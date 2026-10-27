@@ -60,7 +60,7 @@ describe('API Configurador geral', { timeout: 180000 }, () => {
     const anon = createClient(pb.api)
     const info = await anon.get('/platform')
     assert.equal(info.status, 200)
-    assert.deepEqual(info.body.data, { name: 'BLYD Sync', logo_light_url: null, logo_dark_url: null, favicon_url: null, password_reset: false })
+    assert.deepEqual(info.body.data, { name: 'Avanza', logo_light_url: null, logo_dark_url: null, favicon_url: null, password_reset: false })
 
     assert.equal((await anon.get('/settings/platform')).status, 401)
     assert.equal((await gestor.get('/settings/platform')).status, 403)

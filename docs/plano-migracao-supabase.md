@@ -30,7 +30,7 @@
 
 ### O que a empresa informa no modo Supabase
 
-Só **URL e chave** não bastam: a API precisa de uma **conexão direta com o Postgres**. A API REST do Supabase (PostgREST) não faz uma transação com várias gravações, e toda alteração do BLYD Sync grava os dados e o histórico na mesma transação (além das travas das rotinas).
+Só **URL e chave** não bastam: a API precisa de uma **conexão direta com o Postgres**. A API REST do Supabase (PostgREST) não faz uma transação com várias gravações, e toda alteração do Avanza grava os dados e o histórico na mesma transação (além das travas das rotinas).
 
 | Campo | Obrigatório | Para quê | Supabase Cloud | Auto-hospedado (Docker do Supabase) |
 |---|---|---|---|---|
@@ -38,12 +38,12 @@ Só **URL e chave** não bastam: a API precisa de uma **conexão direta com o Po
 | **Chave secreta** (`service_role` ou `sb_secret_…`) | sim | ler e gravar os arquivos nos buckets privados | Project Settings → API Keys | `SERVICE_ROLE_KEY` do `.env` |
 | **Conexão do Postgres** | sim | dados, transações, travas das rotinas e avisos do tempo real (`LISTEN/NOTIFY`) | Connect → *Session pooler* (porta 5432) ou conexão direta | Supavisor em modo sessão (`postgres://postgres.<tenant>:<senha>@host:5432/postgres`) ou a porta do banco |
 | **Certificado da autoridade (CA)** | se a empresa usa CA própria | conexão TLS verificada (`sslmode=verify-full`) | Database Settings → SSL → baixar o certificado | o CA interno da empresa |
-| Esquema | não (padrão `blyd`) | separar as tabelas quando o banco é compartilhado | — | — |
-| Bucket | não (padrão `blyd-files`) | criado sozinho, privado | — | — |
+| Esquema | não (padrão `avanza`) | separar as tabelas quando o banco é compartilhado | — | — |
+| Bucket | não (padrão `avanza-files`) | criado sozinho, privado | — | — |
 | Chave pública + segredo do JWT | só se optar pelo Realtime do Supabase (ver seção 6) | o navegador conectar no Realtime | Project Settings → API Keys / JWT Keys | `ANON_KEY` / `JWT_SECRET` |
 
 - **"Testar conexão" no assistente**, antes de gravar: versão do Postgres (≥ 15), permissão para criar o esquema e as tabelas, TLS válido, Storage acessível com a chave (grava, lê e apaga um arquivo de teste) e relógio do servidor. Só então roda as migrations e cria o administrador.
-- **Usuário do banco dedicado** (recomendado): um papel `blyd_app` com acesso só ao esquema `blyd`, em vez do `postgres`.
+- **Usuário do banco dedicado** (recomendado): um papel `avanza_app` com acesso só ao esquema `avanza`, em vez do `postgres`.
 - **Segredos:** ficam só no servidor (arquivo de configuração com acesso restrito à conta do serviço; no Windows, cifrado com a proteção de dados do sistema). Nunca vão ao navegador, ao histórico ou aos logs; a tela mostra só que estão definidos. Trocar = editar, testar de novo e reiniciar.
 - O **e-mail (SMTP)** continua configurado dentro do app (Configurações → Integrações), igual nas duas edições.
 
@@ -125,10 +125,10 @@ O contrato da API não muda — telas, tokens de API (`kb_pat_`), webhooks, link
 ## 6. Arquitetura alvo da edição Supabase
 
 ```
-Navegador ──HTTPS──► API BLYD Sync (Node + Fastify, N instâncias, sem estado)
+Navegador ──HTTPS──► API Avanza (Node + Fastify, N instâncias, sem estado)
    │                     │  domain + application (os mesmos de hoje)
    │                     │  infrastructure: Postgres · Storage · e-mail · HTTP · cripto
-   │                     ├──► Postgres do Supabase (esquema blyd; RLS "nega tudo"; só a API acessa)
+   │                     ├──► Postgres do Supabase (esquema avanza; RLS "nega tudo"; só a API acessa)
    │                     ├──► Supabase Storage (bucket privado: anexos, documentação, quadro, marca)
    │                     └──► Worker (mesmo código): fila de e-mails, webhooks, lembretes, retenção
    │                            (uma execução por vez com pg_try_advisory_lock)
@@ -144,7 +144,7 @@ Navegador ──HTTPS──► API BLYD Sync (Node + Fastify, N instâncias, sem
 
 | PocketBase | Destino |
 |---|---|
-| Collections e campos | tabelas Postgres no esquema `blyd`; JSON → `jsonb`; múltiplas relações → tabelas de ligação ou `text[]`; datas → `timestamptz`; chaves estrangeiras e índices explícitos |
+| Collections e campos | tabelas Postgres no esquema `avanza`; JSON → `jsonb`; múltiplas relações → tabelas de ligação ou `text[]`; datas → `timestamptz`; chaves estrangeiras e índices explícitos |
 | `$app.runInTransaction` (unitOfWork) | transação Postgres (`BEGIN … COMMIT`) na mesma conexão |
 | Campos de arquivo protegidos | Supabase Storage (bucket privado), servidos pela API (mantém nosniff, CSP sandbox e conferência de permissão) |
 | `onRecordAfter*Success` → tempo real | gatilhos `AFTER INSERT/UPDATE/DELETE` com `pg_notify` (o aviso sai no commit) → SSE da API |
@@ -195,7 +195,7 @@ Navegador ──HTTPS──► API BLYD Sync (Node + Fastify, N instâncias, sem
 | Consultas em laço (N+1) ficarem lentas com o banco pela rede | repositórios novos com junções e consultas em lote; teste de carga desde o início da fase 3 |
 | Diferenças entre SQLite e Postgres (ordenação, comparação de textos, datas) | suíte de API como contrato; ordenações explícitas; colação definida |
 | Supabase auto-hospedado com versões ou configurações diferentes | "Testar conexão" confere versão, permissões, TLS e Storage antes de instalar; dependência só de Postgres + Storage (o Realtime do Supabase é opcional) |
-| Segredos da conexão vazarem | só no servidor, cifrados, fora de logs e do histórico; usuário do banco com acesso só ao esquema `blyd` |
+| Segredos da conexão vazarem | só no servidor, cifrados, fora de logs e do histórico; usuário do banco com acesso só ao esquema `avanza` |
 
 ## 11. Custos (referência — conferir os preços atuais)
 

@@ -1,5 +1,5 @@
 /**
- * Design System do BLYD Sync — ponto único de importação dos componentes reutilizáveis.
+ * Design System do Avanza — ponto único de importação dos componentes reutilizáveis.
  * Features nunca devem criar versões próprias destes componentes (ver docs/design-system.md).
  */
 export * from './AppAvatar'

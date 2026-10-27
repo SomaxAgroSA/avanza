@@ -17,7 +17,7 @@ function day(offset) {
 }
 
 async function seedDemo(api, options) {
-  const password = (options && options.password) || 'DemoBlydSync2026'
+  const password = (options && options.password) || 'DemoAvanza2026'
   const ok = (res, what) => {
     if (res.status >= 300) throw new Error(`${what}: ${res.status} ${JSON.stringify(res.body && res.body.error)}`)
     return res.body.data
@@ -36,8 +36,8 @@ async function seedDemo(api, options) {
     if (!found) throw new Error(`pessoa ${email}: ${JSON.stringify(res.body.error)}`)
     return found
   }
-  const carla = await person('Carla Mendes', 'carla.demo@blydsync.local', 'MEMBER')
-  const rafael = await person('Rafael Lima', 'rafael.demo@blydsync.local', 'MEMBER')
+  const carla = await person('Carla Mendes', 'carla.demo@avanza.local', 'MEMBER')
+  const rafael = await person('Rafael Lima', 'rafael.demo@avanza.local', 'MEMBER')
 
   // projeto
   const project = ok(

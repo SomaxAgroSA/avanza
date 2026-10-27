@@ -173,7 +173,7 @@ Toda mudança relevante grava auditoria na mesma transação: elementos (criaç�
 duração, progresso, mudança de grupo, exclusão) e, no projeto, grupos e etiquetas.
 
 ## 19. UX/UI
-- Design system do BLYD Sync (antes KAMBAN), tokens do tema (claro e escuro), contraste AA, textos em pt-BR/en/es.
+- Design system do Avanza (antes Avanza e KAMBAN), tokens do tema (claro e escuro), contraste AA, textos em pt-BR/en/es.
 - Visual limpo e compacto: blocos de status coloridos, pílulas, barras de progresso, ícones discretos, hover suave.
 - Telas em largura total; no celular, rolagem horizontal da tabela com a coluna do elemento visível.
 
@@ -215,4 +215,4 @@ Cada fase fica funcional, testada (unitário, API, interface, E2E e acessibilida
 ## 24. Princípio final
 
 > **É um quadro de gestão do projeto, à parte das tarefas, com a organização e a fluidez do Monday — e a identidade
-> visual do BLYD Sync.**
+> visual do Avanza.**

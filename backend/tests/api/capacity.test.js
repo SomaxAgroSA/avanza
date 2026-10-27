@@ -38,7 +38,7 @@ describe('API Capacidade', { timeout: 180000 }, () => {
 
   before(async () => {
     publicDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kamban-public-'))
-    fs.writeFileSync(path.join(publicDir, 'index.html'), '<!doctype html><title>BLYD Sync</title>')
+    fs.writeFileSync(path.join(publicDir, 'index.html'), '<!doctype html><title>Avanza</title>')
     pb = await startPocketBase({ KAMBAN_HOOKS_POOL: String(POOL) }, { publicDir })
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)
@@ -55,7 +55,7 @@ describe('API Capacidade', { timeout: 180000 }, () => {
     for (const pathname of ['/', '/projects/abc']) {
       const res = await fetch(`${pb.baseUrl}${pathname}`)
       assert.equal(res.status, 200, pathname)
-      assert.match(await res.text(), /BLYD Sync/)
+      assert.match(await res.text(), /Avanza/)
       assert.match(res.headers.get('content-security-policy') || '', /frame-ancestors 'none'/, pathname)
       assert.equal(res.headers.get('referrer-policy'), 'strict-origin-when-cross-origin')
     }

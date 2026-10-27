@@ -13,7 +13,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 - Pacote de publicação open source: licença Apache-2.0, NOTICE, guia de contribuição, código de conduta, política de segurança, integração contínua (GitHub Actions), imagem Docker com docker-compose e dados de demonstração (`npm run demo`).
 
 ### Alterado
-- **A plataforma agora se chama BLYD Sync** — "Sincronize projetos, tarefas e equipes." — com logos novos (tema claro, tema escuro e ícone do navegador). Identificadores técnicos (`kb_session`, `KAMBAN_*`, `X-Kamban-*`, tokens `kb_pat_`) foram mantidos para não quebrar instalações e integrações.
+- **A plataforma agora se chama Avanza** — "Sincronize projetos, tarefas e equipes." — com logos novos (tema claro, tema escuro e ícone do navegador). Identificadores técnicos (`kb_session`, `KAMBAN_*`, `X-Kamban-*`, tokens `kb_pat_`) foram mantidos para não quebrar instalações e integrações.
 - A Gestão de projetos virou item próprio do menu lateral (`/project-management`), fora da página do projeto; links antigos (`?tab=plan`) redirecionam.
 - **Tela de login remodelada:** painel com a proposta do produto e uma prévia do quadro; "Esqueci minha senha" sempre visível — sem e-mail configurado, orienta a falar com o administrador.
 - **Desempenho:** o servidor sobe com 60 VMs do JavaScript (`KAMBAN_HOOKS_POOL`; o padrão do PocketBase é 15), o quadro do Kanban usa uma consulta mais leve, as consultas periódicas viram rede de segurança (5 min) quando o tempo real está ligado e as atualizações ao vivo fazem no máximo uma busca a cada 2,5 s por tela. No teste de carga a vazão útil triplicou (~200 pessoas simultâneas). **Atenção:** o servidor usa mais memória — reserve 2 GB (ou diminua `KAMBAN_HOOKS_POOL`).

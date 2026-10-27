@@ -72,7 +72,7 @@ describe('application/email — configurações e teste', () => {
     const sent = deps.mailer.sent.at(-1)
     assert.equal(sent.to, 'admin@example.com')
     assert.equal(sent.fromAddress, 'portal@empresa.com')
-    assert.equal(sent.subject, 'Teste de e-mail — BLYD Sync')
+    assert.equal(sent.subject, 'Teste de e-mail — Avanza')
     deps.mailer.failNext('535 authentication failed')
     assert.throws(
       () => email.sendTest(ctxOf(admin), {}),
@@ -138,7 +138,7 @@ describe('application/account-links — esqueci minha senha', () => {
     const mail = deps.store.emailOutbox.at(-1)
     assert.equal(mail.to, 'ana@example.com')
     assert.equal(mail.kind, 'password_reset')
-    assert.equal(mail.subject, 'Reset your password — BLYD Sync')
+    assert.equal(mail.subject, 'Reset your password — Avanza')
     assert.match(mail.text, /https:\/\/kamban\.empresa\.com\/reset-password\?token=/)
     assert.equal(deps.store.audit.at(-1).action, 'auth.password_reset_requested')
     const count = deps.store.emailOutbox.length
@@ -201,7 +201,7 @@ describe('application/account-links — convites', () => {
     const bia = users.createUser(ctxOf(admin), { name: 'Bia', email: 'bia@example.com', role_id: member.id, send_invite: true })
     const mail = deps.store.emailOutbox.at(-1)
     assert.equal(mail.kind, 'invite')
-    assert.equal(mail.subject, 'Você foi convidado para o BLYD Sync')
+    assert.equal(mail.subject, 'Você foi convidado para o Avanza')
     assert.match(mail.text, /Admin convidou você/)
     assert.equal(deps.store.audit.at(-1).action, 'user.invited')
 

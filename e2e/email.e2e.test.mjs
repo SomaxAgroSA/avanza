@@ -55,7 +55,7 @@ describe('E2E — E-mail', { timeout: 240000 }, () => {
     await page.getByText('Configurações de e-mail salvas.').waitFor()
     await page.getByRole('button', { name: 'Enviar e-mail de teste' }).click()
     await page.getByText(`E-mail de teste enviado para ${ADMIN.email}.`).waitFor()
-    const message = await smtp.waitFor((m) => m.subject === 'Teste de e-mail — BLYD Sync')
+    const message = await smtp.waitFor((m) => m.subject === 'Teste de e-mail — Avanza')
     assert.deepEqual(message.to, [ADMIN.email])
     assert.deepEqual(errors, [])
   })
@@ -101,7 +101,7 @@ describe('E2E — E-mail', { timeout: 240000 }, () => {
     await page.getByText('Convite enviado para bia@kamban.test.').waitFor()
     await flush()
     const message = await smtp.waitFor((m) => m.to[0] === 'bia@kamban.test')
-    assert.equal(message.subject, 'Você foi convidado para o BLYD Sync')
+    assert.equal(message.subject, 'Você foi convidado para o Avanza')
 
     const bia = await guest()
     await bia.goto(linkOf(message))

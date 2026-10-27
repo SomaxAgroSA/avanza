@@ -1,6 +1,6 @@
 <p align="center"><img src="web/public/brand/logo-light.png" width="112" alt="" /></p>
 
-<h1 align="center">BLYD Sync</h1>
+<h1 align="center">Avanza</h1>
 
 <p align="center"><strong>Sync projects, tasks and teams.</strong></p>
 
@@ -73,7 +73,7 @@ docker compose up -d
 
 Open http://localhost:8090 and sign in with the email and password from `.env`. Data lives in the `kamban_data` volume. Production (HTTPS, backup, upgrades): [docs/deployment.md](docs/deployment.md) (in Portuguese).
 
-**Demo data:** with the server running, `npm run demo` (from the repository, with `backend/.env` pointing at the server) creates the **DEMO** project — tasks, a sprint, a full management board, custom columns, log, issues, baseline and a documentation space — plus two sample people (`carla.demo@blydsync.local` and `rafael.demo@blydsync.local`, password `DemoBlydSync2026` or the one in `KAMBAN_DEMO_PASSWORD`). Running it again changes nothing.
+**Demo data:** with the server running, `npm run demo` (from the repository, with `backend/.env` pointing at the server) creates the **DEMO** project — tasks, a sprint, a full management board, custom columns, log, issues, baseline and a documentation space — plus two sample people (`carla.demo@avanza.local` and `rafael.demo@avanza.local`, password `DemoAvanza2026` or the one in `KAMBAN_DEMO_PASSWORD`). Running it again changes nothing.
 
 ## Development
 

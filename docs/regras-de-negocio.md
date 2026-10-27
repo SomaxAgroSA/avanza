@@ -1,6 +1,6 @@
 # Regras de negócio — fluxo de trabalho
 
-Como as tarefas andam no BLYD Sync: status, datas de início e conclusão, transições, limite WIP e Kanban.
+Como as tarefas andam no Avanza: status, datas de início e conclusão, transições, limite WIP e Kanban.
 Quem pode fazer cada ação está em [permissions.md](permissions.md); as decisões técnicas, em [decisions.md](decisions.md) (ADR-011 e ADR-015).
 
 ## 1. Status e categorias
@@ -495,7 +495,7 @@ Tela **Configurações → Geral**, só para quem tem a permissão **Configurar 
 
 | Bloco | O que se configura | Limites | Padrão |
 |---|---|---|---|
-| Identidade | nome da plataforma; logo para tema claro e para tema escuro; ícone da aba do navegador | nome até 40 caracteres; imagens PNG, JPG, WebP ou SVG (ícone também ICO), até 1 MB | "BLYD Sync" e os logos padrão (claro, escuro e ícone do navegador) |
+| Identidade | nome da plataforma; logo para tema claro e para tema escuro; ícone da aba do navegador | nome até 40 caracteres; imagens PNG, JPG, WebP ou SVG (ícone também ICO), até 1 MB | "Avanza" e os logos padrão (claro, escuro e ícone do navegador) |
 | Senhas | tamanho mínimo; exigir maiúsculas e minúsculas; exigir um símbolo | mínimo de 8 a 64; **letras e números são sempre exigidos** | 10 caracteres, letras e números |
 | Bloqueio de login | tentativas erradas antes do bloqueio; tempo inicial; tempo máximo | 3 a 20 tentativas; 1 a 60 min; máximo de 1 a 1.440 min e nunca menor que o inicial | 5 tentativas, 5 min, até 60 min |
 | Retenção do histórico | por quanto tempo o histórico de auditoria fica guardado | 1, 3, 6, 12 ou 24 meses, ou "Manter sempre" | 3 meses |

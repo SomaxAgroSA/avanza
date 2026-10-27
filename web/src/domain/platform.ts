@@ -25,7 +25,7 @@ export interface PlatformInfo {
   passwordReset: boolean
 }
 
-export const DEFAULT_PLATFORM_INFO: PlatformInfo = { name: 'BLYD Sync', logoLightUrl: null, logoDarkUrl: null, faviconUrl: null, passwordReset: false }
+export const DEFAULT_PLATFORM_INFO: PlatformInfo = { name: 'Avanza', logoLightUrl: null, logoDarkUrl: null, faviconUrl: null, passwordReset: false }
 
 /** Marca padrão (pasta web/public/brand), usada enquanto ninguém envia outra no Configurador geral. */
 export const DEFAULT_BRANDING: Record<BrandingSlot, string> = {

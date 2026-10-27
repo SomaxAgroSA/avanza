@@ -163,7 +163,7 @@ function createWebhookService(deps) {
     const signature = deps.crypto.hmacSha256Hex(webhook.secret, webhookDomain.signingString(timestamp, body))
     const headers = {
       'Content-Type': 'application/json',
-      'User-Agent': 'BLYD-Sync-Webhooks',
+      'User-Agent': 'Avanza-Webhooks',
       'X-Kamban-Event': delivery.event,
       'X-Kamban-Delivery': delivery.id,
       'X-Kamban-Timestamp': String(timestamp),

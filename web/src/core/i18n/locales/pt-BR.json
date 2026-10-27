@@ -1556,7 +1556,7 @@
     "emptyUnread": "Tudo lido por aqui",
     "emptyHint": "Você será avisado quando alguém mencionar você, atribuir uma tarefa ou comentar nas suas tarefas.",
     "unread": "Não lida",
-    "system": "BLYD Sync",
+    "system": "Avanza",
     "newStatus": "Novo status: {{status}}",
     "dueOn": "Prazo: {{date}}",
     "filters": {

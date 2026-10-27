@@ -1556,7 +1556,7 @@
     "emptyUnread": "You're all caught up",
     "emptyHint": "You'll be notified when someone mentions you, assigns you a task or comments on your tasks.",
     "unread": "Unread",
-    "system": "BLYD Sync",
+    "system": "Avanza",
     "newStatus": "New status: {{status}}",
     "dueOn": "Due: {{date}}",
     "filters": {
