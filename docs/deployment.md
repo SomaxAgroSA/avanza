@@ -60,6 +60,16 @@ KAMBAN_ENV=production ./bin/pocketbase serve \
 - Variáveis: ver `backend/.env.example` e [security.md](security.md).
 - Health check: `GET /api/v1/health` (200 ok / 503 degradado).
 
+## Servidor na rede local (macOS)
+Para a equipe usar o Avanza a partir de um Mac, sem Docker: defina `KAMBAN_HTTP=0.0.0.0:8090` no `backend/.env` (mantenha `KAMBAN_ENV=development` — em produção o cookie é `Secure` e o login não funciona por `http://` na rede) e rode no repositório:
+```bash
+scripts/mac/avanza.sh instalar    # copia o servidor para ~/Avanza e sobe a cada login, mostrando o endereço
+scripts/mac/avanza.sh atualizar   # depois de mudar o código: build, cópia e reinício
+scripts/mac/avanza.sh endereco    # mostra de novo o endereço de acesso
+scripts/mac/avanza.sh status | remover
+```
+O servidor roda numa cópia fora de Documentos (`AVANZA_DIR`, padrão `~/Avanza`) porque o macOS não deixa programas iniciados no login lerem essa pasta; os dados ficam em `~/Avanza/backend/pb_data` e nunca são sobrescritos pelo `atualizar`. Logs em `~/Library/Logs/Avanza`. A conexão é HTTP sem criptografia: use só em rede interna confiável.
+
 ## Backup e restauração
 Todos os dados (banco SQLite, anexos, imagens e arquivos da documentação) ficam no diretório de dados do PocketBase (`pb_data`; no Docker, o volume `kamban_data`).
 - **Backup agendado:** no painel do PocketBase (`/_/` → Settings → Backups) — gera um `.zip` consistente, opcionalmente enviado para S3.

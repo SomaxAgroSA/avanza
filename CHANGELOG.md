@@ -10,6 +10,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 - **Tokens de API** pessoais (Minha conta → Tokens de API): acesso à API com `Authorization: Bearer`, prazo opcional, valor mostrado uma vez, revogação pela pessoa ou pelo Admin (Integrações).
 - **E-mail** (Configurações → Integrações, permissão `integrations.manage`): servidor SMTP com teste e fila de envio; "Esqueci minha senha" no login; convite de usuário por e-mail (a pessoa cria a própria senha); notificações também por e-mail, que cada pessoa liga ou desliga em Minha conta.
 - **Configurador geral** (Configurações → Geral, permissão `platform.manage`): nome, logo (claro/escuro) e ícone da plataforma; política de senha; bloqueio de login; retenção do histórico de auditoria com limpeza diária, prévia ao encurtar e "Limpar agora".
+- **Servidor na rede local no macOS** (`scripts/mac/avanza.sh`): sobe o Avanza a cada login numa cópia em `~/Avanza`, reinicia se cair e mostra o endereço de acesso para a equipe; `atualizar` leva as mudanças do repositório sem tocar nos dados.
 - Pacote de publicação open source: licença Apache-2.0, NOTICE, guia de contribuição, código de conduta, política de segurança, integração contínua (GitHub Actions), imagem Docker com docker-compose e dados de demonstração (`npm run demo`).
 
 ### Alterado
