@@ -1,6 +1,6 @@
 # Plano de migração: PocketBase → Supabase
 
-> **Situação (2026-10-28): o PocketBase sai de vez** (ADR-044, revê o ADR-040). Uma edição só: API em
+> **Situação (2026-10-28): migração concluída — o PocketBase saiu de vez** (ADR-044, revê o ADR-040). Uma edição só: API em
 > Node sobre o Supabase. As seções 2 e 8 (duas edições, escolha e trava) ficam como histórico; a
 > arquitetura alvo (seção 6) e o mapeamento continuam valendo. Andamento na seção 0.
 > Base das estimativas: o código atual (backend com 12,6 mil linhas de domínio/aplicação e 9,2 mil de
@@ -19,7 +19,7 @@ Ambiente local: Docker pelo **Colima** (sem administrador e sem a licença do Do
 | C. Esquema Postgres | migrations SQL (`backend/db/migrations`) com os nomes das collections, cadastros iniciais, lixeira do Storage, gatilhos do tempo real e o executor de migrations | ✅ |
 | D. Repositórios SQL | `infrastructure/repositories/*.js` sobre `pg` (transação do `unitOfWork` pelo contexto, consultas em lote, travas onde o SQLite serializava) | ✅ 101 testes de banco |
 | E. Servidor Node | Fastify com `/api/v1` (envelope, CSRF, cookie, limites por IP, OpenAPI), arquivos no Storage, e-mail (nodemailer), rotinas com trava, tempo real SSE (`LISTEN/NOTIFY`), frontend com os cabeçalhos de segurança | ✅ suíte de API (115 testes) verde |
-| F. Dados e operação | ETL do `pb_data` (`npm run import:pocketbase`, conferido com o banco da equipe), scripts (`npm run dev/start/setup`, `scripts/mac/avanza.sh` com `migrar`), Docker, CI | em andamento: E2E, documentação e a virada do servidor da equipe |
+| F. Dados e operação | ETL do `pb_data` (`npm run import:pocketbase`), scripts (`npm run dev/start/setup`, `scripts/mac/avanza.sh` com `migrar`, nome `avanza.local` e portas do Supabase só locais), Docker, CI, documentação | ✅ 2026-10-28: E2E 27/28 (o "Esqueci minha senha" já falhava antes); servidor da equipe migrado (usuários, sessões e configurações), reinício conferido (tudo volta em ~25 s) e o PocketBase removido — backup em `~/Avanza-backup/pocketbase-2026-10-28.tar.gz` |
 
 **Diferenças conscientes em relação ao PocketBase** (todas cobertas por testes): ordenação de texto pela colação do banco (en_US, natural para pessoas) em vez da ordem por bytes; busca `ILIKE` ignora maiúsculas também com acento; e-mail único sem diferenciar maiúsculas; conflitos de gravação simultânea (número da tarefa, chaves únicas) tratados com trava ou com o erro de negócio; arquivos de registros apagados saem do Storage por uma lixeira (`storage_trash`) esvaziada pela rotina depois de 10 min; uploads de gravações desfeitas também; a segunda barreira de tipo de arquivo (HTML disfarçado de texto), que era do PocketBase, agora é do domínio (`domain/attachment.js`).
 
