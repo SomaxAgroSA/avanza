@@ -25,32 +25,32 @@ export function AuthHero() {
     <aside className="relative flex flex-col overflow-hidden bg-[var(--kb-brand-ink)] px-5 py-7 text-on-cover lg:px-10 lg:py-10">
       <GrowingField />
 
-      <div className="pointer-events-none relative flex items-center gap-3 text-[21px] font-bold">
-        <span className="grid size-[42px] shrink-0 place-items-center rounded-[11px] border border-on-cover/20 bg-on-cover/10">
+      <div data-field-clear className="pointer-events-none relative flex items-center gap-3 self-start text-[21px] font-bold [text-shadow:0_1px_10px_var(--kb-brand-ink)]">
+        <span className="grid size-[42px] shrink-0 place-items-center rounded-[11px] border border-on-cover/30 bg-[var(--kb-brand-ink)] shadow-[0_0_0_4px_var(--kb-brand-ink)]">
           <img src={logo} alt="" className="size-[26px] object-contain" />
         </span>
         <span className="truncate">{platform.name}</span>
       </div>
 
       <div className="pointer-events-none relative mt-8 lg:my-auto">
-        <h2 className="max-w-[600px] font-display text-[clamp(28px,3.6vw,52px)] font-extrabold leading-[1.12] tracking-[-0.025em]">
+        <h2 data-field-clear className="max-w-[600px] font-display text-[clamp(28px,3.6vw,52px)] font-extrabold leading-[1.12] tracking-[-0.025em] [text-shadow:0_2px_18px_var(--kb-brand-ink)]">
           {t('auth.heroTitle')}
         </h2>
-        <p className="mt-4 hidden text-[19px] text-on-cover/90 lg:block">{t('auth.heroSubtitle')}</p>
+        <p data-field-clear className="mt-4 hidden max-w-[640px] text-[19px] text-on-cover [text-shadow:0_1px_12px_var(--kb-brand-ink)] lg:block">{t('auth.heroSubtitle')}</p>
         <ul className="mt-10 hidden max-w-[880px] grid-cols-3 gap-6 lg:grid">
           {FEATURES.map(({ key, icon: Icon }) => (
-            <li key={key} className="grid content-start gap-1.5 text-[15.5px] leading-[1.45]">
-              <span className="mb-2.5 grid size-11 place-items-center rounded-[11px] border border-on-cover/20 bg-on-cover/15">
+            <li key={key} data-field-clear className="grid content-start gap-1.5 text-[15.5px] leading-[1.45] [text-shadow:0_1px_10px_var(--kb-brand-ink)]">
+              <span className="mb-2.5 grid size-11 place-items-center rounded-[11px] border border-on-cover/30 bg-[var(--kb-brand-ink)]">
                 <Icon className="size-5" aria-hidden />
               </span>
               <span className="font-bold">{t(`auth.hero.features.${key}.title`)}</span>
-              <span className="text-on-cover/85">{t(`auth.hero.features.${key}.description`)}</span>
+              <span className="text-on-cover/90">{t(`auth.hero.features.${key}.description`)}</span>
             </li>
           ))}
         </ul>
       </div>
 
-      <p className="pointer-events-none relative hidden text-[15px] text-on-cover/75 lg:block">
+      <p data-field-clear className="pointer-events-none relative hidden self-start text-[15px] text-on-cover/80 lg:block">
         {t('auth.footer', { year: new Date().getFullYear(), name: platform.name })}
       </p>
     </aside>
