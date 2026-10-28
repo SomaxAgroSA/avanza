@@ -105,6 +105,8 @@ export function fakeRepositories(overrides: {
       resetPassword: notImplemented,
       resendInvite: notImplemented,
       history: notImplemented,
+      uploadAvatar: notImplemented,
+      removeAvatar: notImplemented,
       ...overrides.users,
     },
     roles: {

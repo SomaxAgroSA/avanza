@@ -312,6 +312,16 @@ export function createHttpUserRepository(api: ApiClient): UserRepository {
     async resendInvite(id) {
       await api.post(`${path(id)}/invite`)
     },
+    async uploadAvatar(id, file) {
+      const form = new FormData()
+      form.append('file', file)
+      const { data } = await api.postForm<UserDto>(`${path(id)}/avatar`, form)
+      return toUser(data)
+    },
+    async removeAvatar(id) {
+      const { data } = await api.del<UserDto>(`${path(id)}/avatar`)
+      return toUser(data)
+    },
     async history(id, query) {
       const { data, meta } = await api.get<AuditEntryDto[], PageMetaDto>(`${path(id)}/history`, {
         query: { page: query.page, perPage: query.perPage },

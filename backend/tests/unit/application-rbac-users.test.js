@@ -181,6 +181,49 @@ describe('application/users', () => {
     })
   })
 
+  it('foto: opcional; o próprio usuário ou quem tem users.edit envia, troca e remove (com histórico); qualquer um vê', async () => {
+    const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]
+    const photo = (name, head, size) => ({ name, head, size: size === undefined ? 50000 : size, handle: { name } })
+    const deps = createFakeDeps()
+    const users = createUserService(deps)
+    const me = await seedUser(deps, { roleCode: 'MEMBER', name: 'Maria' })
+    const other = await seedUser(deps, { roleCode: 'MEMBER' })
+    const admin = await ctxFor(deps, 'ADMIN')
+    const self = await ctxFor(deps, 'MEMBER', me.id)
+
+    // sem foto: as iniciais (avatar_url nulo) e a foto não existe
+    assert.equal((await users.getUser(admin, me.id)).avatar_url, null)
+    await assert.rejects(async () => users.avatarKey(self, me.id), { code: 'NOT_FOUND' })
+
+    const sent = await users.setAvatar(admin, me.id, photo('maria.png', PNG))
+    assert.match(sent.avatar_url, new RegExp(`^/api/v1/users/${me.id}/avatar\\?v=`))
+    assert.equal(deps.store.audit.at(-1).action, 'user.avatar_updated')
+    assert.deepEqual(deps.store.audit.at(-1).newValue, { avatar: 'maria.png' })
+    assert.match(await users.avatarKey(await ctxFor(deps, 'VIEWER', other.id), me.id), new RegExp(`^users/${me.id}/`))
+
+    // a própria pessoa troca; a URL muda (o navegador não mostra a antiga do cache)
+    const changed = await users.setAvatar(self, me.id, photo('nova.jpg', [0xff, 0xd8, 0xff, 0xe0]))
+    assert.notEqual(changed.avatar_url, sent.avatar_url)
+
+    // só imagem PNG, JPG ou WebP até 2 MB, conferida pelo conteúdo
+    await assert.rejects(async () => users.setAvatar(self, me.id, null), { code: 'VALIDATION_ERROR', details: { fields: { avatar: 'required' } } })
+    await assert.rejects(async () => users.setAvatar(self, me.id, photo('foto.gif', Array.from(Buffer.from('GIF89a')))), { details: { fields: { avatar: 'unsupported_type' } } })
+    await assert.rejects(async () => users.setAvatar(self, me.id, photo('foto.png', Array.from(Buffer.from('%PDF-1.7')))), { code: 'VALIDATION_ERROR' })
+    await assert.rejects(async () => users.setAvatar(self, me.id, photo('grande.png', PNG, 3 * 1024 * 1024)), { details: { fields: { avatar: 'file_too_large' } } })
+
+    // outra pessoa sem users.edit não mexe na foto de ninguém
+    await assert.rejects(async () => users.setAvatar(await ctxFor(deps, 'MEMBER', other.id), me.id, photo('x.png', PNG)), { code: 'FORBIDDEN' })
+    await assert.rejects(async () => users.removeAvatar(await ctxFor(deps, 'MEMBER', other.id), me.id), { code: 'FORBIDDEN' })
+
+    const removed = await users.removeAvatar(self, me.id)
+    assert.equal(removed.avatar_url, null)
+    assert.equal(deps.store.audit.at(-1).action, 'user.avatar_removed')
+    // remover de novo não grava outro histórico
+    const before = deps.store.audit.length
+    await users.removeAvatar(self, me.id)
+    assert.equal(deps.store.audit.length, before)
+  })
+
   it('usuário inexistente retorna USER_NOT_FOUND', async () => {
     const deps = createFakeDeps()
     await assert.rejects(async () => createUserService(deps).getUser(await ctxFor(deps, 'ADMIN'), 'nope'), { code: 'USER_NOT_FOUND' })

@@ -165,6 +165,24 @@ function userHistory(e) {
   })
 }
 
+/** Multipart com a imagem em `file` (foto do usuário). */
+function uploadUserAvatar(e) {
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.users.setAvatar(ctx, param('id'), (await readUploads(e, 'file'))[0] || null) }))
+}
+
+function removeUserAvatar(e) {
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.users.removeAvatar(ctx, param('id')) }))
+}
+
+/** Foto do usuário (o endereço muda a cada foto nova, então pode ficar em cache). */
+function userAvatar(e) {
+  return handle(e, async ({ ctx, services, param }) => {
+    const key = await services.users.avatarKey(ctx, param('id'))
+    e.setHeader('Cache-Control', 'private, max-age=86400')
+    return serveStored(e, key, 'avatar')
+  })
+}
+
 // ---------------------------------------------------------------- audit
 
 function listAuditLogs(e) {
@@ -622,6 +640,9 @@ module.exports = {
   revokeOtherSessions,
   resetUserPassword,
   userHistory,
+  userAvatar,
+  uploadUserAvatar,
+  removeUserAvatar,
   listAuditLogs,
   listProjects,
   getProject,

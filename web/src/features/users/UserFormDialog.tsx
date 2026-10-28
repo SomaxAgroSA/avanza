@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
 import { SUPPORTED_LANGUAGES, currentLanguage } from '@/core/i18n'
 import type { Role, User } from '@/domain/entities'
+import { NO_AVATAR_CHANGE, type AvatarChoice } from '@/domain/user-avatar'
 import { assignableRoles } from '@/domain/rbac'
 import { createUserSchemaFor, updateUserSchema, type CreateUserInput } from '@/domain/validation'
 import { AppButton, AppDialog, AppSelect, AppSwitch, AppTextField, notify } from '@/presentation/components'
@@ -12,7 +13,8 @@ import { usePlatformInfo } from '@/presentation/common/use-platform'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { usePasswordHint, usePasswordPolicy } from '@/features/auth/use-password-policy'
 import { useSession } from '@/features/auth/session'
-import { useCreateUser, useUpdateUser } from './queries'
+import { useCreateUser, useSaveUserAvatar, useUpdateUser } from './queries'
+import { AvatarPicker } from './AvatarPicker'
 
 export interface UserFormDialogProps {
   open: boolean
@@ -35,6 +37,15 @@ export function UserFormDialog({ open, onOpenChange, user, roles, canChangeAcces
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const mutation = isEdit ? updateUser : createUser
+  const saveAvatar = useSaveUserAvatar()
+  const [avatar, setAvatar] = useState<AvatarChoice>(NO_AVATAR_CHANGE)
+  // foto escolhida volta a zero a cada abertura (ajuste durante a renderização, sem efeito)
+  const [avatarFor, setAvatarFor] = useState({ open, user })
+  if (avatarFor.open !== open || avatarFor.user !== user) {
+    setAvatarFor({ open, user })
+    setAvatar(NO_AVATAR_CHANGE)
+  }
+  const saving = mutation.isPending || saveAvatar.isPending
 
   const roleOptions = useMemo(() => {
     const allowed = assignableRoles(current, roles)
@@ -55,6 +66,7 @@ export function UserFormDialog({ open, onOpenChange, user, roles, canChangeAcces
   })
   const { register, handleSubmit, reset, control, setError, formState } = form
   const sendInvite = useWatch({ control, name: 'sendInvite' })
+  const typedName = useWatch({ control, name: 'name' })
 
   useEffect(() => {
     if (!open) return
@@ -68,6 +80,7 @@ export function UserFormDialog({ open, onOpenChange, user, roles, canChangeAcces
     })
     createUser.reset()
     updateUser.reset()
+    saveAvatar.reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, canInvite])
 
@@ -85,9 +98,25 @@ export function UserFormDialog({ open, onOpenChange, user, roles, canChangeAcces
       }
       notify.error(errorMessage(error))
     }
-    const onSuccess = () => {
+    const done = () => {
       notify.success(isEdit ? t('users.updated') : values.sendInvite ? t('users.invited', { email: values.email }) : t('users.created'))
       onOpenChange(false)
+    }
+    // a foto vai depois do cadastro salvo (o usuário novo ainda não tem id); sem mudança, fica como está
+    const onSuccess = (saved: User) => {
+      const file = avatar.file ?? (avatar.removed && user?.avatarUrl ? null : undefined)
+      if (file === undefined) return done()
+      saveAvatar.mutate(
+        { id: saved.id, file },
+        {
+          onSuccess: done,
+          onError: (error) => {
+            // o cadastro já foi salvo: fecha e avisa só da foto
+            notify.warning(t('users.photo.failed', { reason: errorMessage(error) }))
+            onOpenChange(false)
+          },
+        },
+      )
     }
 
     if (user) {
@@ -119,16 +148,17 @@ export function UserFormDialog({ open, onOpenChange, user, roles, canChangeAcces
       description={isEdit ? user?.email : t('users.createDescription')}
       footer={
         <>
-          <AppButton variant="secondary" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+          <AppButton variant="secondary" onClick={() => onOpenChange(false)} disabled={saving}>
             {t('common.cancel')}
           </AppButton>
-          <AppButton type="submit" form="user-form" loading={mutation.isPending}>
+          <AppButton type="submit" form="user-form" loading={saving}>
             {isEdit ? t('common.save') : t('users.create')}
           </AppButton>
         </>
       }
     >
       <form id="user-form" onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
+        <AvatarPicker name={typedName || user?.name || ''} currentUrl={user?.avatarUrl} value={avatar} onChange={setAvatar} disabled={saving} />
         <AppTextField label={t('users.fields.name')} required autoComplete="off" error={errors.name?.message} {...register('name')} />
         <AppTextField
           label={t('users.fields.email')}

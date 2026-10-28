@@ -3,6 +3,7 @@ import type { UserStatus } from '@/domain/entities'
 import type { ListQuery } from '@/domain/pagination'
 import type { CreateUserData, UpdateUserData } from '@/domain/repositories'
 import { useRepositories } from '@/presentation/common/repositories-context'
+import { SESSION_QUERY_KEY } from '@/features/auth/session'
 
 export const usersKeys = {
   all: ['users'] as const,
@@ -55,5 +56,19 @@ export function useSetUserStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: UserStatus }) => users.setStatus(id, status),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: usersKeys.all }),
+  })
+}
+
+/** Foto do usuário depois de salvar o cadastro: `file` envia (substitui), `null` remove. */
+export function useSaveUserAvatar() {
+  const { users } = useRepositories()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File | null }) => (file ? users.uploadAvatar(id, file) : users.removeAvatar(id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: usersKeys.all })
+      // a própria foto aparece no topo da tela
+      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+    },
   })
 }

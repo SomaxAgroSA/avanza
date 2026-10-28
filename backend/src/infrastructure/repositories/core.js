@@ -3,8 +3,10 @@
  * tentativas de login. Portas em application/ports.js; mesmo contrato dos repositórios do PocketBase.
  */
 
+const crypto = require('node:crypto')
 const bcrypt = require('bcryptjs')
 const { appError } = require('../../core/errors')
+const { storedFileName } = require('../storage')
 const { newId, orderBy, likePattern, toDbDate, toJson, insertRow, updateRow, findRow, deleteRow } = require('../sql')
 
 const UNIQUE_VIOLATION = '23505'
@@ -26,7 +28,7 @@ function isUniqueViolation(err, constraint) {
 
 const USER_FIELDS = { name: 'name', roleId: 'role_id', status: 'status', locale: 'locale', theme: 'theme' }
 // nunca carregar o hash da senha junto com o usuário
-const USER_COLUMNS = '"id", "name", "email", "status", "role_id", "locale", "theme", "email_notifications_off", "created", "updated", "last_login_at"'
+const USER_COLUMNS = '"id", "name", "email", "avatar", "status", "role_id", "locale", "theme", "email_notifications_off", "created", "updated", "last_login_at"'
 
 function createUserRepository(db, ctx) {
   const cost = (ctx && ctx.bcryptCost) || DEFAULT_BCRYPT_COST
@@ -36,7 +38,8 @@ function createUserRepository(db, ctx) {
       id: row.id,
       name: row.name,
       email: row.email,
-      avatarUrl: null, // servido por rota protegida em fase futura
+      // a versão muda a cada foto nova (o navegador guarda a anterior em cache)
+      avatarUrl: row.avatar ? `/api/v1/users/${row.id}/avatar?v=${crypto.createHash('sha1').update(row.avatar).digest('hex').slice(0, 10)}` : null,
       status: row.status,
       roleId: row.role_id,
       locale: row.locale || 'pt-BR',
@@ -125,6 +128,26 @@ function createUserRepository(db, ctx) {
         }),
       )
       return toEntity(row)
+    },
+
+    /**
+     * Foto do usuário em "users/<id>/<nome guardado>" (`handle`: arquivo enviado — http/files.js; tipo e
+     * tamanho já conferidos). A anterior vai para a lixeira do Storage pelo gatilho.
+     */
+    async setAvatar(id, handle, mime) {
+      const stored = storedFileName(handle.name)
+      await ctx.storage.put(`users/${id}/${stored}`, handle.buffer, mime || handle.mime)
+      return toEntity(mustExist(await updateRow(db, 'users', id, { avatar: stored }), 'users', id))
+    },
+
+    async clearAvatar(id) {
+      return toEntity(mustExist(await updateRow(db, 'users', id, { avatar: '' }), 'users', id))
+    },
+
+    /** Chave da foto no Storage, ou null sem foto. */
+    async avatarKeyOf(id) {
+      const row = id ? await db.one('SELECT id, avatar FROM users WHERE id = $1', [id]) : null
+      return row && row.avatar ? `users/${row.id}/${row.avatar}` : null
     },
 
     async update(id, patch) {

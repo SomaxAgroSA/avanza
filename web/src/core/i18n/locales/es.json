@@ -470,7 +470,17 @@
     "sendInviteHint": "La persona recibe un enlace para crear su propia contraseña (vale 7 días).",
     "invited": "Invitación enviada a {{email}}.",
     "resendInvite": "Reenviar invitación",
-    "inviteResent": "Invitación reenviada a {{email}}."
+    "inviteResent": "Invitación reenviada a {{email}}.",
+    "photo": {
+      "label": "Foto",
+      "choose": "Elegir foto",
+      "change": "Cambiar foto",
+      "remove": "Quitar foto",
+      "hint": "Opcional. PNG, JPG o WebP de hasta 2 MB; sin foto, se muestran las iniciales.",
+      "unsupported_type": "Usa una imagen PNG, JPG o WebP.",
+      "file_too_large": "La foto debe tener como máximo 2 MB.",
+      "failed": "Usuario guardado, pero la foto no se envió: {{reason}}"
+    }
   },
   "roles": {
     "title": "Perfiles",
@@ -614,6 +624,7 @@
       "status": "Estado",
       "locale": "Idioma",
       "theme": "Tema",
+      "avatar": "Foto",
       "code": "Código",
       "description": "Descripción",
       "permissions": "Permisos",
@@ -751,6 +762,8 @@
       "user.disabled": "Desactivó el usuario",
       "user.enabled": "Reactivó el usuario",
       "user.password_reset": "Restableció la contraseña",
+      "user.avatar_updated": "Cambió la foto del usuario",
+      "user.avatar_removed": "Quitó la foto del usuario",
       "role.created": "Creó el perfil",
       "role.updated": "Actualizó el perfil",
       "role.permissions_updated": "Cambió permisos del perfil",

@@ -5,6 +5,7 @@
 const { appError } = require('../core/errors')
 const { ROLE_CODES } = require('./permissions')
 const rbac = require('./rbac')
+const attachmentDomain = require('./attachment')
 
 const USER_STATUS = Object.freeze({ ACTIVE: 'active', DISABLED: 'disabled' })
 const LOCALES = Object.freeze(['pt-BR', 'en', 'es'])
@@ -12,6 +13,9 @@ const THEMES = Object.freeze(['light', 'dark', 'system'])
 
 const PASSWORD_MIN = 10
 const PASSWORD_MAX = 72 // limite do bcrypt
+
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+const AVATAR_MIME_TYPES = Object.freeze(['image/png', 'image/jpeg', 'image/webp'])
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase()
@@ -54,12 +58,28 @@ function assertCanEdit(principal, target) {
   if (target.roleCode === ROLE_CODES.SUPER_ADMIN && !rbac.isSuperAdmin(principal)) throw appError('FORBIDDEN')
 }
 
+/**
+ * Foto do usuário (`{ name, size, head }`): PNG, JPG ou WebP até 2 MB, com o tipo conferido pelo
+ * conteúdo (domain/attachment.js). Retorna { name, size, mime } ou { error }.
+ */
+function inspectAvatar(upload) {
+  if (!upload) return { error: 'required' }
+  const checked = attachmentDomain.inspectUpload(upload)
+  if (checked.error) return { error: checked.error }
+  if (AVATAR_MIME_TYPES.indexOf(checked.mime) < 0) return { error: 'unsupported_type' }
+  if (checked.size > AVATAR_MAX_BYTES) return { error: 'file_too_large' }
+  return { name: checked.name, size: checked.size, mime: checked.mime }
+}
+
 module.exports = {
   USER_STATUS,
   LOCALES,
   THEMES,
   PASSWORD_MIN,
   PASSWORD_MAX,
+  AVATAR_MAX_BYTES,
+  AVATAR_MIME_TYPES,
+  inspectAvatar,
   normalizeEmail,
   passwordIssue,
   assertCanAuthenticate,

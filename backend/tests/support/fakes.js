@@ -178,6 +178,17 @@ function createFakeRepositories(store) {
       }
       return user
     },
+    setAvatar: (id, handle) => {
+      const user = userRepository.findById(id)
+      user.avatarFile = `${handle.name}_${nextId('v')}`
+      user.avatarUrl = `/api/v1/users/${id}/avatar?v=${user.avatarFile}`
+      return user
+    },
+    clearAvatar: (id) => Object.assign(userRepository.findById(id), { avatarFile: '', avatarUrl: null }),
+    avatarKeyOf: (id) => {
+      const user = userRepository.findById(id)
+      return user && user.avatarFile ? `users/${id}/${user.avatarFile}` : null
+    },
     verifyPassword: (id, password) => store.passwords[id] === password,
     countByRole: (roleId) => store.users.filter((u) => u.roleId === roleId).length,
     searchActive: ({ search, excludeIds, limit }) => {

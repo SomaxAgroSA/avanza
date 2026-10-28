@@ -470,7 +470,17 @@
     "sendInviteHint": "The person gets a link to create their own password (valid for 7 days).",
     "invited": "Invitation sent to {{email}}.",
     "resendInvite": "Resend invitation",
-    "inviteResent": "Invitation resent to {{email}}."
+    "inviteResent": "Invitation resent to {{email}}.",
+    "photo": {
+      "label": "Photo",
+      "choose": "Choose photo",
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "hint": "Optional. PNG, JPG or WebP up to 2 MB; without a photo, the initials are shown.",
+      "unsupported_type": "Use a PNG, JPG or WebP image.",
+      "file_too_large": "The photo must be at most 2 MB.",
+      "failed": "User saved, but the photo was not uploaded: {{reason}}"
+    }
   },
   "roles": {
     "title": "Roles",
@@ -614,6 +624,7 @@
       "status": "Status",
       "locale": "Language",
       "theme": "Theme",
+      "avatar": "Photo",
       "code": "Code",
       "description": "Description",
       "permissions": "Permissions",
@@ -751,6 +762,8 @@
       "user.disabled": "Disabled the user",
       "user.enabled": "Re-enabled the user",
       "user.password_reset": "Reset the password",
+      "user.avatar_updated": "Changed the user's photo",
+      "user.avatar_removed": "Removed the user's photo",
       "role.created": "Created the role",
       "role.updated": "Updated the role",
       "role.permissions_updated": "Changed role permissions",

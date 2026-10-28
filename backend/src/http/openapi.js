@@ -226,6 +226,11 @@ function build() {
           parameters: [idParam, { name: 'page', in: 'query', schema: { type: 'integer' } }, { name: 'perPage', in: 'query', schema: { type: 'integer' } }],
         }),
       },
+      '/users/{id}/avatar': {
+        get: op('Foto do usuário (qualquer pessoa autenticada; nosniff + CSP sandbox; cache de 1 dia — avatar_url muda a cada foto nova)', ['users'], { 200: { description: 'Imagem' }, 404: errorResponse('NOT_FOUND') }, { parameters: [idParam] }),
+        post: op('Envia a foto (o próprio usuário ou users.edit): multipart "file" — PNG, JPG ou WebP até 2 MB, tipo conferido pelo conteúdo; substitui a anterior', ['users'], { 200: ok('Usuário', ref('User')), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [idParam, csrfHeader] }),
+        delete: op('Remove a foto (volta às iniciais)', ['users'], { 200: ok('Usuário', ref('User')) }, { parameters: [idParam, csrfHeader] }),
+      },
       '/audit-logs': {
         get: op('Histórico de auditoria (audit.view), mais recentes primeiro', ['audit'], { 200: ok('Registros', { type: 'array', items: ref('AuditEntry') }, true) }, {
           parameters: [

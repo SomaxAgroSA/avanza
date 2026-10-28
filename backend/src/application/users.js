@@ -260,7 +260,48 @@ function createUserService(deps) {
     return { reset: true }
   }
 
-  return { listUsers, getUser, createUser, updateUser, changeUserStatus, resetPassword }
+  /**
+   * Foto do usuário (opcional; sem foto, as iniciais): o próprio usuário ou quem tem users.edit (SUPER_ADMIN
+   * só por SUPER_ADMIN). `upload`: { name, size, head, handle } — PNG, JPG ou WebP até 2 MB (domain/user.js).
+   */
+  async function setAvatar(ctx, id, upload) {
+    rbac.assertAuthenticated(ctx.principal)
+    const target = await findUserOrFail(id)
+    userDomain.assertCanEdit(ctx.principal, { id: target.id, roleCode: await roleCodeOf(target) })
+    const checked = userDomain.inspectAvatar(upload)
+    if (checked.error) throw appError('VALIDATION_ERROR', undefined, { fields: { avatar: checked.error } })
+    const updated = await deps.unitOfWork.run(async (repos) => {
+      const saved = await repos.userRepository.setAvatar(target.id, upload.handle, checked.mime)
+      await repos.auditRepository.record(
+        buildAuditEntry(ctx, { entityType: 'user', entityId: target.id, action: 'user.avatar_updated', newValue: { avatar: checked.name } }),
+      )
+      return saved
+    })
+    return toUserDto(updated)
+  }
+
+  async function removeAvatar(ctx, id) {
+    rbac.assertAuthenticated(ctx.principal)
+    const target = await findUserOrFail(id)
+    userDomain.assertCanEdit(ctx.principal, { id: target.id, roleCode: await roleCodeOf(target) })
+    if (!target.avatarUrl) return toUserDto(target)
+    const updated = await deps.unitOfWork.run(async (repos) => {
+      const saved = await repos.userRepository.clearAvatar(target.id)
+      await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'user', entityId: target.id, action: 'user.avatar_removed' }))
+      return saved
+    })
+    return toUserDto(updated)
+  }
+
+  /** Chave da foto no Storage: qualquer pessoa autenticada vê (aparece nas listas, tarefas e comentários). */
+  async function avatarKey(ctx, id) {
+    rbac.assertAuthenticated(ctx.principal)
+    const key = id ? await deps.userRepository.avatarKeyOf(id) : null
+    if (!key) throw appError('NOT_FOUND')
+    return key
+  }
+
+  return { listUsers, getUser, createUser, updateUser, changeUserStatus, resetPassword, setAvatar, removeAvatar, avatarKey }
 }
 
 module.exports = { createUserService }

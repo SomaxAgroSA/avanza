@@ -1,7 +1,9 @@
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
+const crypto = require('node:crypto')
 const bcrypt = require('bcryptjs')
-const { createTestDatabase } = require('../support/db-harness')
+const { createTestDatabase, TEST_STORAGE } = require('../support/db-harness')
+const { createStorage } = require('../../src/infrastructure/storage')
 const core = require('../../src/infrastructure/repositories/core')
 
 const CTX = { bcryptCost: 4 }
@@ -131,6 +133,48 @@ describe('repositórios do núcleo (Postgres)', () => {
       const many = await users.findManyByIds([a.id, b.id, 'naoexiste000000'])
       assert.deepEqual(many.map((u) => u.id).sort(), [a.id, b.id].sort())
       assert.equal(many[0].avatarUrl, null)
+    })
+  })
+
+  describe('foto do usuário', () => {
+    let storage
+    let withStorage
+
+    before(async () => {
+      storage = createStorage(Object.assign({}, TEST_STORAGE, { bucket: `avanza-t-${crypto.randomBytes(4).toString('hex')}` }))
+      await storage.ensureBucket()
+      withStorage = core.createUserRepository(t.db, Object.assign({ storage }, CTX))
+    })
+
+    after(async () => {
+      if (storage) await storage.dropBucket()
+    })
+
+    it('grava no Storage, muda o endereço a cada foto e manda a anterior para a lixeira (também ao remover e ao excluir)', async () => {
+      const user = await newUser({ name: 'Foto', email: 'foto@avanza.test' })
+      assert.equal(await withStorage.avatarKeyOf(user.id), null)
+      const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3])
+      const first = await withStorage.setAvatar(user.id, { buffer: bytes, mime: 'image/png', name: 'Minha Foto.png' }, 'image/png')
+      assert.match(first.avatarUrl, new RegExp(`^/api/v1/users/${user.id}/avatar\\?v=[0-9a-f]{10}$`))
+      assert.equal((await withStorage.findById(user.id)).avatarUrl, first.avatarUrl)
+      const key = await withStorage.avatarKeyOf(user.id)
+      assert.match(key, new RegExp(`^users/${user.id}/minha_foto_[a-z0-9]{10}\\.png$`))
+      assert.deepEqual(await storage.read(key), bytes)
+
+      const second = await withStorage.setAvatar(user.id, { buffer: Buffer.from([0xff, 0xd8, 0xff]), name: 'outra.jpg' }, 'image/jpeg')
+      assert.notEqual(second.avatarUrl, first.avatarUrl)
+      assert.ok(await t.db.one('SELECT key FROM storage_trash WHERE key = $1', [key]))
+
+      const secondKey = await withStorage.avatarKeyOf(user.id)
+      const cleared = await withStorage.clearAvatar(user.id)
+      assert.equal(cleared.avatarUrl, null)
+      assert.equal(await withStorage.avatarKeyOf(user.id), null)
+      assert.ok(await t.db.one('SELECT key FROM storage_trash WHERE key = $1', [secondKey]))
+
+      await withStorage.setAvatar(user.id, { buffer: bytes, name: 'ultima.png' }, 'image/png')
+      const lastKey = await withStorage.avatarKeyOf(user.id)
+      await t.db.exec('DELETE FROM users WHERE id = $1', [user.id])
+      assert.ok(await t.db.one('SELECT key FROM storage_trash WHERE key = $1', [lastKey]))
     })
   })
 

@@ -43,6 +43,7 @@
 - **Proibidos** (anexos e arquivos do projeto, mesma validação): SVG, HTML, executáveis e qualquer tipo fora da lista. Até 20 MB por arquivo; uma requisição de upload por arquivo (limite de corpo 21 MB).
 - **Nome seguro:** só o nome base, sem caminhos nem caracteres de controle, até 150 caracteres.
 - **Download protegido:** os arquivos ficam num bucket **privado** do Supabase Storage, que só o servidor acessa (chave secreta); o arquivo só sai por `/api/v1/attachments/{id}/file` (ou `/api/v1/project-files/{id}/file`, arquivos do projeto), que confere o acesso ao projeto (404 para quem não vê). Resposta com `X-Content-Type-Options: nosniff`, CSP `sandbox` e `Cache-Control: private, no-store`; `?download=1` força download.
+- **Foto do usuário:** só PNG, JPG ou WebP até 2 MB, tipo pelo conteúdo (sem SVG); servida só a quem está autenticado por `/api/v1/users/{id}/avatar`, com nosniff e CSP `sandbox` (cache privado de 1 dia: o endereço muda a cada troca). Envia e remove a própria pessoa ou quem tem `users.edit` (Super Admin só por Super Admin).
 - **Markdown seguro:** descrições e comentários são renderizados como elementos React (`AppMarkdown`), sem HTML cru; links só `http(s)`. Campos URL também só `http(s)`.
 - **Menções:** o servidor aceita só pessoas ativas com acesso ao projeto.
 - **Notificações:** só chegam a quem continua com acesso ao projeto e está ativo; cada pessoa lê e marca apenas as suas (as de outra pessoa respondem 404). O texto exibido é guardado na notificação; clicar abre a tarefa, que confere o acesso de novo.

@@ -588,3 +588,14 @@ A página do projeto tem a aba **Arquivos**, para documentos e imagens que perte
 - **Projeto arquivado:** os arquivos continuam visíveis e baixáveis; não dá para enviar nem excluir.
 - **Excluir o projeto** apaga também os arquivos dele.
 - Envio e exclusão aparecem no **histórico do projeto**, viram eventos de webhook (`project.file_added`, `project.file_deleted`) e atualizam a aba de quem está com ela aberta (tempo real). O Claude (MCP) lista os arquivos com `list_project_files`.
+
+## 23. Foto do usuário
+
+No cadastro do usuário (Usuários → Novo usuário ou Editar), o campo **Foto** é opcional: sem foto, o avatar continua mostrando as iniciais com a cor da pessoa, como sempre.
+
+- **Quem envia, troca ou remove:** a própria pessoa ou quem tem `users.edit` (a foto do Super Admin só outro Super Admin altera) — a mesma regra de editar o usuário.
+- **Quem vê:** qualquer pessoa autenticada — a foto aparece nas listas, nas tarefas, nos comentários e no topo da tela.
+- **Tipos e limite:** PNG, JPG ou WebP até 2 MB, conferidos pelo **conteúdo** (extensão trocada é recusada). Sem SVG nem GIF.
+- **No cadastro novo**, a foto é enviada logo depois que o usuário é criado; se a foto falhar, o usuário fica criado e a tela avisa que só a foto não foi enviada.
+- Trocar ou remover a foto (e excluir o usuário) apaga a anterior do armazenamento. O endereço da foto muda a cada troca, então ninguém vê a antiga do cache.
+- Envio e remoção ficam no **histórico do usuário** ("Trocou a foto do usuário", "Removeu a foto do usuário").

@@ -160,6 +160,10 @@ export interface UserRepository {
   /** Reenvia o convite por e-mail (quem ainda não entrou). */
   resendInvite(id: string): Promise<void>
   history(id: string, query: Pick<ListQuery, 'page' | 'perPage'>): Promise<Page<AuditEntry>>
+  /** Foto do usuário (substitui a anterior). */
+  uploadAvatar(id: string, file: File): Promise<User>
+  /** Remove a foto (volta às iniciais). */
+  removeAvatar(id: string): Promise<User>
 }
 
 export interface RoleData {

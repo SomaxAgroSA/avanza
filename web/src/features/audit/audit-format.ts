@@ -22,6 +22,8 @@ export const AUDIT_ACTIONS = [
   'user.disabled',
   'user.enabled',
   'user.password_reset',
+  'user.avatar_updated',
+  'user.avatar_removed',
   'role.created',
   'role.updated',
   'role.permissions_updated',

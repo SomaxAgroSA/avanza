@@ -67,6 +67,9 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 | PATCH | `/users/{id}/status` | `users.disable` | `{ status: "active" \| "disabled" }` — desativar revoga as sessões |
 | POST | `/users/{id}/password` | `users.edit` | `{ password }` — redefine a senha de **outro** usuário (própria conta → `USE_CHANGE_PASSWORD`) e encerra as sessões dele |
 | GET | `/users/{id}/history` | `users.view` ou `audit.view` | histórico de auditoria do usuário, paginado |
+| GET | `/users/{id}/avatar` | autenticado | a foto (`avatar_url` do usuário, com `?v=` que muda a cada troca; cache de 1 dia; nosniff + CSP sandbox); sem foto → 404 |
+| POST | `/users/{id}/avatar` | `users.edit` (ou o próprio) | multipart `file`: PNG, JPG ou WebP até 2 MB, tipo pelo conteúdo; substitui a anterior → usuário. Histórico `user.avatar_updated` |
+| DELETE | `/users/{id}/avatar` | `users.edit` (ou o próprio) | remove a foto (volta às iniciais) → usuário. Histórico `user.avatar_removed` |
 | GET | `/audit-logs` | `audit.view` | auditoria paginada (mais recentes primeiro); filtros `entity_type`, `entity_id`, `user_id`, `action`, `from`, `to` (ISO 8601) |
 
 ## Endpoints — Fase 2 (Projetos)
