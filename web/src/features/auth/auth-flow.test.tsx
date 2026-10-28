@@ -46,7 +46,10 @@ describe('fluxo de autenticação', () => {
     expect(preview).not.toBeNull()
     expect(preview).toHaveClass('motion-safe:animate-float')
     expect(screen.getByText('Ao vivo')).toBeInTheDocument()
-    expect(screen.getByText('Cartão movido para Concluído')).toBeInTheDocument()
+    // na prévia (computador) e na versão compacta do celular, as duas animadas e fora da leitura de tela
+    const moved = screen.getAllByText('Cartão movido para Concluído')
+    expect(moved).toHaveLength(2)
+    moved.forEach((el) => expect(el.closest('[aria-hidden="true"]')).toHaveClass('motion-safe:animate-float'))
   })
 
   it('valida os campos antes de chamar a API', async () => {

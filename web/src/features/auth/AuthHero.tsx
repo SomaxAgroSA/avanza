@@ -121,10 +121,28 @@ function ProductPreview() {
   )
 }
 
+/** Versão compacta da prévia (celular): o "ao vivo" pulsando e o aviso de cartão movido, flutuando. */
+function LiveToast() {
+  const { t } = useTranslation()
+  return (
+    <div aria-hidden className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg shadow-float motion-safe:animate-float">
+      <span className="relative flex size-2.5 shrink-0">
+        <span className="absolute inline-flex size-full rounded-full bg-success opacity-75 motion-safe:animate-ping" />
+        <span className="relative inline-flex size-2.5 rounded-full bg-success" />
+      </span>
+      <span>
+        <span className="block font-semibold">{t('auth.hero.moved')}</span>
+        <span className="block text-muted">{t('auth.hero.now')}</span>
+      </span>
+    </div>
+  )
+}
+
 /**
  * Capa das telas sem sessão: marca, proposta, a prévia animada do quadro, o que o produto faz e o rodapé,
  * sobre o gradiente da marca. No celular fica compacta (marca e título) para o formulário aparecer logo
- * abaixo; em telas baixas, primeiro somem as descrições das funcionalidades e depois a prévia.
+ * abaixo, com uma versão compacta da animação; em telas baixas, a prévia diminui e as funcionalidades
+ * saem antes dela (só abaixo de 600 px de altura a prévia some).
  */
 export function AuthHero() {
   const { t } = useTranslation()
@@ -158,10 +176,14 @@ export function AuthHero() {
           {t('auth.heroTitle')}
         </h2>
         <p className="mt-4 hidden text-[19px] text-on-cover/90 lg:block">{t('auth.heroSubtitle')}</p>
-        <div className="mt-8 hidden max-w-[520px] pr-3 lg:block xl:pr-6 [@media(max-height:860px)]:mt-5 [@media(max-height:860px)]:[zoom:0.8] [@media(max-height:760px)]:hidden">
+        <div className="mt-8 hidden max-w-[520px] pr-3 lg:block xl:pr-6 [@media(max-height:860px)]:mt-5 [@media(max-height:860px)]:[zoom:0.8] [@media(max-height:760px)]:[zoom:0.62] [@media(max-height:600px)]:hidden">
           <ProductPreview />
         </div>
-        <ul className="mt-8 hidden max-w-[880px] grid-cols-3 gap-6 lg:grid [@media(max-height:860px)]:mt-5">
+        {/* no celular: só o "ao vivo" e o aviso de cartão movido, para o formulário continuar logo abaixo */}
+        <div className="mt-5 lg:hidden">
+          <LiveToast />
+        </div>
+        <ul className="mt-8 hidden max-w-[880px] grid-cols-3 gap-6 lg:grid [@media(max-height:860px)]:mt-5 [@media(max-height:760px)]:!hidden">
           {FEATURES.map(({ key, icon: Icon }) => (
             <li key={key} className="grid content-start gap-1.5 text-[15.5px] leading-[1.45]">
               <span className="mb-2.5 grid size-11 place-items-center rounded-[11px] border border-on-cover/20 bg-on-cover/15">
