@@ -62,6 +62,12 @@ describe('API Capacidade', { timeout: 180000 }, () => {
     const missing = await root.get('/nao-existe')
     assert.equal(missing.status, 404)
     assert.equal(missing.body.error.code, 'ROUTE_NOT_FOUND')
+    // módulo de uma versão anterior (a aba ficou aberta durante uma publicação): 404 de verdade, não o index.html
+    for (const pathname of ['/assets/KanbanPage-antigo123.js', '/brand/nao-existe.png']) {
+      const old = await fetch(`${pb.baseUrl}${pathname}`)
+      assert.equal(old.status, 404, pathname)
+      assert.doesNotMatch(await old.text(), /Avanza/)
+    }
   })
 
   it(`com ${CONNECTIONS} conexões do tempo real abertas, a API responde como sem elas`, async () => {

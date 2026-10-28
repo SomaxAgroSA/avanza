@@ -220,6 +220,11 @@ function buildServer(runtime, options) {
   app.setNotFoundHandler((request, reply) => {
     const pathname = request.url.split('?')[0]
     if (pathname.indexOf('/api/') === 0 || pathname === '/api') return renderPlatformError(createEvent(request, reply, runtime), 404)
+    // arquivo que não existe (ex.: um módulo de uma versão anterior que a aba aberta ainda pede) é 404, nunca o
+    // index.html — servido no lugar de um .js, ele quebra o carregamento e o web não percebe que deve recarregar
+    if (pathname.indexOf('/assets/') === 0 || /\.[a-z0-9]{1,8}$/i.test(pathname)) {
+      return reply.code(404).type('text/plain; charset=utf-8').send('Not found')
+    }
     // SPA: qualquer outra rota GET abre o app (o roteador do web decide a tela)
     if (hasFrontend && (request.method === 'GET' || request.method === 'HEAD')) {
       setFrontendHeaders(reply)

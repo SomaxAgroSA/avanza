@@ -3,10 +3,22 @@ import { AppShell } from '@/presentation/layouts/AppShell'
 import { LegacyBacklogRedirect, SettingsIndexRedirect } from './legacy-redirects'
 import { GuestOnly, PermissionGate, RequireAuth } from '@/features/auth/guards'
 import { NotFoundPage, RouteErrorPage } from '@/features/errors/ErrorPages'
+import { isChunkLoadError, reloadForNewVersion } from './chunk-reload'
 
-/** Páginas carregadas sob demanda (code splitting por rota). */
+/**
+ * Páginas carregadas sob demanda (code splitting por rota). Se o arquivo da tela é de uma versão anterior
+ * (houve publicação com a aba aberta), recarrega uma vez para pegar a nova em vez de mostrar o erro.
+ */
 const page = (loader: () => Promise<{ default: React.ComponentType }>): Pick<RouteObject, 'lazy'> => ({
-  lazy: async () => ({ Component: (await loader()).default }),
+  lazy: async () => {
+    try {
+      return { Component: (await loader()).default }
+    } catch (error) {
+      // recarregando: a tela atual fica até a página nova chegar
+      if (isChunkLoadError(error) && reloadForNewVersion()) return new Promise<never>(() => {})
+      throw error
+    }
+  },
 })
 
 export const routes: RouteObject[] = [

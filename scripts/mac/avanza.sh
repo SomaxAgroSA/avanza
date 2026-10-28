@@ -208,8 +208,13 @@ copiar_para_execucao() {
   echo "Copiando para $RUN_DIR..."
   for d in backend/src backend/db backend/scripts backend/public backend/node_modules supabase scripts/mac; do
     mkdir -p "$RUN_DIR/$d"
-    rsync -a --delete --exclude .temp --exclude .branches "$ROOT/$d/" "$RUN_DIR/$d/" || exit 1
+    rsync -a --delete --exclude .temp --exclude .branches --exclude /assets/ "$ROOT/$d/" "$RUN_DIR/$d/" || exit 1
   done
+  # arquivos das telas: os das versões anteriores ficam 14 dias — quem estava com a aba aberta durante a
+  # publicação continua navegando (a aba ainda pede os nomes antigos) até recarregar
+  mkdir -p "$RUN_DIR/backend/public/assets"
+  rsync -a "$ROOT/backend/public/assets/" "$RUN_DIR/backend/public/assets/" || exit 1
+  find "$RUN_DIR/backend/public/assets" -type f -mtime +14 -delete
   cp "$ROOT/backend/package.json" "$RUN_DIR/backend/package.json"
   # sobras da versão PocketBase; o pb_data fica (volta atrás e origem do "migrar")
   rm -rf "$RUN_DIR/backend/bin" "$RUN_DIR/backend/pb_hooks" "$RUN_DIR/backend/pb_migrations" "$RUN_DIR/backend/pb_public"
