@@ -4,7 +4,7 @@
 
 <p align="center"><strong>Sincronize projetos, tarefas e equipes.</strong></p>
 
-**Plataforma open source para o time trabalhar e para o projeto ser gerido no mesmo lugar.** Tarefas, Kanban e sprints para o dia a dia; um quadro de gestão no estilo Monday (fases, cronograma com linha de base e saúde do projeto) para quem coordena; documentação no estilo Confluence para registrar o que se aprende. Um único binário, sem serviços externos, em português, inglês e espanhol.
+**Plataforma open source para o time trabalhar e para o projeto ser gerido no mesmo lugar.** Tarefas, Kanban e sprints para o dia a dia; um quadro de gestão no estilo Monday (fases, cronograma com linha de base e saúde do projeto) para quem coordena; documentação no estilo Confluence para registrar o que se aprende. Roda sobre o Supabase (Cloud, auto-hospedado ou local em Docker) e fala português, inglês e espanhol.
 
 [English](README.en.md) · [Licença Apache-2.0](LICENSE) · [Changelog](CHANGELOG.md) · [Como contribuir](CONTRIBUTING.md)
 
@@ -61,26 +61,29 @@ Os dois ficam no mesmo **projeto** (mesmos membros e permissões), mas não se m
   </tr>
 </table>
 
-## Experimente em 2 minutos (Docker)
+## Experimente com Docker
+
+Precisa de um Supabase (um projeto no Supabase Cloud ou o da empresa, auto-hospedado).
 
 ```bash
 git clone <url-do-repositório> kamban && cd kamban
-cp .env.docker.example .env      # defina KAMBAN_ADMIN_EMAIL e KAMBAN_ADMIN_PASSWORD
+cp .env.docker.example .env      # conexão do Postgres, URL e chave secreta do Supabase, KAMBAN_SECRET_KEY e o administrador
 docker compose up -d
 ```
 
-Abra http://localhost:8090 e entre com o e-mail e a senha do `.env`. Os dados ficam no volume `kamban_data`. Produção (HTTPS, backup, atualização): [docs/deployment.md](docs/deployment.md).
+Abra http://localhost:8090 e entre com o e-mail e a senha do `.env`. Os dados ficam no Supabase (Postgres + Storage). Produção (HTTPS, backup, atualização, migração dos dados de uma instalação com PocketBase): [docs/deployment.md](docs/deployment.md).
 
 **Dados de demonstração:** com o servidor no ar, `npm run demo` (no repositório, com `backend/.env` apontando para o servidor) cria o projeto **DEMO** — tarefas, sprint, quadro de gestão completo, colunas personalizadas, diário, problemas, linha de base e um espaço de documentação — e duas pessoas de exemplo (`carla.demo@avanza.local` e `rafael.demo@avanza.local`, senha `DemoAvanza2026` ou a de `KAMBAN_DEMO_PASSWORD`). Rodar de novo não duplica nada.
 
 ## Desenvolvimento
 
-Requisitos: Node.js 22 ou mais novo.
+Requisitos: Node.js 22 ou mais novo, Docker e o [Supabase CLI](https://supabase.com/docs/guides/local-development) (no macOS sem Docker Desktop, o Colima).
 
 ```bash
-cd backend && npm install && npm run setup && cd ..   # dependências + binário do PocketBase
+supabase start                                        # Supabase local (Studio em http://127.0.0.1:54323)
+cd backend && npm install && npm run setup && cd ..   # dependências + backend/.env a partir do `supabase status`
 cd web && npm install && cd ..
-cp backend/.env.example backend/.env                  # defina KAMBAN_ADMIN_EMAIL / KAMBAN_ADMIN_PASSWORD
+# defina KAMBAN_ADMIN_EMAIL / KAMBAN_ADMIN_PASSWORD em backend/.env
 npm --prefix backend run create-admin                 # cria o super administrador
 npm run dev                                           # API :8090 + web :5173
 ```
@@ -90,13 +93,13 @@ Abra http://localhost:5173.
 | Comando (raiz) | O que faz |
 |---|---|
 | `npm run dev` | API e web juntos, com recarga do web |
-| `npm run check` | lint, tipos e todos os testes (unitários, componentes e API num PocketBase isolado) |
+| `npm run check` | lint, tipos e todos os testes (unitários, componentes, banco e API num esquema isolado do Supabase local) |
 | `npm run e2e` | build + testes de ponta a ponta no navegador (Edge ou Chrome), com acessibilidade e responsividade |
-| `npm run build` | build do web em `backend/pb_public` (servido pelo PocketBase) |
+| `npm run build` | build do web em `backend/public` (servido pela API) |
 | `npm run demo` | dados de demonstração no servidor do `backend/.env` |
 | `npm run screenshots` | regera as imagens deste README a partir dos dados de demonstração |
 
-**Stack:** React 19 + TypeScript + Vite, TanStack Query/Table, Radix UI, Tailwind 4 e i18next no web; [PocketBase](https://pocketbase.io) 0.40 (Go + SQLite) com hooks em JavaScript no backend, organizados em Clean Architecture (domínio puro testado com `node --test`). Detalhes em [docs/architecture.md](docs/architecture.md).
+**Stack:** React 19 + TypeScript + Vite, TanStack Query/Table, Radix UI, Tailwind 4 e i18next no web; [Supabase](https://supabase.com) (Postgres 17 + Storage) com uma API própria em Node 24 + Fastify 5 no backend, organizada em Clean Architecture (domínio puro testado com `node --test`). Detalhes em [docs/architecture.md](docs/architecture.md).
 
 ## Evoluções futuras
 
@@ -111,7 +114,7 @@ Ideias e prioridades são discutidas nas issues — veja [CONTRIBUTING.md](CONTR
 | [Arquitetura](docs/architecture.md) | camadas, dependências, fluxo de requisição, estado |
 | [Regras de negócio](docs/regras-de-negocio.md) | status, transições, WIP, obrigatórios, Kanban, backlog, gestão |
 | [API](docs/api.md) | convenções, envelope, erros, endpoints (OpenAPI em `/api/v1/openapi.json`) |
-| [Banco de dados](docs/database.md) | collections, índices, auditoria |
+| [Banco de dados](docs/database.md) | tabelas, índices, migrations, auditoria |
 | [Segurança](docs/security.md) | sessão, CSRF, CSP, RBAC, rate limit |
 | [Permissões](docs/permissions.md) | catálogo, matriz, regras anti-escalonamento |
 | [Design System](docs/design-system.md) | tokens, componentes, DataTable |

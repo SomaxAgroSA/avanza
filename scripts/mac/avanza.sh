@@ -11,7 +11,8 @@
 # O servidor roda numa cópia fora de Documentos (AVANZA_DIR, padrão ~/Avanza): o macOS não deixa
 # programas iniciados no login lerem Documentos. O .env da cópia nunca é sobrescrito (só ganha as
 # variáveis do Supabase que faltarem). Os dados ficam no Supabase local (Docker pelo Colima), que o
-# servidor sobe antes da API (ADR-044).
+# servidor sobe antes da API (ADR-044). Enquanto está no ar, o Mac anuncia na rede local (Bonjour) o
+# nome AVANZA_NOME.local (padrão avanza.local) apontando para o IP do Wi-Fi.
 # Requisitos: colima e supabase em ~/.local/bin (ou no PATH), dependências instaladas no repositório e
 # backend/.env com KAMBAN_HTTP=0.0.0.0:<porta> (para aceitar conexões da rede) e o Supabase.
 
@@ -19,6 +20,7 @@ set -u
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 RUN_DIR="${AVANZA_DIR:-$HOME/Avanza}"
+NOME="${AVANZA_NOME:-avanza}"
 LABEL=com.avanza.server
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG_DIR="$HOME/Library/Logs/Avanza"
@@ -32,13 +34,23 @@ porta() {
   echo "${p:-8090}"
 }
 
-# IP da interface que leva à rede (cabo ou Wi-Fi); vazio se estiver sem rede.
+# Endereços IPv4 do Mac nas redes ativas, uma por linha "IP|rede" — o Wi-Fi primeiro (cabo e outras depois).
+ips_locais() {
+  local lista
+  lista=$(networksetup -listallhardwareports 2>/dev/null |
+    awk '/^Hardware Port:/{sub(/^Hardware Port: /, ""); nome=$0} /^Device:/{print $2 "|" nome}' |
+    while IFS='|' read -r dev nome; do
+      ip=$(ipconfig getifaddr "$dev" 2>/dev/null)
+      [ -n "$ip" ] && echo "$ip|$nome"
+    done)
+  echo "$lista" | grep '|Wi-Fi$'
+  echo "$lista" | grep -v '|Wi-Fi$' | grep .
+  return 0
+}
+
+# IP principal (o do Wi-Fi quando houver); vazio se estiver sem rede.
 ip_local() {
-  local iface ip
-  iface=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')
-  [ -n "$iface" ] && ip=$(ipconfig getifaddr "$iface" 2>/dev/null)
-  [ -z "${ip:-}" ] && ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
-  echo "${ip:-}"
+  ips_locais | head -1 | cut -d'|' -f1
 }
 
 no_ar() {
@@ -50,15 +62,39 @@ agente_instalado() {
 }
 
 texto_endereco() {
-  local ip host p
-  ip=$(ip_local); host=$(scutil --get LocalHostName 2>/dev/null); p=$(porta)
-  if [ -z "$ip" ]; then
+  local lista host p sufixo
+  lista=$(ips_locais); host=$(scutil --get LocalHostName 2>/dev/null); p=$(porta)
+  if [ -z "$lista" ]; then
     echo "Avanza no ar, mas este Mac está sem rede. Neste Mac: http://localhost:$p"
     return
   fi
+  sufixo=":$p"
+  [ "$p" = "80" ] && sufixo=""
   echo "Avanza no ar. Acesse pela rede:"
-  echo "  http://$ip:$p"
-  [ -n "$host" ] && echo "  http://$host.local:$p"
+  echo "  http://$NOME.local$sufixo"
+  echo "$lista" | while IFS='|' read -r ip nome; do echo "  http://$ip$sufixo  ($nome)"; done
+  [ -n "$host" ] && echo "  http://$host.local$sufixo"
+}
+
+# Anuncia NOME.local (Bonjour/mDNS) apontando para o IP principal (o do Wi-Fi) e refaz o anúncio se o
+# IP mudar. Funciona para quem está na mesma rede (macOS, iPhone e Windows 10+ resolvem nomes .local).
+anunciar_nome() {
+  local ip atual="" pid=""
+  trap '[ -n "$pid" ] && kill "$pid" 2>/dev/null; exit 0' TERM INT
+  while true; do
+    ip=$(ip_local)
+    if [ "$ip" != "$atual" ]; then
+      [ -n "$pid" ] && kill "$pid" 2>/dev/null
+      pid=""
+      if [ -n "$ip" ]; then
+        dns-sd -P "Avanza" _http._tcp local "$(porta)" "$NOME.local" "$ip" path=/ >/dev/null 2>&1 &
+        pid=$!
+      fi
+      atual=$ip
+    fi
+    sleep 30 &
+    wait $!
+  done
 }
 
 mostrar_endereco() {
@@ -77,17 +113,40 @@ APPLESCRIPT
   return 0
 }
 
+# Regra do Lima (a VM do Colima): portas dos contêineres só em 127.0.0.1. Sem ela, o Colima publica
+# o Postgres (senha padrão) e o Studio do Supabase local para a rede inteira; só a API deve aparecer.
+LIMA_OVERRIDE="$HOME/.colima/_lima/_config/override.yaml"
+proteger_portas() {
+  grep -q 'avanza: portas locais' "$LIMA_OVERRIDE" 2>/dev/null && return 1
+  mkdir -p "$(dirname "$LIMA_OVERRIDE")"
+  cat > "$LIMA_OVERRIDE" <<'YAML'
+# avanza: portas locais — os contêineres (Supabase) ficam só em 127.0.0.1; a rede vê apenas a API.
+portForwards:
+  - guestIP: 0.0.0.0
+    guestIPMustBeZero: true
+    guestPortRange: [1, 65535]
+    hostIP: 127.0.0.1
+    hostPortRange: [1, 65535]
+    proto: tcp
+YAML
+  echo "Portas do Supabase restritas a este Mac ($LIMA_OVERRIDE)."
+  return 0
+}
+
 # Motor do Docker (Colima) e Supabase local no ar (o banco e os arquivos do Avanza).
 subir_supabase() {
   command -v colima >/dev/null || { echo "colima não encontrado (instale em ~/.local/bin)." >&2; return 1; }
   command -v supabase >/dev/null || { echo "supabase não encontrado (instale em ~/.local/bin)." >&2; return 1; }
+  if proteger_portas && colima status >/dev/null 2>&1; then
+    colima restart || return 1
+  fi
   colima status >/dev/null 2>&1 || colima start || return 1
   (cd "$ROOT" && supabase start >/dev/null) || { echo "O Supabase não subiu (rode 'supabase start' em $ROOT para ver o erro)." >&2; return 1; }
 }
 
 # Chamado pelo LaunchAgent, dentro da cópia.
 executar() {
-  local node pid codigo marca
+  local node pid codigo marca nome_pid
   node="${AVANZA_NODE:-$(command -v node)}"
   if [ ! -x "$node" ]; then
     echo "Node não encontrado (defina AVANZA_NODE ou rode o instalar de novo)." >&2
@@ -99,7 +158,9 @@ executar() {
 
   "$node" backend/scripts/start.js &
   pid=$!
-  trap 'kill -INT "$pid" 2>/dev/null' TERM INT
+  anunciar_nome &
+  nome_pid=$!
+  trap 'kill -INT "$pid" 2>/dev/null; kill "$nome_pid" 2>/dev/null' TERM INT
 
   # Mostra o endereço quando a API responder e a rede tiver IP; só uma vez a cada 10 min,
   # para não repetir a janela se o LaunchAgent reiniciar o servidor.
@@ -118,6 +179,7 @@ executar() {
 
   wait "$pid"; codigo=$?
   wait "$pid" 2>/dev/null  # o primeiro wait volta antes da hora quando chega um sinal
+  kill "$nome_pid" 2>/dev/null  # o nome some da rede junto com o servidor
   exit "$codigo"
 }
 
@@ -149,12 +211,17 @@ copiar_para_execucao() {
   fi
 }
 
-# .env da cópia: acrescenta as variáveis do Supabase que faltarem (copiadas do repositório).
+# .env da cópia: acrescenta as variáveis do Supabase que faltarem. Conexão e chaves vêm do repositório;
+# esquema e bucket são sempre os da equipe (o desenvolvimento usa outros no mesmo Supabase local).
 completar_env() {
   local var linha
   for var in KAMBAN_DATABASE_URL KAMBAN_DB_SCHEMA KAMBAN_SUPABASE_URL KAMBAN_SUPABASE_SECRET_KEY KAMBAN_STORAGE_BUCKET KAMBAN_SECRET_KEY; do
     grep -q "^$var=" "$RUN_DIR/backend/.env" && continue
-    linha=$(grep -m1 "^$var=" "$ROOT/backend/.env") || continue
+    case "$var" in
+      KAMBAN_DB_SCHEMA) linha="KAMBAN_DB_SCHEMA=avanza" ;;
+      KAMBAN_STORAGE_BUCKET) linha="KAMBAN_STORAGE_BUCKET=avanza-files" ;;
+      *) linha=$(grep -m1 "^$var=" "$ROOT/backend/.env") || continue ;;
+    esac
     printf '%s\n' "$linha" >> "$RUN_DIR/backend/.env"
     echo "  .env da cópia: $var acrescentada"
   done

@@ -140,7 +140,7 @@ Leitura de status/prioridades/tags: `settings.manage` ou `tasks.view`. Alteraç�
 | GET · POST | `/tags` | lista com `task_count` · cria `{ name, color? }` (nome único sem diferenciar maiúsculas/acentos) |
 | PATCH · DELETE | `/tags/{id}` | renomear/cor · excluir (sai das tarefas) |
 
-Horas (`estimated_hours`, `actual_hours`) precisam ser maiores que zero; `null` limpa (o PocketBase não tem número nulo — 0 significa "não informado").
+Horas (`estimated_hours`, `actual_hours`) precisam ser maiores que zero; `null` limpa (no banco, número vazio é 0 — convenção herdada do PocketBase; 0 significa "não informado").
 
 ## Endpoints — Fase 5 (Kanban)
 | Método | Rota | Descrição |
@@ -314,9 +314,9 @@ curl -H "Authorization: Bearer kb_pat_..." https://kamban.empresa.com/api/v1/tas
 Auditoria: `api_token.created` (nome, prefixo, prazo — nunca o valor) e `api_token.revoked`.
 
 ## Tempo real
-Conexão SSE do próprio PocketBase em `/api/realtime` (fora de `/api/v1`): o `GET` abre o fluxo e o primeiro evento, `PB_CONNECT`, traz o `clientId`; o `POST /api/realtime` `{ clientId, subscriptions }` define os tópicos e exige o **cookie de sessão** e o header `X-Requested-With: kamban` (401 sem sessão, 403 sem o header ou se o `clientId` for de outra pessoa).
+Conexão SSE servida pela própria API em `/api/realtime` (fora de `/api/v1`; mesmo protocolo do PocketBase, que o web já usava): o `GET` abre o fluxo e o primeiro evento, `PB_CONNECT`, traz o `clientId`; o `POST /api/realtime` `{ clientId, subscriptions }` define os tópicos e exige o **cookie de sessão** e o header `X-Requested-With: kamban` (401 sem sessão, 403 sem o header ou se o `clientId` for de outra pessoa, 404 se o `clientId` não existe nesta instância).
 
-- Tópicos: `project:{id}` (só projetos que a pessoa vê) e `user:{id}` (só o dela); qualquer outro (inclusive assinaturas de coleção do PocketBase) é descartado sem erro.
+- Tópicos: `project:{id}` (só projetos que a pessoa vê) e `user:{id}` (só o dela); qualquer outro é descartado sem erro. Um sinal de vida (`kamban_keepalive`, que não é tópico) chega a cada 3 min.
 - Evento: nome = tópico; dados `{ collection, action: create|update|delete, id, project_id, task_id, item_id }` — só identificadores. Coleções: tarefas, comentários, anexos, relações, sprints, marcos, projeto e membros, todo o quadro da Gestão e notificações.
 
 ## Endpoints — Webhooks

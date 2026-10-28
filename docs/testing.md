@@ -5,20 +5,24 @@
 ## Comandos
 | Onde | Comando | O quê |
 |---|---|---|
-| raiz | `npm run check` | tudo abaixo (lint, tipos, unitários, API) |
+| raiz | `npm run check` | tudo abaixo (lint, tipos, unitários, banco, API) |
 | `backend/` | `npm test` | domínio + aplicação (`node --test`, fakes em memória) |
-| `backend/` | `npm run test:api` | API ponta a ponta contra PocketBase real e isolado |
+| `backend/` | `npm run test:db` | repositórios SQL, gatilhos e Storage contra o Postgres real do Supabase local |
+| `backend/` | `npm run test:api` | API ponta a ponta contra o servidor Node real e isolado |
 | `backend/` | `npm run coverage` | cobertura dos unitários |
-| `backend/` | `npm run lint` | ESLint (inclui restrições do JSVM) |
+| `backend/` | `npm run lint` | ESLint (inclui a regra contra callback `async` em `forEach`/`filter`/`find`…) |
 | `web/` | `npm test` | Vitest + Testing Library (jsdom) |
 | `web/` | `npm run typecheck` / `npm run lint` | TypeScript estrito / ESLint (a11y, hooks) |
 | raiz | `npm run e2e` | build do front + testes de ponta a ponta no navegador (fluxos do MVP, acessibilidade e responsividade) |
 | raiz | `npm run e2e:run` | só os testes de ponta a ponta, usando o build já gerado |
 | raiz | `npm run screenshots` | build + imagens do README a partir dos dados de demonstração |
 
+Banco, API, E2E e as imagens precisam do **Supabase local no ar** (`supabase start` na raiz; no macOS, `colima start` antes). `KAMBAN_TEST_DATABASE_URL`, `KAMBAN_TEST_SUPABASE_URL` e `KAMBAN_TEST_SUPABASE_SECRET_KEY` apontam para outro Supabase (a CI usa); sem elas, os harness leem o `supabase status`.
+
 ## Backend
-- **Unitários** (`tests/unit`): regras de domínio (RBAC, sessão, usuário), validação, paginação e casos de uso com os fakes de `tests/support/fakes.js`, que implementam as mesmas portas dos repositórios PocketBase.
-- **API** (`tests/api`): `tests/support/pb-harness.js` cria um diretório temporário, roda as migrations, cria admin e superusuário, sobe o PocketBase numa porta livre e derruba ao final. Cobre contrato do envelope, CSRF, cookie, bloqueio da API genérica, sessões/IDOR, RBAC, escalonamento, usuários, auditoria e rate limit.
+- **Unitários** (`tests/unit`): regras de domínio (RBAC, sessão, usuário), validação, paginação e casos de uso com os fakes de `tests/support/fakes.js`, que implementam as mesmas portas dos repositórios SQL e devolvem Promises (um `await` esquecido falha no teste).
+- **Banco** (`tests/db`): `tests/support/db-harness.js` cria um esquema novo (`avanza_t_<aleatório>`) com as migrations reais e o apaga no fim. Cobre os repositórios, as transações (aninhadas, mesma conexão), os gatilhos (lixeira do Storage, avisos do tempo real), o Storage e o bloqueio de `anon`/`authenticated`.
+- **API** (`tests/api`): `tests/support/server-harness.js` (`startServer`, `createClient`) cria esquema `avanza_t_*` e bucket `avanza-t-*` novos, roda as migrations, cria o admin, sobe o servidor Node num processo próprio numa porta livre e apaga tudo ao final (`seedSql` roda SQL extra depois das migrations). É o contrato da API: envelope, CSRF, cookie, nada fora de `/api/v1`, sessões/IDOR, RBAC, escalonamento, usuários, auditoria e rate limit.
 
 ## Frontend
 - `core/networking/api-client.test.ts` — contrato HTTP (envelope, CSRF, correlation id, 401, rede, timeout).
@@ -31,14 +35,14 @@
 - Utilitários: `src/test/utils.tsx` (`fakeRepositories`, `renderRoutes`, `renderWithProviders`).
 
 ## Ponta a ponta (Fase 9)
-Pasta `e2e/` (node:test + playwright-core, com o **Edge instalado** — nada é baixado; `KAMBAN_E2E_CHANNEL=chrome` usa o Chrome, `KAMBAN_E2E_HEADED=1` mostra a janela). `e2e/support.mjs` sobe um PocketBase isolado (mesmo harness dos testes de API) servindo o **build de produção** (`backend/pb_public`), cria projeto, membro e leitor, e oferece login, chamadas à API pela sessão do navegador, axe-core e medições de layout.
+Pasta `e2e/` (node:test + playwright-core, com o **Edge instalado** — nada é baixado; `KAMBAN_E2E_CHANNEL=chrome` usa o Chrome, `KAMBAN_E2E_HEADED=1` mostra a janela). `e2e/support.mjs` sobe a API isolada (mesmo harness dos testes de API: esquema e bucket novos no Supabase local) servindo o **build de produção** (`backend/public`), cria projeto, membro e leitor, e oferece login, chamadas à API pela sessão do navegador, axe-core e medições de layout.
 - **`flows.e2e.test.mjs`** — critérios de aceite (§43): login com troca de idioma (en/es carregados sob demanda), senha errada, tema escuro, sair e voltar a exigir login; criar projeto e adicionar membro pela interface; Kanban (criação rápida, arrastar entre colunas e arrastar para coluna que exige campo → "Preencha para mover"); Planejamento (gestor cria a sprint, membro arrasta a tarefa para ela); comentário, relação "bloqueia" e fork; relatórios; leitor sem edição (Kanban, Planejamento, área administrativa e a própria API recusando); sessão encerrada em outro lugar volta ao login com aviso. Todo teste também exige **zero erros no console**.
 - **`a11y.e2e.test.mjs`** — 25 telas + formulário de tarefa + paleta de comandos, em **desktop (1366) e celular (390), tema claro e escuro**: zero violações graves/críticas do axe-core (WCAG 2.1 A/AA), nenhuma rolagem horizontal, **nenhuma 2ª barra de rolagem** (só o `<main>` rola) e nenhum erro no console.
 - Regressões que a varredura já pegou e que ficaram corrigidas: contraste do cinza "sutil" e dos selos coloridos (status, prioridade, tags) nos dois temas; botão de perigo no tema escuro; tabela oculta do gráfico esticando a página (2ª barra de rolagem que fazia a tela "tremer" ao abrir filtros no Dashboard, nos Relatórios e no tipo de tarefa).
 
 Também na Fase 9: `tests/api/security-sweep.test.js` (ver [security.md](security.md#verificações-automatizadas-fase-9)), `tests/unit/audit-catalog.test.js` e `tests/api/performance.test.js` — 1.500 tarefas com relações e subtarefas; mede lista paginada, busca, ordenação, quadro, planejamento e relatórios (limite folgado de 2 s por chamada; na máquina de desenvolvimento: lista ~30 ms, quadro ~300 ms, planejamento ~130 ms, relatórios ~80 ms).
 
-Pacote de publicação: `tests/api/demo.test.js` roda os **dados de demonstração** (`backend/scripts/demo-data.js`, o mesmo de `npm run demo`) num PocketBase isolado — tudo pela API, quadro da Gestão completo (grupos numerados, colunas, linha de base, problemas, relatório) e a segunda execução não muda nada. `npm run screenshots` (`e2e/screenshots.mjs`) usa os mesmos dados e o harness do E2E para regerar as imagens do README (`docs/images/`, 1600 px, claro e escuro). A integração contínua (`.github/workflows/ci.yml`) roda `npm run check`, o E2E no Chrome e o build + health check da imagem Docker.
+Pacote de publicação: `tests/api/demo.test.js` roda os **dados de demonstração** (`backend/scripts/demo-data.js`, o mesmo de `npm run demo`) numa API isolada — tudo pela API, quadro da Gestão completo (grupos numerados, colunas, linha de base, problemas, relatório) e a segunda execução não muda nada. `npm run screenshots` (`e2e/screenshots.mjs`) usa os mesmos dados e o harness do E2E para regerar as imagens do README (`docs/images/`, 1600 px, claro e escuro). A integração contínua (`.github/workflows/ci.yml`) sobe o Supabase local (`supabase/setup-cli`) e roda `npm run check`, o E2E no Chrome e o build + health check da imagem Docker.
 
 ## Situação na entrega da Fase 9 (2026-09-30)
 - Backend: **257** unitários + **78** de API — todos passando.
@@ -122,7 +126,7 @@ Pacote de publicação: `tests/api/demo.test.js` roda os **dados de demonstraç�
 ## Configurador geral
 - Domínio: padrões, limites seguros, teto ≥ inicial, diferença para o histórico, corte da retenção, política de senha (maiúsculas/minúsculas, símbolo) e de bloqueio, classificação das imagens e SVG perigoso (`domain-platform-settings.test.js`).
 - Casos de uso: permissão, gravar com antes/depois, prévia `dry_run`, limpeza diária e "Limpar agora", bloqueio e senhas (troca, criação, redefinição) pela política, identidade pública e imagens (`application-platform-settings.test.js`).
-- API real com a migration 1790000027 (`api/platform.test.js`): Admin sim/Gestor não, limites, nome na rota pública, prévia e limpeza apagando **histórico antigo semeado por uma migration do teste** (`extraMigrations` do harness), política de senha e bloqueio, PNG servido sem login com nosniff/CSP, SVG com script e arquivo falso recusados.
+- API real com a migration 1790000027 (`api/platform.test.js`): Admin sim/Gestor não, limites, nome na rota pública, prévia e limpeza apagando **histórico antigo semeado pelo teste** (`seedSql` do harness), política de senha e bloqueio, PNG servido sem login com nosniff/CSP, SVG com script e arquivo falso recusados.
 - Interface (`features/settings/general-settings.test.tsx`): salvar só o que mudou, limites e teto, confirmação ao encurtar a retenção com a contagem, envio do logo (tipo barrado na tela), nome/logo no menu e dica + validação da senha pela política. E2E e acessibilidade em `e2e/`.
 
 ## E-mail (integrações)
@@ -149,6 +153,6 @@ Pacote de publicação: `tests/api/demo.test.js` roda os **dados de demonstraç�
 - Web: cliente com `EventSource` falso (conexão, reenvio dos tópicos, reconexão, fechamento ocioso), mapa de invalidação (`domain/realtime.test.ts`) e `useLiveProject` (agrupa avisos). E2E (`e2e/realtime.e2e.test.mjs`): cartão no Kanban, comentário na tarefa aberta e o sino atualizam sem recarregar.
 
 ## Teste de carga
-- `npm --prefix backend run load` (`backend/scripts/load-test.js`): PocketBase isolado, 30 pessoas, projeto com 400 tarefas e quadro da Gestão; mistura de chamadas do uso real (inclui ~10% de escritas) em concorrência crescente (`LOAD_LEVELS`, `LOAD_SECONDS`, `LOAD_TASKS`; `KAMBAN_HOOKS_POOL` muda o pool de VMs do JS, padrão 60; o aquecimento passa por todas as VMs). Resultados e leitura em [plano-migracao-supabase.md](plano-migracao-supabase.md#3-capacidade-medida). Manual — não faz parte do `npm run check`.
+- `npm --prefix backend run load` (`backend/scripts/load-test.js`): API isolada (esquema novo no Supabase local), 30 pessoas, projeto com 400 tarefas e quadro da Gestão; mistura de chamadas do uso real (inclui ~10% de escritas) em concorrência crescente (`LOAD_LEVELS`, `LOAD_SECONDS`, `LOAD_TASKS`; `KAMBAN_DB_POOL` muda as conexões da API com o Postgres, padrão 10). Os resultados medidos no PocketBase estão em [plano-migracao-supabase.md](plano-migracao-supabase.md#3-capacidade-medida). Manual — não faz parte do `npm run check`.
 - `npm --prefix backend run load:docs` (`backend/scripts/load-docs.js`): cenário "equipe pequena + muitos leitores" — 10 pessoas trabalhando (Kanban, listas, Gestão, gravações) com pausa de 1–3 s e 500 leitores logados abrindo páginas da documentação (árvore + página + imagens), cada um com a conexão do tempo real aberta e a conferência da sessão e do sino a cada 5 min; chegadas aleatórias com intervalo médio `DOCS_LEVELS` (60, 30, 15 s). Mostra também quantas conexões do tempo real continuam abertas. Manual.
-- Regressão de capacidade (`tests/api/capacity.test.js`, roda no `npm run check`): pool de 4 VMs e 24 conexões do tempo real abertas — a API precisa responder como sem elas (nenhum middleware em JS global ou no caminho do SSE); o frontend recebe os cabeçalhos de segurança pela rota própria.
+- Regressão de capacidade (`tests/api/capacity.test.js`, roda no `npm run check`): com 24 conexões do tempo real abertas a API precisa responder como sem elas (uma conexão SSE não pode segurar conexão do banco nem trabalho — no PocketBase elas prendiam VMs, ADR-041); o frontend recebe os cabeçalhos de segurança, também no fallback da SPA.

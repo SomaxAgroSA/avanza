@@ -31,15 +31,17 @@ Deve crescer depois sem reescrever a arquitetura. Não é só um quadro Kanban: 
 
 **Configurador geral (2026-10-01) ✅:** Configurações → Geral, permissão própria `platform.manage` (só Admin por padrão): nome/logo/ícone públicos (`GET /platform`), política de senha (mínimo 8–64, letras e números sempre; maiúsculas/minúsculas e símbolo opcionais), bloqueio de login (3–20 tentativas, tempo que dobra até o teto) e retenção do histórico (1–24 meses ou sempre; limpeza diária, prévia ao encurtar). Limites seguros no domínio `domain/platform-settings.js`; regras em regras-de-negocio.md §15; ADR-034.
 
-**E-mail (2026-10-01) ✅:** Configurações → Integrações (`integrations.manage`): SMTP do próprio PocketBase, fila `email_outbox` (rotina a cada minuto, novas tentativas, corpo apagado após envio), "Esqueci minha senha" e convite por links de uso único (`auth_tokens`, só o hash; sem revelar contas; com o e-mail desligado, o botão do login orienta a contatar o administrador) e notificações também por e-mail (preferência em Minha conta). Regras §16; ADR-035.
+**E-mail (2026-10-01) ✅:** Configurações → Integrações (`integrations.manage`): SMTP configurado no app (tabela `email_settings`, senha cifrada com a chave do servidor), fila `email_outbox` (rotina a cada minuto, novas tentativas, corpo apagado após envio), "Esqueci minha senha" e convite por links de uso único (`auth_tokens`, só o hash; sem revelar contas; com o e-mail desligado, o botão do login orienta a contatar o administrador) e notificações também por e-mail (preferência em Minha conta). Regras §16; ADR-035.
 
 **Tokens de API (2026-10-01) ✅:** Minha conta → Tokens de API (`api_tokens.create`, Admin/Gestor): `Authorization: Bearer kb_pat_…` (sem cookie nem CSRF), só o hash guardado, valor mostrado uma vez, permissões do perfil atual a cada chamada, sem criar tokens/trocar senha/sessões com token; Admin revoga em Integrações. Regras §17; ADR-036.
 
 **Webhooks (2026-10-01) ✅:** Integrações → Webhooks (`integrations.manage`): catálogo público de eventos (nomes do histórico; `grupo.*`), entrega criada no próprio `auditRepository.record` (decorador `withWebhooks`), fila `webhook_deliveries` com rotina por minuto, POST assinado (HMAC-SHA256 de `timestamp.corpo`), novas tentativas 1/5/30/120/720 min, desligamento após 20 falhas, SSRF (https; metadados bloqueados; http/loopback só fora de produção). Regras §18; ADR-037.
 
-**Tempo real (2026-10-01) ✅:** SSE do PocketBase (`/api/realtime`) com tópicos `project:{id}`/`user:{id}`; assinatura pela sessão + CSRF em `onRealtimeSubscribeRequest`; avisos só com identificadores saindo de `onRecordAfter*Success`; web invalida o cache (`useLiveProject`, `useLiveNotifications`; no máximo uma busca a cada 2,5 s por tela; polling de 5 min com o tempo real ligado; ressincroniza ao reconectar). Regras §19; ADR-039.
+**Tempo real (2026-10-01) ✅:** SSE servido pela API (`/api/realtime`, protocolo herdado do PocketBase) com tópicos `project:{id}`/`user:{id}`; assinatura pela sessão + CSRF (`http/realtime.js`); avisos só com identificadores saindo dos gatilhos do banco depois do commit (`LISTEN/NOTIFY`); web invalida o cache (`useLiveProject`, `useLiveNotifications`; no máximo uma busca a cada 2,5 s por tela; polling de 5 min com o tempo real ligado; ressincroniza ao reconectar). Regras §19; ADR-039.
 
-**Desempenho e duas edições (2026-10-01):** fase 0 ✅ (pool de 60 VMs do JS, quadro do Kanban com consulta enxuta, polling como rede de segurança, limite de 2,5 s por tela; vazão útil 3×). Edições **Local** (PocketBase no instalador, sem configuração) e **Supabase** (URL + chave secreta + conexão do Postgres; Cloud ou auto-hospedado), escolhidas na instalação e travadas. Plano em plano-migracao-supabase.md; ADR-040.
+**Desempenho e duas edições (2026-10-01):** fase 0 ✅ (pool de 60 VMs do JS, quadro do Kanban com consulta enxuta, polling como rede de segurança, limite de 2,5 s por tela; vazão útil 3×). Edições **Local** (PocketBase no instalador, sem configuração) e **Supabase** (URL + chave secreta + conexão do Postgres; Cloud ou auto-hospedado), escolhidas na instalação e travadas. Plano em plano-migracao-supabase.md; ADR-040 — **revisto pelo ADR-044** (abaixo).
+
+**Supabase no lugar do PocketBase (2026-10-28):** uma edição só — API em Node (Fastify) com os mesmos `domain/` e `application/` (casos de uso assíncronos), repositórios SQL sobre o Postgres do Supabase, arquivos no Storage (bucket privado, servidos pela API), rotinas com trava do Postgres, tempo real SSE com `LISTEN/NOTIFY` (o web não mudou), autenticação própria; dados do PocketBase migrados por `npm run import:pocketbase`. Andamento em plano-migracao-supabase.md §0; ADR-044.
 
 ## 2. Princípios fundamentais (obrigatórios)
 
@@ -49,12 +51,12 @@ Desenvolver como produto real, não protótipo descartável.
 
 ## 3. Stack e tecnologias
 
-**Banco de dados: PocketBase** (neste primeiro momento). Motivos: simplicidade, SQLite, API REST nativa, autenticação, collections, controle de acesso, upload de arquivos, hooks, baixa complexidade operacional, adequado para MVP.
+**Banco de dados: Supabase** (Postgres + Storage), desde 2026-10-28 (ADR-044), com a API própria em Node (Fastify). O MVP nasceu no PocketBase (simplicidade, SQLite, baixa complexidade operacional); a troca reescreveu só a infraestrutura e o HTTP — domínio e casos de uso ficaram, apenas passando a assíncronos.
 
-A arquitetura deve **impedir acoplamento excessivo ao PocketBase**:
-- Toda comunicação com o banco passa por abstrações/repositórios.
-- Nada de chamadas diretas do PocketBase espalhadas pela aplicação.
-- Criar interfaces como `Repository`, `DataSource`, `ApiClient`, `AuthService`, `StorageService` — para permitir trocar por PostgreSQL, Supabase etc. sem reescrever o domínio.
+A arquitetura deve **impedir acoplamento excessivo ao banco**:
+- Toda comunicação com o banco passa por abstrações/repositórios (`infrastructure/`; só `database.js` conhece o driver).
+- Nada de SQL, cliente do Postgres ou do Storage espalhado pela aplicação.
+- Criar interfaces como `Repository`, `DataSource`, `ApiClient`, `AuthService`, `StorageService` — para permitir trocar de banco ou de serviço sem reescrever o domínio.
 
 ## 4. Arquitetura (Clean Architecture)
 
@@ -274,7 +276,7 @@ Gerenciamento consistente, separando **UI State, Domain State, Server State, Ses
 
 Paginação no backend, lazy loading, debounce em pesquisas, cache quando apropriado, compressão de imagens, evitar rebuilds desnecessários, virtualização de listas grandes, consultas eficientes, índices no banco, carregamento sob demanda.
 
-## 31. Banco de dados (collections PocketBase)
+## 31. Banco de dados (tabelas)
 
 ```
 users, roles, permissions, role_permissions, projects, project_members,
@@ -366,7 +368,7 @@ Possível: criar usuário; criar perfil; configurar permissões; criar projeto; 
 
 ## 44. Estratégia de desenvolvimento (em fases — nunca tudo de uma vez)
 
-1. **Fundação:** projeto, arquitetura, design system, tema, i18n, autenticação, sessão, RBAC, PocketBase, API, tratamento de erros, logging.
+1. **Fundação:** projeto, arquitetura, design system, tema, i18n, autenticação, sessão, RBAC, banco de dados, API, tratamento de erros, logging.
 2. **Projetos:** CRUD, membros, permissões, configurações.
 3. **Tipos e campos:** tipos de tarefa, campos personalizados, configuração administrativa.
 4. **Tarefas:** CRUD, detalhes, comentários, anexos, imagens, histórico.

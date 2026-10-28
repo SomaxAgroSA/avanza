@@ -10,13 +10,14 @@ Obrigado por querer ajudar! Este guia mostra como preparar o ambiente, as regras
 
 ## Ambiente
 
-Requisitos: **Node 22+** e um navegador Chromium (Edge ou Chrome) para os testes de ponta a ponta.
+Requisitos: **Node 22+**, Docker com o **Supabase CLI** (Supabase local; no macOS sem Docker Desktop, o Colima) e um navegador Chromium (Edge ou Chrome) para os testes de ponta a ponta.
 
 ```bash
 npm install                                  # raiz (ferramentas dos testes E2E)
-cd backend && npm install && npm run setup   # dependências + binário do PocketBase
+supabase start                               # Supabase local (no macOS com Colima: colima start antes)
+cd backend && npm install && npm run setup   # dependências + backend/.env a partir do `supabase status`
 cd ../web && npm install && cd ..
-cp backend/.env.example backend/.env         # defina KAMBAN_ADMIN_EMAIL / KAMBAN_ADMIN_PASSWORD
+# defina KAMBAN_ADMIN_EMAIL / KAMBAN_ADMIN_PASSWORD em backend/.env
 npm --prefix backend run create-admin
 npm run dev                                  # API :8090 + web :5173
 npm --prefix backend run demo                # opcional: dados de demonstração (com o dev rodando)
@@ -26,7 +27,7 @@ npm --prefix backend run demo                # opcional: dados de demonstração
 
 ## Arquitetura em uma página
 
-- **Backend** (`backend/`): PocketBase + hooks JS. Camadas `core → domain → application → infrastructure → http`; `domain` e `application` são CommonJS puros, testados com `node --test`. Só `infrastructure` fala com o PocketBase (`$app`). Os hooks rodam no JSVM (síncrono, sem `?.`/`??`/`await`).
+- **Backend** (`backend/`): API em Node (Fastify) sobre o Supabase (Postgres + Storage). Camadas `core → domain → application → infrastructure → http`; `domain` e `application` são CommonJS puros (casos de uso assíncronos), testados com `node --test`. Só `infrastructure` fala com o banco (SQL com `pg`) e o Storage. Esquema em migrations SQL numeradas (`backend/db/migrations`; tabela nova com RLS ligado).
 - **Web** (`web/`): React 19 + TypeScript estrito + Vite. Camadas `app · core · domain · data · presentation · features`; telas usam repositórios via `useRepositories()` (nada de `fetch` em `features`/`presentation`).
 - Regras de negócio ficam no servidor (e, quando a tela precisa, espelhadas em `web/src/domain`); **nenhuma regra na UI**.
 - Detalhes em [docs/architecture.md](docs/architecture.md) e nas decisões ([docs/decisions.md](docs/decisions.md)).
@@ -47,7 +48,7 @@ npm --prefix backend run demo                # opcional: dados de demonstração
 
 | Comando (raiz) | O que roda |
 |---|---|
-| `npm run check` | lint, tipos e todos os testes (unitários, interface e API contra PocketBase real) |
+| `npm run check` | lint, tipos e todos os testes (unitários, interface, banco e API contra o Supabase local) |
 | `npm run e2e` | build + ponta a ponta no navegador (fluxos, acessibilidade em 4 modos, responsividade) |
 
 Para o E2E fora do Windows, use o Chrome: `KAMBAN_E2E_CHANNEL=chrome npm run e2e`.
@@ -63,6 +64,6 @@ Para o E2E fora do Windows, use o Chrome: `KAMBAN_E2E_CHANNEL=chrome npm run e2e
 
 ## English summary
 
-Thanks for contributing! Requirements: **Node 22+** and a Chromium browser (Edge or Chrome) for end-to-end tests. Setup is the block above (`npm install`, `npm run setup` in `backend/`, copy `.env.example`, `create-admin`, `npm run dev`; optional `npm --prefix backend run demo` for sample data).
+Thanks for contributing! Requirements: **Node 22+**, Docker with the **Supabase CLI** (local Supabase; on macOS without Docker Desktop, Colima) and a Chromium browser (Edge or Chrome) for end-to-end tests. Setup is the block above (`supabase start`, `npm install`, `npm run setup` in `backend/` to create `backend/.env`, set the admin variables, `create-admin`, `npm run dev`; optional `npm --prefix backend run demo` for sample data).
 
-Ground rules: test first (TDD); business rules live on the server, never in the UI; use the `App*` design-system components and theme tokens; every user-facing string goes through i18n in pt-BR, en and es; new API routes update the OpenAPI document; relevant mutations write to the audit log in the same transaction. Run `npm run check` (lint, types, unit, UI and API tests) and `npm run e2e` (use `KAMBAN_E2E_CHANNEL=chrome` outside Windows) before opening a pull request. Report vulnerabilities privately — see [SECURITY.md](SECURITY.md).
+Ground rules: test first (TDD); business rules live on the server, never in the UI; use the `App*` design-system components and theme tokens; every user-facing string goes through i18n in pt-BR, en and es; new API routes update the OpenAPI document; relevant mutations write to the audit log in the same transaction. Run `npm run check` (lint, types, unit, UI, database and API tests) and `npm run e2e` (use `KAMBAN_E2E_CHANNEL=chrome` outside Windows) before opening a pull request. Report vulnerabilities privately — see [SECURITY.md](SECURITY.md).

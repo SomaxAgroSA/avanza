@@ -1,15 +1,17 @@
-# Banco de dados (PocketBase / SQLite)
+# Banco de dados (Postgres do Supabase)
 
-> Migrations em `backend/pb_migrations/`. Toda alteração de esquema é uma nova migration (nunca editar uma já aplicada em produção).
+> Migrations SQL em `backend/db/migrations/`, aplicadas em ordem quando a API sobe (registro em `schema_migrations`, trava contra duas instâncias migrando juntas). Toda alteração de esquema é um **novo arquivo numerado** (nunca editar um já aplicado em produção); tabela nova precisa de `ENABLE ROW LEVEL SECURITY`.
 
-Convenções: ver [ADR-006](decisions.md#adr-006--campos-de-data-do-pocketbase-createdupdated). Todas as collections têm **regras de API nulas** ([ADR-003](decisions.md#adr-003--api-própria-apiv1-api-genérica-do-pocketbase-bloqueada)).
+Esquema `avanza` (`KAMBAN_DB_SCHEMA`; os arquivos não qualificam nomes e rodam pelo `search_path`). Tabelas e colunas mantêm os nomes das collections do PocketBase ([ADR-044](decisions.md#adr-044--o-pocketbase-sai-api-em-node-sobre-o-supabase-uma-edição-só)): `created`/`updated` ([ADR-006](decisions.md#adr-006--campos-de-data-do-pocketbase-createdupdated)), ids de 15 caracteres `[a-z0-9]` gerados pela API. Convenções: texto vazio é `''` e número vazio é `0` (não `NULL`); relação vazia é `NULL`, com chave estrangeira (cascata, `SET NULL` ou `RESTRICT` como antes; todas `DEFERRABLE INITIALLY IMMEDIATE` para a importação adiar a checagem); datas em `timestamptz(3)`; JSON em `jsonb`; `updated` mantido pelo gatilho `touch_updated`. Todas as tabelas têm **RLS ligado sem políticas** e nenhum privilégio para `anon`/`authenticated`: o acesso é só pela API ([ADR-003](decisions.md#adr-003--api-própria-apiv1-api-genérica-do-pocketbase-bloqueada)).
 
-## Collections — Fase 1
+Os tipos abaixo são os lógicos, herdados das collections: `select` é `text` validado pelo domínio; `relation` é `text` com chave estrangeira (ou `jsonb` com a lista de ids, quando múltipla); `file` é `text` com o nome guardado no Storage (chave `<tabela>/<id>/<nome>` no bucket privado); `date` é `timestamptz(3)`. As seções seguem as fases em que cada tabela nasceu; as migrations citadas (`1790000xxx_*.js`) são as do PocketBase (histórico) — no Postgres, o esquema todo está em `0001_schema.sql` e os cadastros iniciais em `0002_seed.sql`.
+
+## Tabelas — Fase 1
 
 ### `users` (auth, estendida)
 | Campo | Tipo | Observações |
 |---|---|---|
-| id, email, password, tokenKey, verified, emailVisibility | sistema | login por senha nativo **desativado** |
+| id, email, password_hash | | e-mail único sem diferenciar maiúsculas; senha em bcrypt (a API confere) |
 | name | text | |
 | avatar | file | exposição via rota protegida em fase futura |
 | status | select `active`/`disabled` | obrigatório |
@@ -17,9 +19,9 @@ Convenções: ver [ADR-006](decisions.md#adr-006--campos-de-data-do-pocketbase-c
 | last_login_at | date | |
 | locale | select `pt-BR`/`en`/`es` | preferência do usuário |
 | theme | select `light`/`dark`/`system` | preferência do usuário |
-| created, updated | autodate | |
+| created, updated | date | `updated` pelo gatilho |
 
-Índices: `role_id`, `status`, `name` (+ índice único de e-mail do PocketBase).
+Índices: `role_id`, `status`, `name` (+ índice único em `lower(email)`).
 
 ### `roles`
 `code` (text, único, `^[A-Z][A-Z0-9_]{1,31}$`), `name`, `description`, `is_system` (bool), `created`, `updated`. Perfis de sistema: SUPER_ADMIN, ADMIN, MANAGER, MEMBER, VIEWER.
@@ -34,7 +36,7 @@ Convenções: ver [ADR-006](decisions.md#adr-006--campos-de-data-do-pocketbase-c
 | Campo | Observações |
 |---|---|
 | user_id → users | cascade |
-| token_hash | SHA-256 do token (único, `hidden`) — o token puro nunca é gravado |
+| token_hash | SHA-256 do token (único) — o token puro nunca é gravado |
 | ip, user_agent | user agent truncado em 512 |
 | remember | sessão persistente |
 | expires_at, last_seen_at, revoked_at | ver política em [security.md](security.md#sessão) |
@@ -49,7 +51,7 @@ Nenhuma rota edita ou exclui registros. Senhas e tokens nunca entram em `old_val
 Ações registradas na Fase 1: `auth.login`, `auth.login_failed`, `auth.logout`, `auth.session_revoked`, `auth.password_changed`, `user.created`, `user.updated`, `user.disabled`, `user.enabled`, `user.password_reset`, `role.created`, `role.updated`, `role.permissions_updated`, `role.deleted`.
 Consulta: `GET /api/v1/audit-logs` (`audit.view`) e `GET /api/v1/users/{id}/history`; tela *Configurações → Auditoria* e aba *Histórico* do usuário.
 
-## Collections — Fase 2
+## Tabelas — Fase 2
 
 ### `projects`
 | Campo | Tipo | Observações |
@@ -71,7 +73,7 @@ Consulta: `GET /api/v1/audit-logs` (`audit.view`) e `GET /api/v1/users/{id}/hist
 
 Ações de auditoria: `project.created`, `project.updated`, `project.archived`, `project.unarchived`, `project.deleted`, `project.owner_changed`, `project.member_added`, `project.member_role_changed`, `project.member_removed`, `project.member_left`.
 
-## Collections — Fase 3 (tipos de tarefa e campos personalizados)
+## Tabelas — Fase 3 (tipos de tarefa e campos personalizados)
 
 Migration `1790000004_task_config.js`. Ver [ADR-010](decisions.md#adr-010--campos-personalizados-como-biblioteca-reutilizável).
 
@@ -101,7 +103,7 @@ Seed: 21 campos e 8 tipos (`BUG` com 9 campos, `DESENVOLVIMENTO` 7, `MELHORIA` 6
 
 Ações de auditoria: `task_type.created`, `task_type.updated`, `task_type.deleted`, `task_type.reordered`, `task_type.fields_updated`, `custom_field.created`, `custom_field.updated`, `custom_field.deleted`.
 
-## Collections — Fase 4 (tarefas)
+## Tabelas — Fase 4 (tarefas)
 
 ### `task_statuses` e `task_priorities` (migration `1790000005_workflow.js`)
 `key` (único, imutável), `name`, `description`, `color`, `order`, `is_active`, `is_default` (exatamente um, sempre ativo). Só status: `category` (`backlog`, `todo`, `in_progress`, `done`, `cancelled`). Seed: fluxo da diretriz §14 (Backlog → … → Concluído, + Cancelado) e prioridades Crítica/Alta/Média (padrão)/Baixa. Ver [ADR-011](decisions.md#adr-011--status-e-prioridades-globais-com-categoria).
@@ -130,7 +132,7 @@ Um registro por (tarefa, campo) — índice único. `value` (json, valor origina
 - `comments`: `task_id` (cascade), `user_id`, `content` (≤10000, Markdown + menções `@[Nome](id)`), `mentions` (json com IDs), `edited_at`, `deleted_at` (exclusão lógica). Índices `(task_id, created)` e `user_id`.
 
 ### `attachments` (migration `1790000008_attachments.js`)
-`task_id` (cascade), `file` (arquivo **protegido**, até 20 MB, lista de tipos permitidos), `name` (nome seguro), `mime` e `kind` (`image`/`document`, decididos pelo conteúdo), `size`, `uploaded_by`, `created`. Índice `(task_id, created)`. Campos personalizados de imagem/arquivo guardam IDs de anexos da própria tarefa.
+`task_id` (cascade), `file` (no Storage, até 20 MB, tipos permitidos pelo domínio), `name` (nome seguro), `mime` e `kind` (`image`/`document`, decididos pelo conteúdo), `size`, `uploaded_by`, `created`. Índice `(task_id, created)`. Campos personalizados de imagem/arquivo guardam IDs de anexos da própria tarefa.
 
 Ações de auditoria (entidade `task`): `task.created`, `task.updated`, `task.deleted`, `comment.added`, `comment.edited`, `comment.deleted`, `attachment.added`, `attachment.deleted`; e `status.*`, `priority.*`, `tag.*` nas respectivas entidades.
 
@@ -156,13 +158,13 @@ Anexo de comentário (vazio = anexo da tarefa). Índice em `comment_id`.
 - Subtarefas usam `tasks.parent_task_id` (Fase 4); ao excluir o pai, a API solta as filhas antes (com histórico).
 
 ## Fase 8 — Relatórios
-Sem collections novas: os relatórios leem `tasks` com uma consulta enxuta (só as colunas usadas nos cálculos) e `task_relations` para "bloqueadas". Os índices existentes por projeto/status atendem os filtros.
+Sem tabelas novas: os relatórios leem `tasks` com uma consulta enxuta (só as colunas usadas nos cálculos) e `task_relations` para "bloqueadas". Os índices existentes por projeto/status atendem os filtros.
 
-## Configurações aplicadas pelo seed
-- Rate limit ativo (login: 10/min por IP; `/api/v1/`: 600/min; `/api/`: 300/10s).
-- Logs com retenção de 14 dias e IP.
+## Cadastros iniciais (`0002_seed.sql`)
+- Permissões, perfis e matriz, status, prioridades, campos, tipos de tarefa (com as traduções) e a configuração geral — os mesmos que as migrations do PocketBase criavam.
+- Rate limit e logs não ficam no banco: limites por IP no código (`infrastructure/config.js`, ajustáveis por `KAMBAN_RATE_LIMITS`) e logs na saída da API.
 
-## Próximas collections (diretriz §31)
+## Próximas tabelas (diretriz §31)
 nenhuma pendente até a Fase 8 (relatórios usam os dados existentes).
 
 ## Expansão — Onda 1 (timeline) — migration `1790000018_timeline.js`
@@ -171,10 +173,10 @@ nenhuma pendente até a Fase 8 (relatórios usam os dados existentes).
 Início planejado (dia puro, meia-noite UTC). Índice `(project_id, start_date)`. Regra: não pode passar de `due_date` (validada na aplicação).
 
 ### `project_milestones`
-`project_id` → projects (cascade), `name` (≤120), `description` (≤1000), `due_date` (obrigatório, dia puro), `state` (`pending` | `done`), `created_by`. Índice `(project_id, due_date)`. Regras de API nulas (só `/api/v1`). Auditoria no projeto: `milestone.created/updated/deleted`.
+`project_id` → projects (cascade), `name` (≤120), `description` (≤1000), `due_date` (obrigatório, dia puro), `state` (`pending` | `done`), `created_by`. Índice `(project_id, due_date)`. Auditoria no projeto: `milestone.created/updated/deleted`.
 
 ## Expansão — Onda 2 (documentação) — migration `1790000019_docs.js`
-Concede `docs.view/edit/manage` aos perfis (ADMIN e MANAGER: as três; MEMBER: ver e editar; VIEWER: ver) sem sobrescrever matrizes já ajustadas. Regras de API nulas em todas (só `/api/v1`).
+Concede `docs.view/edit/manage` aos perfis (ADMIN e MANAGER: as três; MEMBER: ver e editar; VIEWER: ver) sem sobrescrever matrizes já ajustadas.
 
 ### `doc_spaces`
 `key` (única, `^[A-Z][A-Z0-9]{1,9}$`), `name` (≤80), `description` (≤500), `icon`, `color`, `project_id` → projects (cascade, opcional), `visibility` (`company` | `project`), `home_page_id`, `created_by`.
@@ -186,10 +188,10 @@ Concede `docs.view/edit/manage` aos perfis (ADMIN e MANAGER: as três; MEMBER: v
 `page_id` → doc_pages (cascade), `version`, `title`, `content`, `author`; única `(page_id, version)`.
 
 ### `doc_files`
-`space_id`, `page_id` → doc_pages (cascade), `file` (protegido), `name`, `mime`, `kind` (`image` | `document`), `size`, `uploaded_by`. Download só por `/api/v1/docs/files/{id}`, para quem vê a página.
+`space_id`, `page_id` → doc_pages (cascade), `file` (Storage), `name`, `mime`, `kind` (`image` | `document`), `size`, `uploaded_by`. Download só por `/api/v1/docs/files/{id}`, para quem vê a página.
 
 ## Gerenciamento de Projetos — GP-1 (quadro) — migrations `1790000020_project_plan.js` e `1790000021_plan_items.js`
-Módulo à parte das tarefas: nenhuma coluna em `tasks` (a `1790000021` remove `group_id`, `plan_position`, `progress`, `progress_set` e `resource_ids` que a primeira versão tinha criado). Regras de API nulas em todas (acesso só por `/api/v1`).
+Módulo à parte das tarefas: nenhuma coluna em `tasks` (a `1790000021` remove `group_id`, `plan_position`, `progress`, `progress_set` e `resource_ids` que a primeira versão tinha criado).
 
 ### `project_groups`
 `project_id` → projects (cascade), `parent_id` (texto; raiz = vazio; até 2 níveis), `name` (≤120), `color` (paleta), `position` (passo 1024), `created_by`. Índice `(project_id, parent_id, position)`.
@@ -211,7 +213,7 @@ A migration `1790000021` também concede `plan.view/edit/manage` aos perfis padr
 
 ### GP-3 — migration `1790000023_plan_collaboration.js`
 - `plan_item_updates`: `project_id` e `item_id` (cascade), `parent_id` (resposta; um nível), `author_id`, `content` (≤ 10.000), `mentions` → users (até 20), `edited_at`, `deleted_at` (exclusão lógica). Índices `(item_id, created)` e `(project_id)`.
-- `plan_item_files`: `project_id` e `item_id` (cascade), `file` (protegido, até 20 MB, tipos permitidos), `name`, `mime`, `kind` (`image` | `document`), `size`, `uploaded_by`.
+- `plan_item_files`: `project_id` e `item_id` (cascade), `file` (Storage, até 20 MB, tipos permitidos), `name`, `mime`, `kind` (`image` | `document`), `size`, `uploaded_by`.
 - `notifications`: `task_id` deixa de ser obrigatório; novos `plan_item_id` → plan_items (cascade) e `project_id` → projects (cascade); tipos `plan_mention` e `plan_reply`.
 
 ### Imagens na atualização — migration `1790000024_plan_update_files.js`
@@ -227,12 +229,12 @@ A migration `1790000021` também concede `plan.view/edit/manage` aos perfis padr
 - `plan_items.custom` (JSON `{ coluna: valor }`): valores das colunas personalizadas no elemento (excluir/alterar a coluna reescreve os valores na mesma transação).
 
 ## Configurador geral (migration 1790000027)
-- `platform_settings` — **registro único**: `values` (JSON só com o que foi alterado; o que falta usa o padrão do domínio `domain/platform-settings.js`), `files` (JSON com nome, tipo e tamanho de cada imagem) e os arquivos protegidos `logo_light`, `logo_dark`, `favicon` (até 1 MB; servidos só por `/api/v1/platform/branding/{slot}`). Sem regras de API (acesso só por `/api/v1`). Se o registro sumir, é recriado vazio.
+- `platform_settings` — **registro único**: `values` (JSON só com o que foi alterado; o que falta usa o padrão do domínio `domain/platform-settings.js`), `files` (JSON com nome, tipo e tamanho de cada imagem) e os arquivos `logo_light`, `logo_dark`, `favicon` (no Storage, até 1 MB; servidos só por `/api/v1/platform/branding/{slot}`). Se o registro sumir, é recriado vazio.
 - Permissão `platform.manage` criada e concedida ao Admin.
-- **Retenção do histórico:** a rotina diária `kamban_audit_retention` (03:45) apaga de `audit_logs` o que é anterior ao corte, em lotes de 1.000 (índice `idx_audit_created`), e grava `audit_log.purge`.
+- **Retenção do histórico:** a rotina diária `audit-retention` (03:45) apaga de `audit_logs` o que é anterior ao corte, em lotes de 1.000 (índice `idx_audit_created`), e grava `audit_log.purge`.
 
 ## E-mail (migration 1790000028)
-- **Servidor de e-mail:** nas configurações do próprio PocketBase (`smtp` e `meta.senderName/senderAddress/appURL`) — não há collection nova para isso. Com `--encryptionEnv` (ver implantação), o PocketBase guarda as configurações cifradas.
+- `email_settings` (`0003_email_settings.sql`; antes, nas configurações internas do PocketBase) — **linha única** (`id = 'default'`): `enabled`, `host`, `port`, `username`, `password_secret` (senha cifrada pela API com AES-256-GCM e a `KAMBAN_SECRET_KEY`; nunca em texto puro), `tls`, `sender_name`, `sender_address`, `app_url`.
 - `email_outbox` — fila de saída: `to`, `kind` (notification, password_reset, invite, test), `subject`, `html`, `text` (apagados depois de enviar ou desistir), `status` (pending, sent, failed), `attempts`, `last_error`, `next_attempt_at`, `sent_at`; índice `(status, next_attempt_at, created)`.
 - `auth_tokens` — links de uso único: `user_id` (cascade), `purpose` (reset, invite), `token_hash` (único; o token em si nunca é gravado), `expires_at`, `used_at`.
 - `users.email_notifications_off` — a pessoa desligou as notificações por e-mail.
@@ -245,4 +247,9 @@ A migration `1790000021` também concede `plan.view/edit/manage` aos perfis padr
 ## Webhooks (migration 1790000030)
 - `webhooks`: `name`, `url`, `events` (JSON: eventos do catálogo ou `grupo.*`), `secret` (segredo de assinatura — guardado para assinar; nunca sai na API depois da criação), `active`, `created_by`, `last_status`, `last_delivery_at`, `consecutive_failures`.
 - `webhook_deliveries`: `webhook_id` (cascade), `event`, `payload` (JSON), `status` (pending, success, failed), `attempts`, `response_status`, `response_body` (até 1.000), `error`, `duration_ms`, `next_attempt_at`, `delivered_at`; índices `(status, next_attempt_at, created)` e `(webhook_id, created)`. Encerradas saem depois de 30 dias.
-- O histórico (`auditRepository.record`) enfileira as entregas na mesma transação (`infrastructure/webhook-repositories.js`, `withWebhooks`).
+- O histórico (`auditRepository.record`) enfileira as entregas na mesma transação (`infrastructure/repositories/webhooks.js`, `withWebhooks`).
+
+## Supabase (migrations `0004` a `0006`)
+- `0004_lockdown.sql`: RLS em todas as tabelas e `REVOKE` de `anon`/`authenticated` no esquema — a API REST e o Realtime do Supabase não enxergam nada. O dono das tabelas (o usuário da API) não passa pelo RLS.
+- `storage_trash` (`0005_storage_trash.sql`): `key` + `created`. O gatilho `trash_files` em `attachments`, `doc_files`, `plan_item_files` e `platform_settings` guarda a chave do arquivo de cada linha apagada ou com arquivo trocado (inclusive nas exclusões em cascata); se a transação for desfeita, a entrada também é. A rotina `storage-trash` apaga do Storage o que tem mais de 10 min. Uploads de gravações desfeitas entram pelo mesmo caminho (`guardStorage`).
+- `0006_realtime.sql`: gatilho `notify_change` nas tabelas acompanhadas (`domain/realtime.js#WATCHED`) — avisa o canal `realtime_<esquema>` com tabela, ação, id e os vínculos (projeto, tarefa, elemento, pessoa); o Postgres entrega depois do commit e cada instância da API repassa às conexões SSE.

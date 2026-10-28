@@ -1,6 +1,6 @@
 # Arquitetura
 
-> Referência: [diretriz-desenvolvimento.md](diretriz-desenvolvimento.md) §2–§4, §29. Decisões em [decisions.md](decisions.md).
+> Referência: [diretriz-desenvolvimento.md](diretriz-desenvolvimento.md) §2–§4, §29. Decisões em [decisions.md](decisions.md) (backend atual: [ADR-044](decisions.md#adr-044--o-pocketbase-sai-api-em-node-sobre-o-supabase-uma-edição-só)).
 
 ## Visão geral
 
@@ -11,55 +11,60 @@
 └───────────────────────────────┬───────────────────────────────────┘
                                 │ /api/v1  (cookie HttpOnly + X-Requested-With)
 ┌───────────────────────────────▼───────────────────────────────────┐
-│  backend/ (PocketBase 0.40 + hooks JS)                            │
+│  backend/ (Node 24 + Fastify 5)                                   │
 │  http (rotas/handler) ──▶ application (casos de uso)              │
 │                              │                                    │
 │                         domain (regras puras)                     │
 │                              │ portas (interfaces)                │
-│                  infrastructure (repositórios PocketBase)         │
+│                  infrastructure (repositórios SQL, Storage)       │
 │                              │                                    │
-│                         SQLite (pb_data)                          │
+│          Supabase: Postgres 17 (esquema avanza) + Storage         │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-- **API-first**: o frontend só conversa com `/api/v1`. A API genérica do PocketBase (`/api/collections/...`) fica bloqueada (regras nulas) — ver [security.md](security.md).
-- Em produção o PocketBase serve o build do frontend (`backend/pb_public`) na mesma origem; em desenvolvimento o Vite faz proxy de `/api`.
+- **API-first**: o frontend só conversa com `/api/v1` (e o tempo real em `/api/realtime`). Só a API acessa o banco, pela conexão direta do Postgres; as tabelas têm RLS ligado e nenhum privilégio para `anon`/`authenticated`, então a API REST do Supabase não enxerga nada — ver [security.md](security.md).
+- Em produção a API serve o build do frontend (`backend/public`) na mesma origem; em desenvolvimento o Vite faz proxy de `/api`.
 
 ## Backend (`backend/`)
 
 ```
 backend/
-├── bin/                     # binário do PocketBase (npm run setup) — não versionar
-├── pb_migrations/           # esquema e seed (JS, executados pelo PocketBase)
-├── pb_hooks/
-│   ├── main.pb.js           # SOMENTE registro de rotas/middlewares
-│   └── src/
-│       ├── core/            # erros, envelope de resposta, validação, paginação (puros)
-│       ├── domain/          # regras de negócio puras: RBAC, sessão, usuário, catálogo de permissões
-│       ├── application/     # casos de uso (auth, roles, users), auditoria, presenters (DTO)
-│       ├── infrastructure/  # repositórios PocketBase, config (env), container (composition root)
-│       └── http/            # handler (envelope, CSRF, sessão, correlation id), rotas, OpenAPI
+├── db/migrations/           # esquema, cadastros iniciais, RLS, lixeira do Storage, gatilhos do tempo real (.sql)
+├── src/
+│   ├── server.js            # ponto de entrada: confere a configuração, migra, sobe HTTP, tempo real e rotinas
+│   ├── core/                # erros, envelope de resposta, validação, paginação (puros)
+│   ├── domain/              # regras de negócio puras: RBAC, sessão, usuário, catálogo de permissões
+│   ├── application/         # casos de uso (assíncronos), auditoria, presenters (DTO), portas (ports.js)
+│   ├── infrastructure/      # config (env), database (pool/transações), migrate, storage, secrets, adapters,
+│   │                        # jobs/cron/locks, realtime (LISTEN), repositories/*.js (SQL), container
+│   └── http/                # server (Fastify), route-table + routes, handler (envelope, CSRF, sessão),
+│                            # files, rate-limit, realtime (SSE), OpenAPI
 ├── tests/
 │   ├── unit/                # domínio + aplicação com fakes em memória (node --test)
-│   ├── api/                 # ponta a ponta contra um PocketBase real e isolado
-│   └── support/             # fakes e harness
-└── scripts/                 # setup, dev, create-admin
+│   ├── db/                  # repositórios e gatilhos contra o Postgres do Supabase local
+│   ├── api/                 # ponta a ponta contra a API real (esquema e bucket isolados)
+│   └── support/             # fakes e harness (db-harness, server-harness, SMTP, SSE)
+└── scripts/                 # setup, dev, start, create-admin, demo, import-pocketbase, testes de carga
 ```
 
 Regras de dependência (de fora para dentro):
 
 | Camada | Pode depender de | Nunca depende de |
 |---|---|---|
-| `domain` | `core` | PocketBase, HTTP, application |
-| `application` | `domain`, `core`, portas (`application/ports.js`) | PocketBase, HTTP |
-| `infrastructure` | tudo acima + globais do PocketBase (`$app`, `$dbx`…) | `http` |
+| `domain` | `core` | banco, HTTP, application |
+| `application` | `domain`, `core`, portas (`application/ports.js`) | banco, HTTP |
+| `infrastructure` | tudo acima + `pg`, Storage, nodemailer (`database.js` é o único que conhece o `pg`) | `http` |
 | `http` | `application` via container | regras de negócio |
 
-**Restrições do JSVM (goja)**: código em `pb_hooks`/`pb_migrations` é CommonJS síncrono. Cada handler roda numa VM isolada e não enxerga variáveis do arquivo — por isso `main.pb.js` faz `require()` dentro de cada handler. O ESLint bloqueia `?.`, `??` e `await` nessas pastas.
+**Código assíncrono**: casos de uso e repositórios devolvem Promises. Os fakes dos testes unitários também (um `await` esquecido falha no teste), e o ESLint proíbe callback `async` em `forEach`/`filter`/`some`/`every`/`find`/`sort`/`reduce` (a Promise não seria esperada) — use `for...of` ou `Promise.all`.
 
-**Transações**: casos de uso recebem `unitOfWork.run(fn)`; a implementação usa `app.runInTransaction` e entrega repositórios transacionais. Operação + auditoria são gravadas atomicamente.
+**Transações**: casos de uso recebem `unitOfWork.run(fn)`; a implementação usa `db.transaction` (`infrastructure/database.js`), que guarda a conexão aberta no contexto assíncrono (AsyncLocalStorage): toda consulta dentro dela — inclusive de repositórios montados fora — usa a mesma conexão, e transações aninhadas juntam-se à de fora. Operação + auditoria são gravadas atomicamente; `detached` consulta por fora (o que precisa valer mesmo se a transação for desfeita). Arquivos vão para o Storage antes do commit; `guardStorage` põe a chave na lixeira (`storage_trash`) por fora e a tira dentro da transação, então uploads de gravações desfeitas também são apagados pela rotina.
 
-**Trocar o banco** (PostgreSQL, Supabase…): reescrever `infrastructure/` (e o adaptador HTTP, se sair do PocketBase). `domain/` e `application/` não mudam — as portas estão em `application/ports.js`.
+**Esquema**: migrations SQL numeradas em `backend/db/migrations`, aplicadas em ordem ao subir (`infrastructure/migrate.js`, registro em `schema_migrations`, trava para várias instâncias). Tabelas e colunas mantêm os nomes das collections do PocketBase — ver [database.md](database.md).
+
+**Rotinas**: `infrastructure/jobs.js` confere a cada minuto as expressões cron (`cron.js`); as que mexem em dados rodam com `pg_try_advisory_lock` (`locks.js`), então com várias instâncias só uma executa.
+
+**Trocar o banco ou o Storage**: reescrever `infrastructure/`. `domain/` e `application/` não mudam — as portas estão em `application/ports.js` (foi assim que o backend saiu do PocketBase).
 
 ## Frontend (`web/`)
 
@@ -96,13 +101,13 @@ web/src/
 Estratégia de cache: `staleTime` 30s; listas usam `keepPreviousData` na paginação; erros 4xx não são repetidos; mutações invalidam as chaves afetadas; logout e sessão expirada limpam todo o cache.
 
 ## Tempo real
-- **Servidor:** `onRealtimeSubscribeRequest` (`http/realtime.js`) confere a sessão do cookie e o CSRF e deixa só os tópicos autorizados (`application/realtime.js`); `onRecordAfter{Create,Update,Delete}Success` das coleções de `domain/realtime.js#WATCHED` monta o aviso (`infrastructure/realtime.js`, projeto descoberto pela tarefa quando preciso) e envia pelo broker do PocketBase a quem assina o tópico — depois da transação confirmada.
+- **Servidor:** gatilhos `notify_change` nas tabelas de `domain/realtime.js#WATCHED` (migration `0006_realtime.sql`) avisam o canal `realtime_<esquema>` com os identificadores da mudança; o Postgres só entrega depois do commit. Cada instância da API escuta o canal numa conexão dedicada (`infrastructure/realtime.js`), monta o aviso uma vez (`application/realtime.js#eventFor`, projeto descoberto pela tarefa quando preciso) e o entrega às conexões SSE que assinam o tópico. `http/realtime.js` serve `/api/realtime` no mesmo protocolo do PocketBase (`PB_CONNECT` + `POST` das assinaturas), confere a sessão do cookie e o CSRF e deixa só os tópicos autorizados. A rotina `realtime-keepalive` manda um sinal de vida a cada 3 min (proxies derrubam conexões paradas).
 - **Web:** `core/realtime/realtime-client.ts` (uma conexão `EventSource` por aba, assinaturas com contagem, reconexão), injetado por `RealtimeContext`; `useLiveProject(id)` / `useLiveNotifications(id)` (`presentation/common/use-live.ts`) traduzem cada aviso nas chaves do cache a invalidar (`domain/realtime.ts`), agrupadas em 250 ms e no máximo uma busca a cada 2,5 s por tela; `useLiveRefetchInterval` deixa a consulta periódica em 5 min com o tempo real ligado e `useRealtimeResync` (no AppShell) busca de novo as telas abertas ao reconectar.
 
 ## Fluxo de uma requisição
 
 1. `ApiClient` envia `X-Correlation-Id`, `X-Requested-With: kamban` (mutações) e o cookie de sessão.
-2. Middleware `kamban_api_errors` (preso a cada rota por `apiRoute` em `main.pb.js`, **nunca global**) garante envelope padrão até para erros da plataforma (rate limit, body limit); rota inexistente cai no `/api/v1/{path...}`. **Regra:** nada de `routerUse` com JS — no PocketBase o middleware em JS segura uma VM do pool durante todo o `e.next()`, inclusive nas conexões do tempo real, que ficam abertas por horas (o pool acabava com algumas dezenas de abas logadas). Os cabeçalhos de segurança do frontend ficam na rota própria `GET /{path...}` (`$apis.static` + middleware só dela); a rotina `kamban_realtime_keepalive` manda um sinal de vida a cada 3 min (o PocketBase fecha conexões sem mensagens após 5 min). Teste de regressão: `tests/api/capacity.test.js`.
-3. `handler.handle`: correlation id → CSRF → sessão (`auth.authenticate`) → caso de uso → `{ data, meta, error }`.
+2. `http/server.js` (Fastify): limite por IP (`rate-limit.js`) antes de ler o corpo, limite do corpo por rota (`route-table.js`) e multipart; erros da plataforma (429, 413, JSON inválido, rota inexistente em `/api/`) saem no envelope padrão. Toda resposta leva os cabeçalhos de segurança; o frontend, a CSP e o fallback da SPA para `index.html`.
+3. `handler.handle`: correlation id → CSRF → sessão (`auth.authenticate`, cookie ou `Bearer`) → caso de uso → `{ data, meta, error }`.
 4. Caso de uso valida entrada, aplica RBAC/regras de domínio, grava via `unitOfWork` com auditoria.
 5. Erros de aplicação viram `{ error: { code, message, details } }`; erros inesperados viram `INTERNAL_ERROR` sem vazar detalhes e são logados com o correlation id.
