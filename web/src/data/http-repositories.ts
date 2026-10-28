@@ -191,6 +191,10 @@ export function createHttpApiTokenRepository(api: ApiClient): ApiTokenRepository
     async revoke(id) {
       return toApiToken((await api.del<ApiTokenDto>(`/auth/tokens/${encodeURIComponent(id)}`)).data)
     },
+    async reveal(id) {
+      const { data } = await api.post<ApiTokenDto>(`/auth/tokens/${encodeURIComponent(id)}/reveal`, {})
+      return { ...toApiToken(data), token: data.token ?? '' }
+    },
     async listAll() {
       return (await api.get<ApiTokenDto[]>('/settings/api-tokens')).data.map(toApiToken)
     },

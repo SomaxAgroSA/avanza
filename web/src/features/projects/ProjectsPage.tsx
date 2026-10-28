@@ -18,6 +18,7 @@ import {
 } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { useCopy } from '@/presentation/common/use-copy'
 import { useCan } from '@/features/auth/session'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
@@ -37,6 +38,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const locale = i18n.language
   const navigate = useNavigate()
   const errorMessage = useErrorMessage()
+  const copy = useCopy()
   const canCreate = useCan('projects.create')
   const [params, setParams] = useSearchParams()
 
@@ -194,7 +196,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
               key: 'copy',
               label: t('projects.copyKey'),
               icon: <Copy />,
-              onSelect: () => void navigator.clipboard?.writeText(project.key).then(() => notify.success(t('common.copied'))),
+              onSelect: () => void copy(project.key),
             },
             ...(project.archivedAt && project.capabilities.archive
               ? [{ key: 'unarchive', label: t('projects.unarchive'), icon: <ArchiveRestore />, onSelect: () => unarchive(project) }]

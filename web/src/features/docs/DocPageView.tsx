@@ -5,7 +5,8 @@ import { FilePlus2, FileText, FolderInput, History, Link2, MoreHorizontal, PenLi
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { docOutline, MAX_DOC_DEPTH, type DocPage, type DocSpaceDetail, type DocTreePage } from '@/domain/docs'
-import { AppBreadcrumb, AppButton, AppDropdown, AppEmptyState, AppErrorState, AppIconButton, AppSkeleton, notify, type AppDropdownItem } from '@/presentation/components'
+import { AppBreadcrumb, AppButton, AppDropdown, AppEmptyState, AppErrorState, AppIconButton, AppSkeleton, type AppDropdownItem } from '@/presentation/components'
+import { useCopy } from '@/presentation/common/use-copy'
 import { AppRichTextView, scrollToHeading } from '@/presentation/components/rich-text'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { editPath, pagePath } from './docs-paths'
@@ -54,12 +55,8 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
   const depth = page.ancestors.length + 1
   const canEdit = page.capabilities.edit
 
-  const copyLink = () => {
-    void navigator.clipboard
-      .writeText(`${window.location.origin}${pagePath(page.space.key, page.id)}`)
-      .then(() => notify.success(t('common.copied')))
-      .catch(() => notify.error(t('docs.page.copyFailed')))
-  }
+  const copy = useCopy()
+  const copyLink = () => void copy(`${window.location.origin}${pagePath(page.space.key, page.id)}`)
   const moreItems: AppDropdownItem[] = [
     ...(canEdit && depth < MAX_DOC_DEPTH ? [{ key: 'child', label: t('docs.page.addChild'), icon: <FilePlus2 />, onSelect: () => onCreateChild(page.id) }] : []),
     { key: 'link', label: t('docs.page.copyLink'), icon: <Link2 />, onSelect: copyLink },

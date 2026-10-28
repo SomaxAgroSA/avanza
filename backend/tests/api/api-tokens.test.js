@@ -109,4 +109,30 @@ describe('API Tokens de API', { timeout: 180000 }, () => {
     assert.equal((await root.patch(`/users/${users['gil@example.com'].id}/status`, { status: 'disabled' })).status, 200)
     assert.equal((await bearer(last.token).get('/auth/me')).status, 401)
   })
+
+  it('ver de novo: o dono vê e copia pelo navegador (histórico); com o próprio token, de outra pessoa ou revogado, não', async () => {
+    const roles = (await root.get('/roles')).body.data
+    await root.post('/users', { name: 'Vera', email: 'vera@example.com', password: PASSWORD, role_id: roles.find((r) => r.code === 'MANAGER').id })
+    const gestor = createClient(pb.api)
+    await gestor.login('vera@example.com', PASSWORD)
+    const created = (await gestor.post('/auth/tokens', { name: 'Claude VS Code', expires_in_days: 30 })).body.data
+    const listed = (await gestor.get('/auth/tokens')).body.data.find((t) => t.id === created.id)
+    assert.equal(listed.revealable, true)
+    assert.equal('token' in listed, false)
+
+    const shown = await gestor.post(`/auth/tokens/${created.id}/reveal`)
+    assert.equal(shown.status, 200, JSON.stringify(shown.body))
+    assert.equal(shown.body.data.token, created.token)
+    const history = (await root.get('/audit-logs?action=api_token.revealed')).body.data
+    assert.equal(history.length, 1)
+    assert.equal(JSON.stringify(history).includes(created.token), false)
+
+    // sem o header de CSRF (o navegador sempre manda), com o próprio token e para outra pessoa: não
+    assert.equal((await gestor.post(`/auth/tokens/${created.id}/reveal`, {}, { csrf: false })).status, 403)
+    assert.equal((await bearer(created.token).post(`/auth/tokens/${created.id}/reveal`)).body.error.code, 'TOKEN_NOT_ALLOWED')
+    assert.equal((await root.post(`/auth/tokens/${created.id}/reveal`)).body.error.code, 'API_TOKEN_NOT_FOUND')
+
+    await gestor.del(`/auth/tokens/${created.id}`)
+    assert.equal((await gestor.post(`/auth/tokens/${created.id}/reveal`)).body.error.code, 'API_TOKEN_NOT_REVEALABLE')
+  })
 })

@@ -103,6 +103,35 @@ describe('application/api-tokens', () => {
     assert.equal((await tokens.revoke(await ctxOf(admin), other.id)).state, 'revoked')
   })
 
+  it('ver de novo: só o dono, pelo navegador, com o token ativo; o valor sai cifrado do banco e a exibição fica no histórico', async () => {
+    const { deps, gestor, admin, ctxOf, tokens } = await setup()
+    const created = await tokens.create(await ctxOf(gestor), { name: 'Claude', expires_in_days: 30 })
+    assert.equal(created.revealable, true)
+    assert.equal((await tokens.listMine(await ctxOf(gestor)))[0].revealable, true)
+    // guardado cifrado, nunca em claro
+    assert.equal(Object.values(deps.store.apiTokens[0]).includes(created.token), false)
+
+    const shown = await tokens.reveal(await ctxOf(gestor), created.id)
+    assert.equal(shown.token, created.token)
+    assert.equal(shown.name, 'Claude')
+    const entry = deps.store.audit.at(-1)
+    assert.equal(entry.action, 'api_token.revealed')
+    assert.equal(entry.entityId, created.id)
+    assert.equal(JSON.stringify(entry).includes(created.token), false)
+
+    // só pelo navegador; de outra pessoa (nem o Admin) responde como inexistente
+    assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(gestor, 'token'), created.id)), 'TOKEN_NOT_ALLOWED')
+    assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(admin), created.id)), 'API_TOKEN_NOT_FOUND')
+    assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(gestor), 'naoexiste')), 'API_TOKEN_NOT_FOUND')
+
+    // revogado ou criado antes de guardar o valor: não dá para ver
+    await tokens.revoke(await ctxOf(gestor), created.id)
+    assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(gestor), created.id)), 'API_TOKEN_NOT_REVEALABLE')
+    const legacy = await deps.apiTokenRepository.create({ userId: gestor.id, name: 'Antigo', tokenHash: 'h', prefix: 'kb_pat_xxxx', expiresAt: null, createdAt: deps.clock.now() })
+    assert.equal((await tokens.listMine(await ctxOf(gestor))).find((t) => t.id === legacy.id).revealable, false)
+    assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(gestor), legacy.id)), 'API_TOKEN_NOT_REVEALABLE')
+  })
+
   it('com o próprio token não dá para criar/revogar tokens nem trocar senha ou sessões', async () => {
     const { deps, gestor, ctxOf, tokens } = await setup()
     const created = await tokens.create(await ctxOf(gestor), { name: 'BI', expires_in_days: 30 })

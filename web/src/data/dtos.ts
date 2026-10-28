@@ -663,6 +663,7 @@ export interface ApiTokenDto {
   last_used_at: string | null
   last_used_ip: string | null
   revoked_at: string | null
+  revealable?: boolean
   user?: UserSummaryDto
   token?: string
 }

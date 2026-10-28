@@ -7,6 +7,7 @@ import type { ApiTokenRepository } from '@/domain/repositories'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ApiTokensPage } from './ApiTokensPage'
 import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
+import { notify } from '@/presentation/components'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -23,6 +24,7 @@ const TOKEN: ApiToken = {
   lastUsedAt: null,
   lastUsedIp: null,
   revokedAt: null,
+  revealable: true,
   user: null,
 }
 
@@ -52,6 +54,13 @@ describe('Minha conta — tokens de API', () => {
     expect(screen.getByText('Conectar ao Claude (Claude Code)')).toBeInTheDocument()
     expect(screen.getByText(/claude mcp add --transport http avanza http:\/\/\S+\/api\/mcp --header "Authorization: Bearer kb_pat_ab12x+"/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copiar comando do Claude' })).toBeInTheDocument()
+    // servidor da rede local sem HTTPS: não há navigator.clipboard — a cópia usa o método antigo e avisa
+    const exec = vi.fn(() => true)
+    Object.defineProperty(document, 'execCommand', { value: exec, configurable: true })
+    const success = vi.spyOn(notify, 'success')
+    await userEvent.click(screen.getByRole('button', { name: 'Copiar token' }))
+    expect(exec).toHaveBeenCalledWith('copy')
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Copiado para a área de transferência'))
     await userEvent.click(screen.getByRole('button', { name: 'Já copiei' }))
     await waitFor(() => expect(screen.queryByText('Copie o seu token agora')).not.toBeInTheDocument())
     expect(screen.queryByDisplayValue('kb_pat_ab12' + 'x'.repeat(36))).not.toBeInTheDocument()
@@ -67,6 +76,29 @@ describe('Minha conta — tokens de API', () => {
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: 'Revogar' }))
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('t1'))
+  })
+
+  it('ver token: mostra de novo o valor e o comando do Claude para copiar; o antigo explica que não dá', async () => {
+    const value = 'kb_pat_ab12' + 'y'.repeat(36)
+    const reveal = vi.fn<ApiTokenRepository['reveal']>(() => Promise.resolve({ ...TOKEN, token: value }))
+    const legacy = { ...TOKEN, id: 't2', name: 'Antigo', revealable: false }
+    const info = vi.spyOn(notify, 'info')
+    setup(['api_tokens.create'], { listMine: () => Promise.resolve([TOKEN, legacy]), reveal })
+    const viewOf = (name: string) => within(screen.getByText(name).closest('tr') as HTMLElement).getByRole('button', { name: 'Visualizar' })
+    await screen.findByText('Antigo')
+    await userEvent.click(viewOf('Power BI'))
+    await waitFor(() => expect(reveal).toHaveBeenCalledWith('t1'))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Token "Power BI"')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Token')).toHaveValue(value)
+    expect(within(dialog).getByText(new RegExp(`claude mcp add .* --header "Authorization: Bearer ${value}"`))).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Copiar comando do Claude' })).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Já copiei' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await userEvent.click(viewOf('Antigo'))
+    expect(reveal).toHaveBeenCalledTimes(1)
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/não pode ser mostrado de novo/))
   })
 
   it('sem a permissão não há "Novo token"', async () => {

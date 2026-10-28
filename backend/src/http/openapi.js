@@ -875,6 +875,14 @@ function build() {
       '/auth/tokens/{id}': {
         delete: op('Revoga um token meu (só no navegador); de outra pessoa = API_TOKEN_NOT_FOUND', ['auth'], { 200: ok('Token', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
+      '/auth/tokens/{id}/reveal': {
+        post: op('Mostra de novo o valor de um token meu, ativo, para copiar (só no navegador; fica no histórico como api_token.revealed). De outra pessoa = API_TOKEN_NOT_FOUND; revogado, vencido ou criado antes de guardar o valor = API_TOKEN_NOT_REVEALABLE', ['auth'], {
+          200: ok('Token com o valor', { type: 'object', properties: { token: { type: 'string' } } }),
+          403: errorResponse('TOKEN_NOT_ALLOWED'),
+          404: errorResponse('API_TOKEN_NOT_FOUND'),
+          409: errorResponse('API_TOKEN_NOT_REVEALABLE'),
+        }, { parameters: [idParam, csrfHeader] }),
+      },
       '/settings/api-tokens': {
         get: op('Tokens de todas as pessoas (integrations.manage), com user', ['integrations'], { 200: ok('Tokens', { type: 'array', items: { type: 'object' } }) }),
       },

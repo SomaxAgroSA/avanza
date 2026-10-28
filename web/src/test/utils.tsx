@@ -352,6 +352,7 @@ export function fakeRepositories(overrides: {
       listMine: () => Promise.resolve([]),
       create: notImplemented,
       revoke: notImplemented,
+      reveal: notImplemented,
       listAll: () => Promise.resolve([]),
       revokeAny: notImplemented,
       ...overrides.apiTokens,

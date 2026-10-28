@@ -21,12 +21,14 @@ export interface ApiToken {
   lastUsedAt: Date | null
   lastUsedIp: string | null
   revokedAt: Date | null
+  /** O dono pode ver o valor de novo (criado depois desta opção e ainda ativo). */
+  revealable: boolean
   /** Só na lista do Admin (todos os tokens). */
   user: UserSummary | null
 }
 
 export interface CreatedApiToken extends ApiToken {
-  /** O valor completo — só existe na resposta da criação. */
+  /** O valor completo — só na criação e no "Ver token" (do próprio dono). */
   token: string
 }
 

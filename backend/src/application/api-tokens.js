@@ -3,8 +3,11 @@
  * criou para chamar a API sem o navegador: as permissões são as do perfil da pessoa no momento de cada
  * chamada, e ele para de valer se a pessoa for desativada, se vencer ou se for revogado.
  *
- * Porta: `apiTokenRepository` { create, findById, findByHash, listByUser, listAll, countActiveByUser,
- * touch(id, at, ip), revoke(id, at) }.
+ * O valor fica guardado cifrado (só a infraestrutura cifra e decifra) para o dono poder ver e copiar de
+ * novo pelo navegador (`reveal`, com histórico) — ADR-046.
+ *
+ * Porta: `apiTokenRepository` { create (com `value`), findById, findByHash, listByUser, listAll,
+ * countActiveByUser, touch(id, at, ip), revoke(id, at), revealValue(id) → valor ou null }.
  */
 
 const { appError } = require('../core/errors')
@@ -34,6 +37,8 @@ function createApiTokenService(deps) {
       last_used_at: iso(token.lastUsedAt),
       last_used_ip: token.lastUsedIp || null,
       revoked_at: iso(token.revokedAt),
+      // o dono pode ver o valor de novo (tokens criados antes de guardar o valor não podem)
+      revealable: !!token.revealable,
       user: user ? toUserSummary(user) : undefined,
     }
   }
@@ -51,6 +56,7 @@ function createApiTokenService(deps) {
         userId: ctx.principal.userId,
         name: input.values.name,
         tokenHash: deps.tokens.hash(value),
+        value,
         prefix: tokenDomain.displayPrefix(value),
         expiresAt: tokenDomain.expiresAt(input.values.expiresInDays, now),
         createdAt: now,
@@ -98,6 +104,24 @@ function createApiTokenService(deps) {
   }
 
   /**
+   * Mostra de novo o valor (para copiar): só o dono, só pelo navegador e só com o token ativo; de outra
+   * pessoa — inclusive para quem gerencia integrações — responde como inexistente. Fica no histórico.
+   */
+  async function reveal(ctx, id) {
+    assertBrowserSession(ctx)
+    rbac.assertAuthenticated(ctx.principal)
+    const token = id ? await deps.apiTokenRepository.findById(id) : null
+    if (!token || token.userId !== ctx.principal.userId) throw appError('API_TOKEN_NOT_FOUND')
+    if (tokenDomain.tokenState(token, deps.clock.now()) !== 'active' || !token.revealable) throw appError('API_TOKEN_NOT_REVEALABLE')
+    const value = await deps.apiTokenRepository.revealValue(token.id)
+    if (!value) throw appError('API_TOKEN_NOT_REVEALABLE')
+    await deps.auditRepository.record(
+      buildAuditEntry(ctx, { entityType: 'api_token', entityId: token.id, action: 'api_token.revealed', newValue: { name: token.name, prefix: token.prefix } }),
+    )
+    return Object.assign({ token: value }, present(token))
+  }
+
+  /**
    * Resolve o valor do header `Authorization: Bearer` num principal. Nunca lança erro.
    * Retorna { principal, token } ou { principal: null, reason }.
    */
@@ -122,7 +146,7 @@ function createApiTokenService(deps) {
     return { principal, token }
   }
 
-  return { create, listMine, listAll, revoke, authenticate }
+  return { create, listMine, listAll, revoke, reveal, authenticate }
 }
 
 module.exports = { createApiTokenService, assertBrowserSession }

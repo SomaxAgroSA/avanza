@@ -102,6 +102,8 @@ export interface ApiTokenRepository {
   listMine(): Promise<ApiToken[]>
   create(name: string, expiresInDays: ApiTokenExpiry): Promise<CreatedApiToken>
   revoke(id: string): Promise<ApiToken>
+  /** Mostra de novo o valor de um token meu (fica no histórico). */
+  reveal(id: string): Promise<CreatedApiToken>
   listAll(): Promise<ApiToken[]>
   revokeAny(id: string): Promise<ApiToken>
 }

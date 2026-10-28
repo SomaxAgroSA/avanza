@@ -207,6 +207,7 @@ const ROUTES = [
   ['GET', '/api/v1/auth/tokens', 'listMyApiTokens'],
   ['POST', '/api/v1/auth/tokens', 'createApiToken', JSON_LIMIT],
   ['DELETE', '/api/v1/auth/tokens/:id', 'revokeApiToken'],
+  ['POST', '/api/v1/auth/tokens/:id/reveal', 'revealApiToken'],
   ['GET', '/api/v1/settings/api-tokens', 'listAllApiTokens'],
   ['DELETE', '/api/v1/settings/api-tokens/:id', 'revokeApiToken'],
   ['GET', '/api/v1/settings/webhooks', 'listWebhooks'],

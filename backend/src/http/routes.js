@@ -579,6 +579,7 @@ function confirmPasswordReset(e) {
 const listMyApiTokens = configAction('apiTokens', (s, ctx) => s.listMine(ctx))
 const createApiToken = configAction('apiTokens', (s, ctx, r) => s.create(ctx, r.body()), 201)
 const revokeApiToken = configAction('apiTokens', (s, ctx, r) => s.revoke(ctx, r.id))
+const revealApiToken = configAction('apiTokens', (s, ctx, r) => s.reveal(ctx, r.id))
 const listAllApiTokens = configAction('apiTokens', (s, ctx) => s.listAll(ctx))
 
 // ---------------------------------------------------------------- webhooks
@@ -791,6 +792,7 @@ module.exports = {
   listMyApiTokens,
   createApiToken,
   revokeApiToken,
+  revealApiToken,
   listAllApiTokens,
   listWebhooks,
   webhookEvents,

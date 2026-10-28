@@ -928,6 +928,7 @@ export function toApiToken(dto: ApiTokenDto): ApiToken {
     lastUsedAt: toDate(dto.last_used_at),
     lastUsedIp: dto.last_used_ip ?? null,
     revokedAt: toDate(dto.revoked_at),
+    revealable: !!dto.revealable,
     user: dto.user ? toUserSummary(dto.user) : null,
   }
 }

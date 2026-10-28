@@ -350,10 +350,17 @@ function createFakeRepositories(store) {
   }
 
   const apiTokenRepository = {
+    /** O valor fica "cifrado" (o banco real usa AES-GCM com a chave do servidor). */
     create: (data) => {
-      const token = Object.assign({ id: nextId('pat_'), lastUsedAt: null, lastUsedIp: '', revokedAt: null }, data)
+      const token = Object.assign({ id: nextId('pat_'), lastUsedAt: null, lastUsedIp: '', revokedAt: null }, data, { valueSecret: data.value ? `cifrado(${Buffer.from(data.value).toString('base64')})` : '', revealable: !!data.value })
+      delete token.value
       store.apiTokens.push(token)
       return token
+    },
+    revealValue: (id) => {
+      const token = store.apiTokens.find((t) => t.id === id)
+      const match = token && /^cifrado\((.*)\)$/.exec(token.valueSecret)
+      return match ? Buffer.from(match[1], 'base64').toString() : null
     },
     findById: (id) => store.apiTokens.find((t) => t.id === id) || null,
     findByHash: (hash) => store.apiTokens.find((t) => t.tokenHash === hash) || null,

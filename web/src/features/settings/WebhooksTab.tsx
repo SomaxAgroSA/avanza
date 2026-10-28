@@ -25,6 +25,7 @@ import {
 } from '@/presentation/components'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { useCopy } from '@/presentation/common/use-copy'
 
 const LIST_KEY = ['webhooks'] as const
 const CATALOG_KEY = ['webhooks', 'catalog'] as const
@@ -280,7 +281,8 @@ function WebhookDialog({ webhook, catalog, onClose, onSaved }: { webhook: Webhoo
 
 function SecretDialog({ name, secret, onClose }: { name: string; secret: string; onClose: () => void }) {
   const { t } = useTranslation()
-  const copy = () => void navigator.clipboard?.writeText(secret).then(() => notify.success(t('common.copied')))
+  const copyText = useCopy()
+  const copy = () => void copyText(secret)
   return (
     <AppDialog open onOpenChange={(open) => !open && onClose()} size="lg" closeOnOutsideClick={false} title={t('webhooks.secretTitle', { name })} description={t('webhooks.secretDescription')} footer={<AppButton onClick={onClose}>{t('apiTokens.done')}</AppButton>}>
       <div className="flex flex-col gap-4">

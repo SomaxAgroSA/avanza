@@ -69,6 +69,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   API_TOKEN_INVALID: { status: 401, message: 'Invalid, expired or revoked API token' },
   API_TOKEN_NOT_FOUND: { status: 404, message: 'API token not found' },
   API_TOKEN_LIMIT: { status: 409, message: 'Too many active API tokens' },
+  API_TOKEN_NOT_REVEALABLE: { status: 409, message: 'This API token cannot be shown again (revoked, expired or created before tokens were kept)' },
   TOKEN_NOT_ALLOWED: { status: 403, message: 'This action requires signing in with the browser' },
   WEBHOOK_NOT_FOUND: { status: 404, message: 'Webhook not found' },
   WEBHOOK_DELIVERY_NOT_FOUND: { status: 404, message: 'Webhook delivery not found' },

@@ -133,6 +133,7 @@ export const AUDIT_ACTIONS = [
   'user.invited',
   'api_token.created',
   'api_token.revoked',
+  'api_token.revealed',
   'webhook.created',
   'webhook.updated',
   'webhook.deleted',

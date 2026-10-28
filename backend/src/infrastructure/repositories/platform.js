@@ -88,7 +88,7 @@ function createPlatformSettingsRepository(db, ctx) {
 // ---------------------------------------------------------------- tokens de API
 
 /** Tokens de API pessoais (só o hash do token é guardado). */
-function createApiTokenRepository(db) {
+function createApiTokenRepository(db, ctx) {
   const TABLE = 'api_tokens'
   const toEntity = (row) => ({
     id: row.id,
@@ -101,14 +101,18 @@ function createApiTokenRepository(db) {
     lastUsedIp: row.last_used_ip,
     revokedAt: row.revoked_at,
     createdAt: row.created,
+    // o valor cifrado nunca sai daqui; só se ele existe
+    revealable: !!row.value_secret,
   })
 
   return {
+    /** `data.value` (o token) é guardado cifrado com a chave do servidor, para o dono ver de novo. */
     async create(data) {
       const row = await insertRow(db, TABLE, {
         user_id: data.userId,
         name: text(data.name),
         token_hash: text(data.tokenHash),
+        value_secret: data.value ? ctx.secrets.encrypt(data.value) : '',
         prefix: text(data.prefix),
         expires_at: toDbDate(data.expiresAt),
       })
@@ -148,6 +152,12 @@ function createApiTokenRepository(db) {
 
     async revoke(id, at) {
       return toEntity(mustExist(await updateRow(db, TABLE, id, { revoked_at: toDbDate(at) }), TABLE, id))
+    },
+
+    /** O valor em claro (ou null se não foi guardado). */
+    async revealValue(id) {
+      const row = await db.one('SELECT value_secret FROM api_tokens WHERE id = $1', [id])
+      return row && row.value_secret ? ctx.secrets.decrypt(row.value_secret) : null
     },
   }
 }

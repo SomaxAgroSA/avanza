@@ -23,6 +23,7 @@ import {
 import { useLiveProject } from '@/presentation/common/use-live'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { useCopy } from '@/presentation/common/use-copy'
 import { AuditTimeline } from '@/features/audit/AuditTimeline'
 import { useCan } from '@/features/auth/session'
 import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
@@ -73,6 +74,7 @@ function ProjectDetail({ project }: { project: Project }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const errorMessage = useErrorMessage()
+  const copy = useCopy()
   const lifecycle = useProjectLifecycle()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -142,7 +144,7 @@ function ProjectDetail({ project }: { project: Project }) {
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => void navigator.clipboard?.writeText(project.key).then(() => notify.success(t('common.copied')))}
+                  onClick={() => void copy(project.key)}
                   className="inline-flex items-center gap-1 rounded-full bg-on-cover/15 px-2 py-0.5 font-mono text-xs font-semibold text-on-cover ring-1 ring-on-cover/25 hover:bg-on-cover/25 focus-visible:outline-2 focus-visible:outline-on-cover"
                   title={t('projects.copyKey')}
                 >

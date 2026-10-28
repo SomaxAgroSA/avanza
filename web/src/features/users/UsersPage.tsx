@@ -18,6 +18,7 @@ import {
 } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { useCopy } from '@/presentation/common/use-copy'
 import { useCan, useSession } from '@/features/auth/session'
 import { useRoles } from '@/features/settings/queries'
 import { useResendInvite, useSetUserStatus, useUsersList } from './queries'
@@ -33,6 +34,7 @@ export function UsersPage() {
   const { current } = useSession()
   const canCreate = useCan('users.create')
   const errorMessage = useErrorMessage()
+  const copy = useCopy()
   const [params, setParams] = useSearchParams()
 
   const table = useDataTableState('users', { sort: { id: 'name', direction: 'asc' } })
@@ -190,9 +192,7 @@ export function UsersPage() {
               key: 'copy',
               label: t('users.copyEmail'),
               icon: <Copy />,
-              onSelect: () => {
-                void navigator.clipboard?.writeText(user.email).then(() => notify.success(t('common.copied')))
-              },
+              onSelect: () => void copy(user.email),
             },
             ...(actionsFor(user).includes('reset_password')
               ? [{ key: 'reset', label: t('users.resetPassword'), icon: <KeyRound />, onSelect: () => setResetting(user) }]

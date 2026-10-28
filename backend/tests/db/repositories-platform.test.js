@@ -76,6 +76,22 @@ describe('repositórios da plataforma (Postgres)', () => {
   })
 
   describe('tokens de API', () => {
+    it('o valor fica cifrado com a chave do servidor e só sai por revealValue', async () => {
+      const repo = platform.createApiTokenRepository(t.db, ctx)
+      const value = `kb_pat_${'a'.repeat(40)}`
+      const saved = await repo.create({ userId: user.id, name: 'Claude', tokenHash: 'h-v', value, prefix: 'kb_pat_aaaa', expiresAt: null })
+      assert.equal(saved.revealable, true)
+      assert.equal('value' in saved || 'valueSecret' in saved, false)
+      const row = await t.db.one('SELECT value_secret FROM api_tokens WHERE id = $1', [saved.id])
+      assert.match(row.value_secret, /^v1:/)
+      assert.equal(row.value_secret.includes(value), false)
+      assert.equal(await repo.revealValue(saved.id), value)
+      const legacy = await repo.create({ userId: user.id, name: 'Antigo', tokenHash: 'h-l', prefix: 'kb_pat_llll', expiresAt: null })
+      assert.equal(legacy.revealable, false)
+      assert.equal(await repo.revealValue(legacy.id), null)
+      await t.db.exec("DELETE FROM api_tokens WHERE token_hash IN ('h-v', 'h-l')")
+    })
+
     it('criam, acham pelo hash, listam, contam os ativos, registram uso e revogam', async () => {
       const repo = platform.createApiTokenRepository(t.db, ctx)
       const now = new Date('2026-10-28T12:00:00.000Z')

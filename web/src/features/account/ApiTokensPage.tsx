@@ -22,6 +22,7 @@ import {
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { useCopy } from '@/presentation/common/use-copy'
 import { useCan } from '@/features/auth/session'
 
 const MINE_KEY = ['api-tokens', 'mine'] as const
@@ -38,6 +39,20 @@ export function ApiTokensPage() {
   const columns = useTokenColumns(false)
   const [creating, setCreating] = useState(false)
   const [revoking, setRevoking] = useState<ApiToken | null>(null)
+  // valor mostrado de novo: só em memória enquanto a janela está aberta
+  const [revealed, setRevealed] = useState<CreatedApiToken | null>(null)
+  const reveal = useMutation({
+    mutationFn: (token: ApiToken) => apiTokens.reveal(token.id),
+    onSuccess: setRevealed,
+    onError: (error) => notify.error(errorMessage(error)),
+  })
+  const view = (token: ApiToken) => {
+    if (token.state !== 'active' || !token.revealable) {
+      notify.info(t('apiTokens.notRevealable'))
+      return
+    }
+    reveal.mutate(token)
+  }
   const revoke = useMutation({
     mutationFn: (token: ApiToken) => apiTokens.revoke(token.id),
     onSuccess: (token) => {
@@ -79,10 +94,20 @@ export function ApiTokensPage() {
           table={table}
           paginated={false}
           searchable={false}
-          actions={{ onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }) }}
+          actions={{ onView: view, onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }) }}
           emptyState={<AppEmptyState compact icon={<KeyRound />} title={t('apiTokens.empty')} description={canCreate ? t('apiTokens.emptyHint') : t('apiTokens.noPermission')} />}
         />
       )}
+      <AppDialog
+        open={!!revealed}
+        onOpenChange={(open) => !open && setRevealed(null)}
+        size="lg"
+        title={t('apiTokens.revealTitle', { name: revealed?.name ?? '' })}
+        description={t('apiTokens.revealDescription')}
+        footer={<AppButton onClick={() => setRevealed(null)}>{t('apiTokens.done')}</AppButton>}
+      >
+        {revealed && <TokenValue token={revealed.token} />}
+      </AppDialog>
       <CreateTokenDialog open={creating} onOpenChange={setCreating} onCreated={() => void queryClient.invalidateQueries({ queryKey: MINE_KEY })} />
       <AppConfirmDialog
         open={!!revoking}
@@ -140,8 +165,6 @@ function CreateTokenDialog({ open, onOpenChange, onCreated }: { open: boolean; o
     create.mutate()
   }
 
-  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => notify.success(t('common.copied')))
-
   return (
     <AppDialog
       open={open}
@@ -166,24 +189,7 @@ function CreateTokenDialog({ open, onOpenChange, onCreated }: { open: boolean; o
       }
     >
       {created ? (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-end gap-2">
-            <AppTextField label={t('apiTokens.value')} readOnly value={created.token} className="font-mono" fieldClassName="min-w-0 flex-1" onFocus={(event) => event.target.select()} />
-            <AppIconButton label={t('apiTokens.copy')} icon={<Copy />} variant="secondary" onClick={() => copy(created.token)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium text-fg">{t('apiTokens.example')}</p>
-            <code className="block overflow-x-auto whitespace-pre rounded-md bg-surface-2 px-3 py-2 text-xs">{curlExample(window.location.origin, created.token)}</code>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-medium text-fg">{t('apiTokens.claude')}</p>
-            <div className="flex items-start gap-2">
-              <code className="block min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-md bg-surface-2 px-3 py-2 text-xs">{claudeMcpCommand(window.location.origin, created.token)}</code>
-              <AppIconButton label={t('apiTokens.copyClaude')} icon={<Copy />} variant="secondary" onClick={() => copy(claudeMcpCommand(window.location.origin, created.token))} />
-            </div>
-            <p className="text-xs text-muted">{t('apiTokens.claudeHint')}</p>
-          </div>
-        </div>
+        <TokenValue token={created.token} />
       ) : (
         <form
           onSubmit={(event) => {
@@ -215,5 +221,32 @@ function CreateTokenDialog({ open, onOpenChange, onCreated }: { open: boolean; o
         </form>
       )}
     </AppDialog>
+  )
+}
+
+/** O valor do token com cópia, o exemplo de uso e o comando do Claude (criação e "Ver token"). */
+function TokenValue({ token }: { token: string }) {
+  const { t } = useTranslation()
+  const copyText = useCopy()
+  const copy = (text: string) => void copyText(text)
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-end gap-2">
+        <AppTextField label={t('apiTokens.value')} readOnly value={token} className="font-mono" fieldClassName="min-w-0 flex-1" onFocus={(event) => event.target.select()} />
+        <AppIconButton label={t('apiTokens.copy')} icon={<Copy />} variant="secondary" onClick={() => copy(token)} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <p className="text-sm font-medium text-fg">{t('apiTokens.example')}</p>
+        <code className="block overflow-x-auto whitespace-pre rounded-md bg-surface-2 px-3 py-2 text-xs">{curlExample(window.location.origin, token)}</code>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <p className="text-sm font-medium text-fg">{t('apiTokens.claude')}</p>
+        <div className="flex items-start gap-2">
+          <code className="block min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-md bg-surface-2 px-3 py-2 text-xs">{claudeMcpCommand(window.location.origin, token)}</code>
+          <AppIconButton label={t('apiTokens.copyClaude')} icon={<Copy />} variant="secondary" onClick={() => copy(claudeMcpCommand(window.location.origin, token))} />
+        </div>
+        <p className="text-xs text-muted">{t('apiTokens.claudeHint')}</p>
+      </div>
+    </div>
   )
 }

@@ -532,7 +532,8 @@ Configurado em **Configurações → Integrações → E-mail** por quem tem **C
 
 Em **Minha conta → Tokens de API**, quem tem **Criar tokens de API próprios** (`api_tokens.create`; por padrão Admin e Gestor) cria tokens para scripts e integrações usarem a API sem o navegador.
 
-- **Criar:** nome (até 80) e prazo — 30, 90 ou 365 dias, ou sem prazo. O valor (`kb_pat_…`) aparece **uma única vez**, com cópia e um exemplo de uso; depois a lista mostra só o início, a situação (ativo, vencido, revogado), o último uso e o prazo. No máximo 20 tokens ativos por pessoa.
+- **Criar:** nome (até 80) e prazo — 30, 90 ou 365 dias, ou sem prazo. O valor (`kb_pat_…`) aparece na criação, com cópia, um exemplo de uso e o comando do Claude; depois a lista mostra só o início, a situação (ativo, vencido, revogado), o último uso e o prazo. No máximo 20 tokens ativos por pessoa.
+- **Ver de novo:** na lista, o botão de visualizar mostra outra vez o token e o comando do Claude para copiar — só para o **dono**, só no navegador e só com o token **ativo**; cada exibição fica no histórico ("Viu um token de API de novo"). Tokens criados antes desta opção (o valor não era guardado) não podem ser mostrados: crie outro.
 - **Usar:** `Authorization: Bearer kb_pat_…`. O token age como a pessoa, com as **permissões do perfil dela no momento de cada chamada** (mudou o perfil, mudou o que o token pode). Para de valer se vencer, for revogado ou a pessoa for **desativada**.
 - **Limites:** com um token não dá para criar ou revogar tokens, trocar a senha, sair ou encerrar sessões — isso só no navegador.
 - **Revogar:** a própria pessoa (em Minha conta) ou quem tem **Configurar integrações** (Configurações → Integrações → Tokens de API, que mostra os tokens de todos — ex.: de quem saiu da empresa). Revogar vale na hora e fica no histórico; criar também.
