@@ -6,10 +6,9 @@ import { cn } from '@/core/utils/cn'
 import { DEPENDENCY_RULES, PLAN_LIMITS, PLAN_STATUS_CATEGORIES, type DependencyRule, type Plan, type PlanGroup, type PlanItem, type PlanResource, type PlanStatus, type PlanStatusCategory } from '@/domain/plan'
 import { groupTitle } from '@/domain/plan-view'
 import type { OptionColor } from '@/domain/task-config'
-import { AppButton, AppConfirmDialog, AppDialog, AppIconButton, AppPopover, AppSelect, AppTextField, notify } from '@/presentation/components'
+import { AppButton, AppConfirmDialog, AppDialog, AppIconButton, AppSelect, AppTextField, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
-import { ColorPicker } from '@/features/task-config/config-visuals'
-import { optionColor } from '@/features/task-config/config-theme'
+import { ColorButton, ColorPicker } from '@/features/task-config/config-visuals'
 import type { PlanMutations } from './queries'
 import { ResourceChip, StatusBlock } from './cells'
 
@@ -106,29 +105,6 @@ function GroupForm({ state, mutations, onClose }: { state: Exclude<GroupDialogSt
 }
 
 /* ------------------------------------------------------------------ etiquetas (status e recursos) */
-
-export function ColorButton({ color, label, onChange }: { color: OptionColor; label: string; onChange: (color: OptionColor) => void }) {
-  return (
-    <AppPopover
-      label={label}
-      className="w-auto p-3"
-      trigger={
-        <button type="button" aria-label={label} className="size-7 shrink-0 rounded-full ring-offset-2 ring-offset-surface hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring" style={{ backgroundColor: optionColor(color) }} />
-      }
-    >
-      {(close) => (
-        <ColorPicker
-          label={label}
-          value={color}
-          onChange={(next) => {
-            onChange(next)
-            close()
-          }}
-        />
-      )}
-    </AppPopover>
-  )
-}
 
 function NameInput({ value, label, maxLength, onSave }: { value: string; label: string; maxLength: number; onSave: (name: string) => void }) {
   const [draft, setDraft] = useState(value)

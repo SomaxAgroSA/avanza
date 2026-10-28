@@ -7,7 +7,6 @@ import {
   FIELD_FLAGS,
   FIELD_TYPES,
   FIELD_TYPE_INFO,
-  OPTION_COLORS,
   slugifyName,
   valueIssue,
   type CustomField,
@@ -30,7 +29,7 @@ import {
   notify,
 } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
-import { ColorDot } from './config-visuals'
+import { ColorButton } from './config-visuals'
 import { FIELD_TYPE_ICONS } from './config-theme'
 import { CustomFieldInput } from './CustomFieldInput'
 import { useCustomFieldMutations } from './queries'
@@ -361,14 +360,7 @@ function CustomFieldForm({ open, onOpenChange, field, onSaved }: CustomFieldForm
                   // em tela estreita os controles descem para a 2ª linha e o nome continua largo
                   <div className={cn('flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2', !option.isActive && 'opacity-60')}>
                     <AppDragHandle handle={handle} />
-                    <AppSelect
-                      size="sm"
-                      aria-label={t('fields.optionColor')}
-                      value={option.color}
-                      onValueChange={(color) => setOption(option.key, { color: color as OptionColor })}
-                      triggerClassName="w-14 px-2"
-                      options={OPTION_COLORS.map((color) => ({ value: color, label: <ColorDot color={color} className="size-3" /> }))}
-                    />
+                    <ColorButton color={option.color} label={t('fields.optionColor')} onChange={(color) => setOption(option.key, { color })} />
                     <input
                       ref={(el) => {
                         if (el && focusNext.current === option.key) {

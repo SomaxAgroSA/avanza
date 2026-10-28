@@ -1,3 +1,4 @@
+import type { HexColor } from './colors'
 /**
  * Tipos de tarefa e campos personalizados — tipos e regras de apresentação.
  * Espelha backend/src/domain/custom-field.js (o backend continua sendo a autoridade).
@@ -41,7 +42,9 @@ export const FIELD_FLAGS = ['searchable', 'filterable', 'sortable'] as const
 export type FieldFlag = (typeof FIELD_FLAGS)[number]
 
 export const OPTION_COLORS = ['gray', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'violet', 'pink'] as const
-export type OptionColor = (typeof OPTION_COLORS)[number]
+export type PaletteColor = (typeof OPTION_COLORS)[number]
+/** Cor da paleta ou livre ("#rrggbb") — domain/colors.ts. */
+export type OptionColor = PaletteColor | HexColor
 
 /** Tamanho máximo do rótulo de uma opção (mesmo limite do servidor). */
 export const MAX_OPTION_LABEL = 60

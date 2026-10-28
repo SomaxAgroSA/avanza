@@ -8,6 +8,7 @@
  */
 
 const { OPTION_COLORS } = require('./custom-field')
+const { isColor, normalizeColor } = require('./color')
 
 const COLUMN_TYPES = ['text', 'number', 'date', 'checkbox', 'dropdown', 'people', 'link']
 const MAX_COLUMNS = 30
@@ -43,10 +44,10 @@ function readOptions(raw, newId) {
   for (let i = 0; i < raw.length; i++) {
     const option = raw[i] || {}
     const name = text(option.name)
-    if (!name || name.length > OPTION_NAME_MAX || OPTION_COLORS.indexOf(option.color) < 0) return { issue: 'invalid_option' }
+    if (!name || name.length > OPTION_NAME_MAX || !isColor(option.color, OPTION_COLORS)) return { issue: 'invalid_option' }
     if (seen[nameKey(name)]) return { issue: 'duplicate_option' }
     seen[nameKey(name)] = true
-    options.push({ id: isId(option.id) ? option.id : newId(), name, color: option.color })
+    options.push({ id: isId(option.id) ? option.id : newId(), name, color: normalizeColor(option.color, OPTION_COLORS) })
   }
   return { options }
 }

@@ -29,6 +29,7 @@ import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
 import { STATUS_CATEGORIES, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
+import { toColor } from '@/domain/colors'
 import { FIELD_TYPES, OPTION_COLORS, TASK_TYPE_ICONS, type CustomField, type FieldOption, type TaskType, type TaskTypeDetail, type ContentLocale, type TypeTexts } from '@/domain/task-config'
 import type { AuditEntryDto, MeDto, PermissionDto, ProjectDto, ProjectMemberDto, RoleDto, SessionDto, UserDto, UserSummaryDto } from './dtos'
 import {
@@ -130,7 +131,7 @@ export function toProject(dto: ProjectDto): Project {
     key: dto.key,
     description: dto.description ?? '',
     icon: oneOf(PROJECT_ICONS, dto.icon, 'folder'),
-    cover: oneOf(PROJECT_COVERS, dto.cover, 'violet'),
+    cover: toColor(PROJECT_COVERS, dto.cover, 'violet'),
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     owner: dto.owner ? toUserSummary(dto.owner) : null,
@@ -165,7 +166,7 @@ export function toFieldOption(dto: FieldOptionDto): FieldOption {
   return {
     id: dto.id,
     label: dto.label,
-    color: oneOf(OPTION_COLORS, dto.color, 'gray'),
+    color: toColor(OPTION_COLORS, dto.color, 'gray'),
     order: dto.order,
     isActive: dto.is_active !== false,
   }
@@ -196,7 +197,7 @@ function toLookup(dto: LookupDto): LookupItem {
     key: dto.key,
     name: dto.name,
     description: dto.description ?? '',
-    color: oneOf(OPTION_COLORS, dto.color, 'gray'),
+    color: toColor(OPTION_COLORS, dto.color, 'gray'),
     order: dto.order,
     isActive: dto.is_active !== false,
     isDefault: dto.is_default === true,
@@ -229,7 +230,7 @@ export function toTaskType(dto: TaskTypeDto): TaskType {
     description: dto.description ?? '',
     translations: toTypeTranslations(dto),
     icon: oneOf(TASK_TYPE_ICONS, dto.icon, 'check-square'),
-    color: oneOf(OPTION_COLORS, dto.color, 'blue'),
+    color: toColor(OPTION_COLORS, dto.color, 'blue'),
     order: dto.order,
     isActive: dto.is_active !== false,
     fieldCount: dto.field_count ?? 0,
@@ -265,12 +266,12 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     title: dto.title,
     project: dto.project,
     type: dto.type
-      ? { ...dto.type, icon: oneOf(TASK_TYPE_ICONS, dto.type.icon, 'check-square'), color: oneOf(OPTION_COLORS, dto.type.color, 'blue') }
+      ? { ...dto.type, icon: oneOf(TASK_TYPE_ICONS, dto.type.icon, 'check-square'), color: toColor(OPTION_COLORS, dto.type.color, 'blue') }
       : null,
     status: dto.status
-      ? { ...dto.status, color: oneOf(OPTION_COLORS, dto.status.color, 'gray'), category: oneOf(STATUS_CATEGORIES, dto.status.category, 'todo') }
+      ? { ...dto.status, color: toColor(OPTION_COLORS, dto.status.color, 'gray'), category: oneOf(STATUS_CATEGORIES, dto.status.category, 'todo') }
       : null,
-    priority: dto.priority ? { ...dto.priority, color: oneOf(OPTION_COLORS, dto.priority.color, 'gray') } : null,
+    priority: dto.priority ? { ...dto.priority, color: toColor(OPTION_COLORS, dto.priority.color, 'gray') } : null,
     sprint: dto.sprint ? { id: dto.sprint.id, name: dto.sprint.name, state: oneOf(SPRINT_STATES, dto.sprint.state, 'planned') } : null,
     creator: dto.creator ? toUserSummary(dto.creator) : null,
     assignee: dto.assignee ? toUserSummary(dto.assignee) : null,
@@ -284,7 +285,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     completedAt: toDate(dto.completed_at),
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
-    tags: (dto.tags ?? []).map((tag) => ({ id: tag.id, name: tag.name, color: oneOf(OPTION_COLORS, tag.color, 'gray') })),
+    tags: (dto.tags ?? []).map((tag) => ({ id: tag.id, name: tag.name, color: toColor(OPTION_COLORS, tag.color, 'gray') })),
     checklistProgress: dto.checklist_progress ?? { done: 0, total: 0 },
     commentCount: dto.comment_count ?? 0,
     attachmentCount: dto.attachment_count ?? 0,
@@ -350,7 +351,7 @@ export function toBoard(dto: BoardDto): Board {
         id: column.status.id,
         key: column.status.key,
         name: column.status.name,
-        color: oneOf(OPTION_COLORS, column.status.color, 'gray'),
+        color: toColor(OPTION_COLORS, column.status.color, 'gray'),
         category: oneOf(STATUS_CATEGORIES, column.status.category, 'todo'),
         isDefault: !!column.status.is_default,
       },
@@ -379,7 +380,7 @@ export function toDocSpace(dto: DocSpaceDto): DocSpace {
     name: dto.name,
     description: dto.description ?? '',
     icon: oneOf(SPACE_ICONS, dto.icon, 'book'),
-    color: oneOf(OPTION_COLORS, dto.color, 'blue'),
+    color: toColor(OPTION_COLORS, dto.color, 'blue'),
     visibility: oneOf(SPACE_VISIBILITIES, dto.visibility, 'company'),
     project: dto.project,
     homePageId: dto.home_page_id,
@@ -462,7 +463,7 @@ export function toBacklog(dto: BacklogDto): BacklogView {
       id: s.id,
       key: s.key,
       name: s.name,
-      color: oneOf(OPTION_COLORS, s.color, 'gray'),
+      color: toColor(OPTION_COLORS, s.color, 'gray'),
       category: oneOf(STATUS_CATEGORIES, s.category, 'backlog'),
       isDefault: !!s.is_default,
     })),
@@ -477,9 +478,9 @@ const duration = (d: DurationDto | undefined): Duration => ({ hours: d?.hours ??
 function toBreakdownLabel(dimension: ReportDimension, label: Record<string, unknown> | null): BreakdownLabel | null {
   if (!label) return null
   const str = (key: string) => String(label[key] ?? '')
-  if (dimension === 'status') return { kind: 'status', id: str('id'), name: str('name'), color: oneOf(OPTION_COLORS, str('color'), 'gray'), category: oneOf(STATUS_CATEGORIES, str('category'), 'todo') }
-  if (dimension === 'priority') return { kind: 'priority', id: str('id'), name: str('name'), color: oneOf(OPTION_COLORS, str('color'), 'gray') }
-  if (dimension === 'type') return { kind: 'type', id: str('id'), name: str('name'), icon: oneOf(TASK_TYPE_ICONS, str('icon'), 'check-square'), color: oneOf(OPTION_COLORS, str('color'), 'blue') }
+  if (dimension === 'status') return { kind: 'status', id: str('id'), name: str('name'), color: toColor(OPTION_COLORS, str('color'), 'gray'), category: oneOf(STATUS_CATEGORIES, str('category'), 'todo') }
+  if (dimension === 'priority') return { kind: 'priority', id: str('id'), name: str('name'), color: toColor(OPTION_COLORS, str('color'), 'gray') }
+  if (dimension === 'type') return { kind: 'type', id: str('id'), name: str('name'), icon: oneOf(TASK_TYPE_ICONS, str('icon'), 'check-square'), color: toColor(OPTION_COLORS, str('color'), 'blue') }
   if (dimension === 'assignee') return { kind: 'assignee', user: toUserSummary(label as unknown as UserSummaryDto) }
   return { kind: 'project', id: str('id'), key: str('key'), name: str('name') }
 }
@@ -527,7 +528,7 @@ export function toReport(dto: ReportDto): Report {
 }
 
 export function toTag(dto: TagDto): Tag {
-  return { id: dto.id, name: dto.name, color: oneOf(OPTION_COLORS, dto.color, 'gray'), taskCount: dto.task_count ?? 0 }
+  return { id: dto.id, name: dto.name, color: toColor(OPTION_COLORS, dto.color, 'gray'), taskCount: dto.task_count ?? 0 }
 }
 
 export function toComment(dto: CommentDto): TaskComment {
@@ -607,14 +608,14 @@ export function toPlanStatus(dto: PlanStatusDto): PlanStatus {
   return {
     id: dto.id,
     name: dto.name,
-    color: oneOf(OPTION_COLORS, dto.color, 'gray'),
+    color: toColor(OPTION_COLORS, dto.color, 'gray'),
     category: oneOf(PLAN_STATUS_CATEGORIES, dto.category, 'todo'),
     position: dto.position ?? 0,
   }
 }
 
 export function toPlanResource(dto: PlanResourceDto): PlanResource {
-  return { id: dto.id, name: dto.name, color: oneOf(OPTION_COLORS, dto.color ?? '', 'indigo') }
+  return { id: dto.id, name: dto.name, color: toColor(OPTION_COLORS, dto.color ?? '', 'indigo') }
 }
 
 function toPlanGroupSummary(dto: PlanGroupSummaryDto): PlanGroupSummary {
@@ -635,7 +636,7 @@ export function toPlanGroup(dto: PlanGroupDto): PlanGroup {
     id: dto.id,
     parentId: dto.parent_id ?? null,
     name: dto.name,
-    color: oneOf(OPTION_COLORS, dto.color, 'blue'),
+    color: toColor(OPTION_COLORS, dto.color, 'blue'),
     position: dto.position ?? 0,
     number: dto.number ?? null,
     summary: dto.summary ? toPlanGroupSummary(dto.summary) : null,
@@ -785,7 +786,7 @@ export function toPlanColumn(dto: PlanColumnDto): PlanColumn {
     name: dto.name,
     type,
     settings: {
-      ...(type === 'dropdown' ? { options: (settings.options ?? []).map((o) => ({ id: o.id, name: o.name, color: oneOf(OPTION_COLORS, o.color, 'gray') })) } : {}),
+      ...(type === 'dropdown' ? { options: (settings.options ?? []).map((o) => ({ id: o.id, name: o.name, color: toColor(OPTION_COLORS, o.color, 'gray') })) } : {}),
       ...(type === 'number' && settings.unit ? { unit: settings.unit } : {}),
     },
     position: dto.position ?? 0,

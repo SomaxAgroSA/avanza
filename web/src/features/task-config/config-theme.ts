@@ -36,7 +36,8 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import type { FieldType, OptionColor, TaskTypeIcon } from '@/domain/task-config'
+import { hexTone, isHexColor } from '@/domain/colors'
+import type { FieldType, OptionColor, PaletteColor, TaskTypeIcon } from '@/domain/task-config'
 
 export const TASK_TYPE_ICON_COMPONENTS: Record<TaskTypeIcon, LucideIcon> = {
   bug: Bug,
@@ -79,7 +80,7 @@ export const FIELD_TYPE_ICONS: Record<FieldType, LucideIcon> = {
   file: Paperclip,
 }
 
-const HUES: Record<OptionColor, number> = {
+const HUES: Record<PaletteColor, number> = {
   gray: 260,
   red: 25,
   orange: 55,
@@ -92,9 +93,16 @@ const HUES: Record<OptionColor, number> = {
   pink: 350,
 }
 
+/** Matiz e croma da cor: os da paleta ou o tom da cor livre (a luminosidade fica por conta de cada uso). */
+function tone(color: OptionColor): { hue: number; chroma: number } {
+  if (isHexColor(color)) return hexTone(color)
+  return { hue: HUES[color] ?? HUES.gray, chroma: color === 'gray' ? 0.02 : 0.16 }
+}
+
 /** Cor sólida (legível em claro e escuro) para bolinhas, ícones e destaques. */
 export function optionColor(color: OptionColor): string {
-  return `oklch(0.64 ${color === 'gray' ? 0.02 : 0.16} ${HUES[color]})`
+  const { hue, chroma } = tone(color)
+  return `oklch(0.64 ${chroma} ${hue})`
 }
 
 /**
@@ -102,15 +110,19 @@ export function optionColor(color: OptionColor): string {
  * claro e mais clara no escuro (tokens --kb-option-fg-*), com contraste AA.
  */
 export function optionText(color: OptionColor): string {
-  return `oklch(var(--kb-option-fg-l) ${color === 'gray' ? '0.02' : 'var(--kb-option-fg-c)'} ${HUES[color]})`
+  const { hue, chroma } = tone(color)
+  if (chroma <= 0.02) return `oklch(var(--kb-option-fg-l) 0.02 ${hue})`
+  return `oklch(var(--kb-option-fg-l) calc(var(--kb-option-fg-c) * ${(chroma / 0.16).toFixed(3)}) ${hue})`
 }
 
 /** Fundo sólido para texto branco (blocos de status do quadro): escuro o bastante para contraste AA. */
 export function optionSolid(color: OptionColor): string {
-  return `oklch(0.5 ${color === 'gray' ? 0.02 : 0.15} ${HUES[color]})`
+  const { hue, chroma } = tone(color)
+  return `oklch(0.5 ${chroma <= 0.02 ? 0.02 : (chroma * 0.94).toFixed(3)} ${hue})`
 }
 
 /** Fundo suave da cor (chips e ícones de tipo). */
 export function optionTint(color: OptionColor): string {
-  return `oklch(0.64 ${color === 'gray' ? 0.02 : 0.16} ${HUES[color]} / 0.16)`
+  const { hue, chroma } = tone(color)
+  return `oklch(0.64 ${chroma} ${hue} / 0.16)`
 }

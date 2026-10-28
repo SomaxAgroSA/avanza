@@ -22,7 +22,8 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import type { ProjectCover, ProjectIcon } from '@/domain/projects'
+import { hexTone, isHexColor } from '@/domain/colors'
+import type { PaletteCover, ProjectCover, ProjectIcon } from '@/domain/projects'
 
 /** Identidade visual dos projetos: ícones e capas (gradientes) disponíveis. */
 export const PROJECT_ICON_COMPONENTS: Record<ProjectIcon, LucideIcon> = {
@@ -49,7 +50,7 @@ export const PROJECT_ICON_COMPONENTS: Record<ProjectIcon, LucideIcon> = {
 }
 
 /** Matiz (OKLCH) de cada capa. "slate" usa baixa saturação. */
-const COVER_HUE: Record<ProjectCover, number> = {
+const COVER_HUE: Record<PaletteCover, number> = {
   violet: 295,
   indigo: 272,
   blue: 250,
@@ -63,9 +64,17 @@ const COVER_HUE: Record<ProjectCover, number> = {
   slate: 260,
 }
 
+/** Matiz e croma da capa: os da paleta ou o tom da cor livre. */
+function coverTone(cover: ProjectCover, paletteChroma: number): { hue: number; chroma: number } {
+  if (isHexColor(cover)) {
+    const { hue, chroma } = hexTone(cover)
+    return { hue, chroma: chroma <= 0.02 ? 0.03 : Math.min(chroma, paletteChroma) }
+  }
+  return { hue: COVER_HUE[cover] ?? COVER_HUE.violet, chroma: cover === 'slate' ? 0.03 : paletteChroma }
+}
+
 export function coverGradient(cover: ProjectCover): string {
-  const hue = COVER_HUE[cover]
-  const chroma = cover === 'slate' ? 0.03 : 0.16
+  const { hue, chroma } = coverTone(cover, 0.16)
   return `linear-gradient(135deg, oklch(0.6 ${chroma} ${hue}), oklch(0.5 ${chroma} ${hue + 25}))`
 }
 
@@ -78,8 +87,7 @@ export function coverStyle(cover: ProjectCover): CSSProperties {
  * capas), com um brilho no canto para dar profundidade.
  */
 export function coverHeroStyle(cover: ProjectCover): CSSProperties {
-  const hue = COVER_HUE[cover]
-  const chroma = cover === 'slate' ? 0.03 : 0.15
+  const { hue, chroma } = coverTone(cover, 0.15)
   return {
     backgroundImage: [
       `radial-gradient(circle at 88% -30%, oklch(1 0 0 / 0.22), transparent 45%)`,

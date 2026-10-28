@@ -6,6 +6,7 @@ const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
 const cf = require('../domain/custom-field')
+const { colorRule } = require('../domain/color')
 const contentLocale = require('../domain/content-locale')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso } = require('./presenters')
@@ -21,7 +22,7 @@ const FIELD_RULES = {
   name: [rules.required(), rules.maxLength(60)],
   description: [rules.maxLength(255)],
   icon: [rules.oneOf(cf.TASK_TYPE_ICONS)],
-  color: [rules.oneOf(cf.OPTION_COLORS)],
+  color: [colorRule(cf.OPTION_COLORS)],
   is_active: [rules.boolean()],
 }
 

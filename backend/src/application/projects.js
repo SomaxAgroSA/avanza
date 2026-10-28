@@ -7,6 +7,7 @@ const { assertValid, rules } = require('../core/validation')
 const { parsePagination, parseSort, buildPageMeta } = require('../core/pagination')
 const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
+const { colorRule } = require('../domain/color')
 const { USER_STATUS } = require('../domain/user')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
@@ -17,7 +18,7 @@ const FIELD_RULES = {
   name: [rules.required(), rules.maxLength(120)],
   description: [rules.maxLength(10000)],
   icon: [rules.oneOf(projectDomain.PROJECT_ICONS)],
-  cover: [rules.oneOf(projectDomain.PROJECT_COVERS)],
+  cover: [colorRule(projectDomain.PROJECT_COVERS)],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
   start_date: [rules.isoDate()],

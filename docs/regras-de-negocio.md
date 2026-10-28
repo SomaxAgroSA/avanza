@@ -599,3 +599,12 @@ No cadastro do usuário (Usuários → Novo usuário ou Editar), o campo **Foto*
 - **No cadastro novo**, a foto é enviada logo depois que o usuário é criado; se a foto falhar, o usuário fica criado e a tela avisa que só a foto não foi enviada.
 - Trocar ou remover a foto (e excluir o usuário) apaga a anterior do armazenamento. O endereço da foto muda a cada troca, então ninguém vê a antiga do cache.
 - Envio e remoção ficam no **histórico do usuário** ("Trocou a foto do usuário", "Removeu a foto do usuário").
+
+## 24. Cores personalizadas
+
+Todo lugar que tem cor oferece a paleta de sempre **e** a opção **Personalizada**: tags, status e prioridades do fluxo, tipos de tarefa, opções dos campos de seleção, capa do projeto, espaços da Documentação e, na Gestão de projetos, status, recursos, grupos e as opções das colunas de lista.
+
+- A cor personalizada é escolhida no seletor de cor do navegador ou pelo código (`#1a7f37`, para colar a cor da marca); o código curto (`#abc`) também vale.
+- O sistema usa o **tom** escolhido e ajusta o claro/escuro de cada uso (selos, bolinhas, fundos e capas), para o texto continuar legível no tema claro e no escuro — como faz com as cores da paleta. Cores quase neutras (cinzas) viram o cinza do sistema; cores muito saturadas são suavizadas.
+- Nas listas compactas (status, recursos e opções da Gestão de projetos), a cor da paleta vale na hora; a personalizada é salva uma vez, ao fechar a escolha.
+- A API aceita `#rrggbb` em todo campo de cor e devolve em minúsculas; outro formato é recusado.

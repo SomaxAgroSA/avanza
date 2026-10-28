@@ -13,6 +13,8 @@ import { AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextFi
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
 import { ProjectAvatar } from './project-visuals'
+import { CustomColorSwatch } from '@/features/task-config/config-visuals'
+import { isHexColor } from '@/domain/colors'
 import { useCreateProject, useUpdateProject } from './queries'
 
 const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate' }
@@ -244,7 +246,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
             render={({ field }) => (
               <AppFormField label={t('projects.fields.cover')}>
                 {({ id }) => (
-                  <div id={id} role="radiogroup" aria-label={t('projects.fields.cover')} className="flex flex-wrap gap-2">
+                  <div id={id} role="radiogroup" aria-label={t('projects.fields.cover')} className="flex flex-wrap items-center gap-2">
                     {PROJECT_COVERS.map((key) => {
                       const selected = field.value === key
                       return (
@@ -266,6 +268,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                         </button>
                       )
                     })}
+                    <CustomColorSwatch value={isHexColor(field.value) ? field.value : null} onChange={field.onChange} swatchStyle={coverStyle} className="size-8" />
                   </div>
                 )}
               </AppFormField>

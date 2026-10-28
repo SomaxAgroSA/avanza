@@ -1,3 +1,4 @@
+import type { HexColor } from './colors'
 /**
  * Projetos — tipos e regras de apresentação (espelham backend/src/domain/project.js).
  */
@@ -19,7 +20,9 @@ export const PROJECT_ICONS = [
 export type ProjectIcon = (typeof PROJECT_ICONS)[number]
 
 export const PROJECT_COVERS = ['violet', 'indigo', 'blue', 'cyan', 'teal', 'green', 'amber', 'orange', 'red', 'pink', 'slate'] as const
-export type ProjectCover = (typeof PROJECT_COVERS)[number]
+export type PaletteCover = (typeof PROJECT_COVERS)[number]
+/** Capa da paleta ou cor livre ("#rrggbb") — domain/colors.ts. */
+export type ProjectCover = PaletteCover | HexColor
 
 export type ProjectView = 'all' | 'mine' | 'archived'
 

@@ -9,6 +9,7 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 - **Correlation ID:** envie `X-Correlation-Id` (8–64 caracteres `[A-Za-z0-9-]`) ou o servidor gera um. Volta no header e em `meta.correlationId`.
 - **JSON em snake_case**, datas ISO 8601 (UTC). Corpo JSON limitado a 1 MB.
 - **Cache:** respostas com `Cache-Control: no-store`.
+- **Cores:** todo campo `color` (e a `cover` do projeto) aceita a paleta do lugar ou uma cor livre `#rrggbb`, devolvida em minúsculas (`domain/color.js`); outro formato → `invalid_option`.
 
 ### Envelope
 ```json

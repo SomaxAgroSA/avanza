@@ -13,6 +13,7 @@ const projectDomain = require('../domain/project')
 const docsDomain = require('../domain/docs')
 const content = require('../domain/doc-content')
 const { OPTION_COLORS } = require('../domain/custom-field')
+const { colorRule } = require('../domain/color')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso } = require('./presenters')
 const { createDocAccess } = require('./doc-access')
@@ -23,7 +24,7 @@ const RULES = {
   name: [rules.required(), rules.string(), rules.maxLength(80)],
   description: [rules.string(), rules.maxLength(500)],
   icon: [rules.oneOf(docsDomain.SPACE_ICONS)],
-  color: [rules.oneOf(OPTION_COLORS)],
+  color: [colorRule(OPTION_COLORS)],
   project_id: [idRule],
   visibility: [rules.required(), rules.oneOf(docsDomain.SPACE_VISIBILITIES)],
 }

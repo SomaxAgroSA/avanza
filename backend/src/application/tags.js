@@ -6,6 +6,7 @@ const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
 const cf = require('../domain/custom-field')
+const { colorRule } = require('../domain/color')
 const taskDomain = require('../domain/task')
 const { buildAuditEntry } = require('./audit')
 const { iso } = require('./presenters')
@@ -51,7 +52,7 @@ function createTagService(deps) {
 
   async function createTag(ctx, input) {
     rbac.assertCan(ctx.principal, 'settings.manage')
-    const data = assertValid(input, { name: [rules.required(), nameRule], color: [rules.oneOf(cf.OPTION_COLORS)] })
+    const data = assertValid(input, { name: [rules.required(), nameRule], color: [colorRule(cf.OPTION_COLORS)] })
     const name = data.name.trim()
     await assertUniqueName(name)
     const created = await deps.unitOfWork.run(async (repos) => {
@@ -68,7 +69,7 @@ function createTagService(deps) {
     const source = input || {}
     const schema = {}
     if (source.name !== undefined) schema.name = [nameRule]
-    if (source.color !== undefined) schema.color = [rules.oneOf(cf.OPTION_COLORS)]
+    if (source.color !== undefined) schema.color = [colorRule(cf.OPTION_COLORS)]
     const data = assertValid(source, schema)
     const patch = {}
     if (data.name !== undefined && data.name.trim() !== tag.name) {

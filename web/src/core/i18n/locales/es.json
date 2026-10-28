@@ -1074,7 +1074,12 @@
     "blue": "Azul",
     "indigo": "Índigo",
     "violet": "Violeta",
-    "pink": "Rosa"
+    "pink": "Rosa",
+    "custom": "Personalizado",
+    "customNamed": "Color personalizado {{hex}}",
+    "customPicker": "Elegir el color",
+    "customCode": "Código del color",
+    "customHint": "Ej.: #1a7f37. El tono se ajusta para que sea legible en el tema claro y en el oscuro."
   },
   "sortable": {
     "handle": "Arrastrar {{item}}",

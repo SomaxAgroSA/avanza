@@ -11,6 +11,7 @@
  */
 
 const { OPTION_COLORS } = require('./custom-field')
+const { isColor } = require('./color')
 
 const GROUP_NAME_MAX = 120
 const ITEM_NAME_MAX = 255
@@ -79,7 +80,7 @@ function groupIssues(input, partial) {
     if (!name) issues.name = 'required'
     else if (name.length > GROUP_NAME_MAX) issues.name = 'too_long'
   }
-  if ((!partial || data.color !== undefined) && OPTION_COLORS.indexOf(data.color) < 0) issues.color = 'invalid_option'
+  if ((!partial || data.color !== undefined) && !isColor(data.color, OPTION_COLORS)) issues.color = 'invalid_option'
   return issues
 }
 
@@ -142,7 +143,7 @@ function statusIssues(input, partial) {
     if (!name) issues.name = 'required'
     else if (name.length > STATUS_NAME_MAX) issues.name = 'too_long'
   }
-  if ((!partial || data.color !== undefined) && OPTION_COLORS.indexOf(data.color) < 0) issues.color = 'invalid_option'
+  if ((!partial || data.color !== undefined) && !isColor(data.color, OPTION_COLORS)) issues.color = 'invalid_option'
   if ((!partial || data.category !== undefined) && STATUS_CATEGORIES.indexOf(data.category) < 0) issues.category = 'invalid_option'
   return issues
 }
@@ -155,7 +156,7 @@ function resourceIssues(input, partial) {
     if (!name) issues.name = 'required'
     else if (name.length > RESOURCE_NAME_MAX) issues.name = 'too_long'
   }
-  if (data.color !== undefined && OPTION_COLORS.indexOf(data.color) < 0) issues.color = 'invalid_option'
+  if (data.color !== undefined && !isColor(data.color, OPTION_COLORS)) issues.color = 'invalid_option'
   return issues
 }
 

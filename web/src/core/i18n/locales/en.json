@@ -1074,7 +1074,12 @@
     "blue": "Blue",
     "indigo": "Indigo",
     "violet": "Violet",
-    "pink": "Pink"
+    "pink": "Pink",
+    "custom": "Custom",
+    "customNamed": "Custom color {{hex}}",
+    "customPicker": "Pick the color",
+    "customCode": "Color code",
+    "customHint": "E.g. #1a7f37. The shade is adjusted to stay readable in the light and dark themes."
   },
   "sortable": {
     "handle": "Drag {{item}}",

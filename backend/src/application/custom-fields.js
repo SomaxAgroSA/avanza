@@ -7,6 +7,7 @@ const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
 const contentLocale = require('../domain/content-locale')
 const cf = require('../domain/custom-field')
+const colorDomain = require('../domain/color')
 const { buildAuditEntry } = require('./audit')
 const { iso } = require('./presenters')
 
@@ -46,8 +47,8 @@ function normalizeOptions(raw) {
     const lower = label.toLowerCase()
     if (seen.indexOf(lower) >= 0) throw invalid('options', 'duplicate_option', { index })
     seen.push(lower)
-    const color = o.color === undefined ? 'gray' : o.color
-    if (cf.OPTION_COLORS.indexOf(color) < 0) throw invalid('options', 'invalid_option', { index })
+    const color = o.color === undefined ? 'gray' : colorDomain.normalizeColor(o.color, cf.OPTION_COLORS)
+    if (!color) throw invalid('options', 'invalid_option', { index })
     return {
       id: typeof o.id === 'string' && o.id ? o.id : null,
       label,

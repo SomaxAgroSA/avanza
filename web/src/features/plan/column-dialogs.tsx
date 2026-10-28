@@ -9,7 +9,7 @@ import { AppButton, AppConfirmDialog, AppDialog, AppIconButton, AppTextField, no
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { cn } from '@/core/utils/cn'
-import { ColorButton } from './dialogs'
+import { ColorButton } from '@/features/task-config/config-visuals'
 import type { PlanMutations } from './queries'
 
 const TYPE_ICONS: Record<ColumnType, ReactNode> = {

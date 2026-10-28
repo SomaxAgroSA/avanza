@@ -3,6 +3,7 @@ import { SUPPORTED_LANGUAGES } from '@/core/i18n'
 import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES } from './projects'
 import { SPACE_ICONS, SPACE_VISIBILITIES } from './docs'
 import { OPTION_COLORS } from './task-config'
+import { isHexColor, type HexColor } from './colors'
 import { DEFAULT_PASSWORD_POLICY, type PasswordPolicy } from './platform'
 
 /**
@@ -102,7 +103,7 @@ export const projectSchema = z
       .pipe(z.string().regex(/^[A-Z][A-Z0-9]{1,9}$/, 'invalid_format')),
     description: z.string().max(10000, 'too_long'),
     icon: z.enum(PROJECT_ICONS),
-    cover: z.enum(PROJECT_COVERS),
+    cover: z.union([z.enum(PROJECT_COVERS), z.custom<HexColor>(isHexColor)]),
     status: z.enum(PROJECT_STATUSES),
     priority: z.enum(PROJECT_PRIORITIES),
     /** AAAA-MM-DD ou '' */
@@ -123,7 +124,7 @@ export const docSpaceSchema = z
       .pipe(z.string().regex(/^[A-Z][A-Z0-9]{1,9}$/, 'invalid_format')),
     description: z.string().max(500, 'too_long'),
     icon: z.enum(SPACE_ICONS),
-    color: z.enum(OPTION_COLORS),
+    color: z.union([z.enum(OPTION_COLORS), z.custom<HexColor>(isHexColor)]),
     visibility: z.enum(SPACE_VISIBILITIES),
     projectId: z.string(),
   })
