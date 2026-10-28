@@ -1,6 +1,5 @@
 .git
 **/node_modules
-backend/bin
 backend/pb_data
 backend/public
 backend/.env

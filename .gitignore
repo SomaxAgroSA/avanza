@@ -4,8 +4,7 @@ web/dist/
 web/node_modules/.tmp/
 coverage/
 
-# Backend: binário, dados, build do frontend e segredos
-backend/bin/
+# Backend: build do frontend e segredos (pb_data: dados antigos do PocketBase, só como origem da importação)
 backend/pb_data/
 backend/public/
 backend/.env
