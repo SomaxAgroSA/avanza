@@ -608,3 +608,14 @@ Todo lugar que tem cor oferece a paleta de sempre **e** a opção **Personalizad
 - O sistema usa o **tom** escolhido e ajusta o claro/escuro de cada uso (selos, bolinhas, fundos e capas), para o texto continuar legível no tema claro e no escuro — como faz com as cores da paleta. Cores quase neutras (cinzas) viram o cinza do sistema; cores muito saturadas são suavizadas.
 - Nas listas compactas (status, recursos e opções da Gestão de projetos), a cor da paleta vale na hora; a personalizada é salva uma vez, ao fechar a escolha.
 - A API aceita `#rrggbb` em todo campo de cor e devolve em minúsculas; outro formato é recusado.
+
+## 25. Biblioteca de ícones
+
+Projetos, tipos de tarefa e espaços da Documentação têm os seus ícones padrão. A **biblioteca da plataforma** acrescenta outros, escolhidos numa galeria grande (Lucide, mais de 1.700 ícones, no mesmo estilo dos do sistema).
+
+- **Importar:** em **Configurações → Ícones**, quem tem `settings.manage` busca pelo nome (em inglês: "truck", "leaf"…), marca os ícones e importa de uma vez (até 60 por vez). Ícone já importado aparece marcado e não entra de novo.
+- **Usar:** todos os seletores de ícone (projeto, tipo de tarefa, espaço) mostram os padrões do lugar e, depois, os da biblioteca — para todas as pessoas. Quem gerencia as configurações vê no seletor o atalho "Importar mais ícones da galeria" (abre em outra aba; o formulário não se perde).
+- **Remover:** a tela mostra onde cada ícone é usado (projetos, tipos, espaços). Só sai da biblioteca o ícone que **ninguém usa**; senão a remoção é recusada e diz onde está em uso. Os padrões de cada lugar não saem.
+- O servidor só aceita, em cada lugar, um ícone padrão dele ou um que está na biblioteca (o ícone que o item já tinha continua valendo).
+- Importar e remover ficam no histórico ("Importou ícones", "Removeu um ícone").
+- Os ícones importados são baixados só quando aparecem na tela — o carregamento inicial do sistema não aumenta.

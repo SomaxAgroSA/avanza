@@ -12,6 +12,7 @@ import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
 import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent } from './docs'
 import type { Sprint, SprintInput } from './sprints'
+import type { LibraryIcon } from './icons'
 import type {
   DependencyRule,
   Plan,
@@ -344,6 +345,14 @@ export interface NotificationRepository {
   markAllRead(): Promise<number>
 }
 
+/** Biblioteca de ícones da plataforma (regras §25). */
+export interface IconLibraryRepository {
+  list(): Promise<LibraryIcon[]>
+  /** Importa da galeria (nomes do Lucide); devolve a biblioteca. */
+  importIcons(names: string[]): Promise<LibraryIcon[]>
+  remove(name: string): Promise<void>
+}
+
 export interface TagRepository {
   list(): Promise<Tag[]>
   create(data: { name: string; color: OptionColor }): Promise<Tag>
@@ -509,6 +518,7 @@ export interface Repositories {
   priorities: LookupRepository<TaskPriority>
   tasks: TaskRepository
   tags: TagRepository
+  icons: IconLibraryRepository
   comments: CommentRepository
   attachments: AttachmentRepository
   projectFiles: ProjectFileRepository

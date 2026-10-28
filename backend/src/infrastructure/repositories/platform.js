@@ -336,7 +336,49 @@ function createAuthTokenRepository(db) {
   }
 }
 
+// ---------------------------------------------------------------- biblioteca de ícones
+
+/** Ícones da galeria importados para a plataforma (regras §25); a chave é o nome do Lucide. */
+function createIconLibraryRepository(db) {
+  const toEntity = (row) => ({ name: row.name, createdBy: row.created_by || null, createdAt: row.created })
+  const USED_IN = { projects: 'projects', task_types: 'task_types', doc_spaces: 'doc_spaces' }
+  return {
+    /** Mais recentes primeiro. */
+    async list() {
+      return (await db.query('SELECT * FROM icon_library ORDER BY created DESC, name ASC')).map(toEntity)
+    },
+    async exists(name) {
+      return !!(await db.one('SELECT 1 AS found FROM icon_library WHERE name = $1', [name]))
+    },
+    /** Grava os que ainda não estão (concorrência: ON CONFLICT) e devolve só os nomes novos, na ordem pedida. */
+    async addMany(names, userId) {
+      const added = []
+      for (const name of names) {
+        const row = await db.one('INSERT INTO icon_library (name, created_by) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING RETURNING name', [name, userId || null])
+        if (row) added.push(row.name)
+      }
+      return added
+    },
+    async remove(name) {
+      await db.exec('DELETE FROM icon_library WHERE name = $1', [name])
+    },
+    /** Onde cada ícone está em uso: { [name]: { projects, task_types, doc_spaces } } (só os usados). */
+    async usage(names) {
+      const out = {}
+      for (const [key, table] of Object.entries(USED_IN)) {
+        const rows = await db.query(`SELECT icon, count(*)::int AS total FROM ${ident(table)} WHERE icon = ANY($1::text[]) GROUP BY icon`, [names])
+        rows.forEach((row) => {
+          out[row.icon] = Object.assign({ projects: 0, task_types: 0, doc_spaces: 0 }, out[row.icon])
+          out[row.icon][key] = row.total
+        })
+      }
+      return out
+    },
+  }
+}
+
 module.exports = {
+  createIconLibraryRepository,
   createPlatformSettingsRepository,
   createApiTokenRepository,
   createEmailSettingsRepository,

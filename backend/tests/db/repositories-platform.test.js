@@ -75,6 +75,37 @@ describe('repositórios da plataforma (Postgres)', () => {
     })
   })
 
+  describe('biblioteca de ícones', () => {
+    it('importa sem repetir (também em paralelo), lista os mais recentes primeiro e conta onde cada ícone é usado', async () => {
+      const repo = platform.createIconLibraryRepository(t.db, ctx)
+      assert.deepEqual(await repo.addMany(['tractor', 'sprout'], user.id), ['tractor', 'sprout'])
+      // duas importações do mesmo ícone ao mesmo tempo: só uma grava
+      const [a, b] = await Promise.all([repo.addMany(['wheat'], user.id), repo.addMany(['wheat'], null)])
+      assert.deepEqual(a.concat(b), ['wheat'])
+      assert.deepEqual(await repo.addMany(['tractor'], user.id), [])
+      await t.db.exec('UPDATE icon_library SET created = $2 WHERE name = $1', ['tractor', new Date(Date.UTC(2026, 9, 3))])
+      await t.db.exec('UPDATE icon_library SET created = $2 WHERE name = $1', ['sprout', new Date(Date.UTC(2026, 9, 2))])
+      await t.db.exec('UPDATE icon_library SET created = $2 WHERE name = $1', ['wheat', new Date(Date.UTC(2026, 9, 1))])
+      const list = await repo.list()
+      assert.deepEqual(list.map((i) => i.name), ['tractor', 'sprout', 'wheat'])
+      assert.equal(list[0].createdBy, user.id)
+      assert.equal(await repo.exists('sprout'), true)
+      assert.equal(await repo.exists('rocket'), false)
+
+      const owner = user.id
+      await insertRow(t.db, 'projects', { name: 'Fazenda', key: 'FAZ', icon: 'tractor', owner_id: owner, created_by: owner, status: 'active', priority: 'medium' })
+      await insertRow(t.db, 'projects', { name: 'Fazenda 2', key: 'FAZ2', icon: 'tractor', owner_id: owner, created_by: owner, status: 'active', priority: 'medium' })
+      await insertRow(t.db, 'task_types', { key: 'COLHEITA', name: 'Colheita', icon: 'sprout', color: 'green' })
+      await insertRow(t.db, 'doc_spaces', { key: 'AGRO', name: 'Agro', icon: 'tractor', color: 'green', visibility: 'company' })
+      assert.deepEqual(await repo.usage(['tractor', 'sprout', 'wheat']), {
+        tractor: { projects: 2, task_types: 0, doc_spaces: 1 },
+        sprout: { projects: 0, task_types: 1, doc_spaces: 0 },
+      })
+      await repo.remove('wheat')
+      assert.equal(await repo.exists('wheat'), false)
+    })
+  })
+
   describe('tokens de API', () => {
     it('o valor fica cifrado com a chave do servidor e só sai por revealValue', async () => {
       const repo = platform.createApiTokenRepository(t.db, ctx)

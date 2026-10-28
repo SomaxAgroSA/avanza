@@ -24,6 +24,9 @@ import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
 import type { FieldValue } from '@/domain/task-config'
+import type { LibraryIconDto } from './dtos'
+import type { LibraryIcon } from '@/domain/icons'
+import { toIcon } from '@/domain/icons'
 import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
@@ -130,7 +133,7 @@ export function toProject(dto: ProjectDto): Project {
     name: dto.name,
     key: dto.key,
     description: dto.description ?? '',
-    icon: oneOf(PROJECT_ICONS, dto.icon, 'folder'),
+    icon: toIcon(PROJECT_ICONS, dto.icon, 'folder'),
     cover: toColor(PROJECT_COVERS, dto.cover, 'violet'),
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
@@ -229,7 +232,7 @@ export function toTaskType(dto: TaskTypeDto): TaskType {
     name: dto.name,
     description: dto.description ?? '',
     translations: toTypeTranslations(dto),
-    icon: oneOf(TASK_TYPE_ICONS, dto.icon, 'check-square'),
+    icon: toIcon(TASK_TYPE_ICONS, dto.icon, 'check-square'),
     color: toColor(OPTION_COLORS, dto.color, 'blue'),
     order: dto.order,
     isActive: dto.is_active !== false,
@@ -266,7 +269,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     title: dto.title,
     project: dto.project,
     type: dto.type
-      ? { ...dto.type, icon: oneOf(TASK_TYPE_ICONS, dto.type.icon, 'check-square'), color: toColor(OPTION_COLORS, dto.type.color, 'blue') }
+      ? { ...dto.type, icon: toIcon(TASK_TYPE_ICONS, dto.type.icon, 'check-square'), color: toColor(OPTION_COLORS, dto.type.color, 'blue') }
       : null,
     status: dto.status
       ? { ...dto.status, color: toColor(OPTION_COLORS, dto.status.color, 'gray'), category: oneOf(STATUS_CATEGORIES, dto.status.category, 'todo') }
@@ -379,7 +382,7 @@ export function toDocSpace(dto: DocSpaceDto): DocSpace {
     key: dto.key,
     name: dto.name,
     description: dto.description ?? '',
-    icon: oneOf(SPACE_ICONS, dto.icon, 'book'),
+    icon: toIcon(SPACE_ICONS, dto.icon, 'book'),
     color: toColor(OPTION_COLORS, dto.color, 'blue'),
     visibility: oneOf(SPACE_VISIBILITIES, dto.visibility, 'company'),
     project: dto.project,
@@ -480,7 +483,7 @@ function toBreakdownLabel(dimension: ReportDimension, label: Record<string, unkn
   const str = (key: string) => String(label[key] ?? '')
   if (dimension === 'status') return { kind: 'status', id: str('id'), name: str('name'), color: toColor(OPTION_COLORS, str('color'), 'gray'), category: oneOf(STATUS_CATEGORIES, str('category'), 'todo') }
   if (dimension === 'priority') return { kind: 'priority', id: str('id'), name: str('name'), color: toColor(OPTION_COLORS, str('color'), 'gray') }
-  if (dimension === 'type') return { kind: 'type', id: str('id'), name: str('name'), icon: oneOf(TASK_TYPE_ICONS, str('icon'), 'check-square'), color: toColor(OPTION_COLORS, str('color'), 'blue') }
+  if (dimension === 'type') return { kind: 'type', id: str('id'), name: str('name'), icon: toIcon(TASK_TYPE_ICONS, str('icon'), 'check-square'), color: toColor(OPTION_COLORS, str('color'), 'blue') }
   if (dimension === 'assignee') return { kind: 'assignee', user: toUserSummary(label as unknown as UserSummaryDto) }
   return { kind: 'project', id: str('id'), key: str('key'), name: str('name') }
 }
@@ -524,6 +527,15 @@ export function toReport(dto: ReportDto): Report {
       })),
     },
     overdueTasks: (dto.overdue_tasks ?? []).map(toTaskSummary),
+  }
+}
+
+export function toLibraryIcon(dto: LibraryIconDto): LibraryIcon {
+  return {
+    name: dto.name,
+    createdAt: toDate(dto.created_at),
+    createdBy: dto.created_by ? toUserSummary(dto.created_by) : null,
+    usage: { projects: dto.usage?.projects ?? 0, taskTypes: dto.usage?.task_types ?? 0, docSpaces: dto.usage?.doc_spaces ?? 0 },
   }
 }
 

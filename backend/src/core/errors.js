@@ -57,6 +57,8 @@ const ERROR_DEFINITIONS = Object.freeze({
   DOC_PAGE_IS_HOME: { status: 409, message: 'The space home page cannot be moved or deleted' },
   ATTACHMENT_NOT_FOUND: { status: 404, message: 'Attachment not found' },
   PROJECT_FILE_NOT_FOUND: { status: 404, message: 'Project file not found' },
+  ICON_NOT_FOUND: { status: 404, message: 'Icon not found in the library' },
+  ICON_IN_USE: { status: 409, message: 'The icon is in use by projects, task types or documentation spaces' },
   NOTIFICATION_NOT_FOUND: { status: 404, message: 'Notification not found' },
   STATUS_NOT_FOUND: { status: 404, message: 'Status not found' },
   PRIORITY_NOT_FOUND: { status: 404, message: 'Priority not found' },

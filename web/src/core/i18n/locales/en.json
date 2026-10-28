@@ -214,7 +214,9 @@
     "API_TOKEN_NOT_REVEALABLE": "This token cannot be shown again (revoked or created before this option). Create a new one.",
     "TOKEN_NOT_ALLOWED": "This action can only be done in the browser, not with an API token.",
     "WEBHOOK_NOT_FOUND": "Webhook not found.",
-    "WEBHOOK_DELIVERY_NOT_FOUND": "Delivery not found."
+    "WEBHOOK_DELIVERY_NOT_FOUND": "Delivery not found.",
+    "ICON_IN_USE": "This icon is used by projects, task types or spaces and cannot be removed.",
+    "ICON_NOT_FOUND": "This icon is not in the library."
   },
   "nav": {
     "main": "Main navigation",
@@ -233,6 +235,7 @@
     "statuses": "Statuses",
     "priorities": "Priorities",
     "tags": "Tags",
+    "icons": "Icons",
     "roles": "Roles",
     "permissions": "Permissions",
     "soon": "Soon",
@@ -615,7 +618,8 @@
       "audit_log": "Audit history",
       "email_settings": "Email settings",
       "api_token": "API token",
-      "webhook": "Webhook"
+      "webhook": "Webhook",
+      "icon_library": "Icon library"
     },
     "fields": {
       "name": "Name",
@@ -749,7 +753,8 @@
       "user_id": "Person",
       "url": "Address",
       "events": "Events",
-      "failures": "Failures in a row"
+      "failures": "Failures in a row",
+      "icons": "Icons"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -885,7 +890,9 @@
       "webhook.updated": "Webhook edited",
       "webhook.deleted": "Webhook deleted",
       "webhook.secret_rotated": "Webhook secret changed",
-      "webhook.disabled": "Webhook turned off after repeated failures"
+      "webhook.disabled": "Webhook turned off after repeated failures",
+      "icon_library.imported": "Imported icons",
+      "icon_library.removed": "Removed an icon"
     }
   },
   "projects": {
@@ -3257,5 +3264,46 @@
   "realtime": {
     "reconnecting": "Reconnecting…",
     "reconnectingHint": "Realtime updates dropped and are coming back. The screen keeps working."
+  },
+  "icons": {
+    "title": "Icons",
+    "description": "Platform icon library: besides the default ones, icons imported here are offered for projects, task types and Documentation spaces.",
+    "import": "Import from gallery",
+    "importMore": "Import more icons from the gallery",
+    "empty": "No icons imported",
+    "emptyHint": "Search the gallery (over 1,700 icons) and import the ones your team will use.",
+    "unused": "Not in use",
+    "inUse": "In use: {{where}}",
+    "inUseHint": "{{name}} is in use and cannot be removed",
+    "removeOf": "Remove {{name}}",
+    "removeTitle": "Remove the \"{{name}}\" icon?",
+    "removeDescription": "It will no longer be offered in the icon pickers. You can import it again later.",
+    "removed": "Icon \"{{name}}\" removed.",
+    "usage": {
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects",
+      "taskTypes_one": "{{count}} task type",
+      "taskTypes_other": "{{count}} task types",
+      "docSpaces_one": "{{count}} space",
+      "docSpaces_other": "{{count}} spaces"
+    },
+    "galleryTitle": "Icon gallery",
+    "galleryDescription": "Select icons and import them at once (up to 60). Search by name, e.g. \"truck\", \"leaf\", \"chart\"…",
+    "search": "Search icon",
+    "searchPlaceholder": "Search by name",
+    "noResults": "No icon with that name",
+    "found_one": "{{count}} icon",
+    "found_other": "{{count}} icons",
+    "showMore": "Show {{count}} more",
+    "selected_zero": "None selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "importSelected_zero": "Import",
+    "importSelected_one": "Import {{count}} icon",
+    "importSelected_other": "Import {{count}} icons",
+    "imported_one": "{{count}} icon imported.",
+    "imported_other": "{{count}} icons imported.",
+    "alreadyImported": "{{name}} (already imported)",
+    "maxSelection": "Up to {{count}} icons per import."
   }
 }

@@ -5,16 +5,15 @@ import { cn } from '@/core/utils/cn'
 import { matchRanges, type DocSpace, type SpaceIcon } from '@/domain/docs'
 import { SPACE_ICON_COMPONENTS } from './docs-theme'
 import type { OptionColor } from '@/domain/task-config'
-import { AppBadge } from '@/presentation/components'
+import { AppBadge, AppIcon } from '@/presentation/components'
 import { optionColor, optionTint } from '@/features/task-config/config-theme'
 
 const SIZES = { sm: 'size-7 rounded-md [&_svg]:size-3.5', md: 'size-10 rounded-lg [&_svg]:size-5', lg: 'size-14 rounded-xl [&_svg]:size-7' }
 
 export function SpaceAvatar({ icon, color, size = 'md', className }: { icon: SpaceIcon; color: OptionColor; size?: keyof typeof SIZES; className?: string }) {
-  const Icon = SPACE_ICON_COMPONENTS[icon]
   return (
     <span aria-hidden className={cn('flex shrink-0 items-center justify-center', SIZES[size], className)} style={{ backgroundColor: optionTint(color), color: optionColor(color) }}>
-      <Icon />
+      <AppIcon name={icon} builtins={SPACE_ICON_COMPONENTS} fallback={SPACE_ICON_COMPONENTS.book} />
     </span>
   )
 }

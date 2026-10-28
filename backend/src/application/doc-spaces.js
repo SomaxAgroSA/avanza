@@ -14,6 +14,8 @@ const docsDomain = require('../domain/docs')
 const content = require('../domain/doc-content')
 const { OPTION_COLORS } = require('../domain/custom-field')
 const { colorRule } = require('../domain/color')
+const { iconRule } = require('../domain/icons')
+const { assertIconAvailable } = require('./icon-library')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso } = require('./presenters')
 const { createDocAccess } = require('./doc-access')
@@ -23,7 +25,7 @@ const RULES = {
   key: [rules.required(), rules.custom((value) => docsDomain.spaceKeyIssue(value))],
   name: [rules.required(), rules.string(), rules.maxLength(80)],
   description: [rules.string(), rules.maxLength(500)],
-  icon: [rules.oneOf(docsDomain.SPACE_ICONS)],
+  icon: [iconRule(docsDomain.SPACE_ICONS)],
   color: [colorRule(OPTION_COLORS)],
   project_id: [idRule],
   visibility: [rules.required(), rules.oneOf(docsDomain.SPACE_VISIBILITIES)],
@@ -95,6 +97,7 @@ function createDocSpaceService(deps) {
     rbac.assertAuthenticated(ctx.principal)
     rbac.assertCan(ctx.principal, 'docs.manage')
     const data = assertValid(input || {}, RULES)
+    await assertIconAvailable(deps, data.icon, docsDomain.SPACE_ICONS)
     const visibilityIssue = docsDomain.visibilityIssue(data.visibility, data.project_id)
     if (visibilityIssue) throw invalid({ visibility: visibilityIssue })
     if (data.project_id) {
@@ -152,6 +155,7 @@ function createDocSpaceService(deps) {
       if (source[key] !== undefined) schema[key] = RULES[key]
     })
     const data = assertValid(source, schema)
+    await assertIconAvailable(deps, data.icon, docsDomain.SPACE_ICONS, loaded.space.icon)
     if (data.visibility) {
       const issue = docsDomain.visibilityIssue(data.visibility, loaded.space.projectId)
       if (issue) throw invalid({ visibility: issue })

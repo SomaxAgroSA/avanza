@@ -9,7 +9,9 @@ import type { OptionColor } from './task-config'
 export const SPACE_VISIBILITIES = ['company', 'project'] as const
 export type SpaceVisibility = (typeof SPACE_VISIBILITIES)[number]
 export const SPACE_ICONS = ['book', 'file-text', 'layers', 'settings', 'shield', 'users', 'rocket', 'target', 'code', 'database', 'globe', 'briefcase'] as const
-export type SpaceIcon = (typeof SPACE_ICONS)[number]
+export type BuiltinSpaceIcon = (typeof SPACE_ICONS)[number]
+/** Ícone padrão ou um da biblioteca (nome do Lucide) — domain/icons.ts. */
+export type SpaceIcon = BuiltinSpaceIcon | (string & {})
 export const MAX_DOC_DEPTH = 8
 
 /** Documento do editor (JSON estruturado; higienizado pelo servidor). */

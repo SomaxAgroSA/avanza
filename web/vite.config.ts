@@ -36,13 +36,15 @@ export default defineConfig({
           groups: [
             // Ids de módulo chegam normalizados com "/" em todas as plataformas.
             { name: 'vendor-react', test: /node_modules\/(react|react-dom|scheduler|react-router)\//, priority: 30 },
-            { name: 'vendor-ui', test: /node_modules\/(@radix-ui|radix-ui|@floating-ui|cmdk|react-toastify|@dnd-kit|lucide-react)\//, priority: 20 },
+            // Os ícones do Lucide ficam fora dos grupos: cada um vai junto de quem usa, e os da galeria
+            // (biblioteca de ícones, carregados por nome) viram arquivos próprios, baixados só quando aparecem.
+            { name: 'vendor-ui', test: /node_modules\/(@radix-ui|radix-ui|@floating-ui|cmdk|react-toastify|@dnd-kit|lucide-react\/(?!dynamic|dist\/esm\/(icons\/|dynamic|DynamicIcon)))/, priority: 20 },
             { name: 'vendor-forms', test: /node_modules\/(zod|react-hook-form|@hookform)\//, priority: 20 },
             { name: 'vendor-table', test: /node_modules\/@tanstack\/(react-table|table-core|react-store|store)\//, priority: 20 },
             // Editor da documentação: só carrega nas telas /docs. Prioridade mínima: os grupos puxam as
             // dependências junto, e as compartilhadas (floating-ui, use-sync-external-store…) devem ficar
             // nos grupos do carregamento inicial, não aqui.
-            { name: 'vendor', test: /node_modules\/(?!@tiptap\/|prosemirror-|linkifyjs\/|orderedmap\/|rope-sequence\/|w3c-keyname\/)/, priority: 10 },
+            { name: 'vendor', test: /node_modules\/(?!@tiptap\/|prosemirror-|linkifyjs\/|orderedmap\/|rope-sequence\/|w3c-keyname\/|lucide-react\/(dynamic|dist\/esm\/(icons\/|dynamic|DynamicIcon)))/, priority: 10 },
             { name: 'vendor-editor', test: /node_modules\/(@tiptap|prosemirror-[a-z-]+|linkifyjs|orderedmap|rope-sequence|w3c-keyname)\//, priority: 5 },
           ],
         },

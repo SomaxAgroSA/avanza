@@ -15,6 +15,7 @@ import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
 import { ProjectAvatar } from './project-visuals'
 import { CustomColorSwatch } from '@/features/task-config/config-visuals'
 import { isHexColor } from '@/domain/colors'
+import { IconPicker } from '@/features/icons/IconPicker'
 import { useCreateProject, useUpdateProject } from './queries'
 
 const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate' }
@@ -210,33 +211,15 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
             control={control}
             name="icon"
             render={({ field }) => (
-              <AppFormField label={t('projects.fields.icon')}>
-                {({ id }) => (
-                  <div id={id} role="radiogroup" aria-label={t('projects.fields.icon')} className="grid grid-cols-10 gap-1.5">
-                    {PROJECT_ICONS.map((key) => {
-                      const Icon = PROJECT_ICON_COMPONENTS[key]
-                      const selected = field.value === key
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          aria-label={t(`projects.icons.${key}`)}
-                          title={t(`projects.icons.${key}`)}
-                          onClick={() => field.onChange(key)}
-                          className={cn(
-                            'flex aspect-square items-center justify-center rounded-md border text-muted transition-colors hover:bg-surface-2 hover:text-fg',
-                            selected ? 'border-primary bg-primary-soft text-primary-soft-fg' : 'border-border',
-                          )}
-                        >
-                          <Icon className="size-4" />
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </AppFormField>
+              <IconPicker
+                label={t('projects.fields.icon')}
+                value={field.value}
+                onChange={field.onChange}
+                builtins={PROJECT_ICONS}
+                components={PROJECT_ICON_COMPONENTS}
+                fallback={PROJECT_ICON_COMPONENTS.folder}
+                builtinLabel={(icon) => t(`projects.icons.${icon}`)}
+              />
             )}
           />
 

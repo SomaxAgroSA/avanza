@@ -59,6 +59,7 @@ function createFakeStore() {
     tasks: [],
     taskValues: [],
     tags: [],
+    icons: [],
     taskTags: [],
     comments: [],
     attachments: [],
@@ -986,6 +987,32 @@ function createFakeRepositories(store) {
     },
   }
 
+  const iconLibraryRepository = {
+    list: () => store.icons.slice().reverse(),
+    exists: (name) => store.icons.some((i) => i.name === name),
+    addMany: (names, userId) => {
+      const added = names.filter((name) => !iconLibraryRepository.exists(name))
+      added.forEach((name) => store.icons.push({ name, createdBy: userId || null, createdAt: new Date() }))
+      return added
+    },
+    remove: (name) => {
+      store.icons = store.icons.filter((i) => i.name !== name)
+    },
+    usage: (names) => {
+      const out = {}
+      const count = (list, key) =>
+        list.forEach((item) => {
+          if (!names.includes(item.icon)) return
+          out[item.icon] = Object.assign({ projects: 0, task_types: 0, doc_spaces: 0 }, out[item.icon])
+          out[item.icon][key] += 1
+        })
+      count(store.projects, 'projects')
+      count(store.taskTypes, 'task_types')
+      count(store.docSpaces, 'doc_spaces')
+      return out
+    },
+  }
+
   const tagRepository = {
     findById: (id) => store.tags.find((t) => t.id === id) || null,
     findByKey: (key) => store.tags.find((t) => t.nameKey === key) || null,
@@ -1321,6 +1348,7 @@ function createFakeRepositories(store) {
     docFileRepository,
     taskValueRepository,
     tagRepository,
+    iconLibraryRepository,
     taskTagRepository,
     commentRepository,
     attachmentRepository,

@@ -17,7 +17,9 @@ export const PROJECT_ICONS = [
   'folder', 'rocket', 'briefcase', 'code', 'database', 'globe', 'shield', 'users', 'chart', 'settings',
   'layers', 'zap', 'star', 'box', 'truck', 'building', 'cpu', 'headphones', 'book', 'target',
 ] as const
-export type ProjectIcon = (typeof PROJECT_ICONS)[number]
+export type BuiltinProjectIcon = (typeof PROJECT_ICONS)[number]
+/** Ícone padrão ou um da biblioteca (nome do Lucide) — domain/icons.ts. */
+export type ProjectIcon = BuiltinProjectIcon | (string & {})
 
 export const PROJECT_COVERS = ['violet', 'indigo', 'blue', 'cyan', 'teal', 'green', 'amber', 'orange', 'red', 'pink', 'slate'] as const
 export type PaletteCover = (typeof PROJECT_COVERS)[number]

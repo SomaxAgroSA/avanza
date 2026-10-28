@@ -14,6 +14,7 @@ import {
   AppConfirmDialog,
   AppEmptyState,
   AppErrorState,
+  AppIcon,
   AppIconButton,
   AppSelect,
   AppSkeleton,
@@ -415,6 +416,5 @@ function ProjectSettings({ project, onArchive, onDelete }: { project: Project; o
 
 /** Ícone do projeto grande e translúcido no canto do cabeçalho (decorativo). */
 function ProjectWatermark({ icon }: { icon: Project['icon'] }) {
-  const Icon = PROJECT_ICON_COMPONENTS[icon]
-  return <Icon aria-hidden className="pointer-events-none absolute -bottom-12 right-40 size-44 -rotate-12 text-on-cover opacity-10" />
+  return <AppIcon name={icon} builtins={PROJECT_ICON_COMPONENTS} fallback={PROJECT_ICON_COMPONENTS.folder} aria-hidden className="pointer-events-none absolute -bottom-12 right-40 size-44 -rotate-12 text-on-cover opacity-10" />
 }

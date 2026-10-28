@@ -4,7 +4,7 @@ import { Check, Plus } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { isHexColor, parseHexInput, type HexColor } from '@/domain/colors'
 import { OPTION_COLORS, type FieldType, type OptionColor, type TaskTypeIcon } from '@/domain/task-config'
-import { AppFormField, AppPopover, AppTextField } from '@/presentation/components'
+import { AppFormField, AppIcon, AppPopover, AppTextField } from '@/presentation/components'
 import { FIELD_TYPE_ICONS, TASK_TYPE_ICON_COMPONENTS, optionColor, optionTint } from './config-theme'
 
 /**
@@ -165,11 +165,10 @@ export function ColorDot({ color, className }: { color: OptionColor; className?:
 
 /** Ícone do tipo de tarefa, com fundo na cor do tipo. */
 export function TaskTypeIconBadge({ icon, color, size = 'md' }: { icon: TaskTypeIcon; color: OptionColor; size?: 'sm' | 'md' | 'lg' }) {
-  const Icon = TASK_TYPE_ICON_COMPONENTS[icon]
   const sizes = { sm: 'size-6 rounded-md [&_svg]:size-3.5', md: 'size-9 rounded-lg [&_svg]:size-4', lg: 'size-12 rounded-xl [&_svg]:size-6' }
   return (
     <span aria-hidden className={cn('flex shrink-0 items-center justify-center', sizes[size])} style={{ backgroundColor: optionTint(color), color: optionColor(color) }}>
-      <Icon />
+      <AppIcon name={icon} builtins={TASK_TYPE_ICON_COMPONENTS} fallback={TASK_TYPE_ICON_COMPONENTS['check-square']} />
     </span>
   )
 }

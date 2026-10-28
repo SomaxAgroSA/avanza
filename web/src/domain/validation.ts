@@ -4,6 +4,7 @@ import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES } f
 import { SPACE_ICONS, SPACE_VISIBILITIES } from './docs'
 import { OPTION_COLORS } from './task-config'
 import { isHexColor, type HexColor } from './colors'
+import { isIconName } from './icons'
 import { DEFAULT_PASSWORD_POLICY, type PasswordPolicy } from './platform'
 
 /**
@@ -102,7 +103,7 @@ export const projectSchema = z
       .transform((value) => value.toUpperCase())
       .pipe(z.string().regex(/^[A-Z][A-Z0-9]{1,9}$/, 'invalid_format')),
     description: z.string().max(10000, 'too_long'),
-    icon: z.enum(PROJECT_ICONS),
+    icon: z.union([z.enum(PROJECT_ICONS), z.custom<string>(isIconName)]),
     cover: z.union([z.enum(PROJECT_COVERS), z.custom<HexColor>(isHexColor)]),
     status: z.enum(PROJECT_STATUSES),
     priority: z.enum(PROJECT_PRIORITIES),
@@ -123,7 +124,7 @@ export const docSpaceSchema = z
       .transform((value) => value.toUpperCase())
       .pipe(z.string().regex(/^[A-Z][A-Z0-9]{1,9}$/, 'invalid_format')),
     description: z.string().max(500, 'too_long'),
-    icon: z.enum(SPACE_ICONS),
+    icon: z.union([z.enum(SPACE_ICONS), z.custom<string>(isIconName)]),
     color: z.union([z.enum(OPTION_COLORS), z.custom<HexColor>(isHexColor)]),
     visibility: z.enum(SPACE_VISIBILITIES),
     projectId: z.string(),

@@ -3,7 +3,7 @@ import { ChevronDown, ChevronsUp, ChevronUp, Equal, type LucideIcon } from 'luci
 import { cn } from '@/core/utils/cn'
 import type { ProjectCover, ProjectIcon, ProjectPriority, ProjectStatus } from '@/domain/projects'
 import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
-import { AppBadge } from '@/presentation/components'
+import { AppBadge, AppIcon } from '@/presentation/components'
 
 const SIZES = { sm: 'size-7 rounded-md [&_svg]:size-3.5', md: 'size-9 rounded-lg [&_svg]:size-4', lg: 'size-14 rounded-xl [&_svg]:size-7' }
 
@@ -18,10 +18,9 @@ export function ProjectAvatar({
   size?: keyof typeof SIZES
   className?: string
 }) {
-  const Icon = PROJECT_ICON_COMPONENTS[icon]
   return (
     <span className={cn('flex shrink-0 items-center justify-center text-white shadow-sm', SIZES[size], className)} style={coverStyle(cover)} aria-hidden>
-      <Icon />
+      <AppIcon name={icon} builtins={PROJECT_ICON_COMPONENTS} fallback={PROJECT_ICON_COMPONENTS.folder} />
     </span>
   )
 }

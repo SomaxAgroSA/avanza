@@ -23,10 +23,10 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { hexTone, isHexColor } from '@/domain/colors'
-import type { PaletteCover, ProjectCover, ProjectIcon } from '@/domain/projects'
+import type { BuiltinProjectIcon, PaletteCover, ProjectCover } from '@/domain/projects'
 
 /** Identidade visual dos projetos: ícones e capas (gradientes) disponíveis. */
-export const PROJECT_ICON_COMPONENTS: Record<ProjectIcon, LucideIcon> = {
+export const PROJECT_ICON_COMPONENTS: Record<BuiltinProjectIcon, LucideIcon> = {
   folder: Folder,
   rocket: Rocket,
   briefcase: Briefcase,

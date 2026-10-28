@@ -147,6 +147,9 @@ Leitura de status/prioridades/tags: `settings.manage` ou `tasks.view`. Alteraç�
 | POST | `/notifications/due-reminders` | roda agora os lembretes de prazo (`settings.manage`; também roda todo dia às 08:00) |
 | GET | `/attachments/{id}/file` | download/visualização protegida (`?download=1` força download) |
 | DELETE | `/attachments/{id}` | quem enviou ou gestor; sai dos campos de imagem/arquivo |
+| GET | `/icons` | biblioteca de ícones (qualquer autenticado): `[{ name, created_at, created_by, usage: { projects, task_types, doc_spaces } }]` — nomes do Lucide aceitos em `icon` de projetos, tipos de tarefa e espaços, além dos padrões de cada lugar |
+| POST | `/settings/icons` | `settings.manage`: importa da galeria `{ names: [] }` (até 60; minúsculas, números e hífens; repetidos ignorados) → a biblioteca. Histórico `icon_library.imported` |
+| DELETE | `/settings/icons/{name}` | `settings.manage`: remove — só se ninguém usa (**409 `ICON_IN_USE`** com `details: { projects, task_types, doc_spaces }`); `ICON_NOT_FOUND`. Histórico `icon_library.removed` |
 | GET · POST | `/tags` | lista com `task_count` · cria `{ name, color? }` (nome único sem diferenciar maiúsculas/acentos) |
 | PATCH · DELETE | `/tags/{id}` | renomear/cor · excluir (sai das tarefas) |
 

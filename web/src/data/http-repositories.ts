@@ -39,6 +39,8 @@ import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
 import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import { toBacklog, toBoard, toReport, toReportTask, toSprint, toNotification, toTaskRelations } from './mappers'
+import type { LibraryIconDto } from './dtos'
+import { toLibraryIcon } from './mappers'
 import { toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import type {
   AttachmentRepository,
@@ -55,6 +57,7 @@ import type {
   DocsRepository,
   SprintRepository,
   TagRepository,
+  IconLibraryRepository,
   CustomFieldInput,
   CustomFieldRepository,
   LookupInput,
@@ -549,6 +552,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     priorities: createHttpLookupRepository(api, '/priorities', toPriority),
     tasks: createHttpTaskRepository(api),
     tags: createHttpTagRepository(api),
+    icons: createHttpIconLibraryRepository(api),
     comments: createHttpCommentRepository(api),
     attachments: createHttpAttachmentRepository(api),
     projectFiles: createHttpProjectFileRepository(api),
@@ -588,6 +592,20 @@ function taskBody(data: TaskInput) {
     sprint_id: data.sprintId,
     parent_task_id: data.parentTaskId,
     checklist: data.checklist?.map((item) => ({ id: item.id, text: item.text, done: item.done })),
+  }
+}
+
+export function createHttpIconLibraryRepository(api: ApiClient): IconLibraryRepository {
+  return {
+    async list() {
+      return (await api.get<LibraryIconDto[]>('/icons')).data.map(toLibraryIcon)
+    },
+    async importIcons(names) {
+      return (await api.post<LibraryIconDto[]>('/settings/icons', { names })).data.map(toLibraryIcon)
+    },
+    async remove(name) {
+      await api.del(`/settings/icons/${encodeURIComponent(name)}`)
+    },
   }
 }
 

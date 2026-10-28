@@ -8,6 +8,8 @@ const { parsePagination, parseSort, buildPageMeta } = require('../core/paginatio
 const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
 const { colorRule } = require('../domain/color')
+const { iconRule } = require('../domain/icons')
+const { assertIconAvailable } = require('./icon-library')
 const { USER_STATUS } = require('../domain/user')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
@@ -17,7 +19,7 @@ const keyRule = rules.custom((value) => (typeof value !== 'string' ? 'invalid_ty
 const FIELD_RULES = {
   name: [rules.required(), rules.maxLength(120)],
   description: [rules.maxLength(10000)],
-  icon: [rules.oneOf(projectDomain.PROJECT_ICONS)],
+  icon: [iconRule(projectDomain.PROJECT_ICONS)],
   cover: [colorRule(projectDomain.PROJECT_COVERS)],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
@@ -149,6 +151,7 @@ function createProjectService(deps) {
   async function createProject(ctx, input) {
     rbac.assertCan(ctx.principal, 'projects.create')
     const data = assertValid(input, CREATE_SCHEMA)
+    await assertIconAvailable(deps, data.icon, projectDomain.PROJECT_ICONS)
     const key = projectDomain.normalizeKey(data.key)
     const datesIssue = projectDomain.datesIssue(data.start_date || null, data.due_date || null)
     if (datesIssue) throw appError('VALIDATION_ERROR', undefined, { fields: { due_date: datesIssue } })
@@ -188,6 +191,7 @@ function createProjectService(deps) {
       if (source[field] !== undefined && source[field] !== null) schema[field] = FIELD_RULES[field]
     })
     const data = assertValid(source, schema)
+    await assertIconAvailable(deps, data.icon, projectDomain.PROJECT_ICONS, project.icon)
 
     // Datas podem ser limpas com null; a validação do intervalo considera os valores já salvos.
     const pickDate = (field, current) => (source[field] === null ? null : data[field] !== undefined ? data[field] : current)

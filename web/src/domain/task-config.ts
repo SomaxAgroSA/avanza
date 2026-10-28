@@ -56,7 +56,9 @@ export const TASK_TYPE_ICONS = [
   'bug', 'code', 'sparkles', 'wrench', 'plus-square', 'plug', 'life-buoy', 'book', 'check-square',
   'flag', 'zap', 'shield', 'rocket', 'target', 'file-text', 'layers', 'search', 'settings',
 ] as const
-export type TaskTypeIcon = (typeof TASK_TYPE_ICONS)[number]
+export type BuiltinTaskTypeIcon = (typeof TASK_TYPE_ICONS)[number]
+/** Ícone padrão ou um da biblioteca (nome do Lucide) — domain/icons.ts. */
+export type TaskTypeIcon = BuiltinTaskTypeIcon | (string & {})
 
 export interface FieldConfig {
   max_length?: number

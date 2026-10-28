@@ -7,6 +7,8 @@ const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
 const cf = require('../domain/custom-field')
 const { colorRule } = require('../domain/color')
+const { iconRule } = require('../domain/icons')
+const { assertIconAvailable } = require('./icon-library')
 const contentLocale = require('../domain/content-locale')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso } = require('./presenters')
@@ -21,7 +23,7 @@ const keyRule = rules.custom((value) => (typeof value !== 'string' ? 'invalid_ty
 const FIELD_RULES = {
   name: [rules.required(), rules.maxLength(60)],
   description: [rules.maxLength(255)],
-  icon: [rules.oneOf(cf.TASK_TYPE_ICONS)],
+  icon: [iconRule(cf.TASK_TYPE_ICONS)],
   color: [colorRule(cf.OPTION_COLORS)],
   is_active: [rules.boolean()],
 }
@@ -122,6 +124,7 @@ function createTaskTypeService(deps) {
   async function createType(ctx, input) {
     rbac.assertCan(ctx.principal, 'settings.manage')
     const data = assertValid(input, Object.assign({ key: [rules.required(), keyRule] }, FIELD_RULES))
+    await assertIconAvailable(deps, data.icon, cf.TASK_TYPE_ICONS)
     const key = cf.normalizeTypeKey(data.key)
     const translations = parseTranslations((input || {}).translations)
     if (await types.findByKey(key)) throw appError('TASK_TYPE_KEY_IN_USE')
@@ -153,6 +156,7 @@ function createTaskTypeService(deps) {
       if (source[key] !== undefined) schema[key] = FIELD_RULES[key]
     })
     const data = assertValid(source, schema)
+    await assertIconAvailable(deps, data.icon, cf.TASK_TYPE_ICONS, type.icon)
     const before = { name: type.name, description: type.description, icon: type.icon, color: type.color, is_active: type.isActive !== false }
     let change = diff(before, data, Object.keys(before))
     // traduções: substituem as anteriores quando enviadas (objeto comparado pelo conteúdo)

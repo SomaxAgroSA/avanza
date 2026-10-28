@@ -214,7 +214,9 @@
     "API_TOKEN_NOT_REVEALABLE": "Este token no se puede mostrar de nuevo (revocado o creado antes de esta opción). Crea uno nuevo.",
     "TOKEN_NOT_ALLOWED": "Esta acción solo se puede hacer en el navegador, no con un token de API.",
     "WEBHOOK_NOT_FOUND": "Webhook no encontrado.",
-    "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega no encontrada."
+    "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega no encontrada.",
+    "ICON_IN_USE": "Este ícono lo usan proyectos, tipos de tarea o espacios y no se puede quitar.",
+    "ICON_NOT_FOUND": "Este ícono no está en la biblioteca."
   },
   "nav": {
     "main": "Navegación principal",
@@ -233,6 +235,7 @@
     "statuses": "Estados",
     "priorities": "Prioridades",
     "tags": "Etiquetas",
+    "icons": "Íconos",
     "roles": "Perfiles",
     "permissions": "Permisos",
     "soon": "Pronto",
@@ -615,7 +618,8 @@
       "audit_log": "Historial de auditoría",
       "email_settings": "Configuración de correo",
       "api_token": "Token de API",
-      "webhook": "Webhook"
+      "webhook": "Webhook",
+      "icon_library": "Biblioteca de íconos"
     },
     "fields": {
       "name": "Nombre",
@@ -749,7 +753,8 @@
       "user_id": "Persona",
       "url": "Dirección",
       "events": "Eventos",
-      "failures": "Fallas seguidas"
+      "failures": "Fallas seguidas",
+      "icons": "Íconos"
     },
     "actions": {
       "auth.login": "Inició sesión",
@@ -885,7 +890,9 @@
       "webhook.updated": "Webhook editado",
       "webhook.deleted": "Webhook eliminado",
       "webhook.secret_rotated": "Secreto del webhook cambiado",
-      "webhook.disabled": "Webhook desactivado por fallas seguidas"
+      "webhook.disabled": "Webhook desactivado por fallas seguidas",
+      "icon_library.imported": "Importó íconos",
+      "icon_library.removed": "Quitó un ícono"
     }
   },
   "projects": {
@@ -3257,5 +3264,46 @@
   "realtime": {
     "reconnecting": "Reconectando…",
     "reconnectingHint": "Las actualizaciones en tiempo real se cayeron y están volviendo. La pantalla sigue funcionando."
+  },
+  "icons": {
+    "title": "Íconos",
+    "description": "Biblioteca de íconos de la plataforma: además de los predeterminados, los importados aquí aparecen en los íconos de proyectos, tipos de tarea y espacios de la Documentación.",
+    "import": "Importar de la galería",
+    "importMore": "Importar más íconos de la galería",
+    "empty": "Ningún ícono importado",
+    "emptyHint": "Busca en la galería (más de 1.700 íconos) e importa los que usará el equipo.",
+    "unused": "Sin uso",
+    "inUse": "En uso: {{where}}",
+    "inUseHint": "{{name}} está en uso y no se puede quitar",
+    "removeOf": "Quitar {{name}}",
+    "removeTitle": "¿Quitar el ícono \"{{name}}\"?",
+    "removeDescription": "Deja de aparecer en los selectores de íconos. Puedes importarlo de nuevo después.",
+    "removed": "Ícono \"{{name}}\" quitado.",
+    "usage": {
+      "projects_one": "{{count}} proyecto",
+      "projects_other": "{{count}} proyectos",
+      "taskTypes_one": "{{count}} tipo de tarea",
+      "taskTypes_other": "{{count}} tipos de tarea",
+      "docSpaces_one": "{{count}} espacio",
+      "docSpaces_other": "{{count}} espacios"
+    },
+    "galleryTitle": "Galería de íconos",
+    "galleryDescription": "Marca los íconos e impórtalos de una vez (hasta 60). Los nombres están en inglés: busca \"truck\", \"leaf\", \"chart\"…",
+    "search": "Buscar ícono",
+    "searchPlaceholder": "Buscar por nombre (en inglés)",
+    "noResults": "Ningún ícono con ese nombre",
+    "found_one": "{{count}} ícono",
+    "found_other": "{{count}} íconos",
+    "showMore": "Mostrar {{count}} más",
+    "selected_zero": "Ninguno seleccionado",
+    "selected_one": "{{count}} seleccionado",
+    "selected_other": "{{count}} seleccionados",
+    "importSelected_zero": "Importar",
+    "importSelected_one": "Importar {{count}} ícono",
+    "importSelected_other": "Importar {{count}} íconos",
+    "imported_one": "{{count}} ícono importado.",
+    "imported_other": "{{count}} íconos importados.",
+    "alreadyImported": "{{name}} (ya importado)",
+    "maxSelection": "Hasta {{count}} íconos por importación."
   }
 }

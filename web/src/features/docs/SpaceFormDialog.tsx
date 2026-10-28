@@ -3,16 +3,16 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/core/utils/cn'
 import { isAppError } from '@/core/errors/app-error'
 import { SPACE_ICONS, SPACE_VISIBILITIES, type DocSpace } from '@/domain/docs'
 import { suggestKey } from '@/domain/projects'
 import { docSpaceSchema, type DocSpaceFormInput } from '@/domain/validation'
-import { AppButton, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
+import { AppButton, AppDialog, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { ColorPicker } from '@/features/task-config/config-visuals'
 import { useProjects } from '@/features/projects/queries'
 import { SPACE_ICON_COMPONENTS } from './docs-theme'
+import { IconPicker } from '@/features/icons/IconPicker'
 import { SpaceAvatar } from './docs-visuals'
 import { useSpaceMutations } from './queries'
 
@@ -199,33 +199,15 @@ export function SpaceFormDialog({ open, onOpenChange, space }: SpaceFormDialogPr
             control={control}
             name="icon"
             render={({ field }) => (
-              <AppFormField label={t('docs.space.fields.icon')}>
-                {({ id }) => (
-                  <div id={id} role="radiogroup" aria-label={t('docs.space.fields.icon')} className="grid grid-cols-6 gap-2">
-                    {SPACE_ICONS.map((value) => {
-                      const Icon = SPACE_ICON_COMPONENTS[value]
-                      const selected = field.value === value
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          aria-label={t(`docs.icons.${value}`)}
-                          title={t(`docs.icons.${value}`)}
-                          onClick={() => field.onChange(value)}
-                          className={cn(
-                            'flex aspect-square items-center justify-center rounded-lg border text-muted transition-colors hover:bg-surface-2 hover:text-fg [&_svg]:size-4.5',
-                            selected ? 'border-primary bg-primary-soft text-primary-soft-fg' : 'border-border',
-                          )}
-                        >
-                          <Icon aria-hidden />
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </AppFormField>
+              <IconPicker
+                label={t('docs.space.fields.icon')}
+                value={field.value}
+                onChange={field.onChange}
+                builtins={SPACE_ICONS}
+                components={SPACE_ICON_COMPONENTS}
+                fallback={SPACE_ICON_COMPONENTS.book}
+                builtinLabel={(icon) => t(`docs.icons.${icon}`)}
+              />
             )}
           />
           <Controller control={control} name="color" render={({ field }) => <ColorPicker label={t('docs.space.fields.color')} value={field.value} onChange={field.onChange} />} />

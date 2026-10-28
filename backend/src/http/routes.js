@@ -305,6 +305,9 @@ function taskHistory(e) {
 // ---------------------------------------------------------------- tags & comments
 
 const listTags = configAction('tags', (s, ctx) => s.listTags(ctx))
+const listIcons = configAction('iconLibrary', (s, ctx) => s.list(ctx))
+const importIcons = configAction('iconLibrary', (s, ctx, r) => s.importIcons(ctx, r.body()))
+const removeIcon = (e) => handle(e, async ({ ctx, services, param }) => ({ data: await services.iconLibrary.removeIcon(ctx, param('name')) }))
 const createTag = configAction('tags', (s, ctx, r) => s.createTag(ctx, r.body()), 201)
 const updateTag = configAction('tags', (s, ctx, r) => s.updateTag(ctx, r.id, r.body()))
 const deleteTag = configAction('tags', (s, ctx, r) => s.deleteTag(ctx, r.id))
@@ -691,6 +694,9 @@ module.exports = {
   deleteTask,
   taskHistory,
   listTags,
+  listIcons,
+  importIcons,
+  removeIcon,
   createTag,
   updateTag,
   deleteTag,

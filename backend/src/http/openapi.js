@@ -226,6 +226,17 @@ function build() {
           parameters: [idParam, { name: 'page', in: 'query', schema: { type: 'integer' } }, { name: 'perPage', in: 'query', schema: { type: 'integer' } }],
         }),
       },
+      '/icons': {
+        get: op('Biblioteca de ícones (qualquer autenticado): [{ name, created_at, created_by, usage: { projects, task_types, doc_spaces } }] — nomes do Lucide aceitos nos ícones de projeto, tipo de tarefa e espaço, além dos padrões', ['settings'], { 200: ok('Ícones', { type: 'array', items: { type: 'object' } }) }),
+      },
+      '/settings/icons': {
+        post: op('Importa ícones da galeria (settings.manage): { names: [] } — até 60, nomes do Lucide (minúsculas, números e hífens); repetidos são ignorados → a biblioteca', ['settings'], { 200: ok('Ícones', { type: 'array', items: { type: 'object' } }), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [csrfHeader] }),
+      },
+      '/settings/icons/{name}': {
+        delete: op('Remove da biblioteca (settings.manage) — só se nenhum projeto, tipo ou espaço usa (ICON_IN_USE com as contagens)', ['settings'], { 200: ok('Removido', { type: 'object' }), 404: errorResponse('ICON_NOT_FOUND'), 409: errorResponse('ICON_IN_USE') }, {
+          parameters: [{ name: 'name', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
+        }),
+      },
       '/users/{id}/avatar': {
         get: op('Foto do usuário (qualquer pessoa autenticada; nosniff + CSP sandbox; cache de 1 dia — avatar_url muda a cada foto nova)', ['users'], { 200: { description: 'Imagem' }, 404: errorResponse('NOT_FOUND') }, { parameters: [idParam] }),
         post: op('Envia a foto (o próprio usuário ou users.edit): multipart "file" — PNG, JPG ou WebP até 2 MB, tipo conferido pelo conteúdo; substitui a anterior', ['users'], { 200: ok('Usuário', ref('User')), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [idParam, csrfHeader] }),

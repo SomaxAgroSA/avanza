@@ -13,7 +13,7 @@ import {
   AppDragHandle,
   AppDropdown,
   AppErrorState,
-  AppFormField,
+  AppIcon,
   AppSkeleton,
   AppSortableList,
   AppTextField,
@@ -23,6 +23,7 @@ import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { TASK_TYPE_ICON_COMPONENTS, optionColor, optionTint } from './config-theme'
 import { ColorPicker, TaskTypeIconBadge } from './config-visuals'
+import { IconPicker } from '@/features/icons/IconPicker'
 import { useTaskTypeMutations, useTaskTypes } from './queries'
 
 export function TaskTypesPage() {
@@ -219,7 +220,6 @@ export function TaskTypeFormDialog({ open, type, onOpenChange }: { open: boolean
   }
 
   const pending = create.isPending || update.isPending
-  const Icon = TASK_TYPE_ICON_COMPONENTS[draft.icon]
 
   function submit() {
     const found: Record<string, string> = {}
@@ -271,7 +271,7 @@ export function TaskTypeFormDialog({ open, type, onOpenChange }: { open: boolean
       >
         <div className="flex items-center gap-3 rounded-xl border border-border p-3">
           <span className="flex size-10 items-center justify-center rounded-lg" style={{ color: optionColor(draft.color), backgroundColor: optionTint(draft.color) }}>
-            <Icon className="size-5" aria-hidden />
+            <AppIcon name={draft.icon} builtins={TASK_TYPE_ICON_COMPONENTS} fallback={TASK_TYPE_ICON_COMPONENTS['check-square']} className="size-5" aria-hidden />
           </span>
           <div className="min-w-0">
             <p className="truncate font-medium text-fg">{draft.name || t('taskTypes.namePlaceholder')}</p>
@@ -346,33 +346,15 @@ export function TaskTypeFormDialog({ open, type, onOpenChange }: { open: boolean
             ))}
           </div>
         </section>
-        <AppFormField label={t('taskTypes.fields.icon')}>
-          {({ id }) => (
-            <div id={id} role="radiogroup" aria-label={t('taskTypes.fields.icon')} className="grid grid-cols-9 gap-1.5 sm:grid-cols-[repeat(18,minmax(0,1fr))]">
-              {TASK_TYPE_ICONS.map((key) => {
-                const ItemIcon = TASK_TYPE_ICON_COMPONENTS[key]
-                const selected = draft.icon === key
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    aria-label={t(`taskTypes.icons.${key}`)}
-                    title={t(`taskTypes.icons.${key}`)}
-                    onClick={() => setDraft((d) => ({ ...d, icon: key }))}
-                    className={cn(
-                      'flex aspect-square items-center justify-center rounded-lg border text-muted transition-colors hover:bg-surface-2 hover:text-fg',
-                      selected ? 'border-primary bg-primary-soft text-primary-soft-fg' : 'border-border',
-                    )}
-                  >
-                    <ItemIcon className="size-4" />
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </AppFormField>
+        <IconPicker
+          label={t('taskTypes.fields.icon')}
+          value={draft.icon}
+          onChange={(icon) => setDraft((d) => ({ ...d, icon }))}
+          builtins={TASK_TYPE_ICONS}
+          components={TASK_TYPE_ICON_COMPONENTS}
+          fallback={TASK_TYPE_ICON_COMPONENTS['check-square']}
+          builtinLabel={(icon) => t(`taskTypes.icons.${icon}`)}
+        />
         <ColorPicker label={t('taskTypes.fields.color')} value={draft.color} onChange={(color) => setDraft((d) => ({ ...d, color }))} />
       </form>
     </AppDialog>

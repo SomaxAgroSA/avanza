@@ -448,6 +448,13 @@ export interface ReportDto {
   overdue_tasks: TaskDto[]
 }
 
+export interface LibraryIconDto {
+  name: string
+  created_at: string | null
+  created_by: UserSummaryDto | null
+  usage: { projects: number; task_types: number; doc_spaces: number }
+}
+
 export interface TagDto {
   id: string
   name: string

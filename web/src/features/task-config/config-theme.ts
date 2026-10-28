@@ -37,9 +37,9 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { hexTone, isHexColor } from '@/domain/colors'
-import type { FieldType, OptionColor, PaletteColor, TaskTypeIcon } from '@/domain/task-config'
+import type { BuiltinTaskTypeIcon, FieldType, OptionColor, PaletteColor } from '@/domain/task-config'
 
-export const TASK_TYPE_ICON_COMPONENTS: Record<TaskTypeIcon, LucideIcon> = {
+export const TASK_TYPE_ICON_COMPONENTS: Record<BuiltinTaskTypeIcon, LucideIcon> = {
   bug: Bug,
   code: Code2,
   sparkles: Sparkles,

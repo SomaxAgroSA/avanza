@@ -18,6 +18,7 @@ const { createTaskTypeService } = require('../application/task-types')
 const { createLookupService } = require('../application/lookups')
 const { createTaskService } = require('../application/tasks')
 const { createTagService } = require('../application/tags')
+const { createIconLibraryService } = require('../application/icon-library')
 const { createCommentService } = require('../application/comments')
 const { createAttachmentService } = require('../application/attachments')
 const { createProjectFileService } = require('../application/project-files')
@@ -104,6 +105,7 @@ function createContainer(runtime, options) {
     priorities: createLookupService(deps, 'priority'),
     tasks: createTaskService(deps),
     tags: createTagService(deps),
+    iconLibrary: createIconLibraryService(deps),
     comments: createCommentService(deps),
     attachments: createAttachmentService(deps),
     projectFiles: createProjectFileService(deps),
