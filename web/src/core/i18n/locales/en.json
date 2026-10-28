@@ -302,17 +302,6 @@
       "description": "Password recovery by email isn't set up on this platform. An administrator can reset your password."
     },
     "hero": {
-      "board": "Team board",
-      "live": "Live",
-      "columns": {
-        "todo": "To do",
-        "doing": "In progress",
-        "done": "Done"
-      },
-      "health": "Project health",
-      "onTrack": "On track",
-      "moved": "Card moved to Done",
-      "now": "just now · the whole team sees it",
       "features": {
         "kanban": {
           "title": "Kanban and backlog",
