@@ -51,6 +51,8 @@ export interface DataTableColumn<T> {
 export interface DataTableRowActions<T> {
   /** Clique na linha (e o botão "Visualizar"): abre a visualização rápida. */
   onView?: (row: T) => void
+  /** Linha sem visualização: o botão fica desativado e o clique na linha não faz nada. */
+  canView?: (row: T) => boolean
   /** Duplo clique na linha: abre a página completa (no teclado, use o "Abrir" do menu da linha). */
   onOpen?: (row: T) => void
   onEdit?: (row: T) => void
@@ -407,7 +409,7 @@ export function AppDataTable<T extends RowData>({
                   <tr
                     key={row.id}
                     onClick={(event) => {
-                      if (!actions?.onView || isControl(event.target)) return
+                      if (!actions?.onView || isControl(event.target) || actions.canView?.(row.original) === false) return
                       const view = actions.onView
                       if (!actions.onOpen) return view(row.original)
                       window.clearTimeout(clickTimer.current)
@@ -459,6 +461,7 @@ export function AppDataTable<T extends RowData>({
 
 function RowActions<T extends RowData>({ row, actions }: { row: T; actions: DataTableRowActions<T> }) {
   const { t } = useTranslation()
+  const canView = actions.onView && (actions.canView ? actions.canView(row) : true)
   const canEdit = actions.onEdit && (actions.canEdit ? actions.canEdit(row) : true)
   const canDelete = actions.onDelete && (actions.canDelete ? actions.canDelete(row) : true)
   const moreItems = actions.more?.(row) ?? []
@@ -466,7 +469,7 @@ function RowActions<T extends RowData>({ row, actions }: { row: T; actions: Data
 
   return (
     <div className="flex items-center justify-end gap-0.5">
-      {actions.onView && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} onClick={() => actions.onView?.(row)} />}
+      {actions.onView && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} disabled={!canView} onClick={() => actions.onView?.(row)} />}
       {actions.onEdit && (
         <AppIconButton size="sm" label={t('common.edit')} icon={<Pencil />} disabled={!canEdit} onClick={() => actions.onEdit?.(row)} />
       )}

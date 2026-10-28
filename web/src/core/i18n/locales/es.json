@@ -211,7 +211,7 @@
     "API_TOKEN_INVALID": "Token de API no válido, vencido o revocado.",
     "API_TOKEN_NOT_FOUND": "Token de API no encontrado.",
     "API_TOKEN_LIMIT": "Ya tienes 20 tokens activos. Revoca alguno antes de crear otro.",
-    "API_TOKEN_NOT_REVEALABLE": "Este token no se puede mostrar de nuevo (revocado, vencido o creado antes de esta opción). Crea uno nuevo.",
+    "API_TOKEN_NOT_REVEALABLE": "Este token no se puede mostrar de nuevo (revocado o creado antes de esta opción). Crea uno nuevo.",
     "TOKEN_NOT_ALLOWED": "Esta acción solo se puede hacer en el navegador, no con un token de API.",
     "WEBHOOK_NOT_FOUND": "Webhook no encontrado.",
     "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega no encontrada."
@@ -3143,7 +3143,7 @@
     "reveal": "Ver token",
     "revealTitle": "Token \"{{name}}\"",
     "revealDescription": "Copia el token o el comando de Claude. Esta visualización queda registrada en el historial.",
-    "notRevealable": "Este token no se puede mostrar de nuevo (revocado, vencido o creado antes de esta opción). Crea uno nuevo para copiarlo.",
+    "notRevealable": "Este token se creó antes de esta opción y su valor no se guardó. Crea uno nuevo para copiarlo.",
     "empty": "Ningún token todavía",
     "emptyHint": "Crea un token para que un script o integración acceda a la API en tu nombre.",
     "noPermission": "Tu perfil no permite crear tokens de API.",

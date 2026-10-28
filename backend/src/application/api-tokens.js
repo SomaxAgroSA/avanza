@@ -104,7 +104,7 @@ function createApiTokenService(deps) {
   }
 
   /**
-   * Mostra de novo o valor (para copiar): só o dono, só pelo navegador e só com o token ativo; de outra
+   * Mostra de novo o valor (para copiar): só o dono, só pelo navegador e nunca revogado (vencido pode: é para copiar, não autentica); de outra
    * pessoa — inclusive para quem gerencia integrações — responde como inexistente. Fica no histórico.
    */
   async function reveal(ctx, id) {
@@ -112,7 +112,7 @@ function createApiTokenService(deps) {
     rbac.assertAuthenticated(ctx.principal)
     const token = id ? await deps.apiTokenRepository.findById(id) : null
     if (!token || token.userId !== ctx.principal.userId) throw appError('API_TOKEN_NOT_FOUND')
-    if (tokenDomain.tokenState(token, deps.clock.now()) !== 'active' || !token.revealable) throw appError('API_TOKEN_NOT_REVEALABLE')
+    if (tokenDomain.tokenState(token, deps.clock.now()) === 'revoked' || !token.revealable) throw appError('API_TOKEN_NOT_REVEALABLE')
     const value = await deps.apiTokenRepository.revealValue(token.id)
     if (!value) throw appError('API_TOKEN_NOT_REVEALABLE')
     await deps.auditRepository.record(

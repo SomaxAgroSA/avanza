@@ -316,7 +316,7 @@ curl -H "Authorization: Bearer kb_pat_..." https://kamban.empresa.com/api/v1/tas
 |---|---|---|
 | GET/POST | `/auth/tokens` | os meus tokens (sem o valor) / criar (`api_tokens.create`): `{ name*, expires_in_days*: 30\|90\|365\|0 }` → resposta com `token` (só aqui); `API_TOKEN_LIMIT` (20 ativos) |
 | DELETE | `/auth/tokens/{id}` | revogar um meu; de outra pessoa → 404 `API_TOKEN_NOT_FOUND` |
-| POST | `/auth/tokens/{id}/reveal` | **ver de novo** um token meu e ativo (só no navegador: com token → `TOKEN_NOT_ALLOWED`) → resposta com `token`; de outra pessoa → 404; revogado, vencido ou criado antes de guardar o valor → 409 `API_TOKEN_NOT_REVEALABLE`. Histórico `api_token.revealed`. A lista traz `revealable` |
+| POST | `/auth/tokens/{id}/reveal` | **ver de novo** um token meu e não revogado (vencido pode) (só no navegador: com token → `TOKEN_NOT_ALLOWED`) → resposta com `token`; de outra pessoa → 404; revogado ou criado antes de guardar o valor → 409 `API_TOKEN_NOT_REVEALABLE`. Histórico `api_token.revealed`. A lista traz `revealable` |
 | GET/DELETE | `/settings/api-tokens[/{id}]` | `integrations.manage`: todos os tokens (com `user`) / revogar qualquer um |
 
 Auditoria: `api_token.created` (nome, prefixo, prazo — nunca o valor) e `api_token.revoked`.

@@ -88,7 +88,7 @@ Limites por IP (`http/rate-limit.js`, antes de ler o corpo): login 10/min; `/api
 - **Conteúdo:** todo texto vindo de pessoas é escapado no HTML do e-mail.
 
 ## Tokens de API
-- Valor `kb_pat_` + 40 caracteres aleatórios. A autenticação usa o **hash**; o valor fica também **cifrado** (AES-256-GCM com `KAMBAN_SECRET_KEY`, como a senha do SMTP) para o dono ver de novo pelo navegador (ADR-046) — um vazamento só do banco não revela tokens sem a chave do servidor. Ver de novo: só o dono, só com sessão do navegador (um token não revela outro nem a si mesmo), só ativo, e fica no histórico. O histórico guarda nome, prefixo e prazo, nunca o valor.
+- Valor `kb_pat_` + 40 caracteres aleatórios. A autenticação usa o **hash**; o valor fica também **cifrado** (AES-256-GCM com `KAMBAN_SECRET_KEY`, como a senha do SMTP) para o dono ver de novo pelo navegador (ADR-046) — um vazamento só do banco não revela tokens sem a chave do servidor. Ver de novo: só o dono, só com sessão do navegador (um token não revela outro nem a si mesmo), nunca revogado (vencido pode: não autentica), e fica no histórico. O histórico guarda nome, prefixo e prazo, nunca o valor.
 - `Authorization: Bearer` não usa cookie, então não há CSRF a proteger: o header de CSRF é dispensado só nesse caso, e com o token o cookie é ignorado (não dá para combinar os dois).
 - O token herda as permissões do perfil atual a cada chamada; pessoa desativada, token vencido ou revogado → 401 imediato.
 - Um token vazado não consegue se perpetuar: não cria outros tokens, não troca a senha nem mexe nas sessões (`TOKEN_NOT_ALLOWED`). Revogar está em Minha conta e, para o Admin, em Integrações.

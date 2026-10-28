@@ -103,7 +103,7 @@ describe('application/api-tokens', () => {
     assert.equal((await tokens.revoke(await ctxOf(admin), other.id)).state, 'revoked')
   })
 
-  it('ver de novo: só o dono, pelo navegador, com o token ativo; o valor sai cifrado do banco e a exibição fica no histórico', async () => {
+  it('ver de novo: só o dono, pelo navegador, nunca revogado (vencido pode); o valor sai cifrado do banco e a exibição fica no histórico', async () => {
     const { deps, gestor, admin, ctxOf, tokens } = await setup()
     const created = await tokens.create(await ctxOf(gestor), { name: 'Claude', expires_in_days: 30 })
     assert.equal(created.revealable, true)
@@ -124,7 +124,10 @@ describe('application/api-tokens', () => {
     assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(admin), created.id)), 'API_TOKEN_NOT_FOUND')
     assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(gestor), 'naoexiste')), 'API_TOKEN_NOT_FOUND')
 
-    // revogado ou criado antes de guardar o valor: não dá para ver
+    // vencido ainda pode ser visto (para copiar); revogado ou criado antes de guardar o valor, não
+    deps.clock.advanceMinutes(31 * 24 * 60)
+    assert.equal((await tokens.listMine(await ctxOf(gestor)))[0].state, 'expired')
+    assert.equal((await tokens.reveal(await ctxOf(gestor), created.id)).token, created.token)
     await tokens.revoke(await ctxOf(gestor), created.id)
     assert.equal(await codeOf(async () => tokens.reveal(await ctxOf(gestor), created.id)), 'API_TOKEN_NOT_REVEALABLE')
     const legacy = await deps.apiTokenRepository.create({ userId: gestor.id, name: 'Antigo', tokenHash: 'h', prefix: 'kb_pat_xxxx', expiresAt: null, createdAt: deps.clock.now() })

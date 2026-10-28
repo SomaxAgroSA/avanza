@@ -78,12 +78,13 @@ describe('Minha conta — tokens de API', () => {
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('t1'))
   })
 
-  it('ver token: mostra de novo o valor e o comando do Claude para copiar; o antigo explica que não dá', async () => {
+  it('ver token: mostra de novo o valor e o comando do Claude para copiar; revogado não abre; o antigo explica que não dá', async () => {
     const value = 'kb_pat_ab12' + 'y'.repeat(36)
     const reveal = vi.fn<ApiTokenRepository['reveal']>(() => Promise.resolve({ ...TOKEN, token: value }))
     const legacy = { ...TOKEN, id: 't2', name: 'Antigo', revealable: false }
+    const revoked = { ...TOKEN, id: 't3', name: 'Desligado', state: 'revoked' as const }
     const info = vi.spyOn(notify, 'info')
-    setup(['api_tokens.create'], { listMine: () => Promise.resolve([TOKEN, legacy]), reveal })
+    setup(['api_tokens.create'], { listMine: () => Promise.resolve([TOKEN, legacy, revoked]), reveal })
     const viewOf = (name: string) => within(screen.getByText(name).closest('tr') as HTMLElement).getByRole('button', { name: 'Visualizar' })
     await screen.findByText('Antigo')
     await userEvent.click(viewOf('Power BI'))
@@ -98,7 +99,11 @@ describe('Minha conta — tokens de API', () => {
 
     await userEvent.click(viewOf('Antigo'))
     expect(reveal).toHaveBeenCalledTimes(1)
-    expect(info).toHaveBeenCalledWith(expect.stringMatching(/não pode ser mostrado de novo/))
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/criado antes desta opção/))
+
+    expect(viewOf('Desligado')).toBeDisabled()
+    await userEvent.click(screen.getByText('Desligado'))
+    expect(reveal).toHaveBeenCalledTimes(1)
   })
 
   it('sem a permissão não há "Novo token"', async () => {

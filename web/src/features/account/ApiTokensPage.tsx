@@ -47,7 +47,7 @@ export function ApiTokensPage() {
     onError: (error) => notify.error(errorMessage(error)),
   })
   const view = (token: ApiToken) => {
-    if (token.state !== 'active' || !token.revealable) {
+    if (!token.revealable) {
       notify.info(t('apiTokens.notRevealable'))
       return
     }
@@ -94,7 +94,7 @@ export function ApiTokensPage() {
           table={table}
           paginated={false}
           searchable={false}
-          actions={{ onView: view, onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }) }}
+          actions={{ onView: view, canView: (row) => row.state !== 'revoked', onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }) }}
           emptyState={<AppEmptyState compact icon={<KeyRound />} title={t('apiTokens.empty')} description={canCreate ? t('apiTokens.emptyHint') : t('apiTokens.noPermission')} />}
         />
       )}
