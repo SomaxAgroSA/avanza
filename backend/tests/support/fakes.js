@@ -412,6 +412,14 @@ function createFakeRepositories(store) {
       store.projects = store.projects.filter((p) => p.id !== id)
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
+    /** Abertos que a pessoa enxerga (dono, membro ou viewAll), pela chave; `ids` restringe. */
+    listVisible: (query) =>
+      store.projects
+        .filter((p) => !p.archivedAt)
+        .filter((p) => query.viewAll || p.ownerId === query.userId || store.projectMembers.some((m) => m.projectId === p.id && m.userId === query.userId))
+        .filter((p) => !query.ids || query.ids.includes(p.id))
+        .slice()
+        .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)),
   }
 
   let taskClock = 0
@@ -477,6 +485,22 @@ function createFakeRepositories(store) {
       const sorted = options.closed
         ? list.slice().sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
         : list.slice().sort((a, b) => a.position - b.position || a.number - b.number)
+      return sorted.slice(0, options.limit)
+    },
+    countByStatusIn: (projectIds) => {
+      const counts = {}
+      store.tasks
+        .filter((t) => projectIds.includes(t.projectId))
+        .forEach((t) => {
+          counts[t.statusId] = (counts[t.statusId] || 0) + 1
+        })
+      return counts
+    },
+    listForBoardIn: (projectIds, statusId, options) => {
+      const list = store.tasks.filter((t) => projectIds.includes(t.projectId) && t.statusId === statusId)
+      const sorted = options.closed
+        ? list.slice().sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
+        : list.slice().sort((a, b) => a.position - b.position || a.number - b.number || (a.id < b.id ? -1 : 1))
       return sorted.slice(0, options.limit)
     },
     /** Backlog: tarefas nos status indicados, em ordem manual. */

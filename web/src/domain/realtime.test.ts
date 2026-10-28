@@ -20,6 +20,7 @@ describe('domain/realtime — o que atualizar na tela', () => {
   it('tarefa: quadro, planejamento, timeline, listas, relatórios e a própria tarefa', () => {
     expect(invalidationKeys(event('tasks', { id: 't1', taskId: 't1' }))).toEqual([
       ['tasks', 'board', 'p1'],
+      ['tasks', 'board-all'],
       ['tasks', 'backlog', 'p1'],
       ['tasks', 'timeline', 'p1'],
       ['tasks', 'list'],
@@ -42,6 +43,7 @@ describe('domain/realtime — o que atualizar na tela', () => {
     expect(invalidationKeys(event('task_relations', { taskId: 't1' }))).toEqual([
       ['tasks', 'relations', 't1'],
       ['tasks', 'board', 'p1'],
+      ['tasks', 'board-all'],
       ['tasks', 'timeline', 'p1'],
     ])
   })
@@ -58,6 +60,7 @@ describe('domain/realtime — o que atualizar na tela', () => {
     expect(invalidationKeys(event('project_members'))).toEqual([
       ['projects', 'detail', 'p1'],
       ['projects', 'members', 'p1'],
+      ['tasks', 'board-all'],
     ])
     expect(invalidationKeys(event('notifications', { projectId: null }))).toEqual([['notifications']])
     expect(invalidationKeys(event('desconhecida'))).toEqual([])

@@ -10,6 +10,8 @@ export interface BoardCardField {
 export interface BoardCard extends TaskSummary {
   /** Campos marcados "no card" no tipo da tarefa. */
   cardFields: BoardCardField[]
+  /** Quadro de todos os projetos: pode mover este card (permissão no projeto dele). */
+  canMove?: boolean
 }
 
 export interface BoardColumn {
@@ -24,8 +26,18 @@ export interface BoardColumn {
   cards: BoardCard[]
 }
 
+export interface BoardProject {
+  id: string
+  key: string
+  name: string
+}
+
 export interface Board {
-  project: { id: string; key: string; name: string; archived: boolean }
+  /** null = quadro de todos os projetos (`/kanban/all`). */
+  project: (BoardProject & { archived: boolean }) | null
+  /** Projetos incluídos no quadro, pela chave (no quadro do projeto, só ele). */
+  projects: BoardProject[]
+  /** No quadro de todos os projetos: mover/criar em algum projeto. */
   capabilities: { move: boolean; create: boolean }
   columns: BoardColumn[]
 }
@@ -42,9 +54,14 @@ export interface BoardFilters {
   tag: string
   /** 'none' | id da sprint | '' */
   sprint: string
+  /** Quadro de todos os projetos: só os projetos escolhidos (vazio = todos). */
+  projects: string[]
 }
 
-export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', tag: '', sprint: '' }
+/** Filtros de escolha única (os que viram uma lista de seleção na barra). */
+export type BoardSelectFilter = Exclude<keyof BoardFilters, 'search' | 'projects'>
+
+export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', tag: '', sprint: '', projects: [] }
 
 function normalize(text: string): string {
   return text
@@ -67,6 +84,7 @@ export function matchesFilters(card: TaskSummary, filters: BoardFilters, current
   if (filters.tag && !card.tags.some((t) => t.id === filters.tag)) return false
   if (filters.sprint === 'none' && card.sprint) return false
   if (filters.sprint && filters.sprint !== 'none' && card.sprint?.id !== filters.sprint) return false
+  if (filters.projects.length > 0 && !filters.projects.includes(card.project?.id ?? '')) return false
   return true
 }
 
@@ -179,4 +197,88 @@ export function wipState(column: Pick<BoardColumn, 'wipLimit' | 'total'>): 'none
   if (!column.wipLimit) return 'none'
   if (column.total > column.wipLimit) return 'over'
   return column.total === column.wipLimit ? 'full' : 'ok'
+}
+
+// ------------------------------------------------------------ quadro de todos os projetos (§5)
+
+/** Quadro de todos os projetos (`/kanban/all`)? */
+export function isAllProjects(board: Board): boolean {
+  return board.project === null
+}
+
+/**
+ * Limite WIP que vale para a coluna no quadro: o limite é por projeto, então no quadro de todos os
+ * projetos (total somando vários) não há limite nem alerta.
+ */
+export function boardWipLimit(board: Board, column: Pick<BoardColumn, 'wipLimit'>): number {
+  return isAllProjects(board) ? 0 : column.wipLimit
+}
+
+/** Pode arrastar o card? No quadro de todos os projetos vale a permissão no projeto do card. */
+export function canMoveCard(board: Board, card: Pick<BoardCard, 'canMove'>): boolean {
+  return card.canMove ?? board.capabilities.move
+}
+
+/**
+ * Vizinhos do mesmo projeto na posição final (quadro de todos os projetos): a posição é de cada
+ * projeto e o servidor ignora vizinhos de outro projeto — o mais próximo acima e abaixo do mesmo projeto.
+ */
+export function neighborsInProject(ids: string[], cardId: string, projectOf: (id: string) => string | undefined): { prevId?: string; nextId?: string } {
+  const index = ids.indexOf(cardId)
+  const project = projectOf(cardId)
+  if (index < 0 || !project) return {}
+  const same = (id: string) => projectOf(id) === project
+  const prevId = ids.slice(0, index).reverse().find(same)
+  const nextId = ids.slice(index + 1).find(same)
+  return { prevId, nextId }
+}
+
+/** Responsáveis presentes nos cards (opções do filtro e das raias), por nome. */
+export function boardPeople(board: Board): UserSummary[] {
+  const people = new Map<string, UserSummary>()
+  board.columns.forEach((column) =>
+    column.cards.forEach((card) => {
+      if (card.assignee && !people.has(card.assignee.id)) people.set(card.assignee.id, card.assignee)
+    }),
+  )
+  return [...people.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Pessoas citadas nos cards (responsável, autor, relator): nomes dos campos de pessoa. */
+export function boardPersonReferences(board: Board): Array<{ id: string; name: string }> {
+  const people = new Map<string, { id: string; name: string }>()
+  board.columns.forEach((column) =>
+    column.cards.forEach((card) =>
+      [card.assignee, card.creator, card.reporter].forEach((person) => {
+        if (person && !people.has(person.id)) people.set(person.id, { id: person.id, name: person.name })
+      }),
+    ),
+  )
+  return [...people.values()]
+}
+
+/** Ids dos projetos com algum card carregado no quadro. */
+function projectsWithCards(board: Board): Set<string> {
+  const ids = new Set<string>()
+  board.columns.forEach((column) => column.cards.forEach((card) => card.project && ids.add(card.project.id)))
+  return ids
+}
+
+/** Opções do filtro de projeto: os projetos com cards no quadro (e os já escolhidos), pela chave. */
+export function projectFilterOptions(board: Board, selected: readonly string[]): BoardProject[] {
+  const withCards = projectsWithCards(board)
+  return board.projects.filter((project) => withCards.has(project.id) || selected.includes(project.id))
+}
+
+/**
+ * Projetos do quadro que a tela assina no tempo real, até `max` (o servidor aceita um número limitado
+ * de tópicos por conexão): primeiro os que têm cards. `complete` = todos couberam; senão, a tela
+ * volta à consulta periódica curta para não deixar de ver os demais.
+ */
+export function liveProjectIds(board: Board, max: number): { ids: string[]; complete: boolean } {
+  const withCards = projectsWithCards(board)
+  const ordered = [...board.projects.filter((p) => withCards.has(p.id)), ...board.projects.filter((p) => !withCards.has(p.id))]
+  // na ordem do quadro (pela chave): a lista só muda quando muda quem entra, sem refazer assinaturas à toa
+  const chosen = new Set(ordered.slice(0, max).map((p) => p.id))
+  return { ids: board.projects.filter((p) => chosen.has(p.id)).map((p) => p.id), complete: ordered.length <= max }
 }

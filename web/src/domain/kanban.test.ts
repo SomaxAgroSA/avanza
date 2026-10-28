@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import {
+  boardPeople,
+  boardPersonReferences,
+  boardWipLimit,
   buildContainers,
   buildLanes,
+  canMoveCard,
   canTransition,
   containerId,
   EMPTY_FILTERS,
+  isAllProjects,
+  liveProjectIds,
   matchesFilters,
   moveCardInBoard,
   neighbors,
+  neighborsInProject,
   parseContainer,
+  projectFilterOptions,
   wipState,
   type Board,
   type BoardCard,
@@ -53,6 +61,7 @@ const ana = { id: 'u1', name: 'Ana Souza', email: 'a@x.com', avatarUrl: null }
 
 const board: Board = {
   project: { id: 'p', key: 'CRM', name: 'CRM', archived: false },
+  projects: [{ id: 'p', key: 'CRM', name: 'CRM' }],
   capabilities: { move: true, create: true },
   columns: [
     { status: status('a', 'Backlog'), wipLimit: 0, allowedNext: ['b'], total: 2, truncated: false, cards: [card('1', { assignee: ana }), card('2')] },
@@ -111,5 +120,71 @@ describe('domain/kanban', () => {
     expect(buildLanes(cards, 'priority', ['p1', 'p2']).map((l) => l.id)).toEqual(['p1', 'p2', ''])
     expect(buildLanes(cards, 'priority', ['p1', 'p2'])[0]).toMatchObject({ name: 'Alta', color: 'orange' })
     expect(buildLanes(cards, 'type', []).map((l) => l.id)).toEqual(['t1'])
+  })
+})
+
+describe('domain/kanban — quadro de todos os projetos', () => {
+  const crm = { id: 'p1', key: 'CRM', name: 'CRM' }
+  const erp = { id: 'p2', key: 'ERP', name: 'ERP' }
+  const rh = { id: 'p3', key: 'RH', name: 'RH' }
+  const bia = { id: 'u2', name: 'Bia Lima', email: 'b@x.com', avatarUrl: null }
+  const all: Board = {
+    project: null,
+    projects: [crm, erp, rh],
+    capabilities: { move: true, create: true },
+    columns: [
+      {
+        status: status('a', 'Backlog'),
+        wipLimit: 2,
+        allowedNext: [],
+        total: 3,
+        truncated: false,
+        cards: [
+          card('1', { project: crm, canMove: true, assignee: bia }),
+          card('2', { project: erp, canMove: false, creator: ana }),
+          card('3', { project: crm, canMove: true, assignee: ana }),
+        ],
+      },
+    ],
+  }
+
+  it('reconhece o quadro, sem WIP (é por projeto) e com a permissão de mover de cada card', () => {
+    expect(isAllProjects(all)).toBe(true)
+    expect(isAllProjects(board)).toBe(false)
+    expect(boardWipLimit(all, { wipLimit: 2 })).toBe(0)
+    expect(boardWipLimit(board, { wipLimit: 2 })).toBe(2)
+    expect(canMoveCard(all, card('x', { canMove: false }))).toBe(false)
+    expect(canMoveCard(all, card('x', { canMove: true }))).toBe(true)
+    // quadro do projeto: vale a permissão do quadro
+    expect(canMoveCard({ ...board, capabilities: { move: false, create: false } }, card('x'))).toBe(false)
+  })
+
+  it('filtra por projeto (vazio = todos)', () => {
+    expect(matchesFilters(card('1', { project: crm }), { ...EMPTY_FILTERS, projects: ['p1'] }, 'u1')).toBe(true)
+    expect(matchesFilters(card('2', { project: erp }), { ...EMPTY_FILTERS, projects: ['p1'] }, 'u1')).toBe(false)
+    expect(matchesFilters(card('2', { project: erp }), { ...EMPTY_FILTERS, projects: ['p1', 'p2'] }, 'u1')).toBe(true)
+    expect(matchesFilters(card('2', { project: erp }), EMPTY_FILTERS, 'u1')).toBe(true)
+  })
+
+  it('vizinhos para o servidor: os mais próximos do mesmo projeto', () => {
+    const projectOf = (id: string) => ({ a: 'p1', b: 'p2', c: 'p1', d: 'p2', e: 'p1' })[id]
+    expect(neighborsInProject(['a', 'b', 'c', 'd', 'e'], 'c', projectOf)).toEqual({ prevId: 'a', nextId: 'e' })
+    expect(neighborsInProject(['b', 'c', 'd'], 'c', projectOf)).toEqual({ prevId: undefined, nextId: undefined })
+    expect(neighborsInProject(['a', 'b'], 'x', projectOf)).toEqual({})
+  })
+
+  it('pessoas e projetos tirados dos cards', () => {
+    expect(boardPeople(all).map((p) => p.name)).toEqual(['Ana Souza', 'Bia Lima'])
+    expect(boardPersonReferences(all).map((p) => p.id).sort()).toEqual(['u1', 'u2'])
+    // RH não tem cards: fica fora do filtro, a não ser que já esteja escolhido
+    expect(projectFilterOptions(all, []).map((p) => p.key)).toEqual(['CRM', 'ERP'])
+    expect(projectFilterOptions(all, ['p3']).map((p) => p.key)).toEqual(['CRM', 'ERP', 'RH'])
+  })
+
+  it('tempo real: projetos com cards primeiro, até o limite', () => {
+    expect(liveProjectIds(all, 10)).toEqual({ ids: ['p1', 'p2', 'p3'], complete: true })
+    expect(liveProjectIds(all, 2)).toEqual({ ids: ['p1', 'p2'], complete: false })
+    // RH (sem cards) fica de fora mesmo vindo primeiro; a lista sai na ordem do quadro
+    expect(liveProjectIds({ ...all, projects: [rh, erp, crm] }, 2)).toEqual({ ids: ['p2', 'p1'], complete: false })
   })
 })

@@ -110,7 +110,10 @@ function createTaskRepository(db) {
     .map(ident)
     .join(', ')
 
-  const TEXTS = { code: 'code', title: 'title', description: 'description' }
+  /** Colunas de encerramento do quadro: as mais recentes primeiro (sem data por último). */
+  const CLOSED_ORDER = 'completed_at DESC NULLS LAST, updated DESC, id ASC'
+
+  const TEXTS ={ code: 'code', title: 'title', description: 'description' }
   const RELATIONS = {
     projectId: 'project_id',
     typeId: 'task_type_id',
@@ -208,6 +211,13 @@ function createTaskRepository(db) {
       return countMap(rows, 'status_id')
     },
 
+    /** Total por status somando os projetos indicados (quadro de todos os projetos). */
+    async countByStatusIn(projectIds) {
+      if (projectIds.length === 0) return {}
+      const rows = await db.query('SELECT status_id, COUNT(*) AS total FROM tasks WHERE project_id = ANY($1::text[]) GROUP BY status_id', [projectIds])
+      return countMap(rows, 'status_id')
+    },
+
     /** Todas as tarefas do projeto (timeline), pela numeração, até `limit` (0 = todas). */
     async listByProject(projectId, limit) {
       const rows = await db.query('SELECT * FROM tasks WHERE project_id = $1 ORDER BY number ASC LIMIT $2', [projectId, limit || null])
@@ -221,9 +231,25 @@ function createTaskRepository(db) {
      */
     async listForBoard(projectId, statusId, options) {
       // no SQLite a data vazia ('') ficava por último no DESC; no Postgres o NULL viria primeiro
-      const order = options.closed ? 'completed_at DESC NULLS LAST, updated DESC, id ASC' : 'position ASC, number ASC'
+      const order = options.closed ? CLOSED_ORDER : 'position ASC, number ASC'
       const rows = await db.query(`SELECT ${CARD_COLUMNS} FROM tasks WHERE project_id = $1 AND status_id = $2 ORDER BY ${order} LIMIT $3`, [
         projectId,
+        statusId,
+        options.limit || null,
+      ])
+      return rows.map(toEntity)
+    },
+
+    /**
+     * Cards de uma coluna somando vários projetos (quadro de todos os projetos), na mesma consulta enxuta.
+     * A posição é de cada projeto: nas colunas abertas os cards se intercalam pela posição (o topo de
+     * cada projeto primeiro); nas de encerramento, os mais recentes de todos.
+     */
+    async listForBoardIn(projectIds, statusId, options) {
+      if (projectIds.length === 0) return []
+      const order = options.closed ? CLOSED_ORDER : 'position ASC, number ASC, id ASC'
+      const rows = await db.query(`SELECT ${CARD_COLUMNS} FROM tasks WHERE project_id = ANY($1::text[]) AND status_id = $2 ORDER BY ${order} LIMIT $3`, [
+        projectIds,
         statusId,
         options.limit || null,
       ])

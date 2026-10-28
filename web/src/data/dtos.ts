@@ -283,7 +283,10 @@ export interface NotificationDto {
 }
 
 export interface BoardDto {
-  project: { id: string; key: string; name: string; archived: boolean }
+  /** null no quadro de todos os projetos (GET /board). */
+  project: { id: string; key: string; name: string; archived: boolean } | null
+  /** Só no quadro de todos os projetos: os projetos incluídos. */
+  projects?: Array<{ id: string; key: string; name: string }>
   capabilities: { move: boolean; create: boolean }
   columns: Array<{
     status: { id: string; key: string; name: string; color: string; category: string; is_default: boolean }
@@ -291,7 +294,7 @@ export interface BoardDto {
     allowed_next: string[]
     total: number
     truncated: boolean
-    tasks: Array<TaskDto & { card_fields?: Array<{ field: CustomFieldDto; value: unknown }> }>
+    tasks: Array<TaskDto & { card_fields?: Array<{ field: CustomFieldDto; value: unknown }>; capabilities?: { move: boolean } }>
   }>
 }
 

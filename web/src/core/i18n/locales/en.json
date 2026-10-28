@@ -1031,7 +1031,8 @@
     "add": "Add",
     "memberAdded": "{{name}} added as {{role}}.",
     "switcher": "Project",
-    "chooseProject": "Choose a project"
+    "chooseProject": "Choose a project",
+    "allProjects": "All projects"
   },
   "calendar": {
     "open": "Open calendar",
@@ -1596,14 +1597,20 @@
   "kanban": {
     "title": "Kanban",
     "description": "Drag tasks across the workflow stages.",
-    "pickTitle": "Choose a project to see its board",
+    "allDescription": "Tasks from every project you follow.",
+    "noProjects": "No projects to show",
+    "projectOf": "Project: {{name}}",
     "pickHint": "You can see the boards of projects you are a member of.",
     "notFound": "Board not found or you do not have access to this project.",
     "openBoard": "Open board",
     "searchPlaceholder": "Search by code or title",
     "filters": {
       "all": "{{name}}: all",
-      "me": "My tasks"
+      "me": "My tasks",
+      "project": "Project",
+      "selected": "{{name}}: {{value}}",
+      "projectCount_one": "{{count}} project",
+      "projectCount_other": "{{count}} projects"
     },
     "swimlanes": {
       "label": "Group into swimlanes",
@@ -1629,6 +1636,7 @@
     "wipCount": "{{count}} of at most {{limit}} tasks",
     "addTo": "Create task in {{name}}",
     "truncated": "Showing the {{shown}} most recent of {{total}}.",
+    "truncatedOpen": "Showing the first {{shown}} of {{total}}.",
     "emptyColumn": "No tasks",
     "cardRole": "draggable card",
     "assignedTo": "Assignee: {{name}}",

@@ -478,6 +478,13 @@ function build() {
       '/attachments/{id}': {
         delete: op('Exclui (quem enviou ou gestor); sai também dos campos de imagem/arquivo', ['attachments'], { 200: ok('Excluído', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
+      '/board': {
+        get: op('Quadro Kanban de todos os projetos abertos que a pessoa vê (membro, dono ou projects.view_all): mesmas colunas, total somando os projetos; cada card traz o projeto e capabilities.move (permissão no projeto do card)', ['kanban'], {
+          200: ok('Quadro (project: null; projects: os projetos incluídos)', ref('Board')),
+          400: errorResponse('VALIDATION_ERROR'),
+          403: errorResponse('FORBIDDEN'),
+        }, { parameters: [{ name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'restringe aos projetos indicados (ids separados por vírgula, até 200); id que a pessoa não vê é ignorado' }] }),
+      },
       '/projects/{id}/board': {
         get: op('Quadro Kanban do projeto: colunas = status ativos (WIP, destinos permitidos, total) com cards na ordem manual', ['kanban'], {
           200: ok('Quadro', ref('Board')),
@@ -1232,8 +1239,17 @@ function build() {
         Board: {
           type: 'object',
           properties: {
-            project: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, archived: { type: 'boolean' } } },
-            capabilities: { type: 'object', properties: { move: { type: 'boolean' }, create: { type: 'boolean' } } },
+            project: {
+              type: ['object', 'null'],
+              description: 'null no quadro de todos os projetos (GET /board)',
+              properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, archived: { type: 'boolean' } },
+            },
+            projects: {
+              type: 'array',
+              description: 'só no quadro de todos os projetos: os projetos incluídos, pela chave',
+              items: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' } } },
+            },
+            capabilities: { type: 'object', properties: { move: { type: 'boolean' }, create: { type: 'boolean' } }, description: 'no quadro de todos os projetos: move = em algum projeto; create = em algum projeto' },
             columns: {
               type: 'array',
               items: {
@@ -1249,7 +1265,17 @@ function build() {
                     items: {
                       allOf: [
                         ref('Task'),
-                        { type: 'object', properties: { card_fields: { type: 'array', items: { type: 'object', properties: { field: { type: 'object' }, value: {} } } } } },
+                        {
+                          type: 'object',
+                          properties: {
+                            card_fields: { type: 'array', items: { type: 'object', properties: { field: { type: 'object' }, value: {} } } },
+                            capabilities: {
+                              type: 'object',
+                              description: 'só no quadro de todos os projetos: pode mover este card (permissão no projeto dele)',
+                              properties: { move: { type: 'boolean' } },
+                            },
+                          },
+                        },
                       ],
                     },
                   },

@@ -13,7 +13,17 @@ export function userTopic(userId: string): string {
   return `user:${userId}`
 }
 
+/**
+ * Projetos que uma tela assina de uma vez (Kanban de todos os projetos). O servidor aceita até 50
+ * tópicos por conexão (backend `domain/realtime.js#MAX_TOPICS`), somando todas as telas da aba: sobra
+ * espaço para o sino (`user:`) e outras telas abertas.
+ */
+export const MAX_LIVE_PROJECTS = 40
+
 type Key = readonly unknown[]
+
+/** Quadro de todos os projetos (`boardKeys.all` no Kanban): atualiza com mudança em qualquer projeto. */
+const ALL_PROJECTS_BOARD: Key = ['tasks', 'board-all']
 
 export function invalidationKeys(event: RealtimeEvent): Key[] {
   const p = event.projectId
@@ -22,6 +32,7 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
     case 'tasks':
       return [
         ['tasks', 'board', p],
+        ALL_PROJECTS_BOARD,
         ['tasks', 'backlog', p],
         ['tasks', 'timeline', p],
         ['tasks', 'list'],
@@ -44,6 +55,7 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
       return [
         ['tasks', 'relations', task],
         ['tasks', 'board', p],
+        ALL_PROJECTS_BOARD,
         ['tasks', 'timeline', p],
       ]
     case 'sprints':
@@ -56,9 +68,11 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
       return [['tasks', 'timeline', p]]
     case 'projects':
     case 'project_members':
+      // nome, arquivamento e quem participa mudam o que entra no quadro de todos os projetos
       return [
         ['projects', 'detail', p],
         ['projects', 'members', p],
+        ALL_PROJECTS_BOARD,
       ]
     case 'notifications':
       return [['notifications']]

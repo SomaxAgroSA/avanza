@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { CalendarDays, CalendarOff, CalendarRange, Diamond, GripVertical } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { readJson, writeJson } from '@/core/storage/safe-storage'
-import { EMPTY_FILTERS, matchesFilters, type BoardFilters } from '@/domain/kanban'
+import { EMPTY_FILTERS, matchesFilters, type BoardFilters, type BoardSelectFilter } from '@/domain/kanban'
 import { isClosed, isOverdue, type TaskSummary } from '@/domain/tasks'
 import {
   PX_PER_DAY,
@@ -206,7 +206,7 @@ export function TimelineView({ projectId }: { projectId: string }) {
   }
   const byId = (id: string) => data?.tasks.find((task) => task.id === id)
 
-  const filterSelect = (key: keyof Omit<BoardFilters, 'search'>, label: string, options: Array<{ value: string; label: string }>) => (
+  const filterSelect = (key: BoardSelectFilter, label: string, options: Array<{ value: string; label: string }>) => (
     <AppSelect
       size="sm"
       className="w-full sm:w-44"

@@ -211,6 +211,7 @@ export function fakeRepositories(overrides: {
     },
     board: {
       get: notImplemented,
+      getAll: notImplemented,
       move: notImplemented,
       ...overrides.board,
     },

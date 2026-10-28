@@ -87,4 +87,52 @@ describe('API Kanban', { timeout: 180000 }, () => {
     // o PATCH comum também respeita a regra
     assert.equal((await mario.client.patch(`/tasks/${backlog.tasks[0].id}`, { status_id: st('CONCLUIDO') })).body.error.code, 'TRANSITION_NOT_ALLOWED')
   })
+
+  it('quadro de todos os projetos: só os que a pessoa vê (sem arquivados), project_ids restringe e leitor não move', async () => {
+    const erp = (await admin.post('/projects', { name: 'ERP', key: 'ERP' })).body.data
+    const rh = (await admin.post('/projects', { name: 'RH', key: 'RH' })).body.data
+    const old = (await admin.post('/projects', { name: 'Antigo', key: 'OLD' })).body.data
+    await admin.post(`/projects/${erp.id}/members`, { user_id: mario.user.id, role: 'viewer' })
+    await admin.post(`/projects/${old.id}/members`, { user_id: mario.user.id, role: 'member' })
+    for (const [p, title] of [[erp, 'Tarefa ERP'], [rh, 'Tarefa RH'], [old, 'Tarefa antiga']]) {
+      assert.equal((await admin.post('/tasks', { project_id: p.id, task_type_id: doc.id, title })).status, 201)
+    }
+    assert.equal((await admin.post(`/projects/${old.id}/archive`)).status, 200)
+    const cards = (board) => board.columns.flatMap((c) => c.tasks)
+    const keys = (board) => [...new Set(cards(board).map((t) => t.project.key))].sort()
+
+    const res = await mario.client.get('/board')
+    assert.equal(res.status, 200, JSON.stringify(res.body))
+    const board = res.body.data
+    assert.equal(board.project, null)
+    assert.deepEqual(board.projects.map((p) => p.key), ['CRM', 'ERP'])
+    assert.deepEqual(keys(board), ['CRM', 'ERP'])
+    // mover vale pelo projeto do card: membro no CRM, leitor no ERP
+    assert.ok(cards(board).every((t) => t.capabilities.move === (t.project.key === 'CRM')))
+    assert.deepEqual(board.capabilities, { move: true, create: true })
+    // mesmas colunas do quadro do projeto; total somando os projetos
+    const single = (await mario.client.get(`/projects/${project.id}/board`)).body.data
+    assert.deepEqual(board.columns.map((c) => c.status.key), single.columns.map((c) => c.status.key))
+    assert.deepEqual(board.columns.map((c) => c.total), single.columns.map((c) => c.total + (c.status.key === 'BACKLOG' ? 1 : 0)))
+
+    // quem vê todos os projetos recebe todos os abertos
+    assert.deepEqual((await admin.get('/board')).body.data.projects.map((p) => p.key), ['CRM', 'ERP', 'RH'])
+
+    // project_ids restringe; o que a pessoa não vê fica de fora sem erro
+    const narrowed = (await mario.client.get(`/board?project_ids=${erp.id},${rh.id}`)).body.data
+    assert.deepEqual(narrowed.projects.map((p) => p.key), ['ERP'])
+    assert.deepEqual(keys(narrowed), ['ERP'])
+    assert.deepEqual(narrowed.capabilities, { move: false, create: false })
+    const erpCard = cards(narrowed)[0]
+    assert.equal(erpCard.capabilities.move, false)
+    assert.equal((await mario.client.post(`/tasks/${erpCard.id}/move`, { status_id: st('TRIAGEM') })).status, 403)
+
+    const viewer = (await lia.client.get('/board')).body.data
+    assert.deepEqual(viewer.projects.map((p) => p.key), ['CRM'])
+    assert.deepEqual(viewer.capabilities, { move: false, create: false })
+
+    const invalid = await mario.client.get('/board?project_ids=a%20b')
+    assert.equal(invalid.status, 400)
+    assert.equal(invalid.body.error.code, 'VALIDATION_ERROR')
+  })
 })

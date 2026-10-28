@@ -121,6 +121,97 @@ describe('application/board — quadro do projeto', () => {
   })
 })
 
+describe('application/board — quadro de todos os projetos', () => {
+  /** CRM (Mário membro, Lia leitora) + ERP (Mário leitor) + RH (sem Mário) + Antigo (arquivado, Mário membro). */
+  async function multi() {
+    const s = await setup()
+    const user = (name) => s.deps.store.users.find((u) => u.name === name)
+    const admin = user('Admin')
+    const make = (name, key) => s.deps.projectRepository.create({ name, key, ownerId: admin.id, createdBy: admin.id, status: 'active', priority: 'medium' })
+    const erp = await make('ERP', 'ERP')
+    const rh = await make('RH', 'RH')
+    const old = await make('Antigo', 'OLD')
+    await s.deps.projectMemberRepository.add({ projectId: erp.id, userId: user('Mário').id, role: 'viewer' })
+    await s.deps.projectMemberRepository.add({ projectId: old.id, userId: user('Mário').id, role: 'member' })
+    const create = (project, title, extra) => s.tasks.createTask(s.ctx.admin, Object.assign({ project_id: project.id, task_type_id: s.bug.id, title }, extra))
+    await s.newTask('Erro CRM')
+    await s.newTask('Dev CRM', { status_id: s.statuses.dev.id })
+    await create(erp, 'Erro ERP')
+    await create(erp, 'Dev ERP', { status_id: s.statuses.dev.id })
+    await create(rh, 'Erro RH')
+    await create(old, 'Erro antigo')
+    await s.deps.projectRepository.update(old.id, { archivedAt: new Date() })
+    return Object.assign(s, { erp, rh, old })
+  }
+  const cards = (board) => board.columns.reduce((list, c) => list.concat(c.tasks), [])
+  const summary = (board) => cards(board).map((t) => [t.title, t.project.key, t.capabilities.move]).sort()
+
+  it('membro vê os projetos dele (sem arquivados), com o projeto e a permissão de mover em cada card', async () => {
+    const s = await multi()
+    const board = await s.board.getAllBoard(s.ctx.mario, {})
+    assert.equal(board.project, null)
+    assert.deepEqual(board.projects, [
+      { id: s.project.id, key: 'CRM', name: 'CRM' },
+      { id: s.erp.id, key: 'ERP', name: 'ERP' },
+    ])
+    assert.deepEqual(summary(board), [
+      ['Dev CRM', 'CRM', true],
+      ['Dev ERP', 'ERP', false],
+      ['Erro CRM', 'CRM', true],
+      ['Erro ERP', 'ERP', false],
+    ])
+    // mesmas colunas e limites do quadro do projeto; total somando os projetos
+    assert.deepEqual(board.columns.map((c) => [c.status.key, c.total, c.wip_limit]), [['BACKLOG', 2, 0], ['TODO', 0, 0], ['DEV', 2, 2], ['DONE', 0, 0]])
+    assert.ok(column(board, 'DEV').tasks.every((t) => Array.isArray(t.card_fields)))
+    assert.deepEqual(board.capabilities, { move: true, create: true })
+  })
+
+  it('quem vê todos os projetos recebe todos os abertos; project_ids restringe; leitor só lê', async () => {
+    const s = await multi()
+    const all = await s.board.getAllBoard(s.ctx.admin, {})
+    assert.deepEqual(all.projects.map((p) => p.key), ['CRM', 'ERP', 'RH'])
+    assert.equal(column(all, 'BACKLOG').total, 3)
+    assert.deepEqual(all.capabilities, { move: true, create: true })
+
+    // projeto que a pessoa não vê é ignorado (não confirma a existência)
+    const narrowed = await s.board.getAllBoard(s.ctx.mario, { project_ids: `${s.erp.id},${s.rh.id}` })
+    assert.deepEqual(narrowed.projects.map((p) => p.key), ['ERP'])
+    assert.deepEqual(summary(narrowed), [['Dev ERP', 'ERP', false], ['Erro ERP', 'ERP', false]])
+    assert.deepEqual(narrowed.capabilities, { move: false, create: false })
+
+    const lia = await s.board.getAllBoard(s.ctx.lia, {})
+    assert.deepEqual(lia.projects.map((p) => p.key), ['CRM'])
+    assert.deepEqual(lia.capabilities, { move: false, create: false })
+  })
+
+  it('sem projetos: colunas vazias; sem kanban.view/tasks.view: 403; project_ids inválido: 400', async () => {
+    const s = await multi()
+    const outsider = await ctxOf(s.deps, await seedUser(s.deps, { roleCode: 'MEMBER', name: 'Otto' }))
+    const empty = await s.board.getAllBoard(outsider, {})
+    assert.deepEqual(empty.projects, [])
+    assert.deepEqual(empty.columns.map((c) => [c.total, c.tasks.length]), [[0, 0], [0, 0], [0, 0], [0, 0]])
+    assert.deepEqual(empty.capabilities, { move: false, create: false })
+
+    const noKanban = { principal: createPrincipal({ userId: outsider.principal.userId, roleId: 'r', roleCode: 'X', permissions: ['projects.view', 'tasks.view'] }) }
+    assert.equal(await codeOf(() => s.board.getAllBoard(noKanban, {})), 'FORBIDDEN')
+    const noTasks = { principal: createPrincipal({ userId: outsider.principal.userId, roleId: 'r', roleCode: 'X', permissions: ['projects.view', 'kanban.view'] }) }
+    assert.equal(await codeOf(() => s.board.getAllBoard(noTasks, {})), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.board.getAllBoard(s.ctx.mario, { project_ids: 'abc,../x' })), 'VALIDATION_ERROR:{"project_ids":"invalid_type"}')
+  })
+
+  it('colunas de encerramento: as mais recentes de todos os projetos, com o total de todos', async () => {
+    const s = await multi()
+    for (let i = 0; i < 16; i++) {
+      await s.newTask(`Feita CRM ${i}`, { status_id: s.statuses.done.id })
+      await s.tasks.createTask(s.ctx.admin, { project_id: s.erp.id, task_type_id: s.bug.id, title: `Feita ERP ${i}`, status_id: s.statuses.done.id })
+    }
+    const done = column(await s.board.getAllBoard(s.ctx.mario, {}), 'DONE')
+    assert.equal(done.total, 32)
+    assert.equal(done.tasks.length, 30)
+    assert.equal(done.truncated, true)
+  })
+})
+
 describe('application/tasks — mover no quadro', () => {
   it('muda de coluna e posiciona entre os vizinhos; ordem se mantém na releitura', async () => {
     const s = await setup()

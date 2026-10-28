@@ -89,6 +89,7 @@ const ROUTES = [
   ['POST', '/api/v1/tasks/:id/attachments', 'uploadTaskAttachments', 21 * MB],
   ['GET', '/api/v1/attachments/:id/file', 'attachmentFile'],
   ['DELETE', '/api/v1/attachments/:id', 'deleteAttachment'],
+  ['GET', '/api/v1/board', 'allProjectsBoard'],
   ['GET', '/api/v1/projects/:id/board', 'projectBoard'],
   ['POST', '/api/v1/tasks/:id/move', 'moveTask', JSON_LIMIT],
   ['GET', '/api/v1/projects/:id/backlog', 'projectBacklog'],

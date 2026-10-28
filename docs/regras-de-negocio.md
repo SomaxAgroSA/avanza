@@ -61,6 +61,16 @@ Cada status pode ter um **limite WIP** (máximo de tarefas na coluna; vazio ou 0
 - Filtros, busca e raias (por responsável, prioridade ou tipo) só mudam a visualização.
 - Leitor do projeto e projeto arquivado: veem o quadro e comentam, mas não arrastam nem criam.
 
+### Todos os projetos
+
+- O seletor de projeto do Kanban tem, primeiro, **Todos os projetos** (`/kanban/all`): um quadro só com as tarefas de todos os projetos **abertos** que a pessoa vê (membro, dono ou quem vê todos os projetos); projetos arquivados ficam de fora. `/kanban` abre a última escolha (um projeto ou todos); sem escolha anterior, abre todos.
+- As colunas são as mesmas (os status são globais); o total da coluna soma os projetos e valem os mesmos limites (abertas até 500 cards; encerradas, as 30 mais recentes de todos os projetos). Nas colunas abertas os cards se intercalam pela ordem manual de cada projeto (o topo de cada projeto primeiro).
+- Cada card mostra a **chave do projeto** numa etiqueta, além do código.
+- **Mover** segue as regras do projeto do card (seções 2, 3 e 10; leitor e quem não colabora no projeto não arrastam aquele card). A ordem manual é de cada projeto: soltar o card entre cards de outro projeto o posiciona em relação aos vizinhos **do mesmo projeto**. O **limite WIP** é por projeto, então neste quadro a coluna mostra só o total, sem limite nem alerta.
+- **Filtros:** além dos de sempre, **Projeto** (escolha múltipla entre os projetos com cards no quadro); responsáveis vêm dos cards. Não há filtro de sprint (sprints são do projeto).
+- **Criar:** sem criação rápida por coluna (ela precisa de um projeto); **Nova tarefa** abre o formulário completo, onde se escolhe o projeto. O botão só aparece se a pessoa pode criar em algum projeto do quadro.
+- **Tempo real:** a tela assina os projetos do quadro (até 40 — os com cards primeiro; o servidor aceita 50 tópicos por conexão). Com mais projetos do que isso, a consulta periódica volta a ser a curta (15 s) para os demais não esperarem a rede de segurança.
+
 ## 6. Planejamento (backlog e sprints)
 
 ### O que aparece no Planejamento
@@ -545,7 +555,7 @@ Telas abertas se atualizam sozinhas quando alguém muda algo — sem recarregar 
 - **Quem recebe:** só quem pode ver o projeto (membro, dono ou quem vê todos os projetos), e cada pessoa só as próprias notificações. O aviso leva apenas o tipo do que mudou e os identificadores; a tela busca os dados de novo pela API, com as permissões de sempre — nada que a pessoa não poderia ver chega por esse caminho.
 - **Quando:** logo depois que a mudança é gravada (de qualquer origem: tela, API com token, importação, rotinas). Vários avisos juntos (ex.: mover um grupo inteiro) viram uma única atualização; com muita gente mexendo ao mesmo tempo, cada tela se atualiza **no máximo uma vez a cada 2,5 s** (a primeira mudança depois de um tempo quieto aparece na hora). Se a própria pessoa estiver salvando algo naquele momento (ex.: soltando um cartão), a atualização espera o salvamento terminar — assim nada "volta" para o estado de antes.
 - **Conexão:** uma por aba, aberta quando alguma tela precisa e fechada pouco depois de não precisar. Se cair, a tela continua funcionando e o cabeçalho mostra "Reconectando…" até voltar; ao voltar, as assinaturas são refeitas e a tela busca de novo o que está aberta (os avisos do intervalo se perderam).
-- **Consulta periódica:** com o tempo real ligado, o Kanban e o sino só conferem a cada 5 minutos (rede de segurança); sem ele, voltam a conferir a cada 15 s (Kanban) e 30 s (sino).
+- **Consulta periódica:** com o tempo real ligado, o Kanban e o sino só conferem a cada 5 minutos (rede de segurança); sem ele, voltam a conferir a cada 15 s (Kanban) e 30 s (sino). O Kanban de todos os projetos assina um tópico por projeto (até 40); com mais projetos, confere a cada 15 s mesmo com o tempo real ligado (§5).
 
 ## 20. Opções adicionadas pela tarefa (campos de seleção)
 

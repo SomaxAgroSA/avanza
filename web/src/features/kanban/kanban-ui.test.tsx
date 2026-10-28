@@ -95,6 +95,7 @@ const column = (status: TaskStatus, cards: BoardCard[], extra: Partial<Board['co
 
 const board: Board = {
   project: { id: 'p1', key: 'CRM', name: 'CRM Corporativo', archived: false },
+  projects: [{ id: 'p1', key: 'CRM', name: 'CRM Corporativo' }],
   capabilities: { move: true, create: true },
   columns: [
     column(todo, [
@@ -115,16 +116,36 @@ const detail: TaskDetail = {
   parent: null, forkedFrom: null, capabilities: { edit: true, delete: false, assign: true, comment: true, link: true, fork: true },
 }
 
+const erpProject = { id: 'p2', key: 'ERP', name: 'ERP Financeiro' }
+const rhProject = { id: 'p3', key: 'RH', name: 'RH' }
+const bia = { id: 'u2', name: 'Bia Lima', email: 'b@x.com', avatarUrl: null }
+/** Quadro de todos os projetos: CRM (pode mover) + ERP (leitor) + RH (sem cards). */
+const allBoard: Board = {
+  project: null,
+  projects: [board.projects[0]!, erpProject, rhProject],
+  capabilities: { move: true, create: true },
+  columns: [
+    column(todo, [
+      card('1', 'Erro ao salvar pedido', { assignee: gabi, canMove: true }),
+      card('7', 'Conciliar notas', { code: 'ERP-7', project: erpProject, assignee: bia, canMove: false }),
+      card('2', 'Ajustar relatório de vendas', { canMove: true }),
+    ]),
+    column(doing, [card('3', 'Nova tela de login', { assignee: gabi, canMove: true })], { wipLimit: 1 }),
+  ],
+}
+
 function setup({
   data = board,
   create = vi.fn<TaskRepository['create']>(() => Promise.resolve(detail)),
   type = bugDetail,
   path = '/kanban/p1',
   get = vi.fn<BoardRepository['get']>(() => Promise.resolve(data)),
-}: { data?: Board; create?: TaskRepository['create']; type?: TaskTypeDetail; path?: string; get?: BoardRepository['get'] } = {}) {
+  getAll = vi.fn<BoardRepository['getAll']>(() => Promise.resolve(allBoard)),
+  move = vi.fn<BoardRepository['move']>(() => Promise.resolve(detail)),
+}: { data?: Board; create?: TaskRepository['create']; type?: TaskTypeDetail; path?: string; get?: BoardRepository['get']; getAll?: BoardRepository['getAll']; move?: BoardRepository['move'] } = {}) {
   const repositories = fakeRepositories({
     auth: { me: async () => makeCurrentUser(['kanban.view', 'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign', 'projects.view'], 'ADMIN') },
-    board: { get },
+    board: { get, getAll, move },
     taskTypes: { list: () => Promise.resolve([bugType]), get: () => Promise.resolve(type) },
     statuses: { list: () => Promise.resolve([todo, doing]) },
     priorities: { list: () => Promise.resolve([alta]) },
@@ -141,7 +162,7 @@ function setup({
     ],
     { repositories, initialPath: path },
   )
-  return { ...utils, create, get }
+  return { ...utils, create, get, getAll, move }
 }
 
 describe('KanbanPage', () => {
@@ -157,9 +178,11 @@ describe('KanbanPage', () => {
     await waitFor(() => expect(window.localStorage.getItem('kamban.kanban.project')).toBe('p1'))
   })
 
-  it('/kanban sem projeto pede a escolha; com quadro lembrado, abre direto', async () => {
+  it('/kanban sem escolha abre todos os projetos; com quadro lembrado, abre direto', async () => {
     const first = setup({ path: '/kanban' })
-    expect(await screen.findByText('Escolha um projeto para ver o quadro')).toBeInTheDocument()
+    await waitFor(() => expect(first.router.state.location.pathname).toBe('/kanban/all'))
+    expect(await screen.findByText('Conciliar notas')).toBeInTheDocument()
+    await waitFor(() => expect(window.localStorage.getItem('kamban.kanban.project')).toBe('all'))
     first.unmount()
 
     window.localStorage.setItem('kamban.kanban.project', 'p1')
@@ -226,7 +249,7 @@ describe('KanbanPage', () => {
   })
 
   it('projeto arquivado: somente leitura, sem criação', async () => {
-    setup({ data: { ...board, project: { ...board.project, archived: true }, capabilities: { move: false, create: false } } })
+    setup({ data: { ...board, project: { ...board.project!, archived: true }, capabilities: { move: false, create: false } } })
     expect(await screen.findByText('Projeto arquivado: somente leitura')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Criar tarefa em/ })).not.toBeInTheDocument()
   })
@@ -236,5 +259,60 @@ describe('KanbanPage', () => {
     setup({ get: () => Promise.reject(new AppError({ code: 'PROJECT_NOT_FOUND', message: 'x', status: 404 })) })
     expect(await screen.findByText('Quadro não encontrado ou você não tem acesso a este projeto.')).toBeInTheDocument()
     await waitFor(() => expect(window.localStorage.getItem('kamban.kanban.project')).toBeNull())
+  })
+})
+
+describe('KanbanPage — todos os projetos', () => {
+  it('cards de vários projetos com a etiqueta do projeto, sem limite WIP e sem criação por coluna', async () => {
+    const { getAll, get } = setup({ path: '/kanban/all' })
+    const erpCard = await screen.findByRole('button', { name: /ERP-7 · Conciliar notas/ })
+    expect(within(erpCard).getByTestId('kanban-card-project')).toHaveTextContent('ERP')
+    expect(within(screen.getByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })).getByTestId('kanban-card-project')).toHaveTextContent('CRM')
+    expect(getAll).toHaveBeenCalled()
+    expect(get).not.toHaveBeenCalled()
+    // WIP é por projeto: a coluna mostra só o total
+    expect(screen.queryByText('1/1')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Criar tarefa em/ })).not.toBeInTheDocument()
+    // card de projeto em que a pessoa só lê não arrasta
+    expect(erpCard).not.toHaveAttribute('aria-roledescription')
+    expect(screen.getByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })).toHaveAttribute('aria-roledescription', 'card arrastável')
+    expect(screen.getByText('Tarefas de todos os projetos que você acompanha.')).toBeInTheDocument()
+  })
+
+  it('filtro de projeto (escolha múltipla) e responsáveis tirados dos cards; sem filtro de sprint', async () => {
+    setup({ path: '/kanban/all' })
+    await screen.findByText('Conciliar notas')
+    expect(screen.queryByRole('combobox', { name: 'Sprint' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('combobox', { name: 'Responsável' }))
+    expect(await screen.findByRole('option', { name: 'Bia Lima' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+
+    await userEvent.click(screen.getByTestId('kanban-project-filter'))
+    // RH não tem cards no quadro: fica fora das opções
+    expect(screen.queryByRole('menuitemcheckbox', { name: /RH/ })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'ERP · ERP Financeiro' }))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByText('Erro ao salvar pedido')).not.toBeInTheDocument())
+    expect(screen.getByText('Conciliar notas')).toBeInTheDocument()
+    expect(screen.getByTestId('kanban-project-filter')).toHaveTextContent('Projeto: ERP')
+  })
+
+  it('"Nova tarefa" abre o formulário completo para escolher o projeto; some sem permissão de criar', async () => {
+    const first = setup({ path: '/kanban/all' })
+    await screen.findByText('Conciliar notas')
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Nova tarefa' })
+    expect(within(dialog).getByRole('combobox', { name: /^Projeto/ })).toBeInTheDocument()
+    first.unmount()
+
+    setup({ path: '/kanban/all', getAll: () => Promise.resolve({ ...allBoard, capabilities: { move: false, create: false } }) })
+    await screen.findByText('Conciliar notas')
+    expect(screen.queryByRole('button', { name: 'Nova tarefa' })).not.toBeInTheDocument()
+    expect(screen.getByText('Somente leitura')).toBeInTheDocument()
+  })
+
+  it('sem projetos: aviso no lugar do quadro', async () => {
+    setup({ path: '/kanban/all', getAll: () => Promise.resolve({ ...allBoard, projects: [], columns: allBoard.columns.map((c) => ({ ...c, cards: [], total: 0 })) }) })
+    expect(await screen.findByText('Nenhum projeto para mostrar')).toBeInTheDocument()
   })
 })

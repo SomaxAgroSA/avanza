@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { BoardCard } from '@/domain/kanban'
 import type { FieldType } from '@/domain/task-config'
-import { AppAvatar, AppKanbanCard } from '@/presentation/components'
+import { AppAvatar, AppBadge, AppKanbanCard } from '@/presentation/components'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
 import { CustomFieldValue } from '@/features/task-config/CustomFieldValue'
 import { TagList } from '@/features/tags/tag-visuals'
@@ -16,14 +16,25 @@ const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
 
 const isEmpty = (value: unknown) => value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)
 
-/** Conteúdo do card: código, prioridade, título, campos "no card", tags, prazo, indicadores e responsável. */
-export function KanbanCardContent({ card, references }: { card: BoardCard; references?: CustomFieldReferences }) {
+/**
+ * Conteúdo do card: código, prioridade, título, campos "no card", tags, prazo, indicadores e responsável.
+ * `showProject` (quadro de todos os projetos): etiqueta com a chave do projeto do card.
+ */
+export function KanbanCardContent({ card, references, showProject = false }: { card: BoardCard; references?: CustomFieldReferences; showProject?: boolean }) {
   const { t } = useTranslation()
   const fields = card.cardFields.filter((f) => !NOT_ON_CARD.includes(f.field.type) && !isEmpty(f.value))
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <TaskCode task={card} />
+        <span className="flex min-w-0 items-center gap-1.5">
+          {showProject && card.project && (
+            // texto principal sobre a superfície neutra: contraste AA no claro e no escuro
+            <AppBadge className="max-w-24 shrink-0 font-mono text-fg" title={t('kanban.projectOf', { name: card.project.name })} data-testid="kanban-card-project">
+              <span className="truncate">{card.project.key}</span>
+            </AppBadge>
+          )}
+          <TaskCode task={card} className="min-w-0" />
+        </span>
         {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" />}
       </div>
       <p className="line-clamp-3 text-sm font-medium break-words text-fg">{card.title}</p>
@@ -67,11 +78,13 @@ export function SortableKanbanCard({
   locked,
   onOpen,
   references,
+  showProject = false,
 }: {
   card: BoardCard
   locked: boolean
   onOpen: (id: string) => void
   references?: CustomFieldReferences
+  showProject?: boolean
 }) {
   const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id, disabled: locked })
@@ -101,7 +114,7 @@ export function SortableKanbanCard({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       onClick={() => onOpen(card.id)}
     >
-      <KanbanCardContent card={card} references={references} />
+      <KanbanCardContent card={card} references={references} showProject={showProject} />
     </AppKanbanCard>
   )
 }

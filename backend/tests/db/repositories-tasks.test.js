@@ -219,6 +219,23 @@ describe('repositórios de tarefas (Postgres)', () => {
     assert.deepEqual(codes(await r.tasks.listForBoard(project.id, status.CONCLUIDO, { closed: true, limit: 50 })), codes([done2, done1, doneNull]))
 
     assert.deepEqual(await r.tasks.countByStatus(project.id), { [dev]: 3, [status.CONCLUIDO]: 3 })
+
+    // vários projetos (quadro de todos os projetos): intercala pela posição, encerradas mais recentes de todos
+    const other = await seedProject()
+    const x = await seedTask(other, { statusId: dev, position: 1500 })
+    const doneOther = await seedTask(other, { statusId: status.CONCLUIDO, completedAt: '2026-10-03T10:00:00Z' })
+    const both = [project.id, other.id]
+    const many = await r.tasks.listForBoardIn(both, dev, { closed: false, limit: 50 })
+    assert.deepEqual(codes(many), codes([b, x, c, a]))
+    assert.equal(many[0].description, '')
+    assert.deepEqual(Object.keys(many[0]).sort(), Object.keys(a).sort())
+    assert.deepEqual(codes(await r.tasks.listForBoardIn(both, dev, { closed: false, limit: 2 })), codes([b, x]))
+    assert.deepEqual(codes(await r.tasks.listForBoardIn(both, status.CONCLUIDO, { closed: true, limit: 3 })), codes([done2, doneOther, done1]))
+    assert.deepEqual(codes(await r.tasks.listForBoardIn([other.id], dev, { closed: false, limit: 50 })), codes([x]))
+    assert.deepEqual(await r.tasks.listForBoardIn([], dev, { closed: false, limit: 50 }), [])
+    assert.deepEqual(await r.tasks.countByStatusIn(both), { [dev]: 4, [status.CONCLUIDO]: 4 })
+    assert.deepEqual(await r.tasks.countByStatusIn([other.id]), { [dev]: 1, [status.CONCLUIDO]: 1 })
+    assert.deepEqual(await r.tasks.countByStatusIn([]), {})
     assert.equal(await r.tasks.maxPosition(project.id, dev), 3000)
     assert.equal(await r.tasks.maxPosition(project.id, status.ANALISE), null)
 

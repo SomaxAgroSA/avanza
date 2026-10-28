@@ -127,6 +127,26 @@ function createProjectRepository(db) {
       return { items: rows.map(toEntity), total: counted.total }
     },
 
+    /**
+     * Projetos abertos (não arquivados) que a pessoa enxerga, pela chave: todos com `viewAll`; senão,
+     * os que ela é dona ou membro (mesma regra de domain/project.js#resolveAccess). `ids` restringe.
+     */
+    async listVisible(query) {
+      const where = ['archived_at IS NULL']
+      const params = []
+      const param = (value) => {
+        params.push(value)
+        return `$${params.length}`
+      }
+      if (!query.viewAll) {
+        const user = param(query.userId)
+        where.push(`(owner_id = ${user} OR id IN (SELECT project_id FROM project_members WHERE user_id = ${user}))`)
+      }
+      if (query.ids) where.push(`id = ANY(${param(query.ids)}::text[])`)
+      const rows = await db.query(`SELECT * FROM projects WHERE ${where.join(' AND ')} ORDER BY "key" ASC, "id" ASC`, params)
+      return rows.map(toEntity)
+    },
+
     async create(data) {
       const row = await uniqueAs('idx_projects_key', 'PROJECT_KEY_IN_USE', () => insertRow(db, TABLE, columns(FIELDS, data)))
       return toEntity(row)

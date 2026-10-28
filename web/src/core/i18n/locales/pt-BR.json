@@ -1031,7 +1031,8 @@
     "add": "Adicionar",
     "memberAdded": "{{name}} adicionado como {{role}}.",
     "switcher": "Projeto",
-    "chooseProject": "Escolha um projeto"
+    "chooseProject": "Escolha um projeto",
+    "allProjects": "Todos os projetos"
   },
   "calendar": {
     "open": "Abrir calendário",
@@ -1596,14 +1597,20 @@
   "kanban": {
     "title": "Kanban",
     "description": "Arraste as tarefas entre as etapas do fluxo.",
-    "pickTitle": "Escolha um projeto para ver o quadro",
+    "allDescription": "Tarefas de todos os projetos que você acompanha.",
+    "noProjects": "Nenhum projeto para mostrar",
+    "projectOf": "Projeto: {{name}}",
     "pickHint": "Você vê os quadros dos projetos dos quais participa.",
     "notFound": "Quadro não encontrado ou você não tem acesso a este projeto.",
     "openBoard": "Abrir quadro",
     "searchPlaceholder": "Buscar por código ou título",
     "filters": {
       "all": "{{name}}: todos",
-      "me": "Minhas tarefas"
+      "me": "Minhas tarefas",
+      "project": "Projeto",
+      "selected": "{{name}}: {{value}}",
+      "projectCount_one": "{{count}} projeto",
+      "projectCount_other": "{{count}} projetos"
     },
     "swimlanes": {
       "label": "Agrupar em raias",
@@ -1629,6 +1636,7 @@
     "wipCount": "{{count}} de no máximo {{limit}} tarefas",
     "addTo": "Criar tarefa em {{name}}",
     "truncated": "Mostrando as {{shown}} mais recentes de {{total}}.",
+    "truncatedOpen": "Mostrando as primeiras {{shown}} de {{total}}.",
     "emptyColumn": "Nenhuma tarefa",
     "cardRole": "card arrastável",
     "assignedTo": "Responsável: {{name}}",

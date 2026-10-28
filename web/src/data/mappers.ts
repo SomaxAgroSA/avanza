@@ -324,8 +324,10 @@ export function toNotification(dto: NotificationDto): AppNotification {
 }
 
 export function toBoard(dto: BoardDto): Board {
+  const project = dto.project ?? null
   return {
-    project: dto.project,
+    project,
+    projects: dto.projects ?? (project ? [{ id: project.id, key: project.key, name: project.name }] : []),
     capabilities: { move: !!dto.capabilities?.move, create: !!dto.capabilities?.create },
     columns: dto.columns.map((column) => ({
       status: {
@@ -346,6 +348,7 @@ export function toBoard(dto: BoardDto): Board {
           const field = toCustomField(f.field)
           return { field: { id: field.id, name: field.name, label: field.label, type: field.type, options: field.options, config: field.config }, value: f.value as FieldValue }
         }),
+        ...(task.capabilities ? { canMove: !!task.capabilities.move } : {}),
       })),
     })),
   }

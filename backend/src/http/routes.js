@@ -323,6 +323,7 @@ function attachmentFile(e) {
 // ---------------------------------------------------------------- kanban
 
 const projectBoard = configAction('board', (s, ctx, r) => s.getBoard(ctx, r.id))
+const allProjectsBoard = configAction('board', (s, ctx, r) => s.getAllBoard(ctx, r.query()))
 const moveTask = configAction('tasks', (s, ctx, r) => s.moveTask(ctx, r.id, r.body()))
 
 // ---------------------------------------------------------------- backlog e sprints
@@ -660,6 +661,7 @@ module.exports = {
   deleteComment,
   listTaskAttachments,
   projectBoard,
+  allProjectsBoard,
   moveTask,
   projectBacklog,
   listTaskRelations,

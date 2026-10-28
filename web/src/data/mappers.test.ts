@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toCurrentUser, toRole, toUser } from './mappers'
-import type { UserDto } from './dtos'
+import { toBoard, toCurrentUser, toRole, toUser } from './mappers'
+import type { BoardDto, TaskDto, UserDto } from './dtos'
 
 const userDto: UserDto = {
   id: 'u1',
@@ -45,5 +45,28 @@ describe('data/mappers', () => {
     expect(me.user.id).toBe('u1')
     expect(me.permissions).toEqual(['users.view'])
     expect(me.role).toBeNull()
+  })
+
+  it('quadro de todos os projetos: projeto nulo, projetos incluídos e quem pode mover cada card', () => {
+    const task: TaskDto = {
+      id: 't1', code: 'ERP-1', number: 1, title: 'X', project: { id: 'p2', key: 'ERP', name: 'ERP' }, type: null, status: null, priority: null,
+      creator: null, assignee: null, reporter: null, parent_task_id: null, due_date: null, estimated_hours: null, actual_hours: null,
+      started_at: null, completed_at: null, created_at: null, updated_at: null,
+    }
+    const column = { status: { id: 's', key: 'S', name: 'S', color: 'gray', category: 'todo', is_default: true }, wip_limit: 2, allowed_next: [], total: 1, truncated: false }
+    const dto: BoardDto = {
+      project: null,
+      projects: [{ id: 'p2', key: 'ERP', name: 'ERP' }],
+      capabilities: { move: true, create: false },
+      columns: [{ ...column, tasks: [{ ...task, capabilities: { move: false } }] }],
+    }
+    const board = toBoard(dto)
+    expect(board.project).toBeNull()
+    expect(board.projects).toEqual([{ id: 'p2', key: 'ERP', name: 'ERP' }])
+    expect(board.columns[0]?.cards[0]?.canMove).toBe(false)
+    // quadro do projeto: a lista de projetos é o próprio projeto e o card segue o quadro
+    const single = toBoard({ ...dto, project: { id: 'p2', key: 'ERP', name: 'ERP', archived: false }, projects: undefined, columns: [{ ...column, tasks: [task] }] })
+    expect(single.projects).toEqual([{ id: 'p2', key: 'ERP', name: 'ERP' }])
+    expect(single.columns[0]?.cards[0]?.canMove).toBeUndefined()
   })
 })

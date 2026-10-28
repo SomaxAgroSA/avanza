@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { RealtimeStatus } from '@/core/realtime/realtime-client'
+import type { RealtimeEvent, RealtimeStatus } from '@/core/realtime/realtime-client'
 import { invalidationKeys, projectTopic, userTopic } from '@/domain/realtime'
 import { useRealtime } from './realtime-context'
 
@@ -17,12 +17,17 @@ export const LIVE_MIN_INTERVAL_MS = 2_500
 /** Com o tempo real ligado, a consulta periódica das telas vira só rede de segurança. */
 export const LIVE_SAFETY_NET_MS = 5 * 60_000
 
-/** Enquanto a tela está aberta, assina o tópico e atualiza os dados afetados pelos avisos. */
-function useLiveTopic(topic: string | null) {
+/**
+ * Enquanto a tela está aberta, assina os tópicos e atualiza os dados afetados pelos avisos. Os avisos
+ * de todos os tópicos da tela entram no mesmo lote e no mesmo limite de uma busca a cada 2,5 s.
+ */
+function useLiveTopics(topics: readonly string[]) {
   const realtime = useRealtime()
   const queryClient = useQueryClient()
+  // a lista muda de identidade a cada render: o efeito depende só do conteúdo
+  const joined = topics.join('\n')
   useEffect(() => {
-    if (!topic) return
+    if (!joined) return
     const pending = new Map<string, readonly unknown[]>()
     let timer: ReturnType<typeof setTimeout> | null = null
     let lastFlush = Number.NEGATIVE_INFINITY
@@ -38,25 +43,31 @@ function useLiveTopic(topic: string | null) {
       pending.forEach((queryKey) => void queryClient.invalidateQueries({ queryKey }))
       pending.clear()
     }
-    const off = realtime.subscribe(topic, (event) => {
+    const onEvent = (event: RealtimeEvent) => {
       invalidationKeys(event).forEach((key) => pending.set(JSON.stringify(key), key))
       if (!timer) timer = setTimeout(flush, Math.max(BATCH_MS, lastFlush + LIVE_MIN_INTERVAL_MS - Date.now()))
-    })
+    }
+    const offs = joined.split('\n').map((topic) => realtime.subscribe(topic, onEvent))
     return () => {
-      off()
+      offs.forEach((off) => off())
       if (timer) clearTimeout(timer)
     }
-  }, [topic, realtime, queryClient])
+  }, [joined, realtime, queryClient])
 }
 
 /** Quadro, lista ou tarefa de um projeto aberta: atualiza sozinha quando alguém muda algo. */
 export function useLiveProject(projectId: string | null | undefined) {
-  useLiveTopic(projectId ? projectTopic(projectId) : null)
+  useLiveTopics(projectId ? [projectTopic(projectId)] : [])
+}
+
+/** Tela com vários projetos (Kanban de todos os projetos): um tópico por projeto, num lote só. */
+export function useLiveProjects(projectIds: readonly string[]) {
+  useLiveTopics(projectIds.map(projectTopic))
 }
 
 /** Notificações da pessoa (sino) em tempo real. */
 export function useLiveNotifications(userId: string | null | undefined) {
-  useLiveTopic(userId ? userTopic(userId) : null)
+  useLiveTopics(userId ? [userTopic(userId)] : [])
 }
 
 export function useRealtimeStatus(): RealtimeStatus {

@@ -4,7 +4,7 @@ import { act, render, renderHook } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { RealtimeClient, RealtimeEvent, RealtimeListener, RealtimeStatus } from '@/core/realtime/realtime-client'
 import { RealtimeContext } from './realtime-context'
-import { LIVE_MIN_INTERVAL_MS, LIVE_SAFETY_NET_MS, useLiveProject, useLiveRefetchInterval, useRealtimeResync } from './use-live'
+import { LIVE_MIN_INTERVAL_MS, LIVE_SAFETY_NET_MS, useLiveProject, useLiveProjects, useLiveRefetchInterval, useRealtimeResync } from './use-live'
 
 afterEach(() => vi.useRealTimers())
 
@@ -142,6 +142,51 @@ describe('useLiveProject', () => {
       </QueryClientProvider>,
     )
     expect(realtime.listeners.size).toBe(0)
+  })
+})
+
+function LiveMany({ projectIds }: { projectIds: string[] }) {
+  useLiveProjects(projectIds)
+  return null
+}
+
+describe('useLiveProjects (Kanban de todos os projetos)', () => {
+  it('assina um tópico por projeto; avisos de projetos diferentes viram uma busca só do quadro', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue()
+    const realtime = fakeRealtime()
+    const view = render(
+      <QueryClientProvider client={queryClient}>
+        <RealtimeContext.Provider value={realtime.client}>
+          <LiveMany projectIds={['p1', 'p2']} />
+        </RealtimeContext.Provider>
+      </QueryClientProvider>,
+    )
+    expect(realtime.listeners.get('project:p1')?.size).toBe(1)
+    expect(realtime.listeners.get('project:p2')?.size).toBe(1)
+    const base = { collection: 'tasks', action: 'update' as const, taskId: null, itemId: null }
+    act(() => {
+      realtime.emit('project:p1', { ...base, id: 't1', projectId: 'p1' })
+      realtime.emit('project:p2', { ...base, id: 't2', projectId: 'p2' })
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    const keys = invalidate.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey))
+    expect(keys.filter((k) => k === JSON.stringify(['tasks', 'board-all']))).toHaveLength(1)
+    // nova lista de projetos: troca as assinaturas
+    view.rerender(
+      <QueryClientProvider client={queryClient}>
+        <RealtimeContext.Provider value={realtime.client}>
+          <LiveMany projectIds={['p2', 'p3']} />
+        </RealtimeContext.Provider>
+      </QueryClientProvider>,
+    )
+    expect(realtime.listeners.get('project:p1')?.size).toBe(0)
+    expect(realtime.listeners.get('project:p3')?.size).toBe(1)
+    view.unmount()
+    expect(realtime.listeners.get('project:p3')?.size).toBe(0)
   })
 })
 

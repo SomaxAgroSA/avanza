@@ -30,6 +30,28 @@ describe('application/realtime — assinaturas', () => {
     assert.deepEqual((await realtime.authorize(await ctxOf(mia), ['project:nao-existe'])).allowed, [])
   })
 
+  it('muitos projetos de uma vez (Kanban de todos os projetos): consulta em lote, não por tópico', async () => {
+    const { deps, mia, ctxOf, crm, erp } = await setup()
+    const calls = { findById: 0, find: 0, findManyByIds: 0, rolesForUser: 0 }
+    const spy = (repo, name) => {
+      const original = repo[name]
+      repo[name] = (...args) => {
+        calls[name]++
+        return original(...args)
+      }
+    }
+    spy(deps.projectRepository, 'findById')
+    spy(deps.projectRepository, 'findManyByIds')
+    spy(deps.projectMemberRepository, 'find')
+    spy(deps.projectMemberRepository, 'rolesForUser')
+    const extra = []
+    for (let i = 0; i < 20; i++) extra.push(`project:p${i}`)
+    const result = await createRealtimeService(deps).authorize(await ctxOf(mia), [`project:${crm.id}`, `project:${erp.id}`].concat(extra))
+    assert.deepEqual(result.allowed, [`project:${crm.id}`])
+    assert.equal(result.rejected.length, 21)
+    assert.deepEqual(calls, { findById: 0, find: 0, findManyByIds: 1, rolesForUser: 1 })
+  })
+
   it('sem sessão não assina nada', async () => {
     const { realtime } = await setup()
     await assert.rejects(() => realtime.authorize({ principal: null }, ['user:x']), (err) => err.code === 'UNAUTHENTICATED')

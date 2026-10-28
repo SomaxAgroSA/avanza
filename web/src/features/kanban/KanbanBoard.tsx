@@ -22,9 +22,12 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react'
 import {
+  boardWipLimit,
   buildContainers,
+  canMoveCard,
   canTransition,
   containerId,
+  isAllProjects,
   neighbors,
   parseContainer,
   wipState,
@@ -34,6 +37,7 @@ import {
   type Lane,
   type Swimlane,
 } from '@/domain/kanban'
+import { isClosedCategory } from '@/domain/workflow'
 import { AppAvatar, AppIconButton, AppKanbanCard, AppKanbanColumnHeader, AppKanbanDropZone } from '@/presentation/components'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
 import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
@@ -45,8 +49,11 @@ export interface KanbanDrop {
   card: BoardCard
   from: BoardColumn
   to: BoardColumn
+  /** Vizinhos na tela (acima e abaixo) na posição final. */
   prevId?: string
   nextId?: string
+  /** Ordem final dos cards (ids) na célula de destino. */
+  order: string[]
 }
 
 export interface KanbanBoardProps {
@@ -190,7 +197,7 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
 
     setDrag({ ...state, items: { ...state.items, [current]: list } })
     finish()
-    onMove({ card: entry.card, from: entry.column, to, ...neighbors(list, id) })
+    onMove({ card: entry.card, from: entry.column, to, order: list, ...neighbors(list, id) })
   }
 
   const labelOf = (id: UniqueIdentifier) => {
@@ -211,6 +218,7 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
   const active = activeId ? cards.get(activeId)?.card : undefined
   const originStatus = drag && activeId ? parseContainer(drag.origin).statusId : null
   const showLanes = swimlane !== 'none'
+  const showProject = isAllProjects(board)
 
   return (
     <DndContext
@@ -227,15 +235,17 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
         {/* colunas crescem para ocupar a largura; abaixo de 16rem cada, o quadro rola na horizontal */}
         <div className="grid min-w-full gap-3" style={{ gridTemplateColumns: `repeat(${board.columns.length}, minmax(16rem, 1fr))` }}>
           {board.columns.map((column) => {
-            const wip = wipState(column)
+            // no quadro de todos os projetos o limite (que é por projeto) não aparece
+            const wipLimit = boardWipLimit(board, column)
+            const wip = wipState({ wipLimit, total: column.total })
             const blocked = !!originStatus && !canTransition(board, originStatus, column.status.id)
             return (
               <div key={column.status.id} className="snap-start">
                 <AppKanbanColumnHeader
                   title={column.status.name}
                   accent={optionColor(column.status.color)}
-                  count={column.wipLimit ? `${column.total}/${column.wipLimit}` : column.total}
-                  countLabel={column.wipLimit ? t('kanban.wipCount', { count: column.total, limit: column.wipLimit }) : t('kanban.count', { count: column.total })}
+                  count={wipLimit ? `${column.total}/${wipLimit}` : column.total}
+                  countLabel={wipLimit ? t('kanban.wipCount', { count: column.total, limit: wipLimit }) : t('kanban.count', { count: column.total })}
                   wip={wip}
                   blocked={blocked}
                   actions={
@@ -272,13 +282,20 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
                     tall={!showLanes}
                     label={showLanes ? `${column.status.name} · ${lane.name || t(`kanban.noLane.${swimlane}`)}` : column.status.name}
                     footer={
-                      column.truncated && !showLanes ? <p className="px-1 pt-1 text-xs text-subtle">{t('kanban.truncated', { shown: column.cards.length, total: column.total })}</p> : null
+                      column.truncated && !showLanes ? (
+                        <p className="px-1 pt-1 text-xs text-subtle">
+                          {/* encerradas: as mais recentes; abertas: as primeiras pela ordem do quadro */}
+                          {t(isClosedCategory(column.status.category) ? 'kanban.truncated' : 'kanban.truncatedOpen', { shown: column.cards.length, total: column.total })}
+                        </p>
+                      ) : null
                     }
                     empty={!showLanes ? t('kanban.emptyColumn') : undefined}
                   >
                     {(containers[key] ?? []).map((cardId) => {
                       const card = cards.get(cardId)?.card
-                      return card ? <SortableKanbanCard key={cardId} card={card} locked={!board.capabilities.move} onOpen={onOpen} references={references} /> : null
+                      return card ? (
+                        <SortableKanbanCard key={cardId} card={card} locked={!canMoveCard(board, card)} onOpen={onOpen} references={references} showProject={showProject} />
+                      ) : null
                     })}
                   </Cell>
                 )
@@ -291,7 +308,7 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
       <DragOverlay dropAnimation={null}>
         {active ? (
           <AppKanbanCard overlay className="w-72">
-            <KanbanCardContent card={active} references={references} />
+            <KanbanCardContent card={active} references={references} showProject={showProject} />
           </AppKanbanCard>
         ) : null}
       </DragOverlay>

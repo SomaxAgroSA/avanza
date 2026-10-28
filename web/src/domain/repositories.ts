@@ -351,6 +351,8 @@ export interface CommentRepository {
 /** Quadro Kanban do projeto. */
 export interface BoardRepository {
   get(projectId: string): Promise<Board>
+  /** Quadro de todos os projetos que a pessoa vê (cada card traz o projeto e se pode movê-lo). */
+  getAll(): Promise<Board>
   /** Move o card para o status, entre prevId (acima) e nextId (abaixo). */
   move(taskId: string, target: { statusId: string; prevId?: string; nextId?: string }): Promise<TaskDetail>
 }

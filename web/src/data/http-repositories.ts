@@ -616,6 +616,9 @@ export function createHttpBoardRepository(api: ApiClient): BoardRepository {
     async get(projectId) {
       return toBoard((await api.get<BoardDto>(`/projects/${encodeURIComponent(projectId)}/board`)).data)
     },
+    async getAll() {
+      return toBoard((await api.get<BoardDto>('/board')).data)
+    },
     async move(taskId, target) {
       const body = { status_id: target.statusId, prev_id: target.prevId, next_id: target.nextId }
       return toTaskDetail((await api.post<TaskDetailDto>(`/tasks/${encodeURIComponent(taskId)}/move`, body)).data)

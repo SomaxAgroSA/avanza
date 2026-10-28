@@ -11,23 +11,34 @@ const projectDomain = require('../domain/project')
 const realtimeDomain = require('../domain/realtime')
 
 function createRealtimeService(deps) {
-  async function canViewProject(principal, projectId) {
-    const project = await deps.projectRepository.findById(projectId)
-    if (!project) return false
-    const membership = await deps.projectMemberRepository.find(project.id, principal.userId)
-    return projectDomain.resolveAccess(principal, project, membership).canView
+  /**
+   * Ids dos projetos (entre os pedidos) que a pessoa vê — duas consultas para todos, não duas por
+   * tópico (o Kanban de todos os projetos assina dezenas de uma vez).
+   */
+  async function visibleProjects(principal, projectIds) {
+    const visible = {}
+    if (projectIds.length === 0) return visible
+    const projects = await deps.projectRepository.findManyByIds(projectIds)
+    const roles = await deps.projectMemberRepository.rolesForUser(principal.userId, projects.map((p) => p.id))
+    projects.forEach((project) => {
+      const membership = Object.prototype.hasOwnProperty.call(roles, project.id) ? { role: roles[project.id] } : null
+      if (projectDomain.resolveAccess(principal, project, membership).canView) visible[project.id] = true
+    })
+    return visible
   }
 
   /** Tópicos pedidos → { allowed, rejected }; sem sessão → UNAUTHENTICATED. */
   async function authorize(ctx, topics) {
     rbac.assertAuthenticated(ctx.principal)
+    const requested = realtimeDomain.normalizeTopics(topics).map((topic) => ({ topic, parsed: realtimeDomain.parseTopic(topic) }))
+    const projectIds = requested.filter((r) => r.parsed && r.parsed.kind === 'project').map((r) => r.parsed.id)
+    const visible = await visibleProjects(ctx.principal, projectIds)
     const allowed = []
     const rejected = []
-    for (const topic of realtimeDomain.normalizeTopics(topics)) {
-      const parsed = realtimeDomain.parseTopic(topic)
-      const ok = !!parsed && (parsed.kind === 'user' ? parsed.id === ctx.principal.userId : await canViewProject(ctx.principal, parsed.id))
+    requested.forEach(({ topic, parsed }) => {
+      const ok = !!parsed && (parsed.kind === 'user' ? parsed.id === ctx.principal.userId : !!visible[parsed.id])
       ;(ok ? allowed : rejected).push(topic)
-    }
+    })
     return { allowed, rejected }
   }
 

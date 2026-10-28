@@ -74,6 +74,20 @@ describe('repositórios de projetos e membros', () => {
     assert.equal(archivedMine.total, 0)
   })
 
+  it('visíveis para o quadro de todos os projetos: só abertos, pela chave; sem view_all, dono ou membro', async () => {
+    const keys = (list) => list.map((item) => item.key)
+    assert.deepEqual(keys(await projects.listVisible({ userId: users.caio.id, viewAll: true })), ['ALP', 'BET', 'DEL'])
+    assert.deepEqual(keys(await projects.listVisible({ userId: users.ana.id, viewAll: false })), ['ALP'])
+    assert.deepEqual(await projects.listVisible({ userId: users.caio.id, viewAll: false }), [])
+    // a dona continua vendo o projeto mesmo sem a linha de membro
+    await members.remove(p.delta.id, users.bia.id)
+    assert.deepEqual(keys(await projects.listVisible({ userId: users.bia.id, viewAll: false })), ['ALP', 'BET', 'DEL'])
+    await members.add({ projectId: p.delta.id, userId: users.bia.id, role: 'manager' })
+    // `ids` restringe (arquivado e inexistente ficam de fora)
+    assert.deepEqual(keys(await projects.listVisible({ userId: users.bia.id, viewAll: false, ids: [p.delta.id, p.gamma.id, 'naoexiste12345'] })), ['DEL'])
+    assert.deepEqual(await projects.listVisible({ userId: users.ana.id, viewAll: true, ids: [] }), [])
+  })
+
   it('filtram por busca (nome ou chave, sem curingas), status, prioridade e dono', async () => {
     const base = { scope: { userId: users.ana.id, viewAll: true }, view: 'all', sort: [{ column: 'name', direction: 'ASC' }], pagination: page() }
     const list = (extra) => projects.list(Object.assign({}, base, extra))
