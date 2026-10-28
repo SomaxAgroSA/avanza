@@ -34,17 +34,17 @@ porta() {
   echo "${p:-8090}"
 }
 
-# Endereços IPv4 do Mac nas redes ativas, uma por linha "IP|rede" — o Wi-Fi primeiro (cabo e outras depois).
+# Endereços IPv4 do Mac nas redes ativas, uma por linha "IP|rede|interface" — o Wi-Fi primeiro.
 ips_locais() {
   local lista
   lista=$(networksetup -listallhardwareports 2>/dev/null |
     awk '/^Hardware Port:/{sub(/^Hardware Port: /, ""); nome=$0} /^Device:/{print $2 "|" nome}' |
     while IFS='|' read -r dev nome; do
       ip=$(ipconfig getifaddr "$dev" 2>/dev/null)
-      [ -n "$ip" ] && echo "$ip|$nome"
+      [ -n "$ip" ] && echo "$ip|$nome|$dev"
     done)
-  echo "$lista" | grep '|Wi-Fi$'
-  echo "$lista" | grep -v '|Wi-Fi$' | grep .
+  echo "$lista" | grep '|Wi-Fi|'
+  echo "$lista" | grep -v '|Wi-Fi|' | grep .
   return 0
 }
 
@@ -72,25 +72,27 @@ texto_endereco() {
   [ "$p" = "80" ] && sufixo=""
   echo "Avanza no ar. Acesse pela rede:"
   echo "  http://$NOME.local$sufixo"
-  echo "$lista" | while IFS='|' read -r ip nome; do echo "  http://$ip$sufixo  ($nome)"; done
+  echo "$lista" | while IFS='|' read -r ip nome _; do echo "  http://$ip$sufixo  ($nome)"; done
   [ -n "$host" ] && echo "  http://$host.local$sufixo"
 }
 
-# Anuncia NOME.local (Bonjour/mDNS) apontando para o IP principal (o do Wi-Fi) e refaz o anúncio se o
-# IP mudar. Funciona para quem está na mesma rede (macOS, iPhone e Windows 10+ resolvem nomes .local).
+# Anuncia NOME.local (Bonjour/mDNS) em cada rede ativa com o IP daquela rede (no Wi-Fi o do Wi-Fi, no
+# cabo o do cabo) e refaz os anúncios quando as redes mudam. Funciona para quem está na mesma rede
+# (macOS, iPhone e Windows 10+ resolvem nomes .local).
 anunciar_nome() {
-  local ip atual="" pid=""
-  trap '[ -n "$pid" ] && kill "$pid" 2>/dev/null; exit 0' TERM INT
+  local lista atual="" pids="" p ip nome dev
+  trap 'for p in $pids; do kill "$p" 2>/dev/null; done; exit 0' TERM INT
   while true; do
-    ip=$(ip_local)
-    if [ "$ip" != "$atual" ]; then
-      [ -n "$pid" ] && kill "$pid" 2>/dev/null
-      pid=""
-      if [ -n "$ip" ]; then
-        dns-sd -P "Avanza" _http._tcp local "$(porta)" "$NOME.local" "$ip" path=/ >/dev/null 2>&1 &
-        pid=$!
-      fi
-      atual=$ip
+    lista=$(ips_locais)
+    if [ "$lista" != "$atual" ]; then
+      for p in $pids; do kill "$p" 2>/dev/null; done
+      pids=""
+      while IFS='|' read -r ip nome dev; do
+        [ -n "$ip" ] || continue
+        dns-sd -i "$dev" -P "Avanza" _http._tcp local "$(porta)" "$NOME.local" "$ip" path=/ >/dev/null 2>&1 &
+        pids="$pids $!"
+      done <<< "$lista"
+      atual=$lista
     fi
     sleep 30 &
     wait $!
@@ -141,7 +143,14 @@ subir_supabase() {
     colima restart || return 1
   fi
   colima status >/dev/null 2>&1 || colima start || return 1
-  (cd "$ROOT" && supabase start >/dev/null) || { echo "O Supabase não subiu (rode 'supabase start' em $ROOT para ver o erro)." >&2; return 1; }
+  # logo depois de ligar a VM o Docker ainda está acordando: algumas tentativas antes de desistir
+  local tentativa
+  for tentativa in 1 2 3 4 5; do
+    (cd "$ROOT" && supabase start >/dev/null 2>&1) && return 0
+    sleep 10
+  done
+  echo "O Supabase não subiu (rode 'supabase start' em $ROOT para ver o erro)." >&2
+  return 1
 }
 
 # Chamado pelo LaunchAgent, dentro da cópia.
