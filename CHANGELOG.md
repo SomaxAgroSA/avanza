@@ -32,6 +32,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 - **Desempenho:** o servidor sobe com 60 VMs do JavaScript (`KAMBAN_HOOKS_POOL`; o padrão do PocketBase é 15), o quadro do Kanban usa uma consulta mais leve, as consultas periódicas viram rede de segurança (5 min) quando o tempo real está ligado e as atualizações ao vivo fazem no máximo uma busca a cada 2,5 s por tela. No teste de carga a vazão útil triplicou (~200 pessoas simultâneas). **Atenção:** o servidor usa mais memória — reserve 2 GB (ou diminua `KAMBAN_HOOKS_POOL`).
 
 ### Corrigido
+- **Tela de login:** o lado esquerdo (tema claro) ficava amarelado embaixo (degradê com o verde-lima); agora usa um toque leve do verde da marca.
 - **Kanban com duas barras de rolagem:** textos para leitor de tela dentro dos cards escapavam da rolagem da coluna e esticavam o quadro inteiro; agora só as colunas rolam. Cabeçalhos das etapas com cantos menos arredondados.
 - **Tabelas coladas na borda:** nas listagens (Tarefas, Projetos, Usuários e as demais), a primeira e a última coluna estavam a 12 px da borda arredondada do cartão; agora ficam a 20 px.
 - **Botões de copiar não faziam nada no servidor da rede local** (`http://avanza.local` ou pelo IP): o navegador só oferece a área de transferência moderna em HTTPS. Agora a cópia usa o método compatível nesses endereços (token, comando do Claude, segredo do webhook, chave do projeto, e-mail do usuário e link da documentação) e avisa quando não consegue.

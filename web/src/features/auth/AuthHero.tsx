@@ -14,9 +14,10 @@ import { GrowingField } from './GrowingField'
 const COVER = {
   // Modelo G — verde quase preto da marca, texto claro
   dark: '[--cover-bg:var(--kb-brand-ink)] [--cover-fg:var(--kb-on-cover)] [--cover-muted:color-mix(in_srgb,var(--kb-on-cover)_86%,transparent)] [--cover-line:color-mix(in_srgb,var(--kb-on-cover)_30%,transparent)] bg-[var(--cover-bg)]',
-  // Modelo H — branco esverdeando para o lima embaixo, texto verde quase preto (AA com folga)
+  // Modelo H — branco com um toque do verde da marca embaixo (o lima deixava o fundo amarelado), texto
+  // verde quase preto (AA com folga)
   light:
-    '[--cover-bg:var(--kb-surface)] [--cover-fg:var(--kb-brand-ink)] [--cover-muted:color-mix(in_srgb,var(--kb-brand-ink)_80%,var(--kb-surface))] [--cover-line:color-mix(in_srgb,var(--kb-brand-ink)_16%,transparent)] bg-[linear-gradient(170deg,var(--kb-surface)_50%,color-mix(in_srgb,var(--kb-brand-accent)_18%,var(--kb-surface)))] lg:border-r lg:border-[var(--cover-line)]',
+    '[--cover-bg:var(--kb-surface)] [--cover-fg:var(--kb-brand-ink)] [--cover-muted:color-mix(in_srgb,var(--kb-brand-ink)_80%,var(--kb-surface))] [--cover-line:color-mix(in_srgb,var(--kb-brand-ink)_16%,transparent)] bg-[linear-gradient(170deg,var(--kb-surface)_45%,color-mix(in_srgb,var(--kb-brand-primary)_7%,var(--kb-surface)))] lg:border-r lg:border-[var(--cover-line)]',
 }
 
 const FEATURES: { key: 'kanban' | 'plan' | 'live'; icon: LucideIcon }[] = [
