@@ -57,7 +57,7 @@ export function LoginPage() {
   return (
     <AuthLayout title={t('auth.title')} subtitle={t('auth.subtitle')}>
       {endReason && !serverError && (
-        <div role="status" className="mt-6 flex gap-2 rounded-lg border border-border bg-info-soft px-3 py-2.5 text-sm text-info-soft-fg">
+        <div role="status" className="mt-6 flex gap-2.5 rounded-lg border border-primary-border bg-primary-soft px-3.5 py-3 text-sm text-primary-soft-fg">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>{endReason === 'expired' ? t('auth.sessionExpired') : t('auth.signedOut')}</span>
         </div>

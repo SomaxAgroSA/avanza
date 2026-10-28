@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/figtree';
+@import '@fontsource/plus-jakarta-sans/latin-800.css';
 
 /*
  * Design tokens KAMBAN.
@@ -28,6 +30,7 @@
   --kb-on-cover-muted: oklch(0.93 0.01 270);
   --kb-primary-soft: oklch(0.95 0.03 272);
   --kb-primary-soft-fg: oklch(0.42 0.17 272);
+  --kb-primary-border: oklch(0.54 0.19 272 / 0.25);
 
   --kb-success: oklch(0.6 0.14 155);
   --kb-success-soft: oklch(0.95 0.04 155);
@@ -76,6 +79,7 @@
   --kb-on-cover-muted: oklch(0.93 0.01 270);
   --kb-primary-soft: oklch(0.3 0.07 272);
   --kb-primary-soft-fg: oklch(0.85 0.08 272);
+  --kb-primary-border: oklch(0.66 0.16 272 / 0.3);
 
   --kb-success: oklch(0.7 0.14 155);
   --kb-success-soft: oklch(0.3 0.06 155);
@@ -103,8 +107,80 @@
   --kb-gradient-subtle: linear-gradient(180deg, oklch(0.3 0.06 272 / 0.35), transparent);
 }
 
+/*
+ * Identidade Avanza (SomaxAgro) — origem: identidad_visual/avanza-identidad/avanza-tokens.css.
+ * Por enquanto vale só nas telas sem sessão (AuthLayout aplica .kb-avanza): redefine os tokens
+ * --kb-* dentro do escopo, então AppButton, AppTextField e AppCheckbox ficam verdes sem mudar nada.
+ * Verdes provisórios: ao receber os hex oficiais da Somax, trocar só as três --av-brand-*.
+ */
+.kb-avanza {
+  --av-brand-primary: #00843d;
+  --av-brand-accent: #8dc63f;
+  --av-brand-ink: #1e2b24;
+
+  --kb-bg: #f5f8f5;
+  --kb-surface: #ffffff;
+  --kb-surface-2: #eef3ef;
+  --kb-surface-3: #e2e9e3;
+  --kb-border: #e2e9e3;
+  --kb-border-strong: #c9d4cc;
+  --kb-text: #16211a;
+  --kb-text-muted: #64746a;
+  --kb-text-subtle: #64746a;
+
+  --kb-primary: var(--av-brand-primary);
+  --kb-primary-hover: color-mix(in srgb, var(--av-brand-primary) 85%, var(--av-brand-ink));
+  --kb-primary-fg: #ffffff;
+  --kb-primary-soft: color-mix(in srgb, var(--av-brand-primary) 9%, #ffffff);
+  /* um pouco mais escuro que o primário para garantir AA sobre o fundo suave */
+  --kb-primary-soft-fg: color-mix(in srgb, var(--av-brand-primary) 80%, var(--av-brand-ink));
+  --kb-primary-border: color-mix(in srgb, var(--av-brand-primary) 25%, transparent);
+  --kb-on-cover-muted: color-mix(in srgb, #ffffff 86%, var(--av-brand-accent));
+
+  --kb-ring: color-mix(in srgb, var(--av-brand-primary) 45%, transparent);
+  --kb-gradient-subtle: linear-gradient(180deg, color-mix(in srgb, var(--av-brand-accent) 14%, transparent), transparent);
+  --av-login-gradient: linear-gradient(
+    140deg,
+    var(--av-brand-ink) 0%,
+    color-mix(in srgb, var(--av-brand-ink) 45%, var(--av-brand-primary)) 55%,
+    var(--av-brand-primary) 100%
+  );
+
+  background: var(--kb-bg);
+  color: var(--kb-text);
+  font-family: var(--font-brand);
+}
+
+.dark .kb-avanza {
+  --kb-bg: #0d1410;
+  --kb-surface: #141e18;
+  --kb-surface-2: #1a2620;
+  --kb-surface-3: #23302a;
+  --kb-border: #23302a;
+  --kb-border-strong: #33443b;
+  --kb-text: #e5ede7;
+  --kb-text-muted: #90a096;
+  --kb-text-subtle: #90a096;
+
+  /* botão continua verde Somax com texto branco; links e destaques usam o lima (melhor contraste) */
+  --kb-primary-hover: color-mix(in srgb, var(--av-brand-primary) 88%, #ffffff);
+  --kb-primary-soft: color-mix(in srgb, var(--av-brand-primary) 22%, #141e18);
+  --kb-primary-soft-fg: var(--av-brand-accent);
+
+  --kb-ring: color-mix(in srgb, var(--av-brand-accent) 50%, transparent);
+  --kb-gradient-subtle: linear-gradient(180deg, color-mix(in srgb, var(--av-brand-primary) 18%, transparent), transparent);
+  --av-login-gradient: linear-gradient(
+    140deg,
+    #0a120d 0%,
+    color-mix(in srgb, var(--av-brand-ink) 45%, var(--av-brand-primary)) 55%,
+    var(--av-brand-primary) 100%
+  );
+}
+
 @theme inline {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-brand: 'Figtree Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
 
   --color-bg: var(--kb-bg);
   --color-surface: var(--kb-surface);
@@ -123,6 +199,7 @@
   --color-on-cover-muted: var(--kb-on-cover-muted);
   --color-primary-soft: var(--kb-primary-soft);
   --color-primary-soft-fg: var(--kb-primary-soft-fg);
+  --color-primary-border: var(--kb-primary-border);
 
   --color-success: var(--kb-success);
   --color-success-soft: var(--kb-success-soft);
@@ -333,6 +410,9 @@
 
 @utility bg-brand-gradient {
   background-image: var(--kb-gradient-brand);
+}
+@utility bg-login-gradient {
+  background-image: var(--av-login-gradient);
 }
 @utility bg-subtle-gradient {
   background-image: var(--kb-gradient-subtle);

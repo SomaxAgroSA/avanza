@@ -122,8 +122,8 @@ export function AuthHero() {
   return (
     <div className="relative flex flex-col gap-8">
       <div className="max-w-lg 2xl:max-w-xl">
-        <h2 className="text-3xl font-semibold leading-tight tracking-tight xl:text-4xl 2xl:text-5xl">{t('auth.heroTitle')}</h2>
-        <p className="mt-3 text-base text-on-cover-muted">{t('auth.heroSubtitle')}</p>
+        <h2 className="font-display text-[clamp(34px,3.6vw,52px)] font-extrabold leading-[1.12] tracking-[-0.025em]">{t('auth.heroTitle')}</h2>
+        <p className="mt-4 text-lg text-on-cover-muted xl:text-[19px]">{t('auth.heroSubtitle')}</p>
       </div>
       <div className="max-w-xl pr-3 xl:pr-6 2xl:max-w-2xl [@media(max-height:820px)]:hidden">
         <ProductPreview />
@@ -131,12 +131,12 @@ export function AuthHero() {
       <ul className="grid max-w-2xl gap-4 xl:grid-cols-3 2xl:max-w-3xl">
         {FEATURES.map(({ key, icon: Icon }) => (
           <li key={key} className="flex gap-3 xl:flex-col xl:gap-2">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-on-cover/15 ring-1 ring-on-cover/25">
-              <Icon className="size-4.5" aria-hidden />
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-[11px] border border-on-cover/20 bg-on-cover/15 xl:mb-1">
+              <Icon className="size-5" aria-hidden />
             </span>
             <span>
-              <span className="block text-sm font-semibold">{t(`auth.hero.features.${key}.title`)}</span>
-              <span className="mt-0.5 block text-sm text-on-cover-muted">{t(`auth.hero.features.${key}.description`)}</span>
+              <span className="block text-[15px] font-semibold">{t(`auth.hero.features.${key}.title`)}</span>
+              <span className="mt-0.5 block text-[15px] leading-snug text-on-cover-muted">{t(`auth.hero.features.${key}.description`)}</span>
             </span>
           </li>
         ))}
