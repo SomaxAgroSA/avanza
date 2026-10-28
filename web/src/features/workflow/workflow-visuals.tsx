@@ -6,8 +6,16 @@ import { optionText, optionTint } from '@/features/task-config/config-theme'
 import { CATEGORY_ICONS } from './workflow-theme'
 
 /** Selo de status ou prioridade na cor configurada (ícone da categoria no status, bandeira na prioridade). */
-export function LookupBadge({ item, className }: { item: Pick<LookupItem, 'name' | 'color' | 'category'>; className?: string }) {
+export function LookupBadge({ item, className, iconOnly = false }: { item: Pick<LookupItem, 'name' | 'color' | 'category'>; className?: string; iconOnly?: boolean }) {
   const Icon = item.category ? CATEGORY_ICONS[item.category] : Flag
+  if (iconOnly) {
+    return (
+      <span className={cn('inline-flex size-5 shrink-0 items-center justify-center rounded-full', className)} style={{ color: optionText(item.color), backgroundColor: optionTint(item.color) }} title={item.name}>
+        <Icon className="size-3" aria-hidden />
+        <span className="sr-only">{item.name}</span>
+      </span>
+    )
+  }
   return (
     <span
       className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium', className)}

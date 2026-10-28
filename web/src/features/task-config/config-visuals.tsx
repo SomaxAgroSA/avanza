@@ -164,8 +164,8 @@ export function ColorDot({ color, className }: { color: OptionColor; className?:
 }
 
 /** Ícone do tipo de tarefa, com fundo na cor do tipo. */
-export function TaskTypeIconBadge({ icon, color, size = 'md' }: { icon: TaskTypeIcon; color: OptionColor; size?: 'sm' | 'md' | 'lg' }) {
-  const sizes = { sm: 'size-6 rounded-md [&_svg]:size-3.5', md: 'size-9 rounded-lg [&_svg]:size-4', lg: 'size-12 rounded-xl [&_svg]:size-6' }
+export function TaskTypeIconBadge({ icon, color, size = 'md' }: { icon: TaskTypeIcon; color: OptionColor; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
+  const sizes = { xs: 'size-4 rounded [&_svg]:size-2.5', sm: 'size-6 rounded-md [&_svg]:size-3.5', md: 'size-9 rounded-lg [&_svg]:size-4', lg: 'size-12 rounded-xl [&_svg]:size-6' }
   return (
     <span aria-hidden className={cn('flex shrink-0 items-center justify-center', sizes[size])} style={{ backgroundColor: optionTint(color), color: optionColor(color) }}>
       <AppIcon name={icon} builtins={TASK_TYPE_ICON_COMPONENTS} fallback={TASK_TYPE_ICON_COMPONENTS['check-square']} />

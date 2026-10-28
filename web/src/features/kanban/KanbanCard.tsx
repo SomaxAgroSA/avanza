@@ -41,15 +41,15 @@ export function KanbanCardContent({
         <span className="flex min-w-0 items-center gap-1.5">
           {showProject && card.project && (
             // texto principal sobre a superfície neutra: contraste AA no claro e no escuro
-            <AppBadge className="max-w-24 shrink-0 font-mono text-fg" title={t('kanban.projectOf', { name: card.project.name })} data-testid="kanban-card-project">
+            <AppBadge className={cn('max-w-24 shrink-0 font-mono text-fg', compact && 'px-1.5 py-0 text-[10px]')} title={t('kanban.projectOf', { name: card.project.name })} data-testid="kanban-card-project">
               <span className="truncate">{card.project.key}</span>
             </AppBadge>
           )}
-          <TaskCode task={card} className="min-w-0" />
+          <TaskCode task={card} className="min-w-0" compact={compact} />
         </span>
-        {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" />}
+        {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" iconOnly={compact} />}
       </div>
-      <p className={cn('text-sm font-medium break-words text-fg', compact ? 'line-clamp-2' : 'line-clamp-3')}>{card.title}</p>
+      <p className={cn('font-medium break-words text-fg', compact ? 'line-clamp-2 text-xs leading-snug' : 'line-clamp-3 text-sm')}>{card.title}</p>
       {fields.length > 0 && (
         <dl className="flex flex-col gap-0.5 text-xs">
           {fields.map(({ field, value }) => (
@@ -62,11 +62,11 @@ export function KanbanCardContent({
           ))}
         </dl>
       )}
-      <TagList tags={card.tags} max={compact ? 2 : 3} />
-      <div className="flex min-h-6 items-center justify-between gap-2 text-xs">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+      <TagList tags={card.tags} max={compact ? 2 : 3} compact={compact} />
+      <div className={cn('flex items-center justify-between gap-2', compact ? 'min-h-5 text-[11px] [&_svg]:size-3' : 'min-h-6 text-xs')}>
+        <span className={cn('flex min-w-0 flex-wrap items-center gap-y-1', compact ? 'gap-x-2' : 'gap-x-3')}>
           {card.dueDate && <DueDate task={card} />}
-          <TaskIndicators task={card} />
+          <TaskIndicators task={card} className={compact ? 'mt-0 gap-x-2 text-[11px]' : undefined} />
         </span>
         {card.assignee ? (
           <span title={card.assignee.name} className="shrink-0">
@@ -126,7 +126,7 @@ export function SortableKanbanCard({
       locked={locked}
       dragging={isDragging}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={compact ? 'gap-1.5 p-2.5' : undefined}
+      className={compact ? 'gap-1 rounded-lg p-2' : undefined}
       onClick={() => onOpen(card.id)}
     >
       <KanbanCardContent card={card} references={references} showProject={showProject} compact={compact} />

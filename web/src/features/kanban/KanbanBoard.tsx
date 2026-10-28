@@ -42,6 +42,7 @@ import {
 } from '@/domain/kanban'
 import { isClosedCategory } from '@/domain/workflow'
 import { cn } from '@/core/utils/cn'
+import { useFillHeight } from '@/presentation/common/use-fill-height'
 import { AppAvatar, AppIconButton, AppKanbanCard, AppKanbanColumnHeader, AppKanbanDropZone } from '@/presentation/components'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
 import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
@@ -226,6 +227,10 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
   const originStatus = drag && activeId ? parseContainer(drag.origin).statusId : null
   const showLanes = swimlane !== 'none'
   const isCollapsed = (column: BoardColumn) => view.collapsed.includes(column.status.id)
+  // o quadro ocupa só a tela visível: sem raias, cada coluna rola por dentro; com raias, o quadro rola
+  // (cabeçalho das colunas fica preso no topo)
+  const [boardRef, boardHeight] = useFillHeight<HTMLDivElement>()
+  const fixed = boardHeight !== undefined
   const showProject = isAllProjects(board)
 
   return (
@@ -239,17 +244,25 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
       accessibility={{ announcements, screenReaderInstructions: { draggable: t('kanban.announce.instructions') } }}
     >
       {/* rolagem horizontal com "encaixe" por coluna no celular */}
-      <div className="relative -mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:snap-none sm:px-0" data-testid="kanban-board">
+      <div
+        ref={boardRef}
+        className={cn('relative -mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:snap-none sm:px-0', fixed && showLanes && 'overflow-y-auto')}
+        style={fixed ? { height: boardHeight } : undefined}
+        data-testid="kanban-board"
+      >
         {/* colunas crescem para ocupar a largura; abaixo do mínimo (16rem, 13rem no compacto) o quadro rola na
             horizontal; as recolhidas viram uma faixa estreita */}
-        <div className={cn('grid min-w-full', view.compact ? 'gap-2' : 'gap-3')} style={{ gridTemplateColumns: columnTemplate(board.columns, view) }}>
+        <div
+          className={cn('grid min-w-full', view.compact ? 'gap-2' : 'gap-3', fixed && !showLanes && 'h-full')}
+          style={{ gridTemplateColumns: columnTemplate(board.columns, view), gridTemplateRows: fixed && !showLanes ? 'auto minmax(0, 1fr)' : undefined }}
+        >
           {board.columns.map((column) => {
             // no quadro de todos os projetos o limite (que é por projeto) não aparece
             const wipLimit = boardWipLimit(board, column)
             const wip = wipState({ wipLimit, total: column.total })
             const blocked = !!originStatus && !canTransition(board, originStatus, column.status.id)
             return (
-              <div key={column.status.id} className="snap-start">
+              <div key={column.status.id} className={cn('snap-start', fixed && showLanes && 'sticky top-0 z-10 bg-bg pb-1')}>
                 <AppKanbanColumnHeader
                   title={column.status.name}
                   accent={optionColor(column.status.color)}
@@ -258,6 +271,7 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
                   wip={wip}
                   blocked={blocked}
                   collapsed={isCollapsed(column)}
+                  compact={view.compact}
                   onToggleCollapse={onToggleCollapse && (() => onToggleCollapse(column.status.id))}
                   toggleLabel={t(isCollapsed(column) ? 'kanban.expand' : 'kanban.collapse', { name: column.status.name })}
                   actions={
@@ -294,6 +308,8 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
                       ids={containers[key] ?? []}
                       blocked={!!drag && !!activeId && !allowed(key)}
                       tall={!showLanes}
+                      fixed={fixed}
+                      compact={view.compact}
                       name={column.status.name}
                       expandLabel={t('kanban.expand', { name: column.status.name })}
                       onExpand={onToggleCollapse && (() => onToggleCollapse(column.status.id))}
@@ -307,6 +323,8 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
                     ids={containers[key] ?? []}
                     blocked={!!drag && !!activeId && !allowed(key)}
                     tall={!showLanes}
+                      fixed={fixed}
+                      compact={view.compact}
                     label={showLanes ? `${column.status.name} · ${lane.name || t(`kanban.noLane.${swimlane}`)}` : column.status.name}
                     footer={
                       column.truncated && !showLanes ? (
@@ -355,11 +373,15 @@ function CollapsedCell({
   name,
   expandLabel,
   onExpand,
+  fixed,
+  compact,
 }: {
   id: string
   ids: string[]
   blocked: boolean
   tall: boolean
+  fixed: boolean
+  compact: boolean
   name: string
   expandLabel: string
   onExpand?: () => void
@@ -367,7 +389,7 @@ function CollapsedCell({
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
     <SortableContext id={id} items={ids} strategy={verticalListSortingStrategy}>
-      <AppKanbanDropZone ref={setNodeRef} over={isOver} blocked={blocked} aria-label={name} data-testid={`kanban-cell-${id}`} className={cn('items-center p-1', tall && 'min-h-40')}>
+      <AppKanbanDropZone ref={setNodeRef} over={isOver} blocked={blocked} aria-label={name} data-testid={`kanban-cell-${id}`} className={cn('items-center p-1', compact && 'rounded-lg', tall && 'min-h-40', tall && fixed && 'h-full')}>
         <button
           type="button"
           onClick={onExpand}
@@ -392,11 +414,15 @@ function Cell({
   footer,
   empty,
   children,
+  fixed,
+  compact,
 }: {
   id: string
   ids: string[]
   blocked: boolean
   tall: boolean
+  fixed: boolean
+  compact: boolean
   label: string
   footer: ReactNode
   empty?: string
@@ -411,7 +437,8 @@ function Cell({
         blocked={blocked}
         aria-label={label}
         data-testid={`kanban-cell-${id}`}
-        className={tall ? 'max-h-[calc(100dvh-17rem)] min-h-40 overflow-y-auto' : undefined}
+        // quadro fixo: a coluna ocupa a altura disponível e rola por dentro; sem medida, um teto aproximado
+        className={cn(compact && 'gap-1.5 rounded-lg p-1.5', tall && (fixed ? 'h-full min-h-0 overflow-y-auto' : 'max-h-[calc(100dvh-17rem)] min-h-40 overflow-y-auto'))}
       >
         {children}
         {ids.length === 0 && empty && <p className="py-6 text-center text-xs text-subtle">{empty}</p>}

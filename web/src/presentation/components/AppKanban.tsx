@@ -25,6 +25,8 @@ export interface AppKanbanColumnHeaderProps {
   blocked?: boolean
   /** Coluna recolhida: faixa estreita só com a contagem e o botão de expandir. */
   collapsed?: boolean
+  /** Quadro compacto: cabeçalho mais baixo e texto menor. */
+  compact?: boolean
   /** Recolher/expandir a coluna (o rótulo diz qual das duas). */
   onToggleCollapse?: () => void
   toggleLabel?: string
@@ -32,7 +34,7 @@ export interface AppKanbanColumnHeaderProps {
 }
 
 /** Cabeçalho da coluna do quadro: nome, contagem/limite WIP e ações. */
-export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', accent, actions, blocked, collapsed, onToggleCollapse, toggleLabel, className }: AppKanbanColumnHeaderProps) {
+export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', accent, actions, blocked, collapsed, compact, onToggleCollapse, toggleLabel, className }: AppKanbanColumnHeaderProps) {
   const toggle = onToggleCollapse && (
     <AppIconButton size="sm" variant="ghost" icon={collapsed ? <UnfoldHorizontal /> : <FoldHorizontal />} label={toggleLabel ?? ''} onClick={onToggleCollapse} />
   )
@@ -41,6 +43,7 @@ export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', 
       <div
         className={cn(
           'relative flex min-h-11 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border bg-surface px-0.5 py-1.5 shadow-card transition-opacity',
+          compact && 'min-h-9 rounded-lg py-0.5',
           wip === 'over' && 'border-danger',
           blocked && 'opacity-50',
           className,
@@ -56,14 +59,15 @@ export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', 
     <div
       className={cn(
         'relative flex min-h-11 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2 shadow-card transition-opacity',
+        compact && 'min-h-9 gap-1.5 rounded-lg px-2.5 py-1',
         wip === 'over' && 'border-danger',
         blocked && 'opacity-50',
         className,
       )}
     >
-      {accent && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: accent }} />}
-      <div className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{title}</div>
-      <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums', WIP_TONE[wip])} title={countLabel}>
+      {accent && <span aria-hidden className={cn('absolute inset-x-0 top-0', compact ? 'h-0.5' : 'h-1')} style={{ backgroundColor: accent }} />}
+      <div className={cn('min-w-0 flex-1 truncate font-semibold text-fg', compact ? 'text-xs' : 'text-sm')}>{title}</div>
+      <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums', compact && 'px-1.5 py-0 text-[11px]', WIP_TONE[wip])} title={countLabel}>
         {count}
         {countLabel && <span className="sr-only"> {countLabel}</span>}
       </span>

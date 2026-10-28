@@ -9,11 +9,11 @@ import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 
 /** Ícone do tipo + código (ex.: [bug] CRM-12). */
-export function TaskCode({ task, className }: { task: Pick<TaskSummary, 'code' | 'type'>; className?: string }) {
+export function TaskCode({ task, className, compact = false }: { task: Pick<TaskSummary, 'code' | 'type'>; className?: string; compact?: boolean }) {
   return (
-    <span className={cn('inline-flex items-center gap-1.5 font-mono text-xs text-muted', className)} title={task.type?.name}>
-      {task.type && <TaskTypeIconBadge icon={task.type.icon} color={task.type.color} size="sm" />}
-      {task.code}
+    <span className={cn('inline-flex items-center gap-1.5 font-mono text-xs whitespace-nowrap text-muted', compact && 'gap-1 text-[11px]', className)} title={task.type?.name}>
+      {task.type && <TaskTypeIconBadge icon={task.type.icon} color={task.type.color} size={compact ? 'xs' : 'sm'} />}
+      <span className="truncate">{task.code}</span>
     </span>
   )
 }
@@ -41,15 +41,17 @@ export function PersonCell({ person, emptyLabel }: { person: UserSummary | null;
 /** Indicadores compactos: bloqueio, subtarefas, checklist, anexos e comentários (some quando não há nada). */
 export function TaskIndicators({
   task,
+  className,
 }: {
   task: Pick<TaskSummary, 'checklistProgress' | 'commentCount' | 'attachmentCount'> & Partial<Pick<TaskSummary, 'subtaskProgress' | 'blocked'>>
+  className?: string
 }) {
   const { t } = useTranslation()
   const { done, total } = task.checklistProgress
   const subtasks = task.subtaskProgress ?? { done: 0, total: 0 }
   if (total === 0 && task.commentCount === 0 && task.attachmentCount === 0 && subtasks.total === 0 && !task.blocked) return null
   return (
-    <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+    <span className={cn('mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted', className)}>
       {task.blocked && (
         <span className="inline-flex items-center gap-1 font-medium text-danger" title={t('relations.blockedHint')}>
           <Lock className="size-3.5" aria-hidden />

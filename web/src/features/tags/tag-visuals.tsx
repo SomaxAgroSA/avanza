@@ -17,13 +17,13 @@ export function TagBadge({ tag, className }: { tag: Pick<TagRef, 'name' | 'color
 }
 
 /** Lista compacta de tags (mostra as primeiras e "+N"). */
-export function TagList({ tags, max = 3, className }: { tags: TagRef[]; max?: number; className?: string }) {
+export function TagList({ tags, max = 3, className, compact = false }: { tags: TagRef[]; max?: number; className?: string; compact?: boolean }) {
   if (tags.length === 0) return null
   const shown = tags.slice(0, max)
   return (
     <span className={cn('flex min-w-0 flex-wrap items-center gap-1', className)}>
       {shown.map((tag) => (
-        <TagBadge key={tag.id} tag={tag} />
+        <TagBadge key={tag.id} tag={tag} className={compact ? 'gap-0.5 px-1 py-0 text-[10px] [&>svg]:size-2.5' : undefined} />
       ))}
       {tags.length > max && (
         <span className="text-[11px] text-muted" title={tags.slice(max).map((t) => t.name).join(', ')}>
