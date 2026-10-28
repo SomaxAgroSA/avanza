@@ -306,7 +306,7 @@ export function AppDataTable<T extends RowData>({
                         aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
                         style={pinnedStyle(column as never)}
                         className={cn(
-                          'group relative h-10 border-b border-border bg-surface-2 px-3 text-left text-xs font-semibold uppercase tracking-wide text-muted',
+                          'group relative h-10 border-b border-border bg-surface-2 px-3 text-left first:pl-5 last:pr-5 text-xs font-semibold uppercase tracking-wide text-muted',
                           def?.align === 'end' && 'text-right',
                           column.id === ACTIONS_ID && 'text-right',
                         )}
@@ -366,7 +366,7 @@ export function AppDataTable<T extends RowData>({
                 Array.from({ length: Math.min(state.perPage, 8) }).map((_, i) => (
                   <tr key={`sk-${i}`}>
                     {table.getVisibleLeafColumns().map((column) => (
-                      <td key={column.id} className="border-b border-border px-3 py-3">
+                      <td key={column.id} className="border-b border-border px-3 py-3 first:pl-5 last:pr-5">
                         <AppSkeleton className="h-4 w-3/4" />
                       </td>
                     ))}
@@ -430,7 +430,8 @@ export function AppDataTable<T extends RowData>({
                           key={cell.id}
                           style={pinnedStyle(cell.column as never)}
                           className={cn(
-                            'border-b border-border px-3 py-2.5 align-middle text-fg group-last/row:border-b-0',
+                            // primeira e última colunas mais afastadas da borda arredondada do cartão
+                            'border-b border-border px-3 py-2.5 align-middle text-fg group-last/row:border-b-0 first:pl-5 last:pr-5',
                             cell.column.getIsPinned() && 'bg-surface group-hover/row:bg-surface-2',
                             (def?.align === 'end' || cell.column.id === ACTIONS_ID) && 'text-right',
                           )}
