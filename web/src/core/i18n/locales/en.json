@@ -288,6 +288,7 @@
     "remember": "Keep me signed in for 30 days",
     "submit": "Sign in",
     "securityNote": "Your session is protected and expires automatically after inactivity.",
+    "footer": "© {{year}} {{name}} · SomaxAgro",
     "sessionExpired": "Your session has expired. Sign in again to continue.",
     "logout": "Sign out",
     "signedOut": "You signed out safely. See you soon!",
@@ -300,17 +301,6 @@
       "description": "Password recovery by email isn't set up on this platform. An administrator can reset your password."
     },
     "hero": {
-      "board": "Team board",
-      "live": "Live",
-      "columns": {
-        "todo": "To do",
-        "doing": "In progress",
-        "done": "Done"
-      },
-      "health": "Project health",
-      "onTrack": "On track",
-      "moved": "Card moved to Done",
-      "now": "just now · the whole team sees it",
       "features": {
         "kanban": {
           "title": "Kanban and backlog",

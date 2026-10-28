@@ -87,7 +87,7 @@ export function AppSelect({
                     )}
                   >
                     <Select.ItemIndicator className="absolute left-2 flex items-center">
-                      <Check className="size-4 text-primary" aria-hidden />
+                      <Check className="size-4 text-primary-text" aria-hidden />
                     </Select.ItemIndicator>
                     <Select.ItemText>{option.label}</Select.ItemText>
                   </Select.Item>

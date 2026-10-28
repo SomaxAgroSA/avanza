@@ -100,7 +100,7 @@ export function TaskTypesPage() {
                 <TaskTypeIconBadge icon={type.icon} color={type.color} />
                 <Link to={`/settings/task-types/${type.id}`} className="group min-w-0 flex-1 rounded-md focus-visible:outline-2 focus-visible:outline-ring">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-fg group-hover:text-primary">{type.name}</span>
+                    <span className="font-medium text-fg group-hover:text-primary-text">{type.name}</span>
                     <span className="font-mono text-xs text-subtle">{type.key}</span>
                     {!type.isActive && <AppBadge>{t('taskTypes.inactive')}</AppBadge>}
                   </span>

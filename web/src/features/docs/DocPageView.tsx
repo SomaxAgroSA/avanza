@@ -175,7 +175,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
             <ol className="space-y-1 border-l border-border text-sm">
               {outline.map((item) => (
                 <li key={item.index} style={{ paddingLeft: `${(item.level - 1) * 0.75 + 0.75}rem` }}>
-                  <button type="button" onClick={() => scrollToHeading(contentRef.current, item.index)} className="text-left text-muted hover:text-primary">
+                  <button type="button" onClick={() => scrollToHeading(contentRef.current, item.index)} className="text-left text-muted hover:text-primary-text">
                     {item.text || t('richText.toc.untitled')}
                   </button>
                 </li>

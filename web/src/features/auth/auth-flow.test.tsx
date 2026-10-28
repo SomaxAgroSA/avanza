@@ -32,6 +32,13 @@ describe('fluxo de autenticação', () => {
     expect(router.state.location.search).toBe(`?next=${encodeURIComponent('/admin')}`)
   })
 
+  it('a capa mostra a marca, a proposta e o rodapé com o nome da plataforma', async () => {
+    renderRoutes(routes, { repositories: fakeRepositories(), initialPath: '/login' })
+    expect(await screen.findByRole('heading', { name: 'Sincronize projetos, tarefas e equipes.' })).toBeInTheDocument()
+    expect(screen.getByText('Kanban e backlog')).toBeInTheDocument()
+    expect(screen.getByText(`© ${new Date().getFullYear()} Avanza · SomaxAgro`)).toBeInTheDocument()
+  })
+
   it('valida os campos antes de chamar a API', async () => {
     const login = vi.fn()
     renderRoutes(routes, { repositories: fakeRepositories({ auth: { login } }), initialPath: '/login' })

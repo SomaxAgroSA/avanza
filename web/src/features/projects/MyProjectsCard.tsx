@@ -23,7 +23,7 @@ export function MyProjectsCard({ className }: { className?: string }) {
       title={t('dashboard.myProjects')}
       padded={false}
       actions={
-        <Link to="/projects/mine" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+        <Link to="/projects/mine" className="inline-flex items-center gap-1 text-sm text-primary-text hover:underline">
           {t('dashboard.seeAll')} <ArrowRight className="size-3.5" aria-hidden />
         </Link>
       }

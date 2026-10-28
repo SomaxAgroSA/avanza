@@ -272,8 +272,8 @@ export function AppBoardTable<Row>({
                   <div className={cn('flex min-w-0 items-center gap-1 px-2', index === 0 ? 'justify-start' : 'justify-center')}>
                     {index === 0 && headerLead}
                     <span className="truncate">{c.label}</span>
-                    {sorted === 'asc' && <ArrowUp aria-hidden className="size-3.5 shrink-0 text-primary" />}
-                    {sorted === 'desc' && <ArrowDown aria-hidden className="size-3.5 shrink-0 text-primary" />}
+                    {sorted === 'asc' && <ArrowUp aria-hidden className="size-3.5 shrink-0 text-primary-text" />}
+                    {sorted === 'desc' && <ArrowDown aria-hidden className="size-3.5 shrink-0 text-primary-text" />}
                     {items.length > 0 && (
                       <AppDropdown
                         align="start"

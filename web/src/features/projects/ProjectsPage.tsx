@@ -83,7 +83,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
           <div className="flex min-w-0 items-center gap-3">
             <ProjectAvatar icon={project.icon} cover={project.cover} />
             <div className="min-w-0">
-              <Link to={`/projects/${project.id}`} className="block truncate font-medium text-fg hover:text-primary hover:underline">
+              <Link to={`/projects/${project.id}`} className="block truncate font-medium text-fg hover:text-primary-text hover:underline">
                 {project.name}
               </Link>
               <p className="font-mono text-xs text-muted">{project.key}</p>

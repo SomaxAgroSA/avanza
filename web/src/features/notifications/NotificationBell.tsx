@@ -62,7 +62,7 @@ export function NotificationBell() {
             )}
           </div>
           <div className="border-t border-border p-2 text-center">
-            <Link to="/notifications" onClick={() => setOpen(false)} className="text-sm font-medium text-primary hover:underline">
+            <Link to="/notifications" onClick={() => setOpen(false)} className="text-sm font-medium text-primary-text hover:underline">
               {t('notifications.seeAll')}
             </Link>
           </div>

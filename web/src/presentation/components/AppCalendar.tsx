@@ -190,7 +190,7 @@ export function AppCalendar({ value, onChange, min, max, showFooter = true, clea
                             : outside
                             ? 'text-subtle/60 hover:bg-surface-2'
                             : 'text-fg hover:bg-surface-2',
-                        isToday && !isSelected && 'text-primary ring-1 ring-inset ring-primary/60',
+                        isToday && !isSelected && 'text-primary-text ring-1 ring-inset ring-primary/60',
                         disabled && 'cursor-not-allowed opacity-35 hover:bg-transparent',
                       )}
                     >
@@ -237,7 +237,7 @@ export function AppCalendar({ value, onChange, min, max, showFooter = true, clea
                   setVisible((v) => ({ ...v, year }))
                   setView('months')
                 }}
-                className={cn(cell, 'h-11', current ? 'bg-primary text-primary-fg' : 'text-fg hover:bg-surface-2', year === todayDay.year && !current && 'text-primary')}
+                className={cn(cell, 'h-11', current ? 'bg-primary text-primary-fg' : 'text-fg hover:bg-surface-2', year === todayDay.year && !current && 'text-primary-text')}
               >
                 {year}
               </button>
@@ -264,7 +264,7 @@ export function AppCalendar({ value, onChange, min, max, showFooter = true, clea
               setView('days')
               select(todayDay)
             }}
-            className="rounded-lg px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary-soft disabled:opacity-40"
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-primary-text transition-colors hover:bg-primary-soft disabled:opacity-40"
           >
             {t('calendar.today')}
           </button>

@@ -223,7 +223,7 @@ function RelatedRow({ task, action, icon }: { task: TaskSummary; action?: ReactN
     <li className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 py-2">
       {icon}
       <TaskCode task={task} className="shrink-0" />
-      <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 basis-40 truncate text-sm font-medium text-fg hover:text-primary">
+      <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 basis-40 truncate text-sm font-medium text-fg hover:text-primary-text">
         {task.title}
       </Link>
       <span className="flex shrink-0 items-center gap-3">

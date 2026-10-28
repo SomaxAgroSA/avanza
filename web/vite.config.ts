@@ -27,6 +27,8 @@ export default defineConfig({
     outDir: '../backend/pb_public',
     emptyOutDir: true,
     sourcemap: false,
+    // Fontes sempre como arquivo: a CSP (font-src 'self') bloqueia as pequenas que viriam embutidas em data:.
+    assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
     rolldownOptions: {
       output: {
         // Vendors em chunks estáveis: mudam pouco e ficam em cache entre deploys.

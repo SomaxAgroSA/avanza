@@ -57,8 +57,8 @@ export function LoginPage() {
   return (
     <AuthLayout title={t('auth.title')} subtitle={t('auth.subtitle')}>
       {endReason && !serverError && (
-        <div role="status" className="mt-6 flex gap-2 rounded-lg border border-border bg-info-soft px-3 py-2.5 text-sm text-info-soft-fg">
-          <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <div role="status" className="mt-6 flex items-center gap-2.5 rounded-[9px] border border-primary-border bg-primary-soft px-3.5 py-3 text-primary-soft-fg">
+          <Info className="size-5 shrink-0" aria-hidden />
           <span>{endReason === 'expired' ? t('auth.sessionExpired') : t('auth.signedOut')}</span>
         </div>
       )}
@@ -124,11 +124,17 @@ export function LoginPage() {
             {showContactAdmin && !platform.passwordReset && <ContactAdminNotice className="mt-3" />}
           </div>
         </div>
-        <AppButton type="submit" size="lg" block loading={login.isPending}>
+        <AppButton
+          type="submit"
+          size="lg"
+          block
+          loading={login.isPending}
+          className="h-[50px] rounded-[9px] text-[16.5px] font-semibold shadow-[0_6px_16px_-6px_color-mix(in_oklch,var(--kb-primary)_70%,transparent)]"
+        >
           {t('auth.submit')}
         </AppButton>
       </form>
-      <p className="mt-6 text-center text-xs text-subtle">{t('auth.securityNote')}</p>
+      <p className="mt-4 text-center text-[13.5px] text-muted">{t('auth.securityNote')}</p>
     </AuthLayout>
   )
 }

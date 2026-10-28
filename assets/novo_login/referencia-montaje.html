@@ -1,0 +1,600 @@
+<title>Logos AVANZA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;500;600;800&family=Sora:wght@600;800&family=Outfit:wght@500;700&family=Lexend:wght@600&family=Archivo:wght@800&family=Red+Hat+Display:wght@700;900&family=Urbanist:wght@700;800&family=Manrope:wght@800&family=Plus+Jakarta+Sans:wght@700;800&display=swap">
+<style>
+/* Layout: hoja de muestras — barra de color fija arriba, cuadrícula de láminas de logo */
+:root{
+  --bg:#F3F6F2; --surface:#FFFFFF; --fg:#18231C; --muted:#5D6B62; --line:#DCE3DC; --chip:#E8EEE8;
+  --display:"Bricolage Grotesque",Figtree,system-ui,sans-serif;
+  --body:Figtree,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1612;--surface:#17201A;--fg:#E7EEE8;--muted:#9AA9A0;--line:#2A362F;--chip:#202B24;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1612;--surface:#17201A;--fg:#E7EEE8;--muted:#9AA9A0;--line:#2A362F;--chip:#202B24;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px}
+header{display:grid;gap:10px;margin-bottom:28px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(32px,5vw,52px);line-height:1.02;margin:0;text-wrap:balance;letter-spacing:-.02em}
+.lede{color:var(--muted);max-width:62ch;margin:0}
+.palette{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:28px}
+.palette b{font-size:13px;font-weight:600;margin-right:4px}
+.sw{display:flex;align-items:center;gap:8px}
+.sw label{font-size:13px;color:var(--muted)}
+.sw input[type=color]{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface);cursor:pointer}
+.sw input[type=text]{width:84px;font:500 13px/1 ui-monospace,Menlo,monospace;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+.reset{margin-left:auto;font:600 13px var(--body);padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}.reset{margin-left:0}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:grid}
+.stage{background:#fff;display:grid;place-items:center;padding:28px 20px;border-bottom:1px solid var(--line)}
+.stage svg{width:100%;max-width:380px;height:auto}
+.alt{display:grid;grid-template-columns:1.4fr 1fr;border-bottom:1px solid var(--line)}
+.alt>div{display:grid;place-items:center;padding:16px}
+.alt .dark svg{width:100%;max-width:220px;height:auto}
+.alt .icons{display:flex;gap:14px;align-items:end;justify-content:center;background:var(--chip)}
+.app{border-radius:22%;overflow:hidden;display:block}
+.meta{padding:16px 18px 18px;display:grid;gap:6px}
+.meta .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.num{font:600 12px var(--body);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.meta h2{font-family:var(--display);font-size:20px;margin:0;font-weight:700}
+.meta p{margin:0;color:var(--muted);font-size:14px}
+.copy{font:600 12px var(--body);padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;white-space:nowrap}
+button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.covers-sec{margin-top:56px;display:grid;gap:10px}
+.h1s{font-size:clamp(26px,4vw,40px)}
+.covers{display:grid;gap:28px;margin-top:18px}
+.cv-item{display:grid;gap:10px}
+.cv-cap{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.cv-cap h2{font-family:var(--display);font-size:20px;margin:0}
+.cv-cap span{color:var(--muted);font-size:14px}
+.shot{display:grid;grid-template-columns:1.15fr 1fr;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#F7F9F7}
+@media (max-width:760px){.shot{grid-template-columns:1fr}.shot .form{display:none}}
+.cover{container-type:inline-size;aspect-ratio:1020/870;position:relative;overflow:hidden;color:#fff;font-family:Figtree,system-ui,sans-serif}
+.cover .in{position:absolute;inset:0;padding:7cqw;display:flex;flex-direction:column;z-index:2}
+.cover .logo{width:34cqw}
+.cover .mid{margin-top:auto;margin-bottom:auto;display:grid;gap:2.4cqw}
+.cover h3{font-family:"Plus Jakarta Sans",Figtree,sans-serif;font-weight:800;font-size:5.6cqw;line-height:1.08;margin:0;max-width:72cqw;letter-spacing:-.02em}
+.cover .sub{font-size:2.2cqw;margin:0;opacity:.88;max-width:70cqw}
+.cover .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:3cqw;margin-top:3cqw}
+.cover .ft{display:grid;gap:.8cqw;align-content:start}
+.cover .ft i{width:5cqw;height:5cqw;border-radius:1.2cqw;display:grid;place-items:center}
+.cover .ft i svg{width:2.8cqw;height:2.8cqw}
+.cover .ft b{font-size:1.8cqw}
+.cover .ft small{font-size:1.55cqw;opacity:.82;line-height:1.35}
+.cover .copy-r{font-size:1.6cqw;opacity:.75}
+.cover .deco{position:absolute;z-index:1;pointer-events:none}
+.form{display:grid;align-content:center;gap:12px;padding:8% 10%;color:#1E2B24;font-family:Figtree,sans-serif}
+.form strong{font-size:22px}
+.form .f{height:38px;border:1px solid #D6DED8;border-radius:8px;background:#fff}
+.form .lbl{font-size:13px;font-weight:600;margin-bottom:-6px}
+.form .btn{height:40px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:700}
+.cover.lv{cursor:pointer;user-select:none}
+.fh{font-family:var(--display);font-size:20px;margin:18px 0 0}
+.vf{border:0;border-radius:0;grid-template-columns:1fr 1fr}
+.vf .fp{padding:22px 14px}
+.meta .top .app{border:1px solid var(--line)}
+.final{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+@media (max-width:760px){.final{grid-template-columns:1fr}}
+.fp{display:grid;justify-items:center;gap:18px;padding:22px 20px 26px}
+.fp svg{max-width:340px;width:100%;height:auto}
+.fp .fi{display:flex;gap:14px;align-items:end}
+.fp .fi svg{width:auto}
+.ft-l{justify-self:start;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.cover.lv h3{max-width:40cqw;font-size:4.5cqw}
+.cover.lv .sub{max-width:40cqw;font-size:2cqw}
+.cover.lv .logo{width:30cqw}
+.hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:99px;background:var(--chip);color:var(--fg)}
+.kb-col{position:absolute;top:13cqw;bottom:9cqw;width:14cqw;border-radius:1.6cqw;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
+.kb-col span{display:flex;justify-content:space-between;font-size:1.3cqw;padding:1.3cqw 1.3cqw 0;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+.kb-card{position:absolute;left:0;top:0;width:12cqw;height:6.2cqw;border-radius:1cqw;background:#fff;display:grid;align-content:center;gap:.8cqw;padding:0 1.2cqw;transition:transform .8s cubic-bezier(.2,.8,.2,1),box-shadow .3s;box-shadow:0 .6cqw 1.6cqw rgba(0,0,0,.25)}
+.kb-card i{display:block;height:.9cqw;border-radius:1cqw;background:#E3E9E4}
+.kb-card i:first-child{width:70%}
+.kb-card em{position:absolute;right:1cqw;top:1cqw;width:1.4cqw;height:1.4cqw;border-radius:50%}
+.lv canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.rg{position:absolute;z-index:1;left:52cqw;top:12cqw;width:38cqw;display:grid;justify-items:center;gap:2cqw}
+.rg svg{width:100%;overflow:visible}
+.rg .arc{transition:stroke-dashoffset 1.3s cubic-bezier(.3,.8,.2,1)}
+.rg .lab{font-size:1.9cqw;font-weight:600;text-align:center;min-height:2.6cqw}
+.rg .dots{display:flex;gap:1.2cqw}
+.rg .dots b{width:1.2cqw;height:1.2cqw;border-radius:50%;background:rgba(255,255,255,.35);transition:background .3s,transform .3s}
+.rg .dots b.on{background:#fff;transform:scale(1.3)}
+.gt{position:absolute;z-index:1;left:51cqw;right:5cqw;top:15cqw;display:grid;gap:1.9cqw}
+.gt .hd{display:grid;grid-template-columns:repeat(6,1fr);margin-left:13cqw;font-size:1.3cqw;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.55}
+.gt .row{display:grid;grid-template-columns:13cqw 1fr;align-items:center;font-size:1.45cqw;font-weight:600}
+.gt .row small{display:block;font-weight:500;opacity:.6;font-size:1.25cqw;font-variant-numeric:tabular-nums}
+.gt .tr{position:relative;height:2.8cqw;border-radius:1.4cqw}
+.gt .bar{position:absolute;top:0;bottom:0;border-radius:1.4cqw;overflow:hidden}
+.gt .bar span{display:block;height:100%}
+.gt .today{position:absolute;top:-2.4cqw;bottom:-1cqw;width:0;border-left:.25cqw dashed;margin-left:13cqw}
+.gt .today b{position:absolute;top:-2.6cqw;left:-2.6cqw;font-size:1.2cqw;padding:.3cqw .8cqw;border-radius:1cqw;color:#fff}
+.chv{position:absolute;z-index:1;will-change:transform;transition:filter .3s}
+.chv svg{width:100%;height:auto;display:block}
+.lv .stage-dash .chv{transition:transform .5s cubic-bezier(.2,.9,.2,1)}
+@media (prefers-reduced-motion:reduce){.kb-card,.rg .arc{transition:none}}
+.mk-ctl{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0 6px}
+.seg{display:inline-flex;background:var(--chip);border-radius:10px;padding:3px}
+.seg button{font:600 13px var(--body);border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:8px;cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mk-frame{position:relative;width:100%;aspect-ratio:1440/916;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 20px 50px -20px rgba(0,0,0,.35)}
+.mk-inner{position:absolute;left:0;top:0;width:1440px;height:916px;transform-origin:0 0}
+/* tokens del montaje */
+.mk{--bg:#F5F8F5;--sf:#FFFFFF;--ln:#E2E9E3;--tx:#16211A;--mu:#64746A;--tint:color-mix(in srgb,var(--p) 9%,#fff);--pt:var(--p);width:1440px;height:916px;display:flex;flex-direction:column;font-family:Figtree,system-ui,sans-serif;color:var(--tx);background:var(--bg);font-size:15px}
+.mk.dark{--bg:#0D1410;--sf:#141E18;--ln:#23302A;--tx:#E5EDE7;--mu:#90A096;--tint:color-mix(in srgb,var(--p) 22%,#141E18);--pt:var(--a)}
+.mk svg{flex:none}
+.mk .chrome{height:36px;background:#E9ECEA;display:flex;align-items:center;gap:8px;padding:0 14px;flex:none}
+.mk.dark .chrome{background:#1D2420}
+.mk .chrome i{width:11px;height:11px;border-radius:50%;background:#C9CFCB}
+.mk.dark .chrome i{background:#3A433E}
+.mk .chrome span{margin-left:16px;background:var(--sf);color:var(--mu);font-size:12.5px;padding:4px 14px;border-radius:7px;width:420px}
+.mk .scr{flex:1;display:flex;min-height:0}
+.mk .ic{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* login */
+.mk .lp{width:52%;position:relative;color:#fff;padding:40px 40px;display:flex;flex-direction:column;overflow:hidden}
+.mk .lp:before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.13) 1px,transparent 1.5px);background-size:26px 26px}
+.mk .lp>*{position:relative}
+.mk .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:21px;letter-spacing:-.01em}
+.mk .bi{width:42px;height:42px;border-radius:11px;display:grid;place-items:center}
+.mk .lp h1{font-family:"Plus Jakarta Sans",Figtree,sans-serif;font-size:52px;line-height:1.12;letter-spacing:-.025em;margin:0 0 16px;font-weight:800;max-width:600px}
+.mk .lp .sb{font-size:19px;opacity:.88;margin:0 0 40px}
+.mk .lp .fs{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:880px}
+.mk .lp .fs div{display:grid;gap:6px;font-size:15.5px;line-height:1.45}
+.mk .lp .fs i{width:44px;height:44px;border-radius:11px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;margin-bottom:10px}
+.mk .lp .fs b{font-size:16.5px}
+.mk .lp .fs span{opacity:.82}
+.mk .rp{flex:1;display:flex;flex-direction:column;padding:26px 36px;background:var(--bg)}
+.mk .lang{display:flex;justify-content:flex-end;gap:40px;align-items:center;color:var(--tx);font-size:14px}
+.mk .lang span{display:flex;gap:120px;align-items:center}
+.mk .form2{width:432px;margin:auto;display:grid;gap:10px}
+.mk .form2 h2{margin:0;font-size:29px;font-weight:700;letter-spacing:-.01em}
+.mk .form2 .mu{color:var(--mu);margin:-4px 0 20px;font-size:16px}
+.mk .al{display:flex;gap:10px;align-items:center;padding:13px 14px;border-radius:9px;background:var(--tint);border:1px solid color-mix(in srgb,var(--p) 25%,transparent);color:var(--pt);font-size:16px;margin-bottom:18px}
+.mk .lb{font-size:16px;font-weight:500;margin-top:8px}
+.mk .lb em{color:#D64545;font-style:normal}
+.mk .in{height:42px;border:1px solid var(--ln);border-radius:8px;background:var(--sf);display:flex;align-items:center;padding:0 12px;justify-content:space-between;color:var(--mu)}
+.mk .rw{display:flex;justify-content:space-between;align-items:center;margin:12px 0 10px;font-size:16px}
+.mk .rw label{display:flex;gap:10px;align-items:center}
+.mk .cb{width:18px;height:18px;border:1.5px solid var(--ln);border-radius:4px;background:var(--sf)}
+.mk .lk{color:var(--pt);font-weight:500}
+.mk .bt{height:50px;border-radius:9px;color:#fff;font-weight:600;font-size:16.5px;display:grid;place-items:center;box-shadow:0 6px 16px -6px color-mix(in srgb,var(--p) 70%,transparent)}
+.mk .nt{color:var(--mu);font-size:13.5px;text-align:center;margin-top:16px}
+/* dashboard */
+.mk .sd{width:268px;background:var(--sf);border-right:1px solid var(--ln);display:flex;flex-direction:column}
+.mk .sd .brand{height:62px;padding:0 20px;border-bottom:1px solid var(--ln);font-size:18px;color:var(--tx)}
+.mk .sd .bi{width:34px;height:34px;border-radius:9px}
+.mk .nav{padding:14px 10px;display:grid;gap:3px}
+.mk .nav div{display:flex;align-items:center;gap:13px;padding:10px 12px;border-radius:9px;font-size:16px;color:var(--tx)}
+.mk .nav div.on{background:var(--tint);color:var(--pt);font-weight:600}
+.mk .nav .chev{margin-left:auto;width:15px;height:15px;opacity:.6}
+.mk .sdf{margin-top:auto;border-top:1px solid var(--ln);padding:16px 20px;display:grid;gap:12px;font-size:16px}
+.mk .sdf small{color:var(--mu);font-size:12px;line-height:1.5}
+.mk .mn{flex:1;display:flex;flex-direction:column;min-width:0}
+.mk .tb{height:62px;border-bottom:1px solid var(--ln);background:var(--sf);display:flex;align-items:center;padding:0 24px;gap:18px;font-size:16px;font-weight:500}
+.mk .sr{margin-left:auto;width:290px;height:36px;border:1px solid var(--ln);border-radius:8px;display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--mu);font-weight:400;font-size:15px}
+.mk .sr kbd{margin-left:auto;font:500 11px Figtree;border:1px solid var(--ln);border-radius:4px;padding:2px 5px}
+.mk .st{display:flex;gap:7px;align-items:center;background:color-mix(in srgb,var(--p) 12%,transparent);color:var(--pt);font-size:13.5px;padding:6px 10px;border-radius:7px;font-weight:600}
+.mk .st i{width:7px;height:7px;border-radius:50%;background:var(--pt);box-shadow:0 0 0 3px color-mix(in srgb,var(--p) 25%,transparent)}
+.mk .av{width:34px;height:34px;border-radius:50%;color:#fff;display:grid;place-items:center;font-size:12.5px;font-weight:700}
+.mk .ct{padding:26px 42px;display:grid;gap:22px;overflow:hidden;align-content:start;grid-auto-rows:max-content}
+.mk .hero{border:1px solid var(--ln);border-radius:16px;padding:30px 36px;position:relative;overflow:hidden}
+.mk .hero small{color:var(--pt);font-size:15.5px;font-weight:600}
+.mk .hero h2{margin:6px 0 8px;font-size:34px;letter-spacing:-.02em}
+.mk .hero p{margin:0;color:var(--mu);font-size:16px}
+.mk .hero svg.wm{position:absolute;right:40px;top:50%;transform:translateY(-50%);width:120px;opacity:.9}
+.mk .cols{display:grid;grid-template-columns:1fr 470px;gap:20px;align-items:start}
+.mk .cd{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:20px 22px}
+.mk .cd h3{margin:0 0 16px;font-size:16.5px;display:flex;justify-content:space-between}
+.mk .cd h3 a{color:var(--pt);font-weight:500;font-size:15.5px}
+.mk .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.mk .kp div{border:1px solid var(--ln);border-radius:12px;padding:12px 14px;display:grid;gap:2px}
+.mk .kp span{color:var(--mu);font-size:13px}
+.mk .kp b{font-size:26px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.mk .kp em{font-style:normal;font-size:12.5px;font-weight:600}
+.mk .ch{display:grid;grid-template-columns:repeat(10,1fr);gap:12px;align-items:end;height:120px;padding-bottom:6px;border-bottom:1px solid var(--ln)}
+.mk .ch i{display:block;border-radius:6px 6px 2px 2px}
+.mk .chl{display:grid;grid-template-columns:repeat(10,1fr);gap:12px;color:var(--mu);font-size:11.5px;text-align:center;margin-top:6px}
+.mk .pj{display:grid;grid-template-columns:1fr 160px 90px;gap:16px;align-items:center;padding:11px 0;border-top:1px solid var(--ln);font-size:15px}
+.mk .pj small{display:block;color:var(--mu);font-size:13px}
+.mk .pg{height:7px;border-radius:5px;background:var(--ln);overflow:hidden}
+.mk .pg i{display:block;height:100%;border-radius:5px}
+.mk .pl{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:99px;text-align:center}
+.mk .qa{display:grid;grid-template-columns:40px 1fr 18px;gap:14px;align-items:center;padding:10px 0}
+.mk .qa i{width:40px;height:40px;border-radius:10px;background:var(--tint);color:var(--pt);display:grid;place-items:center}
+.mk .qa b{font-weight:500;font-size:16px;display:block}
+.mk .qa span{color:var(--mu);font-size:13.5px}
+.mk .qa svg.ar{color:var(--mu)}
+footer{margin-top:28px;color:var(--muted);font-size:13px}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">SomaxAgro · Plataforma de gestión de proyectos</span>
+    <h1>AVANZA — 10 propuestas de logo</h1>
+    <p class="lede">Cada propuesta se muestra en su versión principal, sobre fondo oscuro y como ícono de app. Ajusta los colores abajo con los códigos exactos del manual de Somax y todas las propuestas se actualizan.</p>
+  </header>
+
+  <div class="palette" role="group" aria-label="Colores de marca">
+    <b>Colores Somax</b>
+    <div class="sw"><input type="color" id="c1" aria-label="Color principal"><input type="text" id="c1t" aria-label="Hex principal"><label for="c1">Principal</label></div>
+    <div class="sw"><input type="color" id="c2" aria-label="Color secundario"><input type="text" id="c2t" aria-label="Hex secundario"><label for="c2">Secundario</label></div>
+    <div class="sw"><input type="color" id="c3" aria-label="Color oscuro"><input type="text" id="c3t" aria-label="Hex oscuro"><label for="c3">Texto / oscuro</label></div>
+    <button class="reset" id="reset">Restablecer</button>
+  </div>
+
+  <section class="covers-sec" style="margin-top:0;margin-bottom:48px">
+    <span class="eyebrow">Montaje en la plataforma</span>
+    <h1 class="h1s">Avanza con la identidad Somax</h1>
+    <p class="lede">El logo de barras aplicado al login y al dashboard reales, con la paleta verde en lugar del violeta. Los datos del dashboard son de ejemplo.</p>
+    <div class="mk-ctl">
+      <div class="seg" role="tablist" aria-label="Pantalla"><button id="mkv-login" class="on">Inicio de sesión</button><button id="mkv-dash">Dashboard</button></div>
+      <div class="seg" role="tablist" aria-label="Tema"><button id="mkt-light" class="on">Claro</button><button id="mkt-dark">Oscuro</button></div>
+    </div>
+    <div class="mk-frame" id="mkframe"><div class="mk-inner" id="mock"></div></div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+
+  <section class="covers-sec">
+    <span class="eyebrow">Pantalla de inicio de sesión</span>
+    <h1 class="h1s">Capa — 5 modelos</h1>
+    <p class="lede">Panel izquierdo del login, con el mismo contenido que hoy y alineado a una de las propuestas de logo. Usa los mismos colores de la barra de arriba.</p>
+    <div class="covers" id="covers"></div>
+  </section>
+
+  <section class="covers-sec">
+    <span class="eyebrow">Pantalla de inicio de sesión · interactivas</span>
+    <h1 class="h1s">Capa — 5 ideas interactivas</h1>
+    <p class="lede">Composición más limpia: logo, mensaje y una sola pieza visual que se mueve y responde al usuario. Pasa el mouse o haz clic sobre cada capa. Las cifras son de ejemplo.</p>
+    <h2 class="fh">Logo de barras — tema claro y oscuro</h2>
+    <div class="final" id="final"></div>
+    <h2 class="fh">10 variaciones más libres del logo de barras</h2>
+    <p class="lede">Misma idea de crecimiento de menor a mayor, con formas menos rígidas. Cada una en tema claro y oscuro.</p>
+    <div class="grid" id="vars"></div>
+    <h2 class="fh">Capas interactivas</h2>
+    <div class="covers" id="live"></div>
+  </section>
+  <footer>“Copiar SVG” copia el logo con los colores actuales. La tipografía es de Google Fonts; para el archivo final conviene convertir el texto a contornos.</footer>
+</div>
+
+<script>
+const DEF={c1:"#00843D",c2:"#8DC63F",c3:"#1E2B24"};
+let C={...DEF};
+try{const s=JSON.parse(localStorage.getItem("avanza-colors")||"null");if(s)C={...C,...s}}catch(e){}
+
+/* Cada propuesta: icono (coords 0–100) + wordmark */
+const L=[
+ {name:"A-Flecha",desc:"La A se construye como una flecha hacia arriba y su travesaño apunta hacia adelante: avance en dos direcciones.",
+  font:"Sora",w:800,ls:2,
+  icon:(a,b,k)=>`<polygon points="50,6 92,94 72,94 50,46 28,94 8,94" fill="${a}"/><rect x="26" y="64" width="38" height="12" fill="${b}"/><polygon points="62,56 82,70 62,84" fill="${b}"/>`},
+ {name:"Brote en progreso",desc:"Barras de avance que crecen como un cultivo y terminan en una hoja. Une resultados con el mundo agro.",
+  font:"Outfit",w:700,ls:3,
+  icon:(a,b,k)=>`<rect x="8" y="64" width="20" height="30" rx="5" fill="${b}"/><rect x="36" y="44" width="20" height="50" rx="5" fill="${a}"/><rect x="64" y="30" width="20" height="64" rx="5" fill="${a}"/><path d="M74,30 C72,14 82,4 98,2 C98,18 90,28 74,30Z" fill="${b}"/>`},
+ {name:"Surcos",desc:"Hileras de un campo que convergen en el horizonte y forman una A. Visión de largo plazo, con los pies en la tierra.",
+  font:"Archivo",w:800,ls:4,
+  icon:(a,b,k)=>`<polygon points="50,6 4,94 18,94" fill="${a}"/><polygon points="50,6 30,94 42,94" fill="${b}"/><polygon points="50,6 58,94 70,94" fill="${b}"/><polygon points="50,6 82,94 96,94" fill="${a}"/><circle cx="50" cy="6" r="5" fill="${k}"/>`},
+ {name:"Check-Hoja",desc:"Un check de tarea cumplida cuyo trazo largo es una hoja. Proyectos terminados que dan fruto.",
+  font:"Plus Jakarta Sans",w:800,ls:1,
+  icon:(a,b,k)=>`<path d="M12,52 L38,80" stroke="${a}" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M36,82 C48,52 66,24 96,8 C96,44 74,74 36,82Z" fill="${b}"/><path d="M40,78 C56,58 72,36 90,16" stroke="${a}" stroke-width="3" fill="none" stroke-linecap="round"/>`},
+ {name:"Gantt",desc:"Las barras de un diagrama de Gantt se ordenan en forma de flecha. Habla directo el idioma de la gestión de proyectos.",
+  font:"Manrope",w:800,ls:2,
+  icon:(a,b,k)=>`<rect x="6" y="8" width="38" height="12" rx="6" fill="${b}"/><rect x="6" y="26" width="58" height="12" rx="6" fill="${a}"/><rect x="6" y="44" width="88" height="12" rx="6" fill="${a}"/><rect x="6" y="62" width="58" height="12" rx="6" fill="${a}"/><rect x="6" y="80" width="38" height="12" rx="6" fill="${b}"/>`},
+ {name:"Anillo de avance",desc:"Un indicador de progreso al 75% que remata en flecha y rodea la A. El estado del proyecto, siempre a la vista.",
+  font:"Lexend",w:600,ls:3,
+  icon:(a,b,k)=>`<circle cx="50" cy="50" r="40" stroke="${b}" stroke-opacity=".35" stroke-width="11" fill="none"/><path d="M50,10 A40,40 0 1,1 10,50" stroke="${a}" stroke-width="11" fill="none" stroke-linecap="round"/><polygon points="-2,56 22,56 10,38" fill="${a}"/><text x="50" y="63" text-anchor="middle" font-family="Lexend" font-weight="600" font-size="38" fill="${k}">A</text>`},
+ {name:"Hito",desc:"Un camino que avanza hasta la bandera del objetivo. Representa la planificación por hitos y metas cumplidas.",
+  font:"Red Hat Display",w:900,ls:2,
+  icon:(a,b,k)=>`<path d="M10,90 C42,90 30,62 54,58 C74,55 70,40 80,40" stroke="${b}" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="1 14"/><circle cx="10" cy="90" r="7" fill="${a}"/><rect x="78" y="6" width="5" height="40" rx="2" fill="${k}"/><polygon points="83,6 100,15 83,24" fill="${a}"/><circle cx="80.5" cy="46" r="6" fill="${a}"/>`},
+ {name:"Doble avance",desc:"Dos chevrones en secuencia, como el botón de avance rápido. Dinámico, simple y muy reconocible en tamaño pequeño.",
+  font:"Bricolage Grotesque",w:800,ls:1,
+  icon:(a,b,k)=>`<polygon points="4,10 32,10 66,50 32,90 4,90 38,50" fill="${a}"/><polygon points="36,10 64,10 98,50 64,90 36,90 70,50" fill="${b}"/>`},
+ {name:"Norte",desc:"Una aguja de brújula inclinada hacia adelante. Dirección clara y rumbo definido para cada equipo.",
+  font:"Urbanist",w:800,ls:4,
+  icon:(a,b,k)=>`<circle cx="50" cy="50" r="44" stroke="${k}" stroke-width="4" fill="none"/><g transform="rotate(40 50 50)"><polygon points="50,10 64,50 36,50" fill="${a}"/><polygon points="36,50 64,50 50,90" fill="${b}"/><circle cx="50" cy="50" r="5" fill="#fff"/></g>`},
+ {name:"Escalada",desc:"Tres puntos que crecen en diagonal: etapas de un proyecto que suman impulso. Moderno y amigable.",
+  font:"Figtree",w:800,ls:3,
+  icon:(a,b,k)=>`<circle cx="16" cy="80" r="10" fill="${b}"/><circle cx="42" cy="58" r="14" fill="${b}"/><circle cx="74" cy="30" r="22" fill="${a}"/><path d="M66,30 L82,30 M76,23 L83,30 L76,37" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`}
+];
+
+function lockup(p,a,b,k,ink,sub){
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" role="img" aria-label="AVANZA">
+<g transform="translate(8,10)">${p.icon(a,b,k)}</g>
+<text x="124" y="74" font-family="${p.font}, sans-serif" font-weight="${p.w}" font-size="46" letter-spacing="${p.ls}" fill="${ink}">AVANZA</text>
+<text x="126" y="98" font-family="Figtree, sans-serif" font-weight="600" font-size="11.5" letter-spacing="3.2" fill="${sub}">GESTIÓN DE PROYECTOS</text></svg>`;
+}
+function appIcon(p,a,b,k,size,bg){
+  return `<svg class="app" width="${size}" height="${size}" viewBox="-14 -14 128 128" role="img" aria-label="Ícono ${size}px"><rect x="-14" y="-14" width="128" height="128" fill="${bg}"/>${p.icon(a,b,k)}</svg>`;
+}
+function render(){
+  const g=document.getElementById("grid");
+  g.innerHTML=L.map((p,i)=>`
+  <article class="card">
+    <div class="stage">${lockup(p,C.c1,C.c2,C.c3,C.c3,C.c1)}</div>
+    <div class="alt">
+      <div class="dark" style="background:${C.c3}">${lockup(p,C.c2,C.c1==C.c3?C.c2:"#fff",'#fff','#fff',C.c2)}</div>
+      <div class="icons">${appIcon(p,C.c1,C.c2,C.c3,56,"#fff")}${appIcon(p,"#fff",C.c2,"#fff",40,C.c1)}${appIcon(p,C.c1,C.c2,C.c3,24,"#fff")}</div>
+    </div>
+    <div class="meta">
+      <div class="top"><span class="num">Propuesta ${String(i+1).padStart(2,"0")}</span><button class="copy" data-i="${i}">Copiar SVG</button></div>
+      <h2>${p.name}</h2>
+      <p>${p.desc}</p>
+    </div>
+  </article>`).join("");
+  renderCovers();
+  renderLive();
+  renderMock();
+}
+const FI=[
+ `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v10"/></svg>`,
+ `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4v16h16M8 8h6M8 12h9M8 16h4"/></svg>`,
+ `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/></svg>`];
+const FT=[["Kanban y backlog","Priorice, tome y siga cada tarea hasta la entrega."],["Gestión de proyectos","Cronograma, dependencias, línea base y salud del proyecto."],["Equipo en sincronía","Los cambios aparecen al instante para todos, con historial y permisos."]];
+const COV=[
+ {li:0,name:"Degradé de campo",note:"Logo A-Flecha · fondo verde profundo con trama de puntos",
+  bg:c=>`linear-gradient(135deg,${c.c3} 0%,${c.c1} 100%)`,light:false,
+  deco:(c,p)=>`<div class="deco" style="inset:0;background-image:radial-gradient(rgba(255,255,255,.14) 1px,transparent 1.4px);background-size:3.2cqw 3.2cqw"></div><svg class="deco" viewBox="0 0 100 100" style="right:-12cqw;bottom:-10cqw;width:62cqw;opacity:.1">${p.icon("#fff","#fff","#fff")}</svg>`},
+ {li:2,name:"Surcos al horizonte",note:"Logo Surcos · fondo oscuro con hileras de cultivo en perspectiva",
+  bg:c=>c.c3,light:false,
+  deco:(c,p)=>`<svg class="deco" viewBox="0 0 100 40" preserveAspectRatio="none" style="left:0;right:0;bottom:0;width:100%;height:34%;opacity:.55">${Array.from({length:13},(_,i)=>{const x=-40+i*15;return `<polygon points="50,0 ${x},40 ${x+6},40" fill="${i%2?c.c2:c.c1}"/>`}).join("")}</svg><div class="deco" style="left:0;right:0;bottom:0;height:34%;background:linear-gradient(${c.c3},transparent 70%)"></div>`},
+ {li:4,name:"Gantt en claro",note:"Logo Gantt · versión clara, barras del cronograma como gráfico",
+  bg:c=>`linear-gradient(160deg,#FFFFFF 0%,${c.c2}22 100%)`,light:true,
+  deco:(c,p)=>`<svg class="deco" viewBox="0 0 100 100" style="right:-8cqw;top:2cqw;width:32cqw;opacity:.2">${p.icon(c.c1,c.c2,c.c3)}</svg>`},
+ {li:5,name:"Anillo de progreso",note:"Logo Anillo · verde sólido con el indicador de avance gigante",
+  bg:c=>c.c1,light:false,
+  deco:(c,p)=>`<svg class="deco" viewBox="0 0 100 100" style="right:-26cqw;top:50%;transform:translateY(-50%);width:82cqw"><circle cx="50" cy="50" r="40" stroke="#fff" stroke-opacity=".12" stroke-width="9" fill="none"/><path d="M50,10 A40,40 0 1,1 10,50" stroke="${c.c2}" stroke-opacity=".55" stroke-width="9" fill="none" stroke-linecap="round"/></svg>`},
+ {li:7,name:"Avance rápido",note:"Logo Doble avance · chevrones grandes cortados al borde",
+  bg:c=>c.c3,light:false,
+  deco:(c,p)=>`<svg class="deco" viewBox="0 0 100 100" preserveAspectRatio="xMaxYMid slice" style="right:-30cqw;top:0;height:100%;width:80cqw;opacity:.3">${p.icon(c.c1,c.c2,c.c3)}</svg>`}
+];
+function renderCovers(){
+  document.getElementById("covers").innerHTML=COV.map((m,i)=>{
+    const p=L[m.li],c=C,lt=m.light;
+    const logo=lt?lockup(p,c.c1,c.c2,c.c3,c.c3,c.c1):lockup(p,"#fff",c.c2,"#fff","#fff",c.c2);
+    const fg=lt?c.c3:"#fff", box=lt?`background:${c.c1}1F;color:${c.c1}`:`background:rgba(255,255,255,.14);color:#fff`;
+    return `<div class="cv-item"><div class="cv-cap"><span class="num">Modelo ${String.fromCharCode(65+i)}</span><h2>${m.name}</h2><span>${m.note}</span></div>
+    <div class="shot"><div class="cover" style="background:${m.bg(c)};color:${fg}">${m.deco(c,p)}
+      <div class="in"><div class="logo">${logo}</div>
+        <div class="mid"><h3>Sincroniza proyectos, tareas y equipos.</h3><p class="sub">Organice demandas, siga el flujo y entregue con previsibilidad.</p>
+          <div class="feats">${FT.map((f,j)=>`<div class="ft"><i style="${box}">${FI[j]}</i><b>${f[0]}</b><small>${f[1]}</small></div>`).join("")}</div></div>
+        <div class="copy-r">© 2026 Avanza</div></div></div>
+      <div class="form" aria-hidden="true"><strong>Iniciar sesión</strong><span style="color:#5D6B62;font-size:14px;margin-top:-8px">Acceda a su cuenta para continuar.</span><div class="lbl">Correo electrónico</div><div class="f"></div><div class="lbl">Contraseña</div><div class="f"></div><div class="btn" style="background:${c.c1}">Entrar</div></div>
+    </div></div>`}).join("");
+}
+/* ---------- Capas interactivas ---------- */
+const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let LG=0;
+const rgb=h=>{if(h.length==4)h="#"+[...h.slice(1)].map(x=>x+x).join("");return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16))};
+const mix=(a,b,t)=>{const A=rgb(a),B=rgb(b);return `rgb(${A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")})`};
+function shell(c,logo,fg,bg,inner){
+  return `<div class="shot"><div class="cover lv" style="background:${bg};color:${fg}">${inner}
+    <div class="in" style="pointer-events:none"><div class="logo">${logo}</div>
+    <div class="mid"><h3>Sincroniza proyectos, tareas y equipos.</h3><p class="sub">Organice demandas, siga el flujo y entregue con previsibilidad.</p></div>
+    <div class="copy-r">© 2026 Avanza</div></div></div>
+    <div class="form" aria-hidden="true"><strong>Iniciar sesión</strong><span style="color:#5D6B62;font-size:14px;margin-top:-8px">Acceda a su cuenta para continuar.</span><div class="lbl">Correo electrónico</div><div class="f"></div><div class="lbl">Contraseña</div><div class="f"></div><div class="btn" style="background:${c.c1}">Entrar</div></div></div>`;
+}
+const wl=(i,c)=>lockup(L[i],"#fff",c.c2,"#fff","#fff",c.c2);
+const GANTT_INV={...L[4],icon:(a,b,k)=>[72,31,78,59,53].map((w,i)=>{const y=8+18*i;return `<rect x="6" y="${y}" width="88" height="12" rx="6" fill="${k}" fill-opacity=".1"/><rect x="${94-w}" y="${y}" width="${w}" height="12" rx="6" fill="${mix(b,a,i/4)}"/>`}).join("")};
+const LIVE=[
+ {name:"Kanban vivo",hint:"Clic: avanza una tarjeta",note:"Logo Brote · las tareas fluyen solas de “Por hacer” a “Hecho”",
+  html:c=>shell(c,wl(1,c),"#fff",`linear-gradient(150deg,${c.c3},${mix(c.c3,c.c1,.35)})`,
+   `<div class="kbw">${["Por hacer","En curso","Hecho"].map((t,i)=>`<div class="kb-col" style="left:${49+i*15.5}cqw"><span>${t}<em class="n${i}" style="font-style:normal"></em></span></div>`).join("")}
+    ${Array.from({length:6},(_,i)=>`<div class="kb-card" style="z-index:2"><em style="background:${i%3==0?c.c2:c.c1}"></em><i></i><i style="width:${40+i*7%40}%"></i></div>`).join("")}</div>`),
+  init(el,c,g){
+   const cards=[...el.querySelectorAll(".kb-card")].map((n,i)=>({n,col:0,o:i}));let ord=6;
+   const lay=()=>{const cnt=[0,0,0];cards.sort((a,b)=>a.o-b.o).forEach(k=>{const r=cnt[k.col]++;k.n.style.transform=`translate(${50+k.col*15.5}cqw,${19.5+r*7.4}cqw)`});
+     cnt.forEach((v,i)=>el.querySelector(".n"+i).textContent=v)};
+   const step=()=>{let k=cards.filter(k=>k.col==1).sort((a,b)=>a.o-b.o)[0]||cards.filter(k=>k.col==0).sort((a,b)=>a.o-b.o)[0];
+     if(!k){cards.forEach(k=>k.col=0);}else{k.col++;k.o=ord++;}lay()};
+   cards.forEach((k,i)=>{if(i<2)k.col=2;else if(i<3)k.col=1});lay();
+   el.querySelector(".cover").addEventListener("click",step);
+   if(!RM){const t=()=>{if(g!==LG)return;step();setTimeout(t,1700)};setTimeout(t,1700)}
+  }},
+ {name:"Campo que responde · oscuro",hint:"Mueve el mouse sobre el campo",note:"Logo Gantt con barras invertidas · un cultivo de brotes que crece donde pasa el cursor",
+  html:c=>shell(c,lockup(GANTT_INV,"#fff",c.c2,"#fff","#fff",c.c2),"#fff",c.c3,`<canvas></canvas>`),
+  init(el,c,g){
+   const cv=el.querySelector("canvas"),cx=cv.getContext("2d"),box=el.querySelector(".cover");let W,H,P=null,t0=performance.now();
+   const size=()=>{const r=box.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0)};
+   size();new ResizeObserver(size).observe(box);
+   box.addEventListener("pointermove",e=>{const r=box.getBoundingClientRect();P=[e.clientX-r.left,e.clientY-r.top]});
+   box.addEventListener("pointerleave",()=>P=null);
+   const draw=now=>{if(g!==LG)return;const t=(now-t0)/1000;cx.clearRect(0,0,W,H);
+     const s=W/30,R=W*.22,p=P||[W*(.72+.18*Math.sin(t*.6)),H*(.55+.25*Math.sin(t*.9))];
+     cx.lineCap="round";cx.lineWidth=s*.17;
+     for(let y=H*.14;y<H*.97;y+=s)for(let x=s*.5;x<W;x+=s){
+       const d=Math.hypot(x-p[0],y-p[1]),k=Math.max(0,1-d/R)**2,fade=Math.min(1,Math.max(.12,(x/W-.3)/.3));
+       const len=s*.16+k*s*1.5,sw=Math.sin(t*2+y*.05)*k*s*.25;
+       cx.globalAlpha=fade*(.35+.65*k);cx.strokeStyle=mix(c.c1,c.c2,k);
+       cx.beginPath();cx.moveTo(x,y);cx.quadraticCurveTo(x,y-len*.6,x+sw,y-len);cx.stroke();
+       if(k>.45){cx.fillStyle=c.c2;cx.beginPath();cx.ellipse(x+sw+s*.12,y-len,s*.17*k,s*.08*k,-.6,0,7);cx.fill()}}
+     cx.globalAlpha=1;if(!RM)requestAnimationFrame(draw)};
+   requestAnimationFrame(draw);
+   if(RM)box.addEventListener("pointermove",()=>requestAnimationFrame(draw));
+  }},
+ {name:"Pulso del proyecto",hint:"Clic: siguiente indicador",note:"Logo Anillo · el anillo recorre indicadores clave en loop",
+  html:c=>shell(c,wl(5,c),"#fff",`radial-gradient(120% 90% at 80% 40%,${c.c1},${c.c3})`,
+   `<div class="rg"><svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="16"/>
+    <circle class="arc" cx="100" cy="100" r="80" fill="none" stroke="${c.c2}" stroke-width="16" stroke-linecap="round" stroke-dasharray="502.65" stroke-dashoffset="502.65" transform="rotate(-90 100 100)"/>
+    <text class="rnum" x="100" y="112" text-anchor="middle" font-family="Sora,Figtree,sans-serif" font-weight="800" font-size="40" fill="#fff">0%</text></svg>
+    <div class="lab"></div><div class="dots"><b></b><b></b><b></b></div></div>`),
+  init(el,c,g){
+   const M=[[92,"Proyectos dentro del plazo"],[78,"Tareas de la zafra completadas"],[100,"Equipos sincronizados"]];let i=-1,raf;
+   const arc=el.querySelector(".arc"),num=el.querySelector(".rnum"),lab=el.querySelector(".lab"),dots=[...el.querySelectorAll(".dots b")];
+   const go=()=>{i=(i+1)%M.length;const[v,l]=M[i];arc.style.strokeDashoffset=502.65*(1-v/100);lab.textContent=l;dots.forEach((d,j)=>d.classList.toggle("on",j==i));
+     cancelAnimationFrame(raf);const st=performance.now(),from=parseInt(num.textContent)||0;
+     const tick=n=>{const k=RM?1:Math.min(1,(n-st)/1300),e=1-(1-k)**3;num.textContent=Math.round(from+(v-from)*e)+"%";if(k<1)raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick)};
+   el.querySelector(".cover").addEventListener("click",go);setTimeout(go,300);
+   if(!RM){const t=()=>{if(g!==LG)return;go();setTimeout(t,3600)};setTimeout(t,3900)}
+  }},
+ {name:"Zafra en curso",hint:"La línea “Hoy” recorre la campaña · clic: reinicia",note:"Logo Brote · versión clara, cronograma de campaña que avanza en vivo",
+  html:c=>shell(c,lockup(L[1],c.c1,c.c2,c.c3,c.c3,c.c1),c.c3,`linear-gradient(170deg,#fff 55%,${c.c2}26)`,
+   `<div class="gt"><div class="hd">${["Sep","Oct","Nov","Dic","Ene","Feb"].map(m=>`<span>${m}</span>`).join("")}</div>
+    ${[["Preparación del suelo",0,.2],["Siembra",.14,.36],["Monitoreo de plagas",.3,.82],["Aplicaciones",.45,.68],["Cosecha",.76,.98]].map(r=>
+     `<div class="row" data-s="${r[1]}" data-e="${r[2]}"><div>${r[0]}<small>0%</small></div><div class="tr" style="background:${c.c3}0F"><div class="bar" style="left:${r[1]*100}%;width:${(r[2]-r[1])*100}%;background:${c.c1}2E"><span style="width:0;background:${c.c1}"></span></div></div></div>`).join("")}
+    <div class="today" style="border-color:${c.c3}"><b style="background:${c.c3}">Hoy</b></div></div>`),
+  init(el,c,g){
+   const gt=el.querySelector(".gt"),rows=[...el.querySelectorAll(".row")],td=el.querySelector(".today");let t0=performance.now();
+   el.querySelector(".cover").addEventListener("click",()=>{t0=performance.now();if(RM)f(t0+5200)});
+   const f=n=>{if(g!==LG)return;const T=11000,ph=((n-t0)%T)/T,x=RM?.58:Math.min(1,ph*1.12);
+     const tr=rows[0].querySelector(".tr"),w=tr.getBoundingClientRect().width,cw=gt.getBoundingClientRect().width;
+     td.style.left=`calc(${x}*${w}px)`;
+     rows.forEach(r=>{const s=+r.dataset.s,e=+r.dataset.e,p=Math.max(0,Math.min(1,(x-s)/(e-s)));r.querySelector(".bar span").style.width=p*100+"%";
+       const sm=r.querySelector("small");sm.textContent=p>=1?"Completado":Math.round(p*100)+"%";sm.style.color=p>=1?c.c1:""});
+     if(!RM)requestAnimationFrame(f)};
+   requestAnimationFrame(f);
+  }},
+ {name:"Impulso",hint:"Mueve el mouse · clic: acelera",note:"Logo Doble avance · chevrones en capas con profundidad",
+  html:c=>shell(c,wl(7,c),"#fff",`linear-gradient(120deg,${c.c3} 30%,${mix(c.c3,c.c1,.55)})`,
+   [[62,c.c1,.95,.9,58,10],[42,c.c2,.9,1.6,46,24],[26,"#ffffff",.18,2.6,80,36]].map(([w,col,o,dp,l,tp])=>
+    `<div class="chv" data-d="${dp}" style="width:${w}cqw;left:${l}cqw;top:${tp}cqw;opacity:${o}"><svg viewBox="0 0 90 100"><polygon points="0,0 38,0 90,50 38,100 0,100 52,50" fill="${col}"/></svg></div>`).join("")),
+  init(el,c,g){
+   const box=el.querySelector(".cover"),ch=[...el.querySelectorAll(".chv")];let P=null,cur=[0,0],boost=0,t0=performance.now();
+   box.addEventListener("pointermove",e=>{const r=box.getBoundingClientRect();P=[(e.clientX-r.left)/r.width-.5,(e.clientY-r.top)/r.height-.5]});
+   box.addEventListener("pointerleave",()=>P=null);
+   box.addEventListener("click",()=>{boost=1;if(RM)f(performance.now())});
+   const f=n=>{if(g!==LG)return;const t=(n-t0)/1000,tg=P||[Math.sin(t*.5)*.18,Math.cos(t*.4)*.12];
+     cur=cur.map((v,i)=>v+(tg[i]-v)*.07);boost*=.93;
+     ch.forEach(e=>{const d=+e.dataset.d;e.style.transform=`translate(${cur[0]*d*6+boost*d*9}cqw,${cur[1]*d*4}cqw)`});
+     if(!RM)requestAnimationFrame(f)};
+   requestAnimationFrame(f);
+  }}
+];
+LIVE.splice(2,0,{name:"Campo que responde · claro",hint:"Mueve el mouse sobre el campo",note:"Mismo logo y animación, versión para tema claro",
+  html:c=>shell(c,lockup(GANTT_INV,c.c1,c.c2,c.c3,c.c3,c.c1),c.c3,`linear-gradient(170deg,#FFFFFF 50%,${c.c2}2E)`,`<canvas></canvas>`),
+  init:(...a)=>LIVE[1].init(...a)});
+const BR=[0,1,2,3,4].map(i=>({i,y:8+18*i,w:30+14.5*i,t:i/4}));
+const VARS=[
+ {name:"Corte diagonal",desc:"Las barras se inclinan como si avanzaran. Más velocidad, menos bloque.",
+  icon:(a,b,k)=>BR.map(r=>`<polygon points="${94-r.w+7},${r.y} 100,${r.y} 93,${r.y+12} ${94-r.w},${r.y+12}" fill="${mix(b,a,r.t)}"/>`).join("")},
+ {name:"Peso creciente",desc:"Cada barra es más larga y más gruesa: el crecimiento se siente, no solo se ve.",
+  icon:(a,b,k)=>{let y=8;return [5,8,11,14,18].map((h,i)=>{const w=30+14.5*i,s=`<rect x="${94-w}" y="${y}" width="${w}" height="${h}" rx="${h/2}" fill="${mix(b,a,i/4)}"/>`;y+=h+6;return s}).join("")}},
+ {name:"Ritmo libre",desc:"Los bordes no se alinean del todo y el grosor varía un poco, como una escritura a mano.",
+  icon:(a,b,k)=>[[86,30,10],[96,40,12],[90,58,11],[97,72,13],[92,86,12]].map(([e,w,h],i)=>`<rect x="${e-w}" y="${8+18*i}" width="${w}" height="${h}" rx="${h/2}" fill="${i<2?b:a}"/>`).join("")},
+ {name:"Viento",desc:"Las barras se curvan como pasto movido por el viento. Orgánico y en movimiento.",
+  icon:(a,b,k)=>BR.map(r=>`<path d="M94,${r.y+6} Q${94-r.w*.5},${r.y-3} ${94-r.w},${r.y+9}" stroke="${mix(b,a,r.t)}" stroke-width="10" fill="none" stroke-linecap="round"/>`).join("")},
+ {name:"Brote arriba",desc:"La primera barra se transforma en hoja: el gráfico crece y termina en cultivo.",
+  icon:(a,b,k)=>`<path d="M58,22 C64,8 80,4 98,5 C92,18 78,25 58,22Z" fill="${b}"/>`+BR.slice(1).map(r=>`<rect x="${94-r.w}" y="${r.y}" width="${r.w}" height="12" rx="6" fill="${r.i<2?b:a}"/>`).join("")},
+ {name:"Pincelada",desc:"Trazos que se afinan hacia la izquierda, como hechos con pincel. Humano y dinámico.",
+  icon:(a,b,k)=>BR.map(r=>`<path d="M${94-r.w},${r.y+7} Q${94-r.w*.5},${r.y-1} 94,${r.y} Q100,${r.y+6} 94,${r.y+13} Q${94-r.w*.5},${r.y+14} ${94-r.w},${r.y+7}Z" fill="${mix(b,a,r.t)}"/>`).join("")},
+ {name:"Ondas",desc:"Líneas onduladas como surcos o ríos. Mantiene la escalera pero suelta la rigidez.",
+  icon:(a,b,k)=>BR.map(r=>`<path d="M${94-r.w},${r.y+6} c${r.w/6},-7 ${r.w/3},7 ${r.w/2},0 s${r.w/3},-7 ${r.w/2},0" stroke="${mix(b,a,r.t)}" stroke-width="7" fill="none" stroke-linecap="round"/>`).join("")},
+ {name:"Semillas",desc:"Puntos en lugar de barras: cada fila suma una semilla. Ligero y amigable.",
+  icon:(a,b,k)=>BR.map(r=>Array.from({length:r.i+2},(_,j)=>`<circle cx="${90-j*15.5}" cy="${r.y+6}" r="${4.5+r.i*.5}" fill="${mix(b,a,r.t)}"/>`).join("")).join("")},
+ {name:"Abanico",desc:"Las barras se abren desde un punto como rayos de sol al amanecer.",
+  icon:(a,b,k)=>BR.map(r=>`<rect x="6" y="83" width="${r.w}" height="11" rx="5.5" fill="${mix(b,a,r.t)}" transform="rotate(${-(4-r.i)*17} 11.5 88.5)"/>`).join("")},
+ {name:"Barra de progreso",desc:"Cada línea es una barra de progreso que se llena un poco más. Muy de software.",
+  icon:(a,b,k)=>BR.map(r=>`<rect x="6" y="${r.y}" width="88" height="12" rx="6" fill="${k}" fill-opacity=".1"/><rect x="${94-r.w}" y="${r.y}" width="${r.w}" height="12" rx="6" fill="${mix(b,a,r.t)}"/>`).join("")}
+];
+function renderVars(){
+  const c=C;
+  document.getElementById("vars").innerHTML=VARS.map((v,i)=>{const p={...L[4],icon:v.icon};return `<article class="card"><div class="final vf"><div class="fp" style="background:#fff">${lockup(p,c.c1,c.c2,c.c3,c.c3,c.c1)}</div><div class="fp" style="background:${c.c3}">${lockup(p,"#FFFFFF",c.c2,"#FFFFFF","#fff",c.c2)}</div></div>
+   <div class="meta"><div class="top"><span class="num">Variación ${String(i+1).padStart(2,"0")}</span>${appIcon(p,c.c1,c.c2,c.c3,32,"#fff")}</div><h2>${v.name}</h2><p>${v.desc}</p></div></article>`}).join("");
+}
+function renderFinal(){
+  const c=C;
+  renderVars();
+  document.getElementById("final").innerHTML=`<div class="fp" style="background:#fff"><span class="ft-l" style="color:#5D6B62">Tema claro</span>${lockup(GANTT_INV,c.c1,c.c2,c.c3,c.c3,c.c1)}<div class="fi">${appIcon(GANTT_INV,c.c1,c.c2,c.c3,56,"#fff")}${appIcon(GANTT_INV,"#fff",c.c2,"#fff",56,c.c1)}${appIcon(GANTT_INV,c.c1,c.c2,c.c3,28,"#fff")}</div></div>
+  <div class="fp" style="background:${c.c3}"><span class="ft-l" style="color:#ffffffaa">Tema oscuro</span>${lockup(GANTT_INV,"#fff",c.c2,"#fff","#fff",c.c2)}<div class="fi">${appIcon(GANTT_INV,"#fff",c.c2,"#fff",56,c.c3)}${appIcon(GANTT_INV,c.c3,c.c2,c.c3,56,c.c2)}${appIcon(GANTT_INV,"#fff",c.c2,"#fff",28,c.c3)}</div></div>`;
+}
+function renderLive(){
+  renderFinal();
+  const g=++LG,wrap=document.getElementById("live");
+  wrap.innerHTML=LIVE.map((m,i)=>`<div class="cv-item" data-i="${i}"><div class="cv-cap"><span class="num">Modelo ${String.fromCharCode(70+i)}</span><h2>${m.name}</h2><span class="hint">${m.hint}</span><span>${m.note}</span></div>${m.html(C)}</div>`).join("");
+  [...wrap.children].forEach((el,i)=>LIVE[i].init(el,C,g));
+}
+/* ---------- Montaje ---------- */
+const IP={
+ grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 15v-3M12 15v-5M16 15v-2"/>',
+ brief:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+ plan:'<path d="M4 5h3v3H4zM4 14h3v3H4zM11 6h9M11 10h6M11 15h9M11 19h6"/>',
+ kanban:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v9"/>',
+ gantt:'<path d="M3 3v18h18M7 7h7M9 11h9M7 15h5"/>',
+ check:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/>',
+ chart:'<path d="M3 3v18h18M8 17v-5M12 17V8M16 17v-8M20 17v-3"/>',
+ book:'<path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/>',
+ users:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+ bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/>',
+ mon:'<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+ mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+ lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+ eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+ arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+ shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3"/>',
+ sync:'<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/>',
+ chev:'<path d="m6 9 6 6 6-6"/>',
+ side:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 9l-3 3 3 3"/>'
+};
+const ic=(n,s=18,cls="ic")=>`<svg class="${cls}" viewBox="0 0 24 24" width="${s}" height="${s}">${IP[n]}</svg>`;
+let MV="login",MT="light";
+const mark=(a,b,s)=>`<svg viewBox="0 0 100 100" width="${s}" height="${s}">${GANTT_INV.icon(a,b,a)}</svg>`;
+function mockLogin(c,dk){
+  return `<div class="scr"><div class="lp" style="background:linear-gradient(140deg,${dk?"#0A120D":c.c3} 0%,${mix(c.c3,c.c1,.55)} 55%,${c.c1} 100%)">
+   <div class="brand"><div class="bi" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)">${mark("#FFFFFF",c.c2,26)}</div>Avanza</div>
+   <div style="margin:auto 0">
+    <h1>Sincroniza proyectos, tareas y equipos.</h1><p class="sb">Organice demandas, siga el flujo y entregue con previsibilidad.</p>
+    <div class="fs"><div><i>${ic("kanban",20)}</i><b>Kanban y backlog</b><span>Priorice, tome y siga cada tarea hasta la entrega.</span></div>
+    <div><i>${ic("gantt",20)}</i><b>Gestión de proyectos</b><span>Cronograma, dependencias, línea base y salud del proyecto.</span></div>
+    <div><i>${ic("sync",20)}</i><b>Equipo en sincronía</b><span>Los cambios aparecen al instante para todos, con historial y permisos.</span></div></div>
+   </div>
+   <div style="opacity:.75;font-size:15px">© 2026 Avanza · SomaxAgro</div>
+   <svg viewBox="0 0 100 100" style="position:absolute;right:-60px;bottom:-40px;width:340px;opacity:.07">${GANTT_INV.icon("#FFFFFF","#FFFFFF","#FFFFFF")}</svg>
+  </div>
+  <div class="rp"><div class="lang"><span>Español ${ic("chev",15)}</span>${ic("mon",18)}</div>
+   <div class="form2"><h2>Iniciar sesión</h2><p class="mu">Acceda a su cuenta para continuar.</p>
+    <div class="al">${ic("info",18)} Cerró sesión de forma segura. ¡Hasta pronto!</div>
+    <div class="lb">Correo electrónico<em>*</em></div><div class="in"><span style="display:flex;gap:10px;align-items:center">${ic("mail")}<span style="color:var(--tx)">angelica.davalos@somaxagro.com</span></span></div>
+    <div class="lb">Contraseña<em>*</em></div><div class="in"><span style="display:flex;gap:10px;align-items:center">${ic("lock")}<span style="color:var(--tx);letter-spacing:3px">••••••••••</span></span>${ic("eye")}</div>
+    <div class="rw"><label><span class="cb"></span>Mantener la sesión por 30 días</label><span class="lk">Olvidé mi contraseña</span></div>
+    <div class="bt" style="background:${c.c1}">Entrar</div>
+    <div class="nt">Su sesión está protegida y expira automáticamente por inactividad.</div></div></div></div>`;
+}
+function mockDash(c,dk){
+  const nav=[["grid","Dashboard",1],["folder","Proyectos",0,1],["brief","Gestión de proyectos"],["plan","Planificación"],["kanban","Kanban"],["gantt","Cronograma"],["check","Tareas"],["chart","Informes"],["book","Documentación"],["users","Usuarios"],["gear","Configuración",0,1]];
+  const wk=[18,24,21,30,27,35,32,41,38,46];
+  const pj=[["Zafra 2026/27 · Planificación de siembra","Agronomía · vence 15 nov",68,"En curso",c.c1],["Depósito Katueté · ampliación","Logística · vence 02 dic",42,"En riesgo","#D98A1C"],["Lanzamiento línea biológicos","Marketing · vence 20 nov",85,"En curso",c.c1],["Portal de clientes v2","Tecnología · vence 10 ene",24,"Planificado","#5E7A8C"]];
+  const qa=[["plan","Planificación","Priorice y organice los sprints"],["kanban","Kanban","Mueva las tareas por el flujo"],["check","Tareas","Todas las tareas, con filtros"],["folder","Proyectos","Proyectos, miembros y plazos"],["chart","Informes","Indicadores, desgloses y atrasadas"],["users","Usuarios","Gestione cuentas y accesos"],["shield","Permisos","Defina qué puede hacer cada perfil"],["key","Sesiones activas","Vea dónde está conectada su cuenta"]];
+  return `<div class="scr"><aside class="sd"><div class="brand"><div class="bi" style="background:${dk?c.c3:"#fff"};border:1px solid var(--ln)">${mark(dk?"#FFFFFF":c.c1,c.c2,22)}</div>Avanza</div>
+   <div class="nav">${nav.map(n=>`<div class="${n[2]?"on":""}">${ic(n[0])}${n[1]}${n[3]?ic("chev",15,"ic chev"):""}</div>`).join("")}</div>
+   <div class="sdf"><div style="display:flex;gap:13px;align-items:center">${ic("side")}Contraer menú</div><small>Versión 0.1.0<br>© 2026 Avanza · SomaxAgro</small></div></aside>
+   <div class="mn"><div class="tb">Dashboard<div class="sr">${ic("search",16)}Buscar o ejecutar...<kbd>Ctrl K</kbd></div><div class="st"><i></i>En línea</div>${ic("bell",19)}${ic("mon",19)}<div class="av" style="background:${c.c1}">AD</div></div>
+   <div class="ct"><div class="hero" style="background:linear-gradient(110deg,var(--sf) 40%,color-mix(in srgb,${c.c2} ${dk?18:22}%,var(--sf)))"><small>Admin</small><h2>Buenas tardes, Angélica</h2><p>Siga sus proyectos, planifique los sprints y mueva las tareas por el Kanban.</p>
+     <svg class="wm" viewBox="0 0 100 100">${GANTT_INV.icon(dk?c.c2:c.c1,dk?c.c1:c.c2,c.c1)}</svg></div>
+    <div class="cols"><div style="display:grid;gap:20px">
+     <div class="cd"><h3>Indicadores<a>Ver informes →</a></h3>
+      <div class="kp"><div><span>Proyectos activos</span><b>12</b><em style="color:var(--pt)">+2 este mes</em></div><div><span>Tareas en curso</span><b>86</b><em style="color:var(--mu)">31 vencen esta semana</em></div><div><span>Entregas a tiempo</span><b>92%</b><em style="color:var(--pt)">+4 pts</em></div><div><span>Atrasadas</span><b>4</b><em style="color:#D98A1C">2 críticas</em></div></div>
+      <div style="font-size:13px;color:var(--mu);margin-bottom:10px">Tareas completadas por semana</div>
+      <div class="ch">${wk.map((v,i)=>`<i style="height:${v/46*100}%;background:${i==wk.length-1?c.c2:dk?mix(c.c1,"#141E18",.15):c.c1};opacity:${i==wk.length-1?1:.55+i*.045}"></i>`).join("")}</div>
+      <div class="chl">${["S35","S36","S37","S38","S39","S40","S41","S42","S43","S44"].map(s=>`<span>${s}</span>`).join("")}</div></div>
+     <div class="cd"><h3>Mis proyectos<a>Ver todos →</a></h3>${pj.map(p=>`<div class="pj"><div>${p[0]}<small>${p[1]}</small></div><div style="display:grid;gap:5px"><div class="pg"><i style="width:${p[2]}%;background:${p[4]}"></i></div><small style="color:var(--mu);font-size:12px">${p[2]}% completado</small></div><span class="pl" style="background:color-mix(in srgb,${p[4]} 15%,transparent);color:${dk&&p[4]==c.c1?c.c2:p[4]}">${p[3]}</span></div>`).join("")}</div>
+    </div>
+    <div class="cd"><h3>Acceso rápido</h3>${qa.map(q=>`<div class="qa"><i>${ic(q[0],19)}</i><div><b>${q[1]}</b><span>${q[2]}</span></div>${ic("arrow",17,"ic ar")}</div>`).join("")}</div></div></div></div></div>`;
+}
+function renderMock(){
+  const c=C,dk=MT=="dark",el=document.getElementById("mock");
+  el.innerHTML=`<div class="mk ${dk?"dark":""}" style="--p:${c.c1};--a:${c.c2}"><div class="chrome"><i></i><i></i><i></i><span>avanza.somaxagro.com${MV=="dash"?"/dashboard":"/login"}</span></div>${MV=="login"?mockLogin(c,dk):mockDash(c,dk)}</div>`;
+  fitMock();
+}
+function fitMock(){const f=document.getElementById("mkframe");document.getElementById("mock").style.transform=`scale(${f.clientWidth/1440})`}
+new ResizeObserver(fitMock).observe(document.getElementById("mkframe"));
+const segs=(ids,set)=>ids.forEach(id=>document.getElementById(id).addEventListener("click",e=>{ids.forEach(j=>document.getElementById(j).classList.toggle("on",j==id));set(id);renderMock()}));
+segs(["mkv-login","mkv-dash"],id=>MV=id=="mkv-login"?"login":"dash");
+segs(["mkt-light","mkt-dark"],id=>MT=id=="mkt-light"?"light":"dark");
+const norm=v=>{v=v.trim();if(!v.startsWith("#"))v="#"+v;return /^#[0-9a-fA-F]{6}$/.test(v)?v.toUpperCase():null};
+function sync(){for(const k of ["c1","c2","c3"]){document.getElementById(k).value=C[k];document.getElementById(k+"t").value=C[k].toUpperCase()}
+  try{localStorage.setItem("avanza-colors",JSON.stringify(C))}catch(e){}render()}
+for(const k of ["c1","c2","c3"]){
+  document.getElementById(k).addEventListener("input",e=>{C[k]=e.target.value;sync()});
+  document.getElementById(k+"t").addEventListener("change",e=>{const v=norm(e.target.value);if(v){C[k]=v;sync()}else e.target.value=C[k]});
+}
+document.getElementById("reset").onclick=()=>{C={...DEF};sync()};
+document.getElementById("grid").addEventListener("click",async e=>{
+  const btn=e.target.closest(".copy");if(!btn)return;
+  const p=L[+btn.dataset.i];const svg=lockup(p,C.c1,C.c2,C.c3,C.c3,C.c1);
+  try{await navigator.clipboard.writeText(svg);btn.textContent="Copiado"}catch(err){btn.textContent="No se pudo copiar"}
+  setTimeout(()=>btn.textContent="Copiar SVG",1600);
+});
+sync();
+</script>

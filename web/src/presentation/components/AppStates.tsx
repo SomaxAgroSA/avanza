@@ -80,7 +80,7 @@ export function AppLoading({ label, className, fullscreen }: { label?: string; c
       aria-live="polite"
       className={cn('flex items-center justify-center gap-2 text-sm text-muted', fullscreen ? 'min-h-dvh' : 'py-10', className)}
     >
-      <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+      <Loader2 className="size-4 animate-spin text-primary-text" aria-hidden />
       <span>{label ?? t('common.loading')}</span>
     </div>
   )

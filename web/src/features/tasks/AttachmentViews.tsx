@@ -181,7 +181,7 @@ export function AttachmentGallery<T extends FileItem>({
               <li key={doc.id} className={cn('flex items-center gap-3', compact ? 'px-2 py-1.5' : 'px-3 py-2.5')}>
                 <DocumentIcon name={doc.name} />
                 <div className="min-w-0 flex-1">
-                  <a href={`${doc.url}?download=1`} className="block truncate text-sm font-medium text-fg hover:text-primary" download={doc.name}>
+                  <a href={`${doc.url}?download=1`} className="block truncate text-sm font-medium text-fg hover:text-primary-text" download={doc.name}>
                     {doc.name}
                   </a>
                   <p className="truncate text-xs text-muted">
@@ -198,7 +198,7 @@ export function AttachmentGallery<T extends FileItem>({
                   </p>
                 </div>
                 {doc.mime === 'application/pdf' && (
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline">
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary-text hover:underline">
                     {t('attachments.view')}
                   </a>
                 )}

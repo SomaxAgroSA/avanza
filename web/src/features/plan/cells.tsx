@@ -292,7 +292,7 @@ export function ResourcesCell({
             type="button"
             onClick={() => void create()}
             disabled={creating}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm font-medium text-primary hover:bg-primary-soft disabled:opacity-50 [&_svg]:size-3.5"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm font-medium text-primary-text hover:bg-primary-soft disabled:opacity-50 [&_svg]:size-3.5"
           >
             <Plus />
             {t('plan.createResource', { name: query.trim() })}

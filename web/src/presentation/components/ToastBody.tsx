@@ -19,7 +19,7 @@ export function ToastBody({ data, closeToast }: ToastContentProps<ToastBodyData>
             data.undo?.onClick()
             closeToast()
           }}
-          className="mt-1 self-start rounded text-xs font-semibold text-primary underline-offset-2 hover:underline"
+          className="mt-1 self-start rounded text-xs font-semibold text-primary-text underline-offset-2 hover:underline"
         >
           {data.undo.label}
         </button>

@@ -163,7 +163,7 @@ function UserMenu() {
             <div className="flex flex-col">
               <span className="text-sm font-medium text-fg">{current.user.name}</span>
               <span className="text-xs font-normal text-muted">{current.user.email}</span>
-              {current.role && <span className="mt-1 text-[11px] font-medium text-primary">{current.role.name}</span>}
+              {current.role && <span className="mt-1 text-[11px] font-medium text-primary-text">{current.role.name}</span>}
             </div>
           ),
         },

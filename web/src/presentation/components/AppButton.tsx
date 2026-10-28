@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ghost: 'text-muted hover:bg-surface-2 hover:text-fg',
         soft: 'bg-primary-soft text-primary-soft-fg hover:brightness-95 dark:hover:brightness-110',
         danger: 'bg-danger text-danger-fg shadow-sm hover:bg-danger-hover',
-        link: 'text-primary underline-offset-4 hover:underline px-0 h-auto',
+        link: 'text-primary-text underline-offset-4 hover:underline px-0 h-auto',
       },
       size: {
         sm: 'h-8 px-3 text-xs [&_svg]:size-3.5',

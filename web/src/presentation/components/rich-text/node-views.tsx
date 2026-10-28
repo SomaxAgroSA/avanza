@@ -117,7 +117,7 @@ export function TableOfContentsView({ editor, node, getPos, selected }: NodeView
           <ol className="list-none space-y-0.5 pl-0 text-sm">
             {items.map((item, index) => (
               <li key={index} style={{ paddingLeft: `${(item.level - 1) * 0.875}rem` }}>
-                <button type="button" onClick={() => jump(index)} className="text-left text-primary hover:underline">
+                <button type="button" onClick={() => jump(index)} className="text-left text-primary-text hover:underline">
                   {item.text || t('richText.toc.untitled')}
                 </button>
               </li>

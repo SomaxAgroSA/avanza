@@ -151,7 +151,7 @@ export function PermissionsPage() {
               {modules.map(([module, codes]) => (
                 <Fragment key={module}>
                   <tr>
-                    <th scope="rowgroup" className="sticky left-0 z-10 border-b border-border bg-surface px-4 pb-2 pt-4 text-left text-xs font-semibold uppercase tracking-wide text-primary">
+                    <th scope="rowgroup" className="sticky left-0 z-10 border-b border-border bg-surface px-4 pb-2 pt-4 text-left text-xs font-semibold uppercase tracking-wide text-primary-text">
                       {t(`permissions.modules.${module}`)}
                     </th>
                     {roleList.map((role) => {

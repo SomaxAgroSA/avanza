@@ -317,9 +317,9 @@ export function AppDataTable<T extends RowData>({
                           >
                             <table.FlexRender header={header} />
                             {sorted === 'asc' ? (
-                              <ArrowUp className="size-3.5 text-primary" aria-hidden />
+                              <ArrowUp className="size-3.5 text-primary-text" aria-hidden />
                             ) : sorted === 'desc' ? (
-                              <ArrowDown className="size-3.5 text-primary" aria-hidden />
+                              <ArrowDown className="size-3.5 text-primary-text" aria-hidden />
                             ) : (
                               <ChevronsUpDown className="size-3.5 opacity-40" aria-hidden />
                             )}

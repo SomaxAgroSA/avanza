@@ -289,7 +289,7 @@ function RowContent({ item, onOpen }: { item: TaskSummary; onOpen?: (id: string)
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2">
       <TaskCode task={item} className="shrink-0" />
       {onOpen ? (
-        <button type="button" onClick={() => onOpen(item.id)} className="flex min-w-0 flex-1 basis-40 text-left text-sm font-medium text-fg hover:text-primary">
+        <button type="button" onClick={() => onOpen(item.id)} className="flex min-w-0 flex-1 basis-40 text-left text-sm font-medium text-fg hover:text-primary-text">
           {title}
         </button>
       ) : (

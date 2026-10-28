@@ -115,7 +115,7 @@ function TaskDetailView({ task }: { task: TaskDetail }) {
               <TagList tags={task.tags} max={8} />
             </div>
             {task.project && (
-              <Link to={`/projects/${task.project.id}`} className="text-sm text-muted hover:text-primary">
+              <Link to={`/projects/${task.project.id}`} className="text-sm text-muted hover:text-primary-text">
                 {task.project.name}
               </Link>
             )}
@@ -124,7 +124,7 @@ function TaskDetailView({ task }: { task: TaskDetail }) {
                 {task.parent && (
                   <span>
                     {t('relations.subtaskOf')}{' '}
-                    <Link to={`/tasks/${task.parent.id}`} className="font-medium text-fg hover:text-primary">
+                    <Link to={`/tasks/${task.parent.id}`} className="font-medium text-fg hover:text-primary-text">
                       {task.parent.code} · {task.parent.title}
                     </Link>
                   </span>
@@ -133,7 +133,7 @@ function TaskDetailView({ task }: { task: TaskDetail }) {
                   <span className="inline-flex items-center gap-1">
                     <GitFork className="size-3.5" aria-hidden />
                     {t('relations.forkOf')}{' '}
-                    <Link to={`/tasks/${task.forkedFrom.id}`} className="font-medium text-fg hover:text-primary">
+                    <Link to={`/tasks/${task.forkedFrom.id}`} className="font-medium text-fg hover:text-primary-text">
                       {task.forkedFrom.code}
                     </Link>
                   </span>

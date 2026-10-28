@@ -343,7 +343,7 @@ export function PlanTimeline({ plan, onOpen }: { plan: Plan; onOpen: (itemId: st
                     className="flex items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1.5"
                   >
                     {canEdit && <GripVertical className="size-4 shrink-0 cursor-grab text-subtle" aria-hidden />}
-                    <button type="button" className="min-w-0 flex-1 truncate text-left text-sm text-fg hover:text-primary" onClick={() => onOpen(item.id)}>
+                    <button type="button" className="min-w-0 flex-1 truncate text-left text-sm text-fg hover:text-primary-text" onClick={() => onOpen(item.id)}>
                       {item.name}
                     </button>
                     {canEdit && (

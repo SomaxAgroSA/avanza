@@ -95,7 +95,7 @@ function SpaceCard({ space }: { space: DocSpace }) {
       <div className="flex items-start gap-3">
         <SpaceAvatar icon={space.icon} color={space.color} />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-fg group-hover:text-primary">{space.name}</p>
+          <p className="truncate font-semibold text-fg group-hover:text-primary-text">{space.name}</p>
           <p className="font-mono text-xs text-subtle">{space.key}</p>
         </div>
       </div>

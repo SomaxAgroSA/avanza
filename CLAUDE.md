@@ -47,7 +47,7 @@ Windows: rode a partir de `E:\KAMBAN` (letra maiúscula). Com o diretório como 
 - **Auditoria:** toda mutação relevante grava `audit_logs` na mesma transação (`unitOfWork`), sem dados sensíveis.
 - **Design System:** usar componentes `App*` de `@/presentation/components`; nunca duplicar. Toda listagem usa `AppDataTable` + `useDataTableState`; "Visualizar" abre `AppDrawer`; criar/editar abrem `AppDialog` grande (pop-up, `xl`/`2xl`). Só o `<main>` rola (sem 2ª barra de rolagem).
 - **i18n:** pt-BR, es, en — nenhum texto fixo; o teste de locales exige as mesmas chaves nos três. Cadastros traduzidos (hoje: tipos de tarefa): original pt-BR + `translations` en/es; a API localiza pelo `Accept-Language` (`domain/content-locale.js`, `deps.locale`); trocar o idioma rebusca os dados.
-- **Tema:** tokens em `web/src/styles/index.css`; nunca cores literais nos componentes.
+- **Tema:** tokens em `web/src/styles/index.css`; nunca cores literais nos componentes. Verde como texto usa `text-primary-text` (lima no escuro, AA); `bg-primary` só para fundos com `text-primary-fg` — ADR-043.
 - **Toasts:** sempre via `notify` (React-Toastify, canto superior direito, mín. 3 s). Nunca outra lib.
 - **Edições por script:** não usar heredoc do shell com barras invertidas nem `String.replace(a, b)` com `$` em `b` (corrompe regex/código); preferir Edit ou scripts gravados em arquivo com `slice/indexOf`.
 - **Fases:** 1 Fundação ✅ → 2 Projetos ✅ → 3 Tipos e campos ✅ → 4 Tarefas ✅ → 5 Kanban ✅ → 6 Backlog ✅ → 7 Relacionamentos ✅ → 8 Relatórios ✅ → 9 Hardening ✅.

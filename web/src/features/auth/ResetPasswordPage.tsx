@@ -70,7 +70,7 @@ function BackToLogin() {
   const { t } = useTranslation()
   return (
     <p className="text-center text-sm">
-      <Link to="/login" className="inline-flex items-center gap-1.5 rounded font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+      <Link to="/login" className="inline-flex items-center gap-1.5 rounded font-medium text-primary-text hover:underline focus-visible:outline-2 focus-visible:outline-ring">
         <ArrowLeft className="size-4" aria-hidden />
         {t('auth.backToLogin')}
       </Link>

@@ -178,7 +178,7 @@ function SpaceLayout({ detail, currentId }: { detail: DocSpaceDetail; currentId:
               <div className="flex items-start gap-2.5 border-b border-border px-4 py-3.5">
                 <SpaceAvatar icon={space.icon} color={space.color} size="sm" className="mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <Link to={spacePath(space.key)} className="block truncate text-sm font-semibold text-fg hover:text-primary">
+                  <Link to={spacePath(space.key)} className="block truncate text-sm font-semibold text-fg hover:text-primary-text">
                     {space.name}
                   </Link>
                   <p className="font-mono text-xs text-subtle">{space.key}</p>

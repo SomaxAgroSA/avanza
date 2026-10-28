@@ -1,0 +1,38 @@
+/* Avanza · identidad Somax — tokens de color
+   Verdes provisorios: reemplazar --brand-* con los hex oficiales de Somax. */
+:root {
+  --brand-primary: #00843D;   /* verde Somax (principal) */
+  --brand-accent:  #8DC63F;   /* verde lima (secundario) */
+  --brand-ink:     #1E2B24;   /* verde casi negro (texto / fondos oscuros) */
+
+  --bg:        #F5F8F5;
+  --surface:   #FFFFFF;
+  --border:    #E2E9E3;
+  --text:      #16211A;
+  --text-muted:#64746A;
+
+  --primary:        var(--brand-primary);
+  --primary-text:   var(--brand-primary);              /* enlaces, ítem activo */
+  --primary-tint:   color-mix(in srgb, var(--brand-primary) 9%, #FFFFFF);
+  --primary-border: color-mix(in srgb, var(--brand-primary) 25%, transparent);
+  --on-primary:     #FFFFFF;
+
+  --warning: #D98A1C;
+  --danger:  #D64545;
+
+  --hero-gradient:  linear-gradient(110deg, var(--surface) 40%, color-mix(in srgb, var(--brand-accent) 22%, var(--surface)));
+  --login-gradient: linear-gradient(140deg, var(--brand-ink) 0%, color-mix(in srgb, var(--brand-ink) 45%, var(--brand-primary)) 55%, var(--brand-primary) 100%);
+}
+
+.dark, [data-theme="dark"] {
+  --bg:        #0D1410;
+  --surface:   #141E18;
+  --border:    #23302A;
+  --text:      #E5EDE7;
+  --text-muted:#90A096;
+
+  --primary-text: var(--brand-accent);                 /* lima: mejor contraste en oscuro */
+  --primary-tint: color-mix(in srgb, var(--brand-primary) 22%, #141E18);
+  --hero-gradient:  linear-gradient(110deg, var(--surface) 40%, color-mix(in srgb, var(--brand-accent) 18%, var(--surface)));
+  --login-gradient: linear-gradient(140deg, #0A120D 0%, color-mix(in srgb, var(--brand-ink) 45%, var(--brand-primary)) 55%, var(--brand-primary) 100%);
+}

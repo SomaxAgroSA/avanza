@@ -34,14 +34,14 @@ export function AppStatCard({ label, value, hint, icon, tone = 'default', classN
     <>
       <div className="flex items-start justify-between gap-2 text-sm text-muted">
         <span className="line-clamp-2">{label}</span>
-        {icon && <span className={cn('shrink-0 text-subtle transition-colors [&_svg]:size-4', onSelect && 'group-hover:text-primary group-focus-visible:text-primary')}>{icon}</span>}
+        {icon && <span className={cn('shrink-0 text-subtle transition-colors [&_svg]:size-4', onSelect && 'group-hover:text-primary-text group-focus-visible:text-primary-text')}>{icon}</span>}
       </div>
       <div className={cn('text-2xl font-semibold tracking-tight tabular-nums', STAT_TONES[tone])}>{value}</div>
       <div className="flex items-end justify-between gap-2">
         {hint ? <div className="line-clamp-2 min-w-0 text-xs text-subtle">{hint}</div> : <span />}
         {onSelect && actionLabel && (
           // sempre no DOM (compõe o nome do botão); aparece ao passar o mouse ou focar
-          <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-primary-text opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
             {actionLabel}
             <ArrowRight className="size-3.5" aria-hidden />
           </span>
@@ -150,7 +150,7 @@ export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, c
           {seriesA}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-success" />
+          <span className="size-2.5 rounded-sm bg-accent" />
           {seriesB}
         </span>
       </div>
@@ -158,7 +158,7 @@ export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, c
         {points.map((p, i) => (
           <div key={p.key} className="group relative flex h-full min-w-2 flex-1 items-end justify-center gap-px rounded-sm transition-colors hover:bg-surface-2">
             <span className="w-1/2 max-w-3 rounded-t-sm bg-primary transition-opacity group-hover:opacity-90" style={{ height: `${(p.a / max) * 100}%`, minHeight: p.a ? 2 : 0 }} />
-            <span className="w-1/2 max-w-3 rounded-t-sm bg-success transition-opacity group-hover:opacity-90" style={{ height: `${(p.b / max) * 100}%`, minHeight: p.b ? 2 : 0 }} />
+            <span className="w-1/2 max-w-3 rounded-t-sm bg-accent transition-opacity group-hover:opacity-90" style={{ height: `${(p.b / max) * 100}%`, minHeight: p.b ? 2 : 0 }} />
             {/* valores do ponto ao passar o mouse (a tabela sr-only abaixo cobre leitores de tela) */}
             <span
               className={cn(

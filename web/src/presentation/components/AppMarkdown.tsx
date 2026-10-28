@@ -32,7 +32,7 @@ function defaultMention(name: string, _id: string, key: string) {
 function link(href: string, label: ReactNode, key: string) {
   if (!SAFE_URL.test(href)) return <Fragment key={key}>{label}</Fragment>
   return (
-    <a key={key} href={href} target="_blank" rel="noopener noreferrer" className="break-words text-primary underline-offset-2 hover:underline">
+    <a key={key} href={href} target="_blank" rel="noopener noreferrer" className="break-words text-primary-text underline-offset-2 hover:underline">
       {label}
     </a>
   )

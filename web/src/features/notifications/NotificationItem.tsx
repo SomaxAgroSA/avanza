@@ -61,7 +61,7 @@ export function NotificationItem({ notification, onOpen }: { notification: AppNo
           </span>
         )}
         {notification.actor && (
-          <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-surface text-primary ring-1 ring-border">
+          <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-surface text-primary-text ring-1 ring-border">
             <Icon className="size-2.5" aria-hidden />
           </span>
         )}

@@ -17,7 +17,9 @@ export function BrandMark({ collapsed }: { collapsed?: boolean }) {
   const logo = logoFor(info, useResolvedTheme())
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <img src={logo} alt="" className="size-8 shrink-0 object-contain" />
+      <span className="grid size-[34px] shrink-0 place-items-center rounded-[9px] border border-border bg-surface">
+        <img src={logo} alt="" className="size-5 object-contain" />
+      </span>
       {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-fg">{info.name}</span>}
     </div>
   )
@@ -25,7 +27,7 @@ export function BrandMark({ collapsed }: { collapsed?: boolean }) {
 
 const linkBase =
   'group flex h-9 items-center gap-3 rounded-md px-2.5 text-sm font-medium transition-colors ' +
-  'text-muted hover:bg-surface-2 hover:text-fg aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary-soft-fg'
+  'text-muted hover:bg-surface-2 hover:text-fg aria-[current=page]:bg-primary-soft aria-[current=page]:font-semibold aria-[current=page]:text-primary-soft-fg'
 
 /** Versão do produto e copyright no rodapé do menu (recolhido: só a versão, com o resto na dica). */
 function SidebarFooterInfo({ collapsed }: { collapsed: boolean }) {

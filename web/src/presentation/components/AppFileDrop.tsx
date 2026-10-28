@@ -50,14 +50,14 @@ export function AppFileDrop({ onFiles, accept, multiple = true, disabled, hint, 
         className,
       )}
     >
-      <UploadCloud className={cn('size-7', over ? 'text-primary' : 'text-subtle')} aria-hidden />
+      <UploadCloud className={cn('size-7', over ? 'text-primary-text' : 'text-subtle')} aria-hidden />
       <p className="text-sm text-fg">
         {t('files.dropHere')}{' '}
         <button
           type="button"
           disabled={disabled}
           onClick={() => input.current?.click()}
-          className="rounded font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed"
+          className="rounded font-medium text-primary-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed"
         >
           {t('files.choose')}
         </button>

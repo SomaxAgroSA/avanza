@@ -38,7 +38,12 @@ export async function startApp() {
 }
 
 export async function launchBrowser() {
-  return chromium.launch({ channel: process.env.KAMBAN_E2E_CHANNEL || 'msedge', headless: process.env.KAMBAN_E2E_HEADED !== '1' })
+  const browser = await chromium.launch({ channel: process.env.KAMBAN_E2E_CHANNEL || 'msedge', headless: process.env.KAMBAN_E2E_HEADED !== '1' })
+  // os testes esperam a interface em pt-BR, qualquer que seja o idioma da máquina (no macOS o
+  // Chrome ignora --lang e segue o idioma do sistema); um teste pode pedir outro locale
+  const newContext = browser.newContext.bind(browser)
+  browser.newContext = (options = {}) => newContext({ locale: 'pt-BR', ...options })
+  return browser
 }
 
 /** Erros do navegador (exceções e console.error), exceto respostas HTTP esperadas nos fluxos. */

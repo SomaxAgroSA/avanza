@@ -31,7 +31,7 @@ export function DashboardIndicators() {
     <AppCard
       title={t('dashboard.indicators')}
       actions={
-        <Link to="/reports" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+        <Link to="/reports" className="inline-flex items-center gap-1 text-sm text-primary-text hover:underline">
           {t('dashboard.seeReports')} <ArrowRight className="size-4" aria-hidden />
         </Link>
       }

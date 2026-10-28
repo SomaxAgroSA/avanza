@@ -208,7 +208,7 @@ function LinkCell({ value, label, readOnly, onChange }: { value: string | null; 
   return (
     <span className="flex h-full min-w-0 items-center justify-center gap-1 px-1">
       {isSafeLink(value) ? (
-        <a href={value} target="_blank" rel="noopener noreferrer" title={value} className="inline-flex min-w-0 items-center gap-1 truncate text-xs text-primary hover:underline">
+        <a href={value} target="_blank" rel="noopener noreferrer" title={value} className="inline-flex min-w-0 items-center gap-1 truncate text-xs text-primary-text hover:underline">
           <span className="truncate">{host}</span>
           <ExternalLink aria-hidden className="size-3 shrink-0" />
         </a>

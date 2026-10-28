@@ -169,7 +169,7 @@ export function usePlanColumns(ctx: BoardCtx): { main: AppBoardColumn<PlanItem>[
           title={t('plan.panel.open', { name: item.name, count: item.updates })}
           className={cn(
             'relative mr-1 flex size-7 shrink-0 items-center justify-center rounded-md text-subtle hover:bg-surface-3 hover:text-fg focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring [&_svg]:size-4',
-            item.updates > 0 ? 'text-primary' : 'opacity-0 group-hover/row:opacity-100',
+            item.updates > 0 ? 'text-primary-text' : 'opacity-0 group-hover/row:opacity-100',
           )}
         >
           <MessageSquare />

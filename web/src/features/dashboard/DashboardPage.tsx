@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, BarChart3, CheckSquare, FolderKanban, KanbanSquare, KeyRound, ListTodo, ShieldCheck, Users } from 'lucide-react'
 import { AppCard } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
+import { usePlatformInfo } from '@/presentation/common/use-platform'
+import { useResolvedTheme } from '@/presentation/common/use-theme'
+import { logoFor } from '@/domain/platform'
 import { useSession } from '@/features/auth/session'
 import { can } from '@/domain/permissions'
 import { MyProjectsCard } from '@/features/projects/MyProjectsCard'
@@ -23,6 +26,7 @@ export function DashboardPage() {
   const { current } = useSession()
   const firstName = current?.user.name.split(' ')[0] ?? ''
   const permissions = current?.permissions ?? []
+  const logo = logoFor(usePlatformInfo(), useResolvedTheme())
   useDocumentTitle(t('nav.dashboard'))
 
   const shortcuts = [
@@ -38,9 +42,9 @@ export function DashboardPage() {
 
   return (
     <>
-      <div className="relative mb-6 overflow-hidden rounded-2xl border border-border bg-subtle-gradient p-6 sm:p-8">
-        <div aria-hidden className="absolute -right-16 -top-16 size-56 rounded-full bg-brand-gradient opacity-15 blur-3xl" />
-        <p className="text-sm font-medium text-primary">{current?.role?.name}</p>
+      <div className="relative mb-6 overflow-hidden rounded-2xl border border-border bg-hero-gradient p-6 sm:p-8 sm:pr-44">
+        <img src={logo} alt="" aria-hidden className="absolute right-8 top-1/2 hidden size-[120px] -translate-y-1/2 object-contain sm:block" />
+        <p className="text-sm font-semibold text-primary-text">{current?.role?.name}</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
           {t(greetingKey(new Date().getHours()), { name: firstName })}
         </h1>

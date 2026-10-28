@@ -62,14 +62,14 @@ export function CustomFieldValue({
       // defesa extra: o servidor já exige http(s); nunca renderizar outros esquemas (ex.: javascript:)
       if (!/^https?:\/\//i.test(String(value))) return <span className="break-words">{String(value)}</span>
       return (
-        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 text-primary hover:underline">
+        <a href={String(value)} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 text-primary-text hover:underline">
           <span className="truncate">{String(value)}</span>
           <ExternalLink className="size-3.5 shrink-0" aria-hidden />
         </a>
       )
     case 'email':
       return (
-        <a href={`mailto:${String(value)}`} className="text-primary hover:underline">
+        <a href={`mailto:${String(value)}`} className="text-primary-text hover:underline">
           {String(value)}
         </a>
       )
@@ -99,7 +99,7 @@ export function CustomFieldValue({
       return (
         <span className="flex flex-col gap-0.5">
           {items.map((a) => (
-            <a key={a.id} href={`${a.url}?download=1`} download={a.name} className="truncate text-primary hover:underline">
+            <a key={a.id} href={`${a.url}?download=1`} download={a.name} className="truncate text-primary-text hover:underline">
               {a.name}
             </a>
           ))}

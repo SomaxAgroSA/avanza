@@ -29,9 +29,9 @@ export const DEFAULT_PLATFORM_INFO: PlatformInfo = { name: 'Avanza', logoLightUr
 
 /** Marca padrão (pasta web/public/brand), usada enquanto ninguém envia outra no Configurador geral. */
 export const DEFAULT_BRANDING: Record<BrandingSlot, string> = {
-  logo_light: '/brand/logo-light.png',
-  logo_dark: '/brand/logo-dark.png',
-  favicon: '/brand/favicon-64.png',
+  logo_light: '/brand/logo-light.svg',
+  logo_dark: '/brand/logo-dark.svg',
+  favicon: '/brand/favicon.svg',
 }
 
 export interface PlatformSettingsValues {

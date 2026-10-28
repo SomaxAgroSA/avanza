@@ -74,7 +74,7 @@ export function AppDropdown({ trigger, items, align = 'end', className, onCloseF
                   className={cn(itemClasses, 'pl-8')}
                 >
                   <DropdownMenu.ItemIndicator className="absolute left-2">
-                    <Check className="text-primary" />
+                    <Check className="text-primary-text" />
                   </DropdownMenu.ItemIndicator>
                   {item.label}
                 </DropdownMenu.CheckboxItem>

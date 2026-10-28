@@ -288,6 +288,7 @@
     "remember": "Mantener la sesión por 30 días",
     "submit": "Entrar",
     "securityNote": "Su sesión está protegida y expira automáticamente por inactividad.",
+    "footer": "© {{year}} {{name}} · SomaxAgro",
     "sessionExpired": "Su sesión expiró. Inicie sesión de nuevo para continuar.",
     "logout": "Cerrar sesión",
     "signedOut": "Cerró sesión de forma segura. ¡Hasta pronto!",
@@ -300,17 +301,6 @@
       "description": "La recuperación de contraseña por correo no está configurada en esta plataforma. Un administrador puede restablecer su contraseña."
     },
     "hero": {
-      "board": "Tablero del equipo",
-      "live": "En vivo",
-      "columns": {
-        "todo": "Por hacer",
-        "doing": "En curso",
-        "done": "Hecho"
-      },
-      "health": "Salud del proyecto",
-      "onTrack": "En plazo",
-      "moved": "Tarjeta movida a Hecho",
-      "now": "ahora · todo el equipo ya lo ve",
       "features": {
         "kanban": {
           "title": "Kanban y backlog",
