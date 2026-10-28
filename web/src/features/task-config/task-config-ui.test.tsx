@@ -223,6 +223,28 @@ describe('CustomFieldFormDialog', () => {
     expect(update).not.toHaveBeenCalled()
   })
 
+  it('"Permitir adicionar opções pela tarefa": liga na seleção e vai na configuração do campo', async () => {
+    const { update } = renderFieldDrawer({ ...severity, config: { allow_create_options: true } })
+    const toggle = await screen.findByRole('switch', { name: /Permitir adicionar opções pela tarefa/ })
+    expect(toggle).toBeChecked()
+    await userEvent.click(toggle)
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+    expect(nth(update.mock.calls, 0)[1].config).toEqual({})
+
+    update.mockClear()
+    await userEvent.click(toggle)
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+    expect(nth(update.mock.calls, 0)[1].config).toEqual({ allow_create_options: true })
+  })
+
+  it('campo sem opções não mostra "Permitir adicionar opções pela tarefa"', async () => {
+    renderFieldDrawer(null)
+    await screen.findByLabelText(/^Rótulo/)
+    expect(screen.queryByRole('switch', { name: /Permitir adicionar opções pela tarefa/ })).not.toBeInTheDocument()
+  })
+
   it('Enter numa opção cria a próxima logo abaixo, já com o cursor, sem enviar o formulário', async () => {
     const { update } = renderFieldDrawer(severity)
     const before = await screen.findAllByRole('textbox', { name: 'Nome da opção' })

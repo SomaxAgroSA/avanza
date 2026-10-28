@@ -33,6 +33,8 @@ const TYPE_INFO = Object.freeze({
 
 const FIELD_TYPES = Object.freeze(Object.keys(TYPE_INFO))
 const OPTION_COLORS = Object.freeze(['gray', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'violet', 'pink'])
+/** Tamanho máximo do rótulo de uma opção (Configurações e opção adicionada pela tarefa). */
+const MAX_OPTION_LABEL = 60
 
 /** Ícones disponíveis para tipos de tarefa (a interface mapeia para os ícones visuais). */
 const TASK_TYPE_ICONS = Object.freeze([
@@ -102,6 +104,8 @@ function isNum(value) {
 function normalizeConfig(type, raw) {
   const config = raw && typeof raw === 'object' ? raw : {}
   const has = (key) => config[key] !== undefined && config[key] !== null && config[key] !== ''
+  // só seleção tem opções para adicionar pela tarefa
+  if (type !== 'select' && type !== 'multiselect' && config.allow_create_options === true) return { error: 'allow_create_options' }
 
   if (type === 'text' || type === 'textarea') {
     const limit = type === 'text' ? 255 : 10000
@@ -127,7 +131,31 @@ function normalizeConfig(type, raw) {
     return { value: out }
   }
 
+  if (type === 'select' || type === 'multiselect') {
+    // "Permitir adicionar opções pela tarefa": desligado não é gravado (config vazia, como antes)
+    const allow = has('allow_create_options') ? config.allow_create_options : false
+    if (typeof allow !== 'boolean') return { error: 'allow_create_options' }
+    return { value: allow ? { allow_create_options: true } : {} }
+  }
+
   return { value: {} }
+}
+
+/** O campo aceita opções novas criadas a partir da tarefa (seleção com a configuração ligada). */
+function acceptsNewOptions(field) {
+  const info = typeInfo(field.type)
+  return !!info && info.options && !!field.config && field.config.allow_create_options === true
+}
+
+/** Chave de comparação de rótulos de opção: sem maiúsculas, acentos e espaços repetidos. */
+function optionKey(label) {
+  return stripAccents(label).trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+/** Cor da opção nova: a seguinte à da última opção na paleta (recomeça no fim; sem opções, a primeira). */
+function nextOptionColor(lastColor) {
+  const index = OPTION_COLORS.indexOf(lastColor)
+  return index < 0 ? OPTION_COLORS[0] : OPTION_COLORS[(index + 1) % OPTION_COLORS.length]
 }
 
 function isEmptyValue(value) {
@@ -231,6 +259,7 @@ function validateValue(field, raw) {
 module.exports = {
   FIELD_TYPES,
   OPTION_COLORS,
+  MAX_OPTION_LABEL,
   TASK_TYPE_ICONS,
   typeInfo,
   slugifyName,
@@ -238,6 +267,9 @@ module.exports = {
   normalizeTypeKey,
   typeKeyIssue,
   normalizeConfig,
+  acceptsNewOptions,
+  optionKey,
+  nextOptionColor,
   validateValue,
   isEmptyValue,
 }

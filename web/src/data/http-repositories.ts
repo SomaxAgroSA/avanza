@@ -37,9 +37,9 @@ import type { DocPageDto, DocSpaceDto, DocTreePageDto } from './dtos'
 import type { DocFile, DocSpaceInput, RichContent } from '@/domain/docs'
 import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
-import type { AttachmentDto, CommentDto, CustomFieldDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
+import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import { toBacklog, toBoard, toReport, toReportTask, toSprint, toNotification, toTaskRelations } from './mappers'
-import { toAttachment, toComment, toCustomField, toPriority, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
+import { toAttachment, toComment, toCustomField, toFieldOption, toPriority, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import type {
   AttachmentRepository,
   CommentRepository,
@@ -469,6 +469,9 @@ export function createHttpCustomFieldRepository(api: ApiClient): CustomFieldRepo
     },
     async remove(id) {
       await api.del(path(id))
+    },
+    async addOption(fieldId, label) {
+      return toFieldOption((await api.post<FieldOptionDto>(`${path(fieldId)}/options`, { label })).data)
     },
   }
 }

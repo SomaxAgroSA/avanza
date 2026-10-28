@@ -317,6 +317,23 @@ function build() {
           parameters: [idParam, csrfHeader],
         }),
       },
+      '/custom-fields/{id}/options': {
+        post: op(
+          'Adiciona opção pela tarefa (settings.manage, tasks.create ou tasks.edit) em seleção com config.allow_create_options; rótulo igual (sem diferenciar maiúsculas e acentos) devolve a opção existente, reativada se estava inativa',
+          ['task-config'],
+          {
+            200: ok('Opção de mesmo rótulo (existente ou reativada)', ref('FieldOption')),
+            201: ok('Opção criada no fim da lista, com a cor seguinte da paleta', ref('FieldOption')),
+            400: errorResponse('VALIDATION_ERROR (fields.label: required, invalid_type, too_long; fields.options: too_many)'),
+            403: errorResponse('FIELD_OPTIONS_LOCKED (campo não é seleção ou não permite adicionar opções) ou FORBIDDEN'),
+            404: errorResponse('FIELD_NOT_FOUND'),
+          },
+          {
+            parameters: [idParam, csrfHeader],
+            requestBody: jsonBody({ type: 'object', required: ['label'], properties: { label: { type: 'string', maxLength: 60 } } }),
+          },
+        ),
+      },
       '/task-types': {
         get: op('Tipos de tarefa em ordem; inativos só com include_inactive=1 e settings.manage', ['task-config'], { 200: ok('Tipos', { type: 'array', items: ref('TaskType') }) }, {
           parameters: [{ name: 'include_inactive', in: 'query', schema: { type: 'string', enum: ['1'] } }],
@@ -387,7 +404,7 @@ function build() {
             { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
           ],
         }),
-        post: op('Cria tarefa (tasks.create + colaborador do projeto)', ['tasks'], { 201: ok('Criada', ref('TaskDetail')), 404: errorResponse('PROJECT_NOT_FOUND') }, {
+        post: op('Cria tarefa (tasks.create + colaborador do projeto); campos de imagem/arquivo não são exigidos aqui — envie depois em /tasks/{id}/attachments com field', ['tasks'], { 201: ok('Criada', ref('TaskDetail')), 404: errorResponse('PROJECT_NOT_FOUND') }, {
           parameters: [csrfHeader],
           requestBody: jsonBody(ref('TaskInput')),
         }),
@@ -1415,7 +1432,16 @@ function build() {
             label: { type: 'string', examples: ['Severidade'] },
             type: { type: 'string', enum: ['text', 'textarea', 'number', 'decimal', 'boolean', 'date', 'datetime', 'select', 'multiselect', 'user', 'users', 'project', 'url', 'email', 'phone', 'image', 'file'] },
             description: { type: 'string' },
-            config: { type: 'object', properties: { max_length: { type: 'integer' }, min: { type: 'number' }, max: { type: 'number' }, decimals: { type: 'integer' } } },
+            config: {
+              type: 'object',
+              properties: {
+                max_length: { type: 'integer' },
+                min: { type: 'number' },
+                max: { type: 'number' },
+                decimals: { type: 'integer' },
+                allow_create_options: { type: 'boolean', description: 'Seleção: quem cria/edita tarefas pode adicionar opções pelo formulário da tarefa (ausente = desligado)' },
+              },
+            },
             default_value: { description: 'Valor no formato do tipo; em seleção, id(s) da opção' },
             searchable: { type: 'boolean' },
             filterable: { type: 'boolean' },

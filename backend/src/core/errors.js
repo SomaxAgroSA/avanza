@@ -19,6 +19,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   CANNOT_EDIT_OWN_ROLE: { status: 403, message: 'You cannot change the permissions of your own role' },
   CANNOT_DISABLE_SELF: { status: 403, message: 'You cannot disable your own account' },
   ROLE_IMMUTABLE: { status: 403, message: 'This role cannot be changed' },
+  FIELD_OPTIONS_LOCKED: { status: 403, message: 'This field does not accept new options from tasks' },
   NOT_FOUND: { status: 404, message: 'Resource not found' },
   ROUTE_NOT_FOUND: { status: 404, message: 'Route not found' },
   ROLE_NOT_FOUND: { status: 404, message: 'Role not found' },

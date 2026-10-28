@@ -11,6 +11,8 @@ const { buildAuditEntry } = require('./audit')
 const { iso } = require('./presenters')
 
 const READ_PERMISSIONS = ['settings.manage', 'tasks.view']
+/** Quem adiciona opção pela tarefa: quem configura os campos ou quem cria/edita tarefas. */
+const ADD_OPTION_PERMISSIONS = ['settings.manage', 'tasks.create', 'tasks.edit']
 const FLAGS = ['searchable', 'filterable', 'sortable']
 const MAX_OPTIONS = 200
 
@@ -40,7 +42,7 @@ function normalizeOptions(raw) {
     const o = option && typeof option === 'object' ? option : {}
     const label = typeof o.label === 'string' ? o.label.trim() : ''
     if (!label) throw invalid('options', 'required', { index })
-    if (label.length > 60) throw invalid('options', 'too_long', { index })
+    if (label.length > cf.MAX_OPTION_LABEL) throw invalid('options', 'too_long', { index })
     const lower = label.toLowerCase()
     if (seen.indexOf(lower) >= 0) throw invalid('options', 'duplicate_option', { index })
     seen.push(lower)
@@ -84,6 +86,10 @@ function createCustomFieldService(deps) {
   const fields = deps.customFieldRepository
   const typeFields = deps.taskTypeFieldRepository
 
+  function presentOption(o) {
+    return { id: o.id, label: o.label, color: o.color, order: o.order, is_active: o.isActive !== false }
+  }
+
   function present(field, options, usedBy) {
     return {
       id: field.id,
@@ -96,7 +102,7 @@ function createCustomFieldService(deps) {
       searchable: !!field.searchable,
       filterable: !!field.filterable,
       sortable: !!field.sortable,
-      options: (options || []).map((o) => ({ id: o.id, label: o.label, color: o.color, order: o.order, is_active: o.isActive !== false })),
+      options: (options || []).map(presentOption),
       used_by: usedBy || [],
       created_at: iso(field.createdAt),
       updated_at: iso(field.updatedAt),
@@ -285,7 +291,50 @@ function createCustomFieldService(deps) {
     return { deleted: true }
   }
 
-  return { listFields, getField, createField, updateField, deleteField, presentMany }
+  /**
+   * "Adicionar opção" no formulário da tarefa (campo de seleção com `allow_create_options`).
+   * Rótulo igual a uma opção existente (sem diferenciar maiúsculas e acentos) devolve essa opção —
+   * reativada, se estava inativa — em vez de duplicar. A nova entra no fim, com a cor seguinte da paleta.
+   * Retorna { option, created }.
+   */
+  async function addOption(ctx, id, input) {
+    rbac.assertAuthenticated(ctx.principal)
+    if (!ADD_OPTION_PERMISSIONS.some((code) => rbac.can(ctx.principal, code))) throw appError('FORBIDDEN')
+    const field = await findOrFail(id)
+    if (!cf.acceptsNewOptions(field)) throw appError('FIELD_OPTIONS_LOCKED')
+    const raw = (input || {}).label
+    if (raw !== undefined && raw !== null && typeof raw !== 'string') throw invalid('label', 'invalid_type')
+    const label = typeof raw === 'string' ? raw.trim().replace(/\s+/g, ' ') : ''
+    if (!label) throw invalid('label', 'required')
+    if (label.length > cf.MAX_OPTION_LABEL) throw invalid('label', 'too_long')
+
+    const result = await deps.unitOfWork.run(async (repos) => {
+      const options = await repos.customFieldRepository.lockOptions(field.id)
+      const key = cf.optionKey(label)
+      const existing = options.find((o) => cf.optionKey(o.label) === key)
+      if (existing && existing.isActive !== false) return { option: existing, created: false }
+      const record = async (oldValue, newValue) =>
+        repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'custom_field', entityId: field.id, action: 'custom_field.option_added', oldValue, newValue }))
+      if (existing) {
+        const option = await repos.customFieldRepository.updateOption(existing.id, { isActive: true })
+        await record({ option: existing.label, is_active: false }, { option: existing.label, is_active: true })
+        return { option, created: false }
+      }
+      if (options.length >= MAX_OPTIONS) throw invalid('options', 'too_many')
+      const last = options.reduce((max, o) => (!max || o.order >= max.order ? o : max), null)
+      const option = await repos.customFieldRepository.createOption(field.id, {
+        label,
+        color: cf.nextOptionColor(last ? last.color : null),
+        order: last ? last.order + 1 : 0,
+        isActive: true,
+      })
+      await record(null, { option: option.label, color: option.color })
+      return { option, created: true }
+    })
+    return { option: presentOption(result.option), created: result.created }
+  }
+
+  return { listFields, getField, createField, updateField, deleteField, addOption, presentMany }
 }
 
 module.exports = { createCustomFieldService, READ_PERMISSIONS }

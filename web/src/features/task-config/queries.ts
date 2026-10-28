@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { CustomFieldInput, TaskTypeFieldInput, TaskTypeInput } from '@/domain/repositories'
+import { withFieldOption, type CustomField, type TaskTypeDetail, type TaskTypeField } from '@/domain/task-config'
+import type { TaskDetail } from '@/domain/tasks'
 import { useRepositories } from '@/presentation/common/repositories-context'
 
 export const configKeys = {
@@ -45,6 +47,27 @@ export function useCustomFieldMutations() {
     }),
     remove: useMutation({ mutationFn: (id: string) => customFields.remove(id), onSuccess: invalidate }),
   }
+}
+
+/**
+ * "Adicionar opção" pela tarefa. A opção entra na hora nos campos já carregados (biblioteca, tipos e
+ * tarefas abertas) — o formulário já mostra e valida a opção escolhida — e essas consultas são
+ * recarregadas em seguida.
+ */
+export function useAddFieldOption() {
+  const { customFields } = useRepositories()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ fieldId, label }: { fieldId: string; label: string }) => customFields.addOption(fieldId, label),
+    onSuccess: (option, { fieldId }) => {
+      const links = (list: TaskTypeField[]) => list.map((link) => ({ ...link, field: withFieldOption(link.field, fieldId, option) }))
+      queryClient.setQueriesData<CustomField[]>({ queryKey: configKeys.fields }, (list) => list?.map((field) => withFieldOption(field, fieldId, option)))
+      queryClient.setQueriesData<TaskTypeDetail>({ queryKey: ['task-config', 'type'] }, (type) => (type ? { ...type, fields: links(type.fields) } : type))
+      queryClient.setQueriesData<TaskDetail>({ queryKey: ['tasks', 'detail'] }, (task) => (task ? { ...task, fields: links(task.fields) } : task))
+      void queryClient.invalidateQueries({ queryKey: ['task-config'] })
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'detail'] })
+    },
+  })
 }
 
 export function useTaskTypeMutations() {

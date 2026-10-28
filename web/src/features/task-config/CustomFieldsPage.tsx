@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
-import { FIELD_FLAGS, FIELD_TYPES, FIELD_TYPE_INFO, type CustomField, type FieldValue } from '@/domain/task-config'
+import { acceptsNewOptions, FIELD_FLAGS, FIELD_TYPES, FIELD_TYPE_INFO, type CustomField, type FieldValue } from '@/domain/task-config'
 import {
   AppBadge,
   AppButton,
@@ -109,7 +109,8 @@ export function CustomFieldsPage() {
             {FIELD_FLAGS.filter((flag) => field[flag]).map((flag) => (
               <AppBadge key={flag}>{t(`fields.flagsShort.${flag}`)}</AppBadge>
             ))}
-            {!FIELD_FLAGS.some((flag) => field[flag]) && <span className="text-subtle">—</span>}
+            {acceptsNewOptions(field) && <AppBadge>{t('fields.allowCreateOptionsShort')}</AppBadge>}
+            {!FIELD_FLAGS.some((flag) => field[flag]) && !acceptsNewOptions(field) && <span className="text-subtle">—</span>}
           </span>
         ),
       },
@@ -245,9 +246,10 @@ function FieldDetailsDrawer({ field, onOpenChange, onEdit }: { field: CustomFiel
             </Row>
             <Row label={t('fields.details')}>{summary(field)}</Row>
             <Row label={t('fields.behavior')}>
-              {FIELD_FLAGS.filter((flag) => field[flag])
-                .map((flag) => t(`fields.flagsShort.${flag}`))
-                .join(', ') || '—'}
+              {[
+                ...FIELD_FLAGS.filter((flag) => field[flag]).map((flag) => t(`fields.flagsShort.${flag}`)),
+                ...(acceptsNewOptions(field) ? [t('fields.allowCreateOptionsShort')] : []),
+              ].join(', ') || '—'}
             </Row>
             <Row label={t('fields.usedBy')}>{field.usedBy.map((type) => type.name).join(', ') || t('fields.unused')}</Row>
           </dl>

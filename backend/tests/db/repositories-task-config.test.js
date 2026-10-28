@@ -101,6 +101,18 @@ describe('repositórios da configuração das tarefas', () => {
       ])
       assert.deepEqual(listed.filter((o) => o.fieldId === other.id).map((o) => o.id), [foreign.id])
       assert.deepEqual(await fields.listOptions([]), [])
+
+      // opção adicionada pela tarefa: trava o campo e lê as opções; cria no fim; reativa
+      const locked = await t.db.transaction(() => fields.lockOptions(select.id))
+      assert.deepEqual(locked.map((o) => o.label), ['Fim', 'Começo', 'Nova'])
+      const added = await fields.createOption(select.id, { label: 'Extra', color: 'teal', order: 3, isActive: true })
+      assert.deepEqual([added.fieldId, added.label, added.color, added.order, added.isActive], [select.id, 'Extra', 'teal', 3, true])
+      const off = await fields.updateOption(added.id, { isActive: false })
+      assert.equal(off.isActive, false)
+      assert.equal(off.label, 'Extra')
+      assert.equal((await fields.updateOption(added.id, { isActive: true })).isActive, true)
+      assert.equal(await fields.updateOption('nao-existe', { isActive: true }), null)
+      assert.deepEqual((await fields.listOptions([select.id])).map((o) => o.label), ['Fim', 'Começo', 'Nova', 'Extra'])
       // apagar o campo leva as opções
       await fields.delete(select.id)
       assert.equal(await fields.findById(select.id), null)

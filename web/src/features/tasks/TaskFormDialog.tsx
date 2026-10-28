@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
-import { isRequiredIn, isRequiredOnCreate, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
+import { isRequiredIn, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
 import { customValueIssues, datesIssue, parseHours, type TaskDetail, type TaskInput } from '@/domain/tasks'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
 import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppSkeleton, AppTextField, AppTextarea, notify } from '@/presentation/components'
@@ -12,11 +12,12 @@ import { useProjectMembers, useProjects } from '@/features/projects/queries'
 import { CustomFieldInput } from '@/features/task-config/CustomFieldInput'
 import { ColorDot, TaskTypeIconBadge } from '@/features/task-config/config-visuals'
 import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
+import { useFieldOptionCreator } from '@/features/task-config/use-field-option-creator'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskAttachments, useTaskMutations } from './queries'
 import { PROJECT_OPTIONS_QUERY } from './required-fields'
-import { useFieldAttachmentUpload } from './use-attachment-uploader'
+import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from './use-attachment-uploader'
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 
@@ -111,9 +112,14 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const statuses = useStatuses(false)
   const priorities = usePriorities(false)
   const members = useProjectMembers(open ? draft.projectId || undefined : undefined)
-  // campos de imagem/arquivo escolhem entre os anexos da tarefa (só na edição: na criação ainda não há anexos)
+  // campos de imagem/arquivo: na edição, escolhem entre os anexos da tarefa ou enviam pelo campo; na
+  // criação (a tarefa ainda não existe), os arquivos escolhidos ficam aqui e vão logo depois de criar
   const taskAttachments = useTaskAttachments(open ? task?.id : undefined)
   const uploadToField = useFieldAttachmentUpload(task?.id ?? '')
+  const heldFiles = useHeldFieldFiles()
+  const sendFieldFiles = useFieldFilesSender()
+  const [sendingFiles, setSendingFiles] = useState(false)
+  const createOption = useFieldOptionCreator()
   const tags = useTags(open)
   const sprints = useSprints(open ? draft.projectId || undefined : undefined)
 
@@ -128,16 +134,28 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   }
 
   const fields: TaskTypeField[] = useMemo(() => (typeDetail.data?.fields ?? []).filter((f) => f.visible), [typeDetail.data])
+  // arquivo escolhido preenche o campo: some o "obrigatório" dele
+  const heldForm = useMemo(
+    () => ({
+      ...heldFiles,
+      add: (name: string, files: File[], imagesOnly: boolean) => {
+        heldFiles.add(name, files, imagesOnly)
+        setValueErrors(({ [name]: _removed, ...rest }) => rest)
+      },
+    }),
+    [heldFiles],
+  )
   const activeMembers = useMemo(() => (members.data ?? []).filter((m) => m.user.status === 'active'), [members.data])
   const references = useMemo(
     () => ({
       people: activeMembers.map((m) => ({ id: m.user.id, name: m.user.name })),
       projects: (projects.data?.items ?? []).map((p) => ({ id: p.id, key: p.key, name: p.name })),
       attachments: task ? (taskAttachments.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url })) : undefined,
-      // na edição o arquivo pode ser enviado pelo próprio campo (na criação a tarefa ainda não existe)
       uploadFiles: task ? uploadToField : undefined,
+      heldFiles: task ? undefined : heldForm,
+      createOption,
     }),
-    [activeMembers, projects.data, task, taskAttachments.data, uploadToField],
+    [activeMembers, projects.data, task, taskAttachments.data, uploadToField, heldForm, createOption],
   )
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
@@ -177,7 +195,19 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       label: <LookupBadge item={item} />,
     }))
 
-  const pending = create.isPending || update.isPending
+  const pending = create.isPending || update.isPending || sendingFiles
+
+  /** Depois de criar: envia os arquivos escolhidos nos campos. A tarefa já existe — falha não a desfaz. */
+  async function sendHeldFiles(saved: TaskDetail): Promise<string[]> {
+    const failed: string[] = []
+    for (const link of fields) {
+      const chosen = heldFiles.files[link.field.name] ?? []
+      if ((link.field.type !== 'image' && link.field.type !== 'file') || chosen.length === 0) continue
+      const result = await sendFieldFiles(saved.id, chosen, link.field.name, link.field.type === 'image')
+      result.failed.forEach((item) => failed.push(`${item.name} (${item.reason})`))
+    }
+    return failed
+  }
 
   function submit() {
     const found: Record<string, string> = {}
@@ -195,7 +225,9 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       setErrors({ start_date: datesProblem })
       return
     }
-    const issues = customValueIssues(fields, draft.values, draft.statusId)
+    // na criação, o campo de arquivo/imagem exigido conta os arquivos escolhidos (vão logo depois de criar)
+    const held = isEdit ? undefined : Object.fromEntries(Object.entries(heldFiles.files).map(([name, list]) => [name, list.length]))
+    const issues = customValueIssues(fields, draft.values, draft.statusId, held)
     setErrors(found)
     setValueErrors(issues)
     if (Object.keys(found).length > 0 || Object.keys(issues).length > 0) return
@@ -241,6 +273,17 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       onSaved?.(saved)
       onOpenChange(false)
     }
+    const onCreated = async (saved: TaskDetail) => {
+      setSendingFiles(true)
+      let failed: string[] = []
+      try {
+        failed = await sendHeldFiles(saved)
+      } finally {
+        setSendingFiles(false)
+      }
+      onSuccess(saved)
+      if (failed.length > 0) notify.warning(t('tasks.filesNotSent', { count: failed.length, code: saved.code, names: failed.join(', ') }))
+    }
     if (task) update.mutate({ id: task.id, data }, { onSuccess, onError })
     else
       create.mutate(
@@ -253,7 +296,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
           sprintId: draft.sprintId || undefined,
           parentTaskId: draft.parentTaskId || undefined,
         },
-        { onSuccess, onError },
+        { onSuccess: (saved) => void onCreated(saved), onError },
       )
   }
 
@@ -264,7 +307,8 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   return (
     <AppDialog
       open={open}
-      onOpenChange={onOpenChange}
+      // enviando os arquivos da tarefa recém-criada: espera terminar
+      onOpenChange={(next) => !sendingFiles && onOpenChange(next)}
       size="2xl"
       closeOnOutsideClick={false}
       title={isEdit ? t('tasks.editTitle', { code: task?.code }) : t('tasks.createTitle')}
@@ -356,7 +400,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                   <CustomFieldInput
                     key={link.field.id}
                     field={link.field}
-                    required={isEdit ? isRequiredIn(link, draft.statusId) : isRequiredOnCreate(link, draft.statusId)}
+                    required={isRequiredIn(link, draft.statusId)}
                     value={draft.values[link.field.name]}
                     error={valueErrors[link.field.name]}
                     references={references}

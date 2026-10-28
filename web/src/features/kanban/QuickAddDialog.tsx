@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
 import { safeStorage } from '@/core/storage/safe-storage'
-import { isRequiredOnCreate } from '@/domain/task-config'
+import { isRequiredIn } from '@/domain/task-config'
 import type { TaskDetail } from '@/domain/tasks'
 import { AppButton, AppDialog, AppSelect, AppTextField, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
@@ -62,7 +62,8 @@ function QuickAddForm({ statusId, statusName, sprintId, sprintName, projectId, o
 
   const typeDetail = useTaskType(typeId || undefined)
   // obrigatórios do status da coluna (sempre + exigidos nele) sem valor padrão levam ao formulário completo
-  const needsFullForm = (typeDetail.data?.fields ?? []).some((link) => isRequiredOnCreate(link, statusId) && link.field.defaultValue === null)
+  // (inclusive arquivo/imagem: o arquivo é escolhido lá e enviado logo depois de criar)
+  const needsFullForm = (typeDetail.data?.fields ?? []).some((link) => isRequiredIn(link, statusId) && link.field.defaultValue === null)
   const assignable = (members.data ?? []).filter((m) => m.user.status === 'active' && (m.role !== 'viewer' || m.isOwner))
   const initial = (): TaskFormInitial => ({ title: title.trim(), typeId, statusId, priorityId, assigneeId, sprintId })
 

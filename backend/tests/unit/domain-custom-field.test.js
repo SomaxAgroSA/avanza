@@ -50,6 +50,41 @@ describe('domain/custom-field — configuração por tipo', () => {
     assert.equal(cf.normalizeConfig('number', { min: 10, max: 1 }).error, 'min_greater_than_max')
     assert.equal(cf.normalizeConfig('decimal', { decimals: 9 }).error, 'decimals')
   })
+
+  it('"permitir adicionar opções pela tarefa" só em seleção (desligado não é gravado)', () => {
+    assert.deepEqual(cf.normalizeConfig('select', { allow_create_options: true }), { value: { allow_create_options: true } })
+    assert.deepEqual(cf.normalizeConfig('multiselect', { allow_create_options: true }), { value: { allow_create_options: true } })
+    assert.deepEqual(cf.normalizeConfig('select', { allow_create_options: false }), { value: {} })
+    assert.deepEqual(cf.normalizeConfig('multiselect', {}), { value: {} })
+    assert.equal(cf.normalizeConfig('select', { allow_create_options: 'sim' }).error, 'allow_create_options')
+    assert.equal(cf.normalizeConfig('text', { allow_create_options: true }).error, 'allow_create_options')
+    // desligado num tipo sem opções é só descartado
+    assert.deepEqual(cf.normalizeConfig('boolean', { allow_create_options: false }), { value: {} })
+  })
+
+  it('aceita opções novas só em seleção com a configuração ligada', () => {
+    assert.equal(cf.acceptsNewOptions({ type: 'select', config: { allow_create_options: true } }), true)
+    assert.equal(cf.acceptsNewOptions({ type: 'multiselect', config: { allow_create_options: true } }), true)
+    assert.equal(cf.acceptsNewOptions({ type: 'select', config: {} }), false)
+    assert.equal(cf.acceptsNewOptions({ type: 'select', config: null }), false)
+    assert.equal(cf.acceptsNewOptions({ type: 'text', config: { allow_create_options: true } }), false)
+  })
+})
+
+describe('domain/custom-field — opções', () => {
+  it('compara rótulos sem diferenciar maiúsculas, acentos e espaços repetidos', () => {
+    assert.equal(cf.optionKey('  Crítica  Alta '), 'critica alta')
+    assert.equal(cf.optionKey('CRITICA alta'), cf.optionKey('crítica   Alta'))
+    assert.notEqual(cf.optionKey('Alta'), cf.optionKey('Alto'))
+  })
+
+  it('a opção nova recebe a cor seguinte à da última (a paleta recomeça no fim)', () => {
+    assert.equal(cf.nextOptionColor('green'), 'teal')
+    assert.equal(cf.nextOptionColor('pink'), 'gray')
+    assert.equal(cf.nextOptionColor(null), 'gray')
+    assert.equal(cf.nextOptionColor('roxo'), 'gray')
+    assert.equal(cf.MAX_OPTION_LABEL, 60)
+  })
 })
 
 describe('domain/custom-field — validação de valores', () => {

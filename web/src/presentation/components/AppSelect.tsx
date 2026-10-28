@@ -1,12 +1,17 @@
-import type { ReactNode } from 'react'
-import { Select } from 'radix-ui'
+import { useState, type ReactNode } from 'react'
+import { Popover, Select } from 'radix-ui'
 import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { AppFormField } from './AppFormField'
+import { OptionPicker, type CreateOptionHandler } from './option-picker'
 
 export interface AppSelectOption {
   value: string
   label: ReactNode
+  /** Elemento à esquerda do rótulo (ex.: bolinha de cor). */
+  prefix?: ReactNode
+  /** Texto do rótulo para a busca quando `label` não é texto (usado com `onCreateOption`). */
+  textValue?: string
   disabled?: boolean
 }
 
@@ -25,10 +30,35 @@ export interface AppSelectProps {
   /** Nome acessível quando não há label visível. */
   'aria-label'?: string
   size?: 'sm' | 'md'
+  /**
+   * Permite criar uma opção pela busca: a lista ganha busca e, com um texto sem opção igual (sem
+   * diferenciar maiúsculas e acentos), o item "Adicionar “texto”". A função cria e devolve o valor da
+   * nova opção, que fica escolhida (null/undefined = não criou; ela mesma avisa o erro).
+   */
+  onCreateOption?: CreateOptionHandler | undefined
 }
 
 /** Valor sentinela para "todos" (Radix Select não aceita string vazia como item). */
 export const SELECT_ALL = '__all__'
+
+const triggerClass = (size: 'sm' | 'md', extra?: string) =>
+  cn(
+    'flex w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 text-sm text-fg shadow-xs',
+    'hover:border-border-strong focus:outline-2 focus:outline-ring data-[placeholder]:text-subtle',
+    'disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger',
+    size === 'sm' ? 'h-8 text-xs' : 'h-9',
+    extra,
+  )
+
+function OptionLabel({ option }: { option: AppSelectOption }) {
+  if (!option.prefix) return <>{option.label}</>
+  return (
+    <span className="inline-flex items-center gap-2">
+      {option.prefix}
+      {option.label}
+    </span>
+  )
+}
 
 export function AppSelect({
   value,
@@ -43,8 +73,17 @@ export function AppSelect({
   className,
   triggerClassName,
   size = 'md',
+  onCreateOption,
   ...rest
 }: AppSelectProps) {
+  if (onCreateOption) {
+    return (
+      <CreatableSelect
+        {...{ value, onValueChange, options, placeholder, label, error, hint, required, disabled, className, triggerClassName, size, onCreateOption }}
+        aria-label={rest['aria-label']}
+      />
+    )
+  }
   return (
     <AppFormField label={label} error={error} hint={hint} required={required} className={className}>
       {({ id, describedBy, invalid }) => (
@@ -54,13 +93,7 @@ export function AppSelect({
             aria-label={rest['aria-label']}
             aria-invalid={invalid || undefined}
             aria-describedby={describedBy}
-            className={cn(
-              'flex w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 text-sm text-fg shadow-xs',
-              'hover:border-border-strong focus:outline-2 focus:outline-ring data-[placeholder]:text-subtle',
-              'disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger',
-              size === 'sm' ? 'h-8 text-xs' : 'h-9',
-              triggerClassName,
-            )}
+            className={triggerClass(size, triggerClassName)}
           >
             <span className="truncate">
               <Select.Value placeholder={placeholder} />
@@ -89,13 +122,92 @@ export function AppSelect({
                     <Select.ItemIndicator className="absolute left-2 flex items-center">
                       <Check className="size-4 text-primary-text" aria-hidden />
                     </Select.ItemIndicator>
-                    <Select.ItemText>{option.label}</Select.ItemText>
+                    <Select.ItemText>
+                      <OptionLabel option={option} />
+                    </Select.ItemText>
                   </Select.Item>
                 ))}
               </Select.Viewport>
             </Select.Content>
           </Select.Portal>
         </Select.Root>
+      )}
+    </AppFormField>
+  )
+}
+
+/**
+ * Variante com criação (`onCreateOption`): popover com busca no lugar do Select nativo do Radix,
+ * que não aceita campo de texto dentro da lista.
+ */
+function CreatableSelect({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  label,
+  error,
+  hint,
+  required,
+  disabled,
+  className,
+  triggerClassName,
+  size = 'md',
+  onCreateOption,
+  ...rest
+}: AppSelectProps & { onCreateOption: CreateOptionHandler }) {
+  const [open, setOpen] = useState(false)
+  const current = options.find((o) => o.value === value)
+  const choose = (next: string) => {
+    onValueChange(next)
+    setOpen(false)
+  }
+
+  return (
+    <AppFormField label={label} error={error} hint={hint} required={required} className={className}>
+      {({ id, describedBy, invalid }) => (
+        <Popover.Root open={open} onOpenChange={setOpen}>
+          <Popover.Trigger asChild>
+            <button
+              id={id}
+              type="button"
+              role="combobox"
+              aria-label={rest['aria-label']}
+              aria-expanded={open}
+              aria-controls={`${id}-listbox`}
+              aria-haspopup="listbox"
+              aria-invalid={invalid || undefined}
+              aria-describedby={describedBy}
+              disabled={disabled}
+              data-placeholder={current ? undefined : ''}
+              className={triggerClass(size, triggerClassName)}
+            >
+              <span className="truncate">{current ? <OptionLabel option={current} /> : placeholder}</span>
+              <ChevronDown className="size-4 shrink-0 text-subtle" aria-hidden />
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              align="start"
+              sideOffset={4}
+              className="z-50 w-[var(--radix-popover-trigger-width)] min-w-56 rounded-xl border border-border bg-surface p-1 text-fg shadow-float animate-scale-in"
+            >
+              <OptionPicker
+                listboxId={`${id}-listbox`}
+                options={options.map((o) => ({
+                  value: o.value,
+                  label: o.textValue ?? (typeof o.label === 'string' ? o.label : o.value),
+                  prefix: o.prefix,
+                  disabled: o.disabled,
+                }))}
+                isSelected={(optionValue) => optionValue === value}
+                onPick={choose}
+                onCreateOption={onCreateOption}
+                onCreated={choose}
+              />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       )}
     </AppFormField>
   )

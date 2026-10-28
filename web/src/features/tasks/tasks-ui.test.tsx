@@ -3,11 +3,13 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import { AppError } from '@/core/errors/app-error'
+import type { Attachment } from '@/domain/attachments'
 import type { ProjectMember } from '@/domain/projects'
-import type { TaskRepository } from '@/domain/repositories'
-import type { CustomField, TaskType, TaskTypeDetail } from '@/domain/task-config'
+import type { AttachmentRepository, CustomFieldRepository, TaskRepository } from '@/domain/repositories'
+import type { CustomField, FieldOption, TaskType, TaskTypeDetail } from '@/domain/task-config'
 import type { TaskDetail } from '@/domain/tasks'
 import type { TaskPriority, TaskStatus } from '@/domain/workflow'
+import { notify } from '@/presentation/components'
 import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/test/utils'
 import { TaskFormDialog } from './TaskFormDialog'
 import { TaskDetailPage } from './TaskDetailPage'
@@ -182,6 +184,109 @@ describe('TaskFormDialog', () => {
     await userEvent.type(screen.getByLabelText(/^Título/), 'Erro')
     await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
     expect(await screen.findByText('Muito longo')).toBeInTheDocument()
+  })
+})
+
+describe('TaskFormDialog — arquivos e opção nova na criação', () => {
+  const evidencias = field({ id: 'f9', name: 'evidencias', label: 'Evidências', type: 'file', config: {} })
+  const sistemas = field({
+    id: 'f3',
+    name: 'sistemas',
+    label: 'Sistemas',
+    type: 'multiselect',
+    config: { allow_create_options: true },
+    options: [{ id: 'o1', label: 'ERP', color: 'blue', order: 0, isActive: true }],
+  })
+  const crm: FieldOption = { id: 'o9', label: 'CRM', color: 'indigo', order: 1, isActive: true }
+  const ata = new File(['%PDF-1.4'], 'ata.pdf', { type: 'application/pdf' })
+  const saved = [{ id: 'a9', name: 'ata.pdf', kind: 'document', url: '/api/v1/attachments/a9/file' }] as unknown as Attachment[]
+
+  function setup(options: { upload?: AttachmentRepository['upload'] } = {}) {
+    // o servidor devolve o tipo já com a opção criada (a tela recarrega depois de adicionar)
+    let type: TaskTypeDetail = {
+      ...bugType,
+      fields: [
+        { field: evidencias, order: 0, required: true, visible: true, showOnCard: false, requiredStatusIds: [] },
+        { field: sistemas, order: 1, required: false, visible: true, showOnCard: false, requiredStatusIds: [] },
+      ],
+    }
+    const addOption = vi.fn<CustomFieldRepository['addOption']>(async () => {
+      type = { ...type, fields: type.fields.map((link) => (link.field.id === 'f3' ? { ...link, field: { ...link.field, options: [...link.field.options, crm] } } : link)) }
+      return crm
+    })
+    const create = vi.fn<TaskRepository['create']>(() => Promise.resolve(detail))
+    const upload = vi.fn<AttachmentRepository['upload']>(options.upload ?? (async () => saved))
+    const onSaved = vi.fn()
+    const onOpenChange = vi.fn()
+    const { container } = renderRoutes([{ path: '/', element: <TaskFormDialog open projectId="p1" onOpenChange={onOpenChange} onSaved={onSaved} /> }], {
+      repositories: fakeRepositories({
+        auth: { me: async () => makeCurrentUser(['tasks.view', 'tasks.create', 'tasks.edit', 'projects.view']) },
+        taskTypes: { list: () => Promise.resolve([bugType]), get: () => Promise.resolve(type) },
+        statuses: { list: () => Promise.resolve([backlog, dev]) },
+        priorities: { list: () => Promise.resolve([media]) },
+        projects: { listMembers: () => Promise.resolve(members) },
+        tasks: { create },
+        attachments: { list: () => Promise.resolve([]), upload },
+        customFields: { addOption },
+      }),
+      initialPath: '/',
+    })
+    const pickFile = () => userEvent.upload(container.ownerDocument.querySelector('input[type=file]') as HTMLInputElement, ata)
+    return { create, upload, addOption, onSaved, onOpenChange, pickFile }
+  }
+
+  it('arquivo exigido: escolhido no próprio campo e enviado logo depois de criar, ligado ao campo', async () => {
+    const { create, upload, onSaved, pickFile } = setup()
+    await chooseOption(/^Tipo/, 'Bug')
+    expect(await screen.findByRole('button', { name: 'Enviar arquivo' })).toBeInTheDocument()
+    expect(screen.queryByText(/Anexe depois de criar/)).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Ata da reunião')
+    // sem arquivo, o campo exigido barra a criação
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    expect(await screen.findByText('Campo obrigatório')).toBeInTheDocument()
+    expect(create).not.toHaveBeenCalled()
+
+    await pickFile()
+    expect(await screen.findByText('ata.pdf')).toBeInTheDocument()
+    expect(screen.queryByText('Campo obrigatório')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(upload).toHaveBeenCalledWith('k1', ata, { field: 'evidencias' }))
+    expect(create.mock.calls[0]?.[0].customValues).not.toHaveProperty('evidencias')
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(detail))
+  })
+
+  it('envio que falha depois de criar: a tarefa continua criada e o aviso diz qual arquivo faltou', async () => {
+    const warning = vi.spyOn(notify, 'warning').mockImplementation(() => '')
+    const { create, onSaved, onOpenChange, pickFile } = setup({ upload: () => Promise.reject(new AppError({ code: 'INTERNAL_ERROR', message: 'x', status: 500 })) })
+    await chooseOption(/^Tipo/, 'Bug')
+    await screen.findByRole('button', { name: 'Enviar arquivo' })
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Ata da reunião')
+    await pickFile()
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(warning).toHaveBeenCalledOnce())
+    expect(warning.mock.calls[0]?.[0]).toMatch(/^CRM-7 foi criada, mas 1 arquivo não foi enviado: ata\.pdf \(/)
+    expect(create).toHaveBeenCalledOnce()
+    expect(onSaved).toHaveBeenCalledWith(detail)
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    warning.mockRestore()
+  })
+
+  it('opção nova no campo de seleção: criada pela API, já selecionada e enviada na tarefa', async () => {
+    const { create, addOption, pickFile } = setup()
+    await chooseOption(/^Tipo/, 'Bug')
+    await userEvent.click(await screen.findByRole('combobox', { name: /^Sistemas/ }))
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Buscar' }), 'CRM')
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar “CRM”' }))
+    await waitFor(() => expect(addOption).toHaveBeenCalledWith('f3', 'CRM'))
+    await waitFor(() => expect(within(screen.getByRole('listbox')).getByRole('option', { name: 'CRM' })).toHaveAttribute('aria-selected', 'true'))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('combobox', { name: /^Sistemas/ })).toHaveTextContent('CRM')
+
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Integração')
+    await pickFile()
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0].customValues).toMatchObject({ sistemas: ['o9'] })
   })
 })
 

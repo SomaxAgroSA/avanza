@@ -158,6 +158,7 @@
     "TASK_TYPE_NOT_FOUND": "Tipo de tarefa não encontrado.",
     "FIELD_NAME_IN_USE": "Já existe um campo com este nome técnico.",
     "FIELD_IN_USE": "Este campo é usado por tipos de tarefa. Remova-o dos tipos antes de excluir.",
+    "FIELD_OPTIONS_LOCKED": "Este campo não aceita opções novas pela tarefa.",
     "TASK_TYPE_KEY_IN_USE": "Já existe um tipo com esta chave.",
     "TASK_TYPE_IN_USE": "Existem tarefas deste tipo. Desative-o em vez de excluir.",
     "STATUS_NOT_FOUND": "Status não encontrado.",
@@ -647,6 +648,7 @@
       "searchable": "Pesquisável",
       "filterable": "Filtrável",
       "sortable": "Ordenável",
+      "option": "Opção",
       "options": "Opções",
       "is_active": "Ativo",
       "color": "Cor",
@@ -780,6 +782,7 @@
       "custom_field.created": "Criou o campo",
       "custom_field.updated": "Atualizou o campo",
       "custom_field.deleted": "Excluiu o campo",
+      "custom_field.option_added": "Adicionou opção ao campo",
       "status.created": "Criou o status",
       "status.updated": "Atualizou o status",
       "status.deleted": "Excluiu o status",
@@ -1073,7 +1076,9 @@
   },
   "multiSelect": {
     "placeholder": "Selecionar…",
-    "remove": "Remover {{item}}"
+    "remove": "Remover {{item}}",
+    "create": "Adicionar “{{item}}”",
+    "searchOrCreate": "Buscar ou adicionar…"
   },
   "fields": {
     "title": "Campos personalizados",
@@ -1152,6 +1157,10 @@
     "optionActive": "Opção {{name}} ativa",
     "untitledOption": "Opção sem nome",
     "addOption": "Adicionar opção",
+    "allowCreateOptions": "Permitir adicionar opções pela tarefa",
+    "allowCreateOptionsHint": "Quem cria ou edita tarefas pode incluir uma opção nova direto no formulário (ela entra no fim da lista).",
+    "allowCreateOptionsShort": "Opções novas pela tarefa",
+    "optionAdded": "Opção “{{name}}” adicionada ao campo {{field}}.",
     "removeOption": "Remover opção",
     "default": "Padrão",
     "defaultSingleHint": "Marque no máximo uma opção como padrão.",
@@ -1176,7 +1185,8 @@
       "min": "Mínimo inválido.",
       "max": "Máximo inválido.",
       "decimals": "Use de 0 a 6 casas decimais.",
-      "min_greater_than_max": "O mínimo não pode ser maior que o máximo."
+      "min_greater_than_max": "O mínimo não pode ser maior que o máximo.",
+      "allow_create_options": "Só campos de seleção aceitam opções adicionadas pela tarefa."
     },
     "flags": {
       "searchable": "Pesquisável",
@@ -1204,11 +1214,13 @@
       "user": "Escolhido entre os membros do projeto, na tarefa",
       "users": "Escolhidos entre os membros do projeto, na tarefa",
       "project": "Escolhido entre os projetos visíveis, na tarefa",
-      "image": "Anexe depois de criar a tarefa (aba Anexos)",
-      "file": "Anexe depois de criar a tarefa (aba Anexos)"
+      "image": "Enviada na tarefa (ao criar ou depois)",
+      "file": "Enviado na tarefa (ao criar ou depois)"
     },
     "attachmentHint": "Escolha entre os anexos da tarefa (envie novos na aba Anexos).",
     "attachmentUploadHint": "Escolha entre os anexos da tarefa ou envie um novo.",
+    "heldFilesHint": "Enviados logo depois de criar a tarefa.",
+    "removeHeldFile": "Remover {{name}}",
     "uploadFile": "Enviar arquivo",
     "uploadImage": "Enviar imagem",
     "noAttachments": "Nenhum anexo na tarefa ainda",
@@ -1391,6 +1403,8 @@
     "createDescription": "Escolha o tipo: o formulário mostra os campos dele.",
     "editTitle": "Editar {{code}}",
     "created": "Tarefa {{code}} criada.",
+    "filesNotSent_one": "{{code}} foi criada, mas {{count}} arquivo não foi enviado: {{names}}. Envie de novo no campo ou na aba Anexos.",
+    "filesNotSent_other": "{{code}} foi criada, mas {{count}} arquivos não foram enviados: {{names}}. Envie de novo nos campos ou na aba Anexos.",
     "updated": "Tarefa {{code}} atualizada.",
     "deleted": "Tarefa {{code}} excluída.",
     "deleteTitle": "Excluir a tarefa {{code}}?",

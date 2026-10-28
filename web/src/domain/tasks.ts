@@ -225,13 +225,22 @@ export function parseHours(text: string): number | null {
  * Retorna erros por nome técnico do campo.
  */
 /** Problemas dos campos personalizados; `statusId` = status em que a tarefa vai ficar (soma os exigidos nele). */
-export function customValueIssues(fields: TaskTypeField[], values: Record<string, FieldValue | undefined>, statusId?: string | null): Record<string, string> {
+export function customValueIssues(
+  fields: TaskTypeField[],
+  values: Record<string, FieldValue | undefined>,
+  statusId?: string | null,
+  heldFiles?: Record<string, number>,
+): Record<string, string> {
   const issues: Record<string, string> = {}
   fields
     .filter((link) => link.visible)
     .forEach((link) => {
-      // tipos preenchidos por outros módulos (anexos) só são exigidos pelo servidor
-      if (link.field.type === 'image' || link.field.type === 'file') return
+      if (link.field.type === 'image' || link.field.type === 'file') {
+        // na criação (`heldFiles`: arquivos escolhidos por campo, enviados logo depois de criar), o
+        // campo exigido precisa de ao menos um arquivo; na edição o valor são anexos e o servidor confere
+        if (heldFiles && isRequiredIn(link, statusId) && !((heldFiles[link.field.name] ?? 0) > 0)) issues[link.field.name] = 'required'
+        return
+      }
       const issue = valueIssue(link.field, values[link.field.name], isRequiredIn(link, statusId))
       if (issue) issues[link.field.name] = issue
     })

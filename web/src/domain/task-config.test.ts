@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeTypeKey, slugifyName, valueIssue, type CustomField } from './task-config'
+import { acceptsNewOptions, normalizeTypeKey, slugifyName, valueIssue, withFieldOption, type CustomField, type FieldOption } from './task-config'
 
 const field = (type: CustomField['type'], config: CustomField['config'] = {}, options: CustomField['options'] = []) => ({ type, config, options })
 
 describe('domain/task-config', () => {
+  it('opção adicionada pela tarefa: só em seleção com a configuração ligada', () => {
+    expect(acceptsNewOptions(field('select', { allow_create_options: true }))).toBe(true)
+    expect(acceptsNewOptions(field('multiselect', { allow_create_options: true }))).toBe(true)
+    expect(acceptsNewOptions(field('select'))).toBe(false)
+    expect(acceptsNewOptions(field('text', { allow_create_options: true }))).toBe(false)
+  })
+
+  it('inclui a opção nova no campo certo, na ordem, sem duplicar', () => {
+    const option = (id: string, order: number, isActive = true): FieldOption => ({ id, label: id, color: 'gray', order, isActive })
+    const sev = { id: 'f1', options: [option('a', 0), option('b', 1)] }
+    expect(withFieldOption(sev, 'f1', option('c', 2)).options.map((o) => o.id)).toEqual(['a', 'b', 'c'])
+    // reativada: troca a existente
+    const back = withFieldOption({ id: 'f1', options: [option('a', 0), option('b', 1, false)] }, 'f1', option('b', 1))
+    expect(back.options.map((o) => [o.id, o.isActive])).toEqual([['a', true], ['b', true]])
+    // outro campo fica igual
+    expect(withFieldOption(sev, 'f2', option('c', 2))).toBe(sev)
+  })
+
   it('gera nome técnico e chave de tipo', () => {
     expect(slugifyName('Passos para reprodução')).toBe('passos_para_reproducao')
     expect(normalizeTypeKey(' nova funcionalidade ')).toBe('NOVA_FUNCIONALIDADE')

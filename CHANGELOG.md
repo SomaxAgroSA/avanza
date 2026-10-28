@@ -5,6 +5,8 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Adicionar opção pela tarefa:** campos de seleção (única ou múltipla) podem permitir, em Configurações → Campos, que quem cria ou edita tarefas inclua uma opção nova direto no formulário — a busca da lista mostra "Adicionar “texto”" e a opção já fica escolhida. Texto igual a uma opção existente (sem diferenciar maiúsculas e acentos) reaproveita a opção, reativando-a se estava inativa; fica no histórico do campo. Nova rota `POST /api/v1/custom-fields/{id}/options`.
+- **Arquivos já na criação da tarefa:** campos de arquivo/imagem do formulário de criação têm "Enviar arquivo/imagem"; os arquivos escolhidos aparecem no campo (cada um sai pelo X) e são enviados logo depois de criar, já ligados ao campo. Campo exigido precisa de arquivo para criar; se um envio falhar, a tarefa continua criada e o aviso diz qual arquivo faltou.
 - **Tempo real:** Kanban, Planejamento, Timeline, quadro da Gestão de projetos, página do projeto, página da tarefa e o sino de notificações se atualizam sozinhos quando alguém muda algo (sem recarregar).
 - **Webhooks** (Configurações → Integrações → Webhooks): avisos assinados (HMAC-SHA256) para outros sistemas a cada evento do catálogo (tarefas, projetos, comentários, quadro, documentação…), com novas tentativas, desligamento automático, teste e reenvio.
 - **Tokens de API** pessoais (Minha conta → Tokens de API): acesso à API com `Authorization: Bearer`, prazo opcional, valor mostrado uma vez, revogação pela pessoa ou pelo Admin (Integrações).

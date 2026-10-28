@@ -24,12 +24,12 @@ import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
 import type { FieldValue } from '@/domain/task-config'
-import type { AttachmentDto, CommentDto, CustomFieldDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
+import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
 import { STATUS_CATEGORIES, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
-import { FIELD_TYPES, OPTION_COLORS, TASK_TYPE_ICONS, type CustomField, type TaskType, type TaskTypeDetail, type ContentLocale, type TypeTexts } from '@/domain/task-config'
+import { FIELD_TYPES, OPTION_COLORS, TASK_TYPE_ICONS, type CustomField, type FieldOption, type TaskType, type TaskTypeDetail, type ContentLocale, type TypeTexts } from '@/domain/task-config'
 import type { AuditEntryDto, MeDto, PermissionDto, ProjectDto, ProjectMemberDto, RoleDto, SessionDto, UserDto, UserSummaryDto } from './dtos'
 import {
   MEMBER_ROLES,
@@ -160,6 +160,16 @@ export function toProjectMember(dto: ProjectMemberDto): ProjectMember {
   }
 }
 
+export function toFieldOption(dto: FieldOptionDto): FieldOption {
+  return {
+    id: dto.id,
+    label: dto.label,
+    color: oneOf(OPTION_COLORS, dto.color, 'gray'),
+    order: dto.order,
+    isActive: dto.is_active !== false,
+  }
+}
+
 export function toCustomField(dto: CustomFieldDto): CustomField {
   return {
     id: dto.id,
@@ -172,13 +182,7 @@ export function toCustomField(dto: CustomFieldDto): CustomField {
     searchable: !!dto.searchable,
     filterable: !!dto.filterable,
     sortable: !!dto.sortable,
-    options: (dto.options ?? []).map((o) => ({
-      id: o.id,
-      label: o.label,
-      color: oneOf(OPTION_COLORS, o.color, 'gray'),
-      order: o.order,
-      isActive: o.is_active !== false,
-    })),
+    options: (dto.options ?? []).map(toFieldOption),
     usedBy: dto.used_by ?? [],
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),

@@ -18,7 +18,7 @@
 | `AppButton` | variantes `primary`, `secondary`, `ghost`, `soft`, `danger`, `link`; `loading`, ícones, `asChild` |
 | `AppIconButton` | botão de ícone com `label` obrigatório (vira tooltip e nome acessível) |
 | `AppTextField` | rótulo, obrigatório (*), dica, erro, ícone, senha com mostrar/ocultar |
-| `AppSelect` | select acessível (Radix); `SELECT_ALL` para "todos" |
+| `AppSelect` | select acessível (Radix); `SELECT_ALL` para "todos"; `prefix` (ex.: bolinha de cor) e, com `onCreateOption(texto) => Promise<valor>`, vira lista com busca e item "Adicionar “texto”" (a nova opção fica escolhida) |
 | `AppCheckbox` | com estado indeterminado |
 | `AppTextarea` | texto longo simples (o editor rico vem depois) |
 | `AppDatePicker` | data (somente dia, AAAA-MM-DD): digitação com máscara no formato do idioma (dd/mm/aaaa) + botão que abre o `AppCalendar`; limpar, mín./máx. |
@@ -40,7 +40,7 @@
 | Componente | Uso |
 |---|---|
 | `AppSwitch` | interruptor liga/desliga (Radix), com rótulo e descrição; tamanhos `sm`/`md` |
-| `AppMultiSelect` | seleção múltipla em combobox com busca, chips removíveis e teclado |
+| `AppMultiSelect` | seleção múltipla em combobox com busca (sem acentos/maiúsculas), chips removíveis e teclado (setas; Enter na busca escolhe a opção igual ou cria); `onCreateOption` como no `AppSelect` (a nova entra selecionada) |
 | `AppTimeField` | hora (HH:mm) com máscara, sem controle nativo |
 | `AppSortableList` + `AppDragHandle` | lista reordenável (dnd-kit): mouse, toque e **teclado** (espaço pega/solta, setas movem, Esc cancela), anúncios para leitor de tela traduzidos |
 

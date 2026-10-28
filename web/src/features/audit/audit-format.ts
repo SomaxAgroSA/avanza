@@ -44,6 +44,7 @@ export const AUDIT_ACTIONS = [
   'custom_field.created',
   'custom_field.updated',
   'custom_field.deleted',
+  'custom_field.option_added',
   'status.created',
   'status.updated',
   'status.deleted',

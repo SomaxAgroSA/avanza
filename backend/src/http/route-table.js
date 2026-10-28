@@ -53,6 +53,7 @@ const ROUTES = [
   ['GET', '/api/v1/custom-fields/:id', 'getCustomField'],
   ['PATCH', '/api/v1/custom-fields/:id', 'updateCustomField', JSON_LIMIT],
   ['DELETE', '/api/v1/custom-fields/:id', 'deleteCustomField'],
+  ['POST', '/api/v1/custom-fields/:id/options', 'addCustomFieldOption', JSON_LIMIT],
   ['GET', '/api/v1/task-types', 'listTaskTypes'],
   ['POST', '/api/v1/task-types', 'createTaskType', JSON_LIMIT],
   ['PUT', '/api/v1/task-types/order', 'reorderTaskTypes', JSON_LIMIT],

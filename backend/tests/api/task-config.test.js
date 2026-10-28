@@ -208,6 +208,47 @@ describe('API /api/v1/task-types e /custom-fields', { timeout: 120000 }, () => {
     assert.equal((await admin.get(`/tasks/${task.id}`)).body.data.type.name, 'Suporte')
   })
 
+  it('opção adicionada pela tarefa: só com a configuração ligada, sem duplicar e com histórico', async () => {
+    const field = (
+      await admin.post('/custom-fields', { label: 'Sistema afetado', type: 'multiselect', options: [{ label: 'ERP', color: 'blue' }] })
+    ).body.data
+    assert.deepEqual(field.config, {})
+    const optionsPath = `/custom-fields/${field.id}/options`
+    const locked = await admin.post(optionsPath, { label: 'CRM' })
+    assert.equal(locked.status, 403)
+    assert.equal(locked.body.error.code, 'FIELD_OPTIONS_LOCKED')
+
+    const on = await admin.patch(`/custom-fields/${field.id}`, { config: { allow_create_options: true } })
+    assert.equal(on.status, 200, JSON.stringify(on.body))
+    assert.deepEqual(on.body.data.config, { allow_create_options: true })
+    const bad = await admin.post('/custom-fields', { label: 'Observação curta', type: 'text', config: { allow_create_options: true } })
+    assert.equal(bad.body.error.details.fields.config, 'allow_create_options')
+
+    // quem cria/edita tarefas adiciona; leitor não
+    const member = await userWithRole('MEMBER', 'membro-opcoes@kamban.test')
+    const viewer = await userWithRole('VIEWER', 'leitor-opcoes@kamban.test')
+    const created = await member.post(optionsPath, { label: ' CRM ' })
+    assert.equal(created.status, 201, JSON.stringify(created.body))
+    assert.deepEqual(
+      [created.body.data.label, created.body.data.color, created.body.data.order, created.body.data.is_active],
+      // a última opção (ERP) é azul: a seguinte da paleta é índigo
+      ['CRM', 'indigo', 1, true],
+    )
+    const again = await member.post(optionsPath, { label: 'crm' })
+    assert.equal(again.status, 200)
+    assert.equal(again.body.data.id, created.body.data.id)
+    assert.equal((await viewer.post(optionsPath, { label: 'BI' })).status, 403)
+    assert.equal((await member.post(optionsPath, { label: '' })).body.error.details.fields.label, 'required')
+    assert.equal((await member.post('/custom-fields/naoexiste/options', { label: 'X' })).body.error.code, 'FIELD_NOT_FOUND')
+
+    // a opção já vale no valor da tarefa e o histórico do campo registra quem adicionou
+    assert.deepEqual((await admin.get(`/custom-fields/${field.id}`)).body.data.options.map((o) => o.label), ['ERP', 'CRM'])
+    const logs = (await admin.get(`/audit-logs?entity_type=custom_field&entity_id=${field.id}`)).body.data
+    const added = logs.find((entry) => entry.action === 'custom_field.option_added')
+    assert.ok(added, JSON.stringify(logs.map((entry) => entry.action)))
+    assert.deepEqual(added.new_value, { option: 'CRM', color: 'indigo' })
+  })
+
   it('leitura para quem vê tarefas; escrita só com settings.manage', async () => {
     const member = await userWithRole('MEMBER', 'membro-config@kamban.test')
     assert.equal((await member.get('/task-types')).status, 200)

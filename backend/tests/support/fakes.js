@@ -1146,6 +1146,16 @@ function createFakeRepositories(store) {
     },
     listOptions: (fieldIds) =>
       store.fieldOptions.filter((o) => fieldIds.includes(o.fieldId)).slice().sort((a, b) => a.order - b.order),
+    lockOptions: (fieldId) => store.fieldOptions.filter((o) => o.fieldId === fieldId).slice().sort((a, b) => a.order - b.order),
+    createOption: (fieldId, data) => {
+      const created = { id: nextId('opt_'), fieldId, label: data.label, color: data.color, isActive: !!data.isActive, order: data.order }
+      store.fieldOptions.push(created)
+      return created
+    },
+    updateOption: (id, patch) => {
+      const option = store.fieldOptions.find((o) => o.id === id)
+      return option ? Object.assign(option, patch) : null
+    },
     /** Substitui as opções: mantém IDs informados, cria novas e remove as ausentes. */
     syncOptions: (fieldId, options) => {
       const keep = options.filter((o) => o.id).map((o) => o.id)

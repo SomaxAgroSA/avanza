@@ -235,7 +235,8 @@ Cada tipo de tarefa define, campo a campo, **quando** ele precisa estar preenchi
 | campo **oculto** | nunca (não aparece no formulário) |
 
 - **A regra vale para o status em que a tarefa vai ficar.** Ao criar, editar ou mudar de status, a tarefa precisa ter preenchidos os campos exigidos nesse status. Exemplo: se "Parecer do analista" é exigido em Análise, a tarefa só entra em Análise com o parecer preenchido.
-- **Campos de arquivo e imagem são a exceção na criação:** o anexo só pode ser enviado depois que a tarefa existe, então eles não são exigidos ao criar (o formulário não os marca com *). A partir daí valem as regras acima: para salvar uma edição ou mudar para um status que exige o campo, anexe antes (no próprio campo ou na aba Anexos).
+- **Campos de arquivo e imagem na criação:** o formulário de criação tem **Enviar arquivo/imagem** no próprio campo. Os arquivos escolhidos aparecem pelo nome (cada um sai pelo X) e são enviados **logo depois de criar a tarefa**, já ligados ao campo (fotos grandes são reduzidas antes). Campo exigido no status escolhido precisa de ao menos um arquivo escolhido (o formulário marca com * e não cria sem ele); campo de imagem só aceita imagens. Se algum envio falhar, a tarefa **continua criada** e um aviso lista os arquivos que faltaram (envie de novo no campo ou na aba Anexos). Pela API, o servidor não exige esses campos no `POST /tasks` (o anexo só existe depois da tarefa); a partir daí valem as regras acima: para salvar uma edição ou mudar para um status que exige o campo, anexe antes.
+- **Depois de criada**, todo lugar que edita os campos da tarefa (editar e "Preencha para mover") oferece **Enviar arquivo/imagem** além de escolher entre os anexos que já existem.
 - **Vale para toda mudança de status:** arrastar no Kanban, "Mover para" no Planejamento, troca rápida de status na tarefa, formulário completo e API.
 - **Preencher e mover:** quando falta algum campo, a tela abre um pop-up só com os campos que faltam; ao salvar, grava os valores e aplica a mudança de status. Cancelar deixa a tarefa onde estava.
 - **Enquanto a tarefa está num status que exige o campo, ele não pode ser apagado.** Voltando para um status que não exige, pode.
@@ -243,7 +244,7 @@ Cada tipo de tarefa define, campo a campo, **quando** ele precisa estar preenchi
 - **Configuração nova vale na próxima alteração:** tarefas que já estavam num status quando a exigência foi criada passam a precisar do campo na próxima vez que forem salvas nesse status.
 - Status excluído sai automaticamente da lista do campo.
 - A **pré-visualização** do tipo tem "Validar como no status", que mostra (com *) o que é exigido em cada status; o formulário da tarefa marca os obrigatórios conforme o status escolhido.
-- A criação rápida do Kanban leva ao formulário completo quando a coluna exige campos sem valor padrão.
+- A criação rápida do Kanban leva ao formulário completo quando a coluna exige campos sem valor padrão (inclusive arquivo/imagem, escolhidos lá).
 - O histórico do tipo registra onde cada campo é exigido (ex.: "Parecer do analista (Análise, Desenvolvimento)").
 
 ## 11. Tipos de tarefa traduzidos
@@ -545,3 +546,12 @@ Telas abertas se atualizam sozinhas quando alguém muda algo — sem recarregar 
 - **Quando:** logo depois que a mudança é gravada (de qualquer origem: tela, API com token, importação, rotinas). Vários avisos juntos (ex.: mover um grupo inteiro) viram uma única atualização; com muita gente mexendo ao mesmo tempo, cada tela se atualiza **no máximo uma vez a cada 2,5 s** (a primeira mudança depois de um tempo quieto aparece na hora). Se a própria pessoa estiver salvando algo naquele momento (ex.: soltando um cartão), a atualização espera o salvamento terminar — assim nada "volta" para o estado de antes.
 - **Conexão:** uma por aba, aberta quando alguma tela precisa e fechada pouco depois de não precisar. Se cair, a tela continua funcionando e o cabeçalho mostra "Reconectando…" até voltar; ao voltar, as assinaturas são refeitas e a tela busca de novo o que está aberta (os avisos do intervalo se perderam).
 - **Consulta periódica:** com o tempo real ligado, o Kanban e o sino só conferem a cada 5 minutos (rede de segurança); sem ele, voltam a conferir a cada 15 s (Kanban) e 30 s (sino).
+
+## 20. Opções adicionadas pela tarefa (campos de seleção)
+
+- Em Configurações → Campos, os campos de **seleção única** e **seleção múltipla** têm **"Permitir adicionar opções pela tarefa"** (desligado por padrão). Ligado, no formulário da tarefa (criar, editar e "Preencha para mover") a lista do campo ganha busca e, quando o texto não corresponde a nenhuma opção, o item **Adicionar “texto”**: a opção é criada no campo e já fica escolhida.
+- **Quem pode:** quem tem `settings.manage` ou permissão de **criar** ou **editar tarefas** (`tasks.create`/`tasks.edit`). Leitor não adiciona.
+- **Sem duplicar:** texto igual a uma opção do campo, sem diferenciar maiúsculas, acentos e espaços repetidos (ex.: "critica" = "Crítica"), usa a opção existente; se ela estava **inativa**, é reativada.
+- A opção nova entra **no fim da lista**, ativa, com a **cor seguinte** à da última opção na paleta; o rótulo vai até 60 caracteres e o campo até 200 opções. O padrão do campo não muda. A opção vale para todos os tipos que usam o campo e pode ser renomeada, recolorida, reordenada ou desativada depois em Configurações → Campos.
+- Campo com a configuração desligada recusa a criação (`FIELD_OPTIONS_LOCKED`), inclusive para o Admin — ele edita as opções em Configurações.
+- O histórico do campo registra quem adicionou ou reativou a opção ("Adicionou opção ao campo").

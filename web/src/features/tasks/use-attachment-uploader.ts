@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
 import { fileIssue } from '@/domain/attachments'
 import { notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { compressImage } from './image-compress'
-import { useAttachmentMutations } from './queries'
+import { useAttachmentMutations, useFieldFileUpload } from './queries'
 
 export interface PendingUpload {
   key: string
@@ -59,36 +59,83 @@ export function useAttachmentUploader(taskId: string) {
   return useFileUploader<{ commentId?: string; field?: string }>((file, options) => upload.mutateAsync({ file, ...options }))
 }
 
+/** Resultado do envio a um campo: ids dos anexos aceitos e, por arquivo recusado, o motivo já traduzido. */
+export interface FieldUploadResult {
+  ids: string[]
+  failed: Array<{ name: string; reason: string }>
+}
+
 /**
- * Envio direto no campo de imagem/arquivo da tarefa (edição e "Preencha para mover"): o arquivo vira
- * anexo já ligado ao campo — sem precisar passar pela aba Anexos. Devolve os ids aceitos; os recusados
- * aparecem num aviso com o motivo.
+ * Envia arquivos a um campo de imagem/arquivo de uma tarefa (o anexo já fica ligado ao campo):
+ * pré-checagem no navegador (`imagesOnly` nos campos de imagem), compressão de fotos grandes e um
+ * arquivo por requisição. Não avisa nada: devolve os aceitos e os recusados com o motivo.
  */
-export function useFieldAttachmentUpload(taskId: string) {
+export function useFieldFilesSender() {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
-  const { upload } = useAttachmentMutations(taskId)
-  const { mutateAsync } = upload
+  const { mutateAsync } = useFieldFileUpload()
   return useCallback(
-    async (files: File[], field: string): Promise<string[]> => {
-      const ids: string[] = []
+    async (taskId: string, files: File[], field: string, imagesOnly = false): Promise<FieldUploadResult> => {
+      const result: FieldUploadResult = { ids: [], failed: [] }
       for (const original of files) {
-        const issue = fileIssue(original)
+        const issue = fileIssue(original, imagesOnly)
         if (issue) {
-          notify.error(`${original.name}: ${t(`validation.${issue}`, { defaultValue: issue })}`)
+          result.failed.push({ name: original.name, reason: t(`validation.${issue}`, { defaultValue: issue }) })
           continue
         }
         try {
           const file = original.type.startsWith('image/') ? await compressImage(original) : original
-          const saved = await mutateAsync({ file, field })
-          saved.forEach((attachment) => ids.push(attachment.id))
+          const saved = await mutateAsync({ taskId, file, field })
+          saved.forEach((attachment) => result.ids.push(attachment.id))
         } catch (error) {
           const code = isAppError(error) && error.code === 'VALIDATION_ERROR' ? error.fieldErrors().files : undefined
-          notify.error(`${original.name}: ${code ? t(`validation.${code}`, { defaultValue: code }) : errorMessage(error)}`)
+          result.failed.push({ name: original.name, reason: code ? t(`validation.${code}`, { defaultValue: code }) : errorMessage(error) })
         }
       }
-      return ids
+      return result
     },
     [mutateAsync, t, errorMessage],
   )
+}
+
+/**
+ * Envio direto no campo de imagem/arquivo da tarefa já criada (edição e "Preencha para mover"): o
+ * arquivo vira anexo já ligado ao campo — sem precisar passar pela aba Anexos. Devolve os ids aceitos;
+ * os recusados aparecem num aviso com o motivo.
+ */
+export function useFieldAttachmentUpload(taskId: string) {
+  const send = useFieldFilesSender()
+  return useCallback(
+    async (files: File[], field: string, imagesOnly = false): Promise<string[]> => {
+      const { ids, failed } = await send(taskId, files, field, imagesOnly)
+      failed.forEach((item) => notify.error(`${item.name}: ${item.reason}`))
+      return ids
+    },
+    [send, taskId],
+  )
+}
+
+/**
+ * Arquivos dos campos de imagem/arquivo na criação da tarefa: ficam no formulário (pré-checados,
+ * imagem só em campo de imagem) e são enviados logo depois de criar. O que a pré-checagem recusa
+ * aparece num aviso com o motivo e não entra na lista.
+ */
+export function useHeldFieldFiles() {
+  const { t } = useTranslation()
+  const [files, setFiles] = useState<Record<string, File[]>>({})
+
+  const add = useCallback(
+    (field: string, chosen: File[], imagesOnly: boolean) => {
+      const accepted = chosen.filter((file) => {
+        const issue = fileIssue(file, imagesOnly)
+        if (issue) notify.error(t('attachments.rejected', { name: file.name, reason: t(`validation.${issue}`) }))
+        return !issue
+      })
+      if (accepted.length > 0) setFiles((current) => ({ ...current, [field]: [...(current[field] ?? []), ...accepted] }))
+    },
+    [t],
+  )
+  const remove = useCallback((field: string, index: number) => setFiles((current) => ({ ...current, [field]: (current[field] ?? []).filter((_, i) => i !== index) })), [])
+
+  return useMemo(() => ({ files, add, remove }), [files, add, remove])
 }

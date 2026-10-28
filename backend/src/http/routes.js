@@ -223,6 +223,14 @@ const createCustomField = configAction('customFields', (s, ctx, r) => s.createFi
 const updateCustomField = configAction('customFields', (s, ctx, r) => s.updateField(ctx, r.id, r.body()))
 const deleteCustomField = configAction('customFields', (s, ctx, r) => s.deleteField(ctx, r.id))
 
+/** "Adicionar opção" pela tarefa: 201 quando cria; 200 quando devolve (ou reativa) a opção de mesmo rótulo. */
+function addCustomFieldOption(e) {
+  return handle(e, async ({ ctx, services, param, body }) => {
+    const result = await services.customFields.addOption(ctx, param('id'), body())
+    return { status: result.created ? 201 : 200, data: result.option }
+  })
+}
+
 const listTaskTypes = configAction('taskTypes', (s, ctx, r) => s.listTypes(ctx, r.query()))
 const getTaskType = configAction('taskTypes', (s, ctx, r) => s.getType(ctx, r.id))
 const createTaskType = configAction('taskTypes', (s, ctx, r) => s.createType(ctx, r.body()), 201)
@@ -614,6 +622,7 @@ module.exports = {
   createCustomField,
   updateCustomField,
   deleteCustomField,
+  addCustomFieldOption,
   listTaskTypes,
   getTaskType,
   createTaskType,

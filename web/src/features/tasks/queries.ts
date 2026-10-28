@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { ListQuery } from '@/domain/pagination'
 import type { TaskListOptions } from '@/domain/repositories'
 import type { TaskInput } from '@/domain/tasks'
@@ -82,16 +82,18 @@ export function useTaskAttachments(taskId: string | undefined) {
   return useQuery({ queryKey: taskKeys.attachments(taskId ?? ''), queryFn: () => attachments.list(taskId as string), enabled: !!taskId })
 }
 
+/** Anexos mudaram: lista, histórico, campos de imagem/arquivo (detalhe) e contadores das listas. */
+function invalidateTaskFiles(queryClient: QueryClient, taskId: string) {
+  void queryClient.invalidateQueries({ queryKey: taskKeys.attachments(taskId) })
+  void queryClient.invalidateQueries({ queryKey: taskKeys.history(taskId) })
+  void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
+  void queryClient.invalidateQueries({ queryKey: ['tasks', 'list'] })
+}
+
 export function useAttachmentMutations(taskId: string) {
   const { attachments } = useRepositories()
   const queryClient = useQueryClient()
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: taskKeys.attachments(taskId) })
-    void queryClient.invalidateQueries({ queryKey: taskKeys.history(taskId) })
-    // campos de imagem/arquivo e contadores
-    void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
-    void queryClient.invalidateQueries({ queryKey: ['tasks', 'list'] })
-  }
+  const invalidate = () => invalidateTaskFiles(queryClient, taskId)
   return {
     upload: useMutation({
       mutationFn: ({ file, field, commentId }: { file: File; field?: string; commentId?: string }) => attachments.upload(taskId, file, { field, commentId }),
@@ -108,6 +110,19 @@ export function useAttachmentMutations(taskId: string) {
       },
     }),
   }
+}
+
+/**
+ * Arquivo enviado direto num campo de imagem/arquivo; a tarefa vem em cada envio (na criação, ela
+ * acabou de nascer — o formulário ainda não tinha o id).
+ */
+export function useFieldFileUpload() {
+  const { attachments } = useRepositories()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskId, file, field }: { taskId: string; file: File; field: string }) => attachments.upload(taskId, file, { field }),
+    onSuccess: (_, { taskId }) => invalidateTaskFiles(queryClient, taskId),
+  })
 }
 
 export function useTaskMutations() {

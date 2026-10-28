@@ -158,6 +158,7 @@
     "TASK_TYPE_NOT_FOUND": "Tipo de tarea no encontrado.",
     "FIELD_NAME_IN_USE": "Ya existe un campo con este nombre técnico.",
     "FIELD_IN_USE": "Este campo lo usan tipos de tarea. Quítelo de ellos antes de eliminar.",
+    "FIELD_OPTIONS_LOCKED": "Este campo no acepta opciones nuevas desde la tarea.",
     "TASK_TYPE_KEY_IN_USE": "Ya existe un tipo con esta clave.",
     "TASK_TYPE_IN_USE": "Hay tareas de este tipo. Desactívelo en lugar de eliminarlo.",
     "STATUS_NOT_FOUND": "Estado no encontrado.",
@@ -647,6 +648,7 @@
       "searchable": "Buscable",
       "filterable": "Filtrable",
       "sortable": "Ordenable",
+      "option": "Opción",
       "options": "Opciones",
       "is_active": "Activo",
       "color": "Color",
@@ -780,6 +782,7 @@
       "custom_field.created": "Creó el campo",
       "custom_field.updated": "Actualizó el campo",
       "custom_field.deleted": "Eliminó el campo",
+      "custom_field.option_added": "Añadió una opción al campo",
       "status.created": "Creó el estado",
       "status.updated": "Actualizó el estado",
       "status.deleted": "Eliminó el estado",
@@ -1073,7 +1076,9 @@
   },
   "multiSelect": {
     "placeholder": "Seleccionar…",
-    "remove": "Quitar {{item}}"
+    "remove": "Quitar {{item}}",
+    "create": "Añadir “{{item}}”",
+    "searchOrCreate": "Buscar o añadir…"
   },
   "fields": {
     "title": "Campos personalizados",
@@ -1152,6 +1157,10 @@
     "optionActive": "Opción {{name}} activa",
     "untitledOption": "Opción sin nombre",
     "addOption": "Agregar opción",
+    "allowCreateOptions": "Permitir añadir opciones desde la tarea",
+    "allowCreateOptionsHint": "Quien crea o edita tareas puede incluir una opción nueva en el propio formulario (queda al final de la lista).",
+    "allowCreateOptionsShort": "Opciones nuevas desde la tarea",
+    "optionAdded": "Opción “{{name}}” añadida al campo {{field}}.",
     "removeOption": "Quitar opción",
     "default": "Predeterminada",
     "defaultSingleHint": "Marque como máximo una opción como predeterminada.",
@@ -1176,7 +1185,8 @@
       "min": "Mínimo inválido.",
       "max": "Máximo inválido.",
       "decimals": "Use de 0 a 6 decimales.",
-      "min_greater_than_max": "El mínimo no puede ser mayor que el máximo."
+      "min_greater_than_max": "El mínimo no puede ser mayor que el máximo.",
+      "allow_create_options": "Solo los campos de selección aceptan opciones añadidas desde la tarea."
     },
     "flags": {
       "searchable": "Buscable",
@@ -1204,11 +1214,13 @@
       "user": "Se elige entre los miembros del proyecto, en la tarea",
       "users": "Se eligen entre los miembros del proyecto, en la tarea",
       "project": "Se elige entre los proyectos visibles, en la tarea",
-      "image": "Adjunte después de crear la tarea (pestaña Adjuntos)",
-      "file": "Adjunte después de crear la tarea (pestaña Adjuntos)"
+      "image": "Se envía en la tarea (al crearla o después)",
+      "file": "Se envía en la tarea (al crearla o después)"
     },
     "attachmentHint": "Elija entre los adjuntos de la tarea (suba nuevos en la pestaña Adjuntos).",
     "attachmentUploadHint": "Elige entre los adjuntos de la tarea o sube uno nuevo.",
+    "heldFilesHint": "Se envían justo después de crear la tarea.",
+    "removeHeldFile": "Quitar {{name}}",
     "uploadFile": "Subir archivo",
     "uploadImage": "Subir imagen",
     "noAttachments": "Aún no hay adjuntos en la tarea",
@@ -1391,6 +1403,8 @@
     "createDescription": "Elija el tipo: el formulario muestra sus campos.",
     "editTitle": "Editar {{code}}",
     "created": "Tarea {{code}} creada.",
+    "filesNotSent_one": "{{code}} se creó, pero {{count}} archivo no se envió: {{names}}. Envíelo de nuevo en el campo o en la pestaña Adjuntos.",
+    "filesNotSent_other": "{{code}} se creó, pero {{count}} archivos no se enviaron: {{names}}. Envíelos de nuevo en los campos o en la pestaña Adjuntos.",
     "updated": "Tarea {{code}} actualizada.",
     "deleted": "Tarea {{code}} eliminada.",
     "deleteTitle": "¿Eliminar la tarea {{code}}?",

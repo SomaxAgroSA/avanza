@@ -145,6 +145,29 @@ function createCustomFieldRepository(db) {
       const rows = await db.query('SELECT * FROM custom_field_options WHERE field_id = ANY($1::text[]) ORDER BY "order" ASC, created ASC, id ASC', [fieldIds])
       return rows.map(toOption)
     },
+    /**
+     * Trava o campo até o fim da transação e devolve as opções dele em ordem: duas opções adicionadas
+     * ao mesmo tempo (ou uma troca das opções em Configurações) não se misturam nem se duplicam.
+     */
+    async lockOptions(fieldId) {
+      await db.query('SELECT id FROM custom_fields WHERE id = $1 FOR NO KEY UPDATE', [fieldId])
+      const rows = await db.query('SELECT * FROM custom_field_options WHERE field_id = $1 ORDER BY "order" ASC, created ASC, id ASC', [fieldId])
+      return rows.map(toOption)
+    },
+    async createOption(fieldId, data) {
+      return toOption(
+        await insertRow(db, 'custom_field_options', { field_id: fieldId, label: data.label || '', color: data.color || '', order: Number(data.order) || 0, is_active: !!data.isActive }),
+      )
+    },
+    async updateOption(id, patch) {
+      const values = {}
+      if (patch.label !== undefined) values.label = patch.label || ''
+      if (patch.color !== undefined) values.color = patch.color || ''
+      if (patch.order !== undefined) values.order = Number(patch.order) || 0
+      if (patch.isActive !== undefined) values.is_active = !!patch.isActive
+      const row = await updateRow(db, 'custom_field_options', id, values)
+      return row ? toOption(row) : null
+    },
     /** Substitui as opções: mantém IDs informados, cria novas e remove as ausentes. */
     async syncOptions(fieldId, options) {
       // trava o campo: duas trocas simultâneas das opções não se misturam

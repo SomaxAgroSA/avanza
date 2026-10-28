@@ -43,6 +43,12 @@ export type FieldFlag = (typeof FIELD_FLAGS)[number]
 export const OPTION_COLORS = ['gray', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'violet', 'pink'] as const
 export type OptionColor = (typeof OPTION_COLORS)[number]
 
+/** Tamanho máximo do rótulo de uma opção (mesmo limite do servidor). */
+export const MAX_OPTION_LABEL = 60
+
+/** Quem adiciona opção pelo formulário da tarefa (espelha backend/application/custom-fields.js). */
+export const ADD_FIELD_OPTION_PERMISSIONS = ['settings.manage', 'tasks.create', 'tasks.edit'] as const
+
 export const TASK_TYPE_ICONS = [
   'bug', 'code', 'sparkles', 'wrench', 'plus-square', 'plug', 'life-buoy', 'book', 'check-square',
   'flag', 'zap', 'shield', 'rocket', 'target', 'file-text', 'layers', 'search', 'settings',
@@ -54,6 +60,8 @@ export interface FieldConfig {
   min?: number
   max?: number
   decimals?: number
+  /** Seleção: quem cria/edita tarefas pode adicionar opções pelo formulário da tarefa. */
+  allow_create_options?: boolean
 }
 
 export interface FieldOption {
@@ -132,16 +140,16 @@ export function isRequiredIn(link: Pick<TaskTypeField, 'required' | 'visible' | 
   return !!statusId && link.requiredStatusIds.includes(statusId)
 }
 
-/**
- * Exigido ao criar a tarefa (espelha backend/domain/task.js `options.creating`): campos de arquivo/imagem
- * só recebem o anexo depois que a tarefa existe, então ficam para as alterações seguintes.
- */
-export function isRequiredOnCreate(
-  link: Pick<TaskTypeField, 'required' | 'visible' | 'requiredStatusIds'> & { field: Pick<CustomField, 'type'> },
-  statusId: string | null | undefined,
-): boolean {
-  if (link.field.type === 'file' || link.field.type === 'image') return false
-  return isRequiredIn(link, statusId)
+/** Campo de seleção que aceita opção nova criada no formulário da tarefa (espelha domain/custom-field.js). */
+export function acceptsNewOptions(field: Pick<CustomField, 'type' | 'config'>): boolean {
+  return FIELD_TYPE_INFO[field.type].options && field.config.allow_create_options === true
+}
+
+/** Campo `fieldId` com a opção incluída (ou atualizada, se já existia), na ordem das opções. */
+export function withFieldOption<T extends Pick<CustomField, 'id' | 'options'>>(field: T, fieldId: string, option: FieldOption): T {
+  if (field.id !== fieldId) return field
+  const others = field.options.filter((o) => o.id !== option.id)
+  return { ...field, options: [...others, option].sort((a, b) => a.order - b.order) }
 }
 
 export interface TaskTypeDetail extends TaskType {

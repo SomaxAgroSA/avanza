@@ -1,7 +1,7 @@
 import type { AuditEntry, CurrentUser, Permission, Role, Session, User, UserStatus } from './entities'
 import type { ListQuery, Page } from './pagination'
 import type { PermissionCode } from './permissions'
-import type { CustomField, FieldConfig, FieldType, FieldValue, OptionColor, TaskType, TaskTypeDetail, TaskTypeIcon, TranslatedLocale, TypeTexts } from './task-config'
+import type { CustomField, FieldConfig, FieldOption, FieldType, FieldValue, OptionColor, TaskType, TaskTypeDetail, TaskTypeIcon, TranslatedLocale, TypeTexts } from './task-config'
 import type { LookupItem, StatusCategory, TaskPriority, TaskStatus } from './workflow'
 import type { Attachment } from './attachments'
 import type { AppNotification } from './notifications'
@@ -246,6 +246,8 @@ export interface CustomFieldRepository {
   create(data: CustomFieldInput): Promise<CustomField>
   update(id: string, data: Partial<CustomFieldInput>): Promise<CustomField>
   remove(id: string): Promise<void>
+  /** "Adicionar opção" pela tarefa: cria no fim (ou devolve a de mesmo rótulo, reativada se preciso). */
+  addOption(fieldId: string, label: string): Promise<FieldOption>
 }
 
 export interface TaskTypeInput {

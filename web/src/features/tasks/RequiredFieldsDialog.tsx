@@ -5,6 +5,7 @@ import { AppButton, AppDialog, AppSkeleton, notify } from '@/presentation/compon
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useProjectMembers, useProjects } from '@/features/projects/queries'
 import { CustomFieldInput } from '@/features/task-config/CustomFieldInput'
+import { useFieldOptionCreator } from '@/features/task-config/use-field-option-creator'
 import { useTask, useTaskAttachments, useTaskMutations } from './queries'
 import { missingForStatus, PROJECT_OPTIONS_QUERY } from './required-fields'
 import { useFieldAttachmentUpload } from './use-attachment-uploader'
@@ -42,14 +43,16 @@ function RequiredFieldsForm({ request, onClose }: { request: RequiredFieldsReque
   // tudo o que um campo exigido pode pedir precisa estar à mão aqui: sem isso a tarefa não sai do lugar
   const projects = useProjects(PROJECT_OPTIONS_QUERY, links.some((link) => link.field.type === 'project'))
   const uploadToField = useFieldAttachmentUpload(request.taskId)
+  const createOption = useFieldOptionCreator()
   const references = useMemo(
     () => ({
       people: (members.data ?? []).filter((m) => m.user.status === 'active').map((m) => ({ id: m.user.id, name: m.user.name })),
       projects: (projects.data?.items ?? []).map((p) => ({ id: p.id, key: p.key, name: p.name })),
       attachments: (attachments.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url })),
       uploadFiles: uploadToField,
+      createOption,
     }),
-    [members.data, projects.data, attachments.data, uploadToField],
+    [members.data, projects.data, attachments.data, uploadToField, createOption],
   )
   const valueOf = (name: string) => (name in values ? values[name] : task.data?.customValues[name])
 

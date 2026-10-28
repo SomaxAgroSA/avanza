@@ -158,6 +158,7 @@
     "TASK_TYPE_NOT_FOUND": "Task type not found.",
     "FIELD_NAME_IN_USE": "A field with this technical name already exists.",
     "FIELD_IN_USE": "This field is used by task types. Remove it from them before deleting.",
+    "FIELD_OPTIONS_LOCKED": "This field does not accept new options from tasks.",
     "TASK_TYPE_KEY_IN_USE": "A type with this key already exists.",
     "TASK_TYPE_IN_USE": "There are tasks of this type. Deactivate it instead of deleting.",
     "STATUS_NOT_FOUND": "Status not found.",
@@ -647,6 +648,7 @@
       "searchable": "Searchable",
       "filterable": "Filterable",
       "sortable": "Sortable",
+      "option": "Option",
       "options": "Options",
       "is_active": "Active",
       "color": "Color",
@@ -780,6 +782,7 @@
       "custom_field.created": "Created the field",
       "custom_field.updated": "Updated the field",
       "custom_field.deleted": "Deleted the field",
+      "custom_field.option_added": "Added an option to the field",
       "status.created": "Created the status",
       "status.updated": "Updated the status",
       "status.deleted": "Deleted the status",
@@ -1073,7 +1076,9 @@
   },
   "multiSelect": {
     "placeholder": "Select…",
-    "remove": "Remove {{item}}"
+    "remove": "Remove {{item}}",
+    "create": "Add “{{item}}”",
+    "searchOrCreate": "Search or add…"
   },
   "fields": {
     "title": "Custom fields",
@@ -1152,6 +1157,10 @@
     "optionActive": "Option {{name}} active",
     "untitledOption": "Untitled option",
     "addOption": "Add option",
+    "allowCreateOptions": "Allow adding options from the task",
+    "allowCreateOptionsHint": "People who create or edit tasks can add a new option right in the form (it goes to the end of the list).",
+    "allowCreateOptionsShort": "New options from tasks",
+    "optionAdded": "Option “{{name}}” added to {{field}}.",
     "removeOption": "Remove option",
     "default": "Default",
     "defaultSingleHint": "Mark at most one option as default.",
@@ -1176,7 +1185,8 @@
       "min": "Invalid minimum.",
       "max": "Invalid maximum.",
       "decimals": "Use 0 to 6 decimal places.",
-      "min_greater_than_max": "The minimum can't be greater than the maximum."
+      "min_greater_than_max": "The minimum can't be greater than the maximum.",
+      "allow_create_options": "Only selection fields accept options added from tasks."
     },
     "flags": {
       "searchable": "Searchable",
@@ -1204,11 +1214,13 @@
       "user": "Chosen among project members, in the task",
       "users": "Chosen among project members, in the task",
       "project": "Chosen among visible projects, in the task",
-      "image": "Attach after creating the task (Attachments tab)",
-      "file": "Attach after creating the task (Attachments tab)"
+      "image": "Uploaded in the task (when creating it or later)",
+      "file": "Uploaded in the task (when creating it or later)"
     },
     "attachmentHint": "Choose among the task's attachments (upload new ones in the Attachments tab).",
     "attachmentUploadHint": "Pick one of the task attachments or upload a new one.",
+    "heldFilesHint": "Uploaded right after the task is created.",
+    "removeHeldFile": "Remove {{name}}",
     "uploadFile": "Upload file",
     "uploadImage": "Upload image",
     "noAttachments": "No attachments on the task yet",
@@ -1391,6 +1403,8 @@
     "createDescription": "Pick the type: the form shows its fields.",
     "editTitle": "Edit {{code}}",
     "created": "Task {{code}} created.",
+    "filesNotSent_one": "{{code}} was created, but {{count}} file was not uploaded: {{names}}. Upload it again in the field or in the Attachments tab.",
+    "filesNotSent_other": "{{code}} was created, but {{count}} files were not uploaded: {{names}}. Upload them again in the fields or in the Attachments tab.",
     "updated": "Task {{code}} updated.",
     "deleted": "Task {{code}} deleted.",
     "deleteTitle": "Delete task {{code}}?",

@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { Popover } from 'radix-ui'
-import { Check, ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
 import { AppFormField } from './AppFormField'
+import { OptionPicker, type CreateOptionHandler } from './option-picker'
 
 export interface AppMultiSelectOption {
   value: string
@@ -24,15 +25,19 @@ export interface AppMultiSelectProps {
   required?: boolean
   disabled?: boolean
   className?: string
+  /**
+   * Permite criar uma opção a partir da busca: com o texto sem opção igual (sem diferenciar
+   * maiúsculas e acentos), a lista mostra "Adicionar “texto”". A função cria e devolve o valor da
+   * nova opção, que entra selecionada (null/undefined = não criou; ela mesma avisa o erro).
+   */
+  onCreateOption?: CreateOptionHandler | undefined
 }
 
-/** Seleção múltipla com busca e chips removíveis. */
-export function AppMultiSelect({ value, onValueChange, options, label, placeholder, error, hint, required, disabled, className }: AppMultiSelectProps) {
+/** Seleção múltipla com busca e chips removíveis (opcionalmente, criação de opção pela busca). */
+export function AppMultiSelect({ value, onValueChange, options, label, placeholder, error, hint, required, disabled, className, onCreateOption }: AppMultiSelectProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
   const selected = options.filter((o) => value.includes(o.value))
-  const visible = options.filter((o) => o.label.toLowerCase().includes(search.trim().toLowerCase()))
 
   const toggle = (optionValue: string) =>
     onValueChange(value.includes(optionValue) ? value.filter((v) => v !== optionValue) : [...value, optionValue])
@@ -40,13 +45,7 @@ export function AppMultiSelect({ value, onValueChange, options, label, placehold
   return (
     <AppFormField label={label} error={error} hint={hint} required={required} className={className}>
       {({ id, describedBy, invalid }) => (
-        <Popover.Root
-          open={open}
-          onOpenChange={(next) => {
-            setOpen(next)
-            if (!next) setSearch('')
-          }}
-        >
+        <Popover.Root open={open} onOpenChange={setOpen}>
           <Popover.Trigger asChild>
             <button
               id={id}
@@ -97,43 +96,16 @@ export function AppMultiSelect({ value, onValueChange, options, label, placehold
               sideOffset={4}
               className="z-50 w-[var(--radix-popover-trigger-width)] min-w-56 rounded-xl border border-border bg-surface p-1 text-fg shadow-float animate-scale-in"
             >
-              {options.length > 7 && (
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={t('common.search')}
-                  aria-label={t('common.search')}
-                  className="mb-1 h-8 w-full rounded-lg border border-border bg-surface px-2 text-sm outline-none focus:border-primary"
-                />
-              )}
-              <ul id={`${id}-listbox`} role="listbox" aria-multiselectable="true" className="max-h-64 overflow-y-auto">
-                {visible.length === 0 && <li className="px-2 py-6 text-center text-sm text-muted">{t('commandPalette.empty')}</li>}
-                {visible.map((option) => {
-                  const checked = value.includes(option.value)
-                  return (
-                    <li key={option.value} role="option" aria-selected={checked}>
-                      <button
-                        type="button"
-                        disabled={option.disabled}
-                        onClick={() => toggle(option.value)}
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2 disabled:opacity-50"
-                      >
-                        <span
-                          className={cn(
-                            'flex size-4 shrink-0 items-center justify-center rounded-[5px] border',
-                            checked ? 'border-primary bg-primary text-primary-fg' : 'border-border-strong',
-                          )}
-                        >
-                          {checked && <Check className="size-3" strokeWidth={3} />}
-                        </span>
-                        {option.prefix}
-                        <span className="truncate">{option.label}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
+              <OptionPicker
+                listboxId={`${id}-listbox`}
+                multiple
+                options={options}
+                searchable={options.length > 7}
+                isSelected={(optionValue) => value.includes(optionValue)}
+                onPick={toggle}
+                onCreateOption={onCreateOption}
+                onCreated={(created) => onValueChange(value.includes(created) ? value : [...value, created])}
+              />
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>

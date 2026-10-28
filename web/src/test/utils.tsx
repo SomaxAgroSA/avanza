@@ -142,6 +142,7 @@ export function fakeRepositories(overrides: {
       create: notImplemented,
       update: notImplemented,
       remove: notImplemented,
+      addOption: notImplemented,
       ...overrides.customFields,
     },
     taskTypes: {

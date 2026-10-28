@@ -110,7 +110,7 @@ export interface CustomFieldDto {
   label: string
   type: string
   description: string
-  config: Record<string, number>
+  config: Record<string, number | boolean>
   default_value: string | number | boolean | string[] | null
   searchable: boolean
   filterable: boolean

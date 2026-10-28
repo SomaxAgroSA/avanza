@@ -84,14 +84,14 @@ Migration `1790000004_task_config.js`. Ver [ADR-010](decisions.md#adr-010--campo
 | label | text (≤80) | rótulo exibido |
 | type | select | `text`, `textarea`, `number`, `decimal`, `boolean`, `date`, `datetime`, `select`, `multiselect`, `user`, `users`, `project`, `url`, `email`, `phone`, `image`, `file` — imutável |
 | description | text (≤255) | texto de ajuda do formulário |
-| config | json | por tipo: `max_length` (texto), `min`/`max` (números), `decimals` 0–6 (decimal) |
+| config | json | por tipo: `max_length` (texto), `min`/`max` (números), `decimals` 0–6 (decimal), `allow_create_options` (seleção: opções adicionadas pela tarefa; só gravado quando ligado) |
 | default_value | json | no formato do tipo; em seleção guarda o(s) id(s) das opções marcadas como padrão |
 | searchable, filterable, sortable | bool | só valem quando o tipo suporta (ver `TYPE_INFO` em `domain/custom-field.js`) |
 
 Índices: `name` (único), `type`. Exclusão bloqueada enquanto algum tipo usa o campo (`FIELD_IN_USE`).
 
 ### `custom_field_options`
-`field_id` → custom_fields (cascade), `label` (≤60, único por campo sem diferenciar maiúsculas), `color` (paleta fechada), `order`, `is_active`. Índice em `field_id`. Opções em uso devem ser **desativadas**, não removidas.
+`field_id` → custom_fields (cascade), `label` (≤60, único por campo sem diferenciar maiúsculas), `color` (paleta fechada), `order`, `is_active`. Índice em `field_id`. Opções em uso devem ser **desativadas**, não removidas. Opção adicionada pela tarefa (`POST /custom-fields/{id}/options`) entra no fim, sob trava do campo (`FOR NO KEY UPDATE`), sem duplicar rótulo (sem diferenciar maiúsculas e acentos).
 
 ### `task_types`
 `key` (≤30, **único**, `^[A-Z][A-Z0-9_]{1,29}$`, imutável), `name` (≤60), `description`, `icon`, `color`, `order`, `is_active`. Índices: `key` (único), `order`. Exclusão só sem tarefas (`TASK_TYPE_IN_USE`); em uso, desativar. `translations` (JSON `{ en: { name, description }, es: {…} }`, migration `1790000017_task_type_translations.js`, que já traduz os 8 tipos padrão quando o texto ainda é o original): o nome/descrição do registro são o original em pt-BR.

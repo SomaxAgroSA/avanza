@@ -34,7 +34,7 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 |---|---|
 | 400 | `VALIDATION_ERROR`, `BAD_REQUEST`, `USE_CHANGE_PASSWORD` |
 | 401 | `UNAUTHENTICATED`, `SESSION_EXPIRED`, `INVALID_CREDENTIALS` |
-| 403 | `FORBIDDEN`, `ACCOUNT_DISABLED`, `CSRF_CHECK_FAILED`, `PRIVILEGE_ESCALATION`, `CANNOT_EDIT_OWN_ROLE`, `CANNOT_DISABLE_SELF`, `ROLE_IMMUTABLE` |
+| 403 | `FORBIDDEN`, `ACCOUNT_DISABLED`, `CSRF_CHECK_FAILED`, `PRIVILEGE_ESCALATION`, `CANNOT_EDIT_OWN_ROLE`, `CANNOT_DISABLE_SELF`, `ROLE_IMMUTABLE`, `FIELD_OPTIONS_LOCKED` |
 | 404 | `ROUTE_NOT_FOUND`, `USER_NOT_FOUND`, `ROLE_NOT_FOUND`, `SESSION_NOT_FOUND`, `PROJECT_NOT_FOUND`, `MEMBER_NOT_FOUND`, `FIELD_NOT_FOUND`, `TASK_TYPE_NOT_FOUND`, `STATUS_NOT_FOUND`, `PRIORITY_NOT_FOUND`, `TASK_NOT_FOUND`, `COMMENT_NOT_FOUND`, `TAG_NOT_FOUND`, `ATTACHMENT_NOT_FOUND`, `NOTIFICATION_NOT_FOUND`, `SPRINT_NOT_FOUND`, `RELATION_NOT_FOUND`, `MILESTONE_NOT_FOUND`, `GROUP_NOT_FOUND`, `DOC_SPACE_NOT_FOUND`, `DOC_PAGE_NOT_FOUND`, `DOC_VERSION_NOT_FOUND`, `DOC_FILE_NOT_FOUND` |
 | 409 | `TRANSITION_NOT_ALLOWED`, `RELATION_EXISTS`, `RELATION_CYCLE`, `NOT_IN_BACKLOG`, `EMAIL_ALREADY_IN_USE`, `ROLE_CODE_IN_USE`, `ROLE_IN_USE`, `PROJECT_KEY_IN_USE`, `PROJECT_ARCHIVED`, `PROJECT_NOT_ARCHIVED`, `MEMBER_ALREADY_EXISTS`, `CANNOT_REMOVE_OWNER`, `OWNER_ROLE_LOCKED`, `FIELD_NAME_IN_USE`, `FIELD_IN_USE`, `TASK_TYPE_KEY_IN_USE`, `TASK_TYPE_IN_USE`, `STATUS_KEY_IN_USE`, `STATUS_IN_USE`, `STATUS_IS_DEFAULT`, `PRIORITY_KEY_IN_USE`, `PRIORITY_IN_USE`, `PRIORITY_IS_DEFAULT`, `TAG_NAME_IN_USE`, `DOC_SPACE_KEY_IN_USE`, `DOC_PAGE_CYCLE`, `DOC_PAGE_TOO_DEEP`, `DOC_PAGE_IS_HOME` |
 | 429 | `RATE_LIMITED`, `ACCOUNT_LOCKED` (bloqueio progressivo de login; `details.retry_after_seconds`) |
@@ -91,15 +91,16 @@ Projeto sem acesso responde **404 `PROJECT_NOT_FOUND`** (não revela existência
 
 ## Endpoints — Fase 3 (Tipos de tarefa e campos personalizados)
 
-Leitura: `settings.manage` ou `tasks.view` (o formulário de tarefas precisa da configuração). Escrita: `settings.manage`.
+Leitura: `settings.manage` ou `tasks.view` (o formulário de tarefas precisa da configuração). Escrita: `settings.manage` (exceto adicionar opção pela tarefa, abaixo).
 
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/custom-fields` | biblioteca completa, com `options` e `used_by` (tipos que usam o campo) |
-| POST | `/custom-fields` | `{ name, label, type, description?, config?, default_value?, searchable?, filterable?, sortable?, options? }` — `name` e `type` são imutáveis depois |
+| POST | `/custom-fields` | `{ name, label, type, description?, config?, default_value?, searchable?, filterable?, sortable?, options? }` — `name` e `type` são imutáveis depois. Em seleção, `config.allow_create_options: true` deixa adicionar opções pelo formulário da tarefa (desligado não é gravado; em outro tipo → `VALIDATION_ERROR` `fields.config = allow_create_options`) |
 | GET | `/custom-fields/{id}` | detalhe |
 | PATCH | `/custom-fields/{id}` | parcial; `options` é sincronizado pelo `id` (sem `id` = nova; ausente = removida). Em seleção, o padrão vem de `options[].is_default` |
 | DELETE | `/custom-fields/{id}` | só se nenhum tipo usa (`FIELD_IN_USE` com `details.types`) |
+| POST | `/custom-fields/{id}/options` | **Adicionar opção pela tarefa** — `{ label }` (até 60, aparado). Permissão: `settings.manage`, `tasks.create` ou `tasks.edit`. Só em seleção com `config.allow_create_options` (senão **403 `FIELD_OPTIONS_LOCKED`**, inclusive para o Admin). Rótulo igual a uma opção do campo, sem diferenciar maiúsculas e acentos, devolve essa opção (**200**; inativa é reativada); senão cria no fim da lista com a cor seguinte da paleta (**201**). Resposta: a opção (`{ id, label, color, order, is_active }`). Máximo de 200 opções (`fields.options = too_many`). Histórico: `custom_field.option_added` |
 | GET | `/task-types` | em ordem; inativos só com `include_inactive=1` e `settings.manage` |
 | POST | `/task-types` | `{ key, name, description?, icon?, color?, is_active? }` |
 | PUT | `/task-types/order` | `{ ids: [...] }` — lista **completa** (`invalid_order` se faltar ou repetir) |
@@ -121,7 +122,7 @@ Leitura de status/prioridades/tags: `settings.manage` ou `tasks.view`. Alteraç�
 | PUT | `/statuses/order` · `/priorities/order` | `{ ids }` com a lista completa |
 | GET · PATCH · DELETE | `/statuses/{id}` · `/priorities/{id}` | chave imutável; `is_default: true` desmarca o anterior; o padrão não pode ser desativado nem excluído (`*_IS_DEFAULT`); em uso não se exclui (`*_IN_USE`) |
 | GET | `/tasks` | paginado; `project_id`, `task_type_id`, `status_id`, `priority_id`, `assignee_id` (ou `me`), `tag_id`, `category` (ex.: `backlog,todo,in_progress`), `search` (título, código e campos personalizados pesquisáveis), `sort` (`code`, `title`, `created_at`, `updated_at`, `due_date`, `priority`, `status`) |
-| POST | `/tasks` | `{ project_id, task_type_id, title, description?, status_id?, priority_id?, assignee_id?, reporter_id?, due_date?, estimated_hours?, actual_hours?, custom_values?, tag_ids?, checklist? }` — número sequencial por projeto (`CRM-12`); padrões de status, prioridade e valores dos campos |
+| POST | `/tasks` | `{ project_id, task_type_id, title, description?, status_id?, priority_id?, assignee_id?, reporter_id?, due_date?, estimated_hours?, actual_hours?, custom_values?, tag_ids?, checklist? }` — número sequencial por projeto (`CRM-12`); padrões de status, prioridade e valores dos campos. Campos de imagem/arquivo **não são exigidos na criação** (o anexo só existe depois): crie a tarefa e envie com `POST /tasks/{id}/attachments` + `field` — é o que o formulário faz logo depois de criar |
 | GET | `/tasks/{id}` | detalhe com `fields` do tipo, `custom_values` (por nome técnico), `checklist`, `tags` e `capabilities` |
 | PATCH | `/tasks/{id}` | parcial; `null` limpa responsável/relator/prazo/horas; trocar o tipo descarta valores de campos que o novo tipo não tem; `project_id` é imutável |
 | DELETE | `/tasks/{id}` | `tasks.delete` + gestor, `projects.view_all` ou autor |

@@ -134,6 +134,107 @@ describe('application/custom-fields', () => {
     await assert.rejects(() => fields.getField(admin, field.id), { code: 'FIELD_NOT_FOUND' })
   })
 
+  it('"permitir adicionar opções pela tarefa": gravado na config de seleção e recusado nos outros tipos', async () => {
+    const { fields, admin } = await setup()
+    const field = await fields.createField(admin, Object.assign({}, severity, { config: { allow_create_options: true } }))
+    assert.deepEqual(field.config, { allow_create_options: true })
+    const off = await fields.updateField(admin, field.id, { config: { allow_create_options: false } })
+    assert.deepEqual(off.config, {})
+    await assert.rejects(
+      () => fields.createField(admin, { label: 'Obs', type: 'text', config: { allow_create_options: true } }),
+      (err) => err.details.fields.config === 'allow_create_options',
+    )
+  })
+
+  describe('opção adicionada pela tarefa', () => {
+    async function withField(config) {
+      const ctx = await setup()
+      const field = await ctx.fields.createField(ctx.admin, Object.assign({}, severity, { config: config === undefined ? { allow_create_options: true } : config }))
+      return Object.assign(ctx, { field })
+    }
+
+    it('cria no fim da lista com a cor seguinte da paleta e registra no histórico do campo', async () => {
+      const { deps, fields, member, field } = await withField()
+      const result = await fields.addOption(member, field.id, { label: '  Bloqueante ' })
+      assert.equal(result.created, true)
+      assert.deepEqual(
+        { label: result.option.label, color: result.option.color, order: result.option.order, is_active: result.option.is_active },
+        // última opção (Baixa) é verde: a seguinte da paleta é teal
+        { label: 'Bloqueante', color: 'teal', order: 3, is_active: true },
+      )
+      assert.ok(result.option.id)
+      const saved = await fields.getField(member, field.id)
+      assert.deepEqual(saved.options.map((o) => o.label), ['Crítica', 'Média', 'Baixa', 'Bloqueante'])
+      assert.equal(saved.default_value, field.default_value, 'o padrão do campo não muda')
+      const entry = deps.store.audit.at(-1)
+      assert.equal(entry.action, 'custom_field.option_added')
+      assert.equal(entry.entityType, 'custom_field')
+      assert.equal(entry.entityId, field.id)
+      assert.deepEqual(entry.newValue, { option: 'Bloqueante', color: 'teal' })
+    })
+
+    it('mesmo rótulo (maiúsculas e acentos à parte) devolve a opção existente; inativa é reativada', async () => {
+      const { deps, fields, admin, member, field } = await withField()
+      const critica = field.options[0]
+      const count = deps.store.audit.length
+      const same = await fields.addOption(member, field.id, { label: 'CRITICA' })
+      assert.deepEqual([same.created, same.option.id, same.option.label], [false, critica.id, 'Crítica'])
+      assert.equal(deps.store.audit.length, count, 'nada mudou, nada é registrado')
+
+      await fields.updateField(admin, field.id, {
+        options: field.options.map((o) => ({ id: o.id, label: o.label, color: o.color, is_active: o.label !== 'Baixa' })),
+      })
+      const back = await fields.addOption(member, field.id, { label: 'baixa' })
+      assert.deepEqual([back.created, back.option.label, back.option.is_active], [false, 'Baixa', true])
+      assert.equal((await fields.getField(member, field.id)).options.length, 3, 'sem duplicar')
+      const entry = deps.store.audit.at(-1)
+      assert.equal(entry.action, 'custom_field.option_added')
+      assert.deepEqual([entry.oldValue, entry.newValue], [{ option: 'Baixa', is_active: false }, { option: 'Baixa', is_active: true }])
+    })
+
+    it('quem pode: settings.manage, tasks.create ou tasks.edit', async () => {
+      const { deps, fields, admin, viewer, field } = await withField()
+      assert.equal((await fields.addOption(admin, field.id, { label: 'Pelo admin' })).created, true)
+      await assert.rejects(() => fields.addOption(viewer, field.id, { label: 'Pelo leitor' }), { code: 'FORBIDDEN' })
+      const role = deps.store.roles.find((r) => r.code === 'VIEWER')
+      deps.store.rolePermissions[role.id] = ['tasks.view', 'tasks.edit']
+      const editor = await ctxFor(deps, 'VIEWER')
+      assert.equal((await fields.addOption(editor, field.id, { label: 'Pelo editor' })).created, true)
+      deps.store.rolePermissions[role.id] = ['tasks.view', 'tasks.create']
+      const creator = await ctxFor(deps, 'VIEWER')
+      assert.equal((await fields.addOption(creator, field.id, { label: 'Pelo criador' })).created, true)
+      await assert.rejects(() => fields.addOption({ principal: null }, field.id, { label: 'X' }), { code: 'UNAUTHENTICATED' })
+    })
+
+    it('campo sem a configuração ligada (ou que não é seleção) recusa com FIELD_OPTIONS_LOCKED', async () => {
+      const { fields, admin, member, field } = await withField({})
+      await assert.rejects(() => fields.addOption(member, field.id, { label: 'Nova' }), { code: 'FIELD_OPTIONS_LOCKED' })
+      await assert.rejects(() => fields.addOption(admin, field.id, { label: 'Nova' }), { code: 'FIELD_OPTIONS_LOCKED' }, 'nem o admin: ele edita em Configurações')
+      const text = await fields.createField(admin, { label: 'Versão', type: 'text' })
+      await assert.rejects(() => fields.addOption(member, text.id, { label: 'Nova' }), { code: 'FIELD_OPTIONS_LOCKED' })
+      await assert.rejects(() => fields.addOption(member, 'nao-existe', { label: 'Nova' }), { code: 'FIELD_NOT_FOUND' })
+    })
+
+    it('valida o rótulo (obrigatório, até 60) e o limite de opções', async () => {
+      const { deps, fields, member, field } = await withField()
+      const code = async (input) => {
+        try {
+          await fields.addOption(member, field.id, input)
+        } catch (err) {
+          return err.code + ':' + JSON.stringify(err.details.fields)
+        }
+        return 'OK'
+      }
+      assert.equal(await code({ label: '   ' }), 'VALIDATION_ERROR:{"label":"required"}')
+      assert.equal(await code({}), 'VALIDATION_ERROR:{"label":"required"}')
+      assert.equal(await code({ label: 42 }), 'VALIDATION_ERROR:{"label":"invalid_type"}')
+      assert.equal(await code({ label: 'x'.repeat(61) }), 'VALIDATION_ERROR:{"label":"too_long"}')
+      assert.equal(await code({ label: 'x'.repeat(60) }), 'OK')
+      for (let i = deps.store.fieldOptions.length; i < 200; i++) deps.store.fieldOptions.push({ id: `extra${i}`, fieldId: field.id, label: `Extra ${i}`, color: 'gray', isActive: true, order: i })
+      assert.equal(await code({ label: 'Mais uma' }), 'VALIDATION_ERROR:{"options":"too_many"}')
+    })
+  })
+
   it('lista com busca, filtro por tipo e "usado em"', async () => {
     const { fields, types, admin, member, viewer } = await setup()
     const sev = await fields.createField(admin, severity)

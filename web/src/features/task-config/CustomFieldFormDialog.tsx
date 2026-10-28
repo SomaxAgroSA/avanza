@@ -55,7 +55,11 @@ interface Draft {
   filterable: boolean
   sortable: boolean
   options: OptionDraft[]
+  /** Seleção: "Permitir adicionar opções pela tarefa". */
+  allowCreateOptions: boolean
 }
+
+type NumericConfigKey = 'max_length' | 'min' | 'max' | 'decimals'
 
 let keySeq = 0
 const newKey = () => `opt-${++keySeq}`
@@ -63,7 +67,7 @@ const newKey = () => `opt-${++keySeq}`
 function toDraft(field?: CustomField | null): Draft {
   const config: Record<string, string> = {}
   Object.entries(field?.config ?? {}).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) config[k] = String(v)
+    if (k !== 'allow_create_options' && v !== undefined && v !== null) config[k] = String(v)
   })
   const defaults = Array.isArray(field?.defaultValue) ? field.defaultValue : [field?.defaultValue]
   return {
@@ -84,12 +88,13 @@ function toDraft(field?: CustomField | null): Draft {
       isActive: o.isActive,
       isDefault: defaults.includes(o.id),
     })),
+    allowCreateOptions: field?.config.allow_create_options === true,
   }
 }
 
-function toConfig(type: FieldType, config: Record<string, string>): FieldConfig {
+function toConfig(type: FieldType, config: Record<string, string>, allowCreateOptions = false): FieldConfig {
   const out: FieldConfig = {}
-  const num = (key: keyof FieldConfig) => {
+  const num = (key: NumericConfigKey) => {
     const raw = config[key]
     if (raw !== undefined && raw.trim() !== '') out[key] = Number(raw.replace(',', '.'))
   }
@@ -99,6 +104,7 @@ function toConfig(type: FieldType, config: Record<string, string>): FieldConfig 
     num('max')
   }
   if (type === 'decimal') num('decimals')
+  if (FIELD_TYPE_INFO[type].options && allowCreateOptions) out.allow_create_options = true
   return out
 }
 
@@ -167,7 +173,7 @@ function CustomFieldForm({ open, onOpenChange, field, onSaved }: CustomFieldForm
     const payload = {
       label: draft.label.trim(),
       description: draft.description.trim(),
-      config: toConfig(draft.type, draft.config),
+      config: toConfig(draft.type, draft.config, draft.allowCreateOptions),
       searchable: info.searchable && draft.searchable,
       filterable: info.filterable && draft.filterable,
       sortable: info.sortable && draft.sortable,
@@ -191,7 +197,7 @@ function CustomFieldForm({ open, onOpenChange, field, onSaved }: CustomFieldForm
     else create.mutate({ ...payload, type: draft.type, name: draft.name || slugifyName(draft.label) }, { onSuccess, onError })
   }
 
-  const numberField = (key: keyof FieldConfig, label: string, hint?: string) => (
+  const numberField = (key: NumericConfigKey, label: string, hint?: string) => (
     <AppTextField
       label={label}
       hint={hint}
@@ -423,6 +429,13 @@ function CustomFieldForm({ open, onOpenChange, field, onSaved }: CustomFieldForm
                 <span className="ml-2 text-xs text-subtle">{t('fields.optionEnterHint')}</span>
               </div>
               {isEdit && <p className="text-xs text-subtle">{t('fields.optionsEditHint')}</p>}
+              <AppSwitch
+                className="mt-2"
+                checked={draft.allowCreateOptions}
+                onCheckedChange={(checked) => set('allowCreateOptions', checked)}
+                label={t('fields.allowCreateOptions')}
+                description={t('fields.allowCreateOptionsHint')}
+              />
             </section>
           )}
 
