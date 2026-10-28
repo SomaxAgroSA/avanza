@@ -72,9 +72,16 @@ export function TaskDetailPage() {
 /** Abas do detalhe; `?tab=comments` abre direto nos comentários (ex.: vindo de uma notificação). */
 const TASK_TABS = ['details', 'comments', 'attachments', 'relations', 'history']
 
-function TaskDetailView({ task }: { task: TaskDetail }) {
+/**
+ * Detalhe completo da tarefa: cabeçalho com ações, campos rápidos, abas e propriedades. Na página, a aba fica
+ * no endereço; `embedded` (janela sobre o Kanban, TaskDetailDialog) guarda a aba só na janela, não mostra
+ * o "voltar" nem repete o título (que fica no cabeçalho da janela), e excluir chama `onDeleted`.
+ */
+export function TaskDetailView({ task, embedded = false, onDeleted }: { task: TaskDetail; embedded?: boolean; onDeleted?: () => void }) {
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') ?? 'details'
+  const [localTab, setLocalTab] = useState('details')
+  const tab = embedded ? localTab : (params.get('tab') ?? 'details')
+  const setTab = (value: string) => (embedded ? setLocalTab(value) : setParams(value === 'details' ? {} : { tab: value }, { replace: true }))
   const { t } = useTranslation()
   const navigate = useNavigate()
   const errorMessage = useErrorMessage()
@@ -97,15 +104,21 @@ function TaskDetailView({ task }: { task: TaskDetail }) {
 
   return (
     <>
-      <Link to="/tasks" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
-        <ArrowLeft className="size-4" aria-hidden /> {t('tasks.backToList')}
-      </Link>
+      {!embedded && (
+        <Link to="/tasks" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
+          <ArrowLeft className="size-4" aria-hidden /> {t('tasks.backToList')}
+        </Link>
+      )}
 
       <section className="mb-6 flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 shadow-card">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <TaskCode task={task} />
-            <h1 className="mt-1 text-xl font-semibold tracking-tight break-words text-fg">{task.title}</h1>
+            {!embedded && (
+              <>
+                <TaskCode task={task} />
+                <h1 className="mt-1 text-xl font-semibold tracking-tight break-words text-fg">{task.title}</h1>
+              </>
+            )}
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               {task.blocked && (
                 <AppBadge tone="danger" title={t('relations.blockedHint')}>
@@ -167,7 +180,7 @@ function TaskDetailView({ task }: { task: TaskDetail }) {
         <AppTabs
           aria-label={task.code}
           value={TASK_TABS.includes(tab) ? tab : 'details'}
-          onValueChange={(value) => setParams(value === 'details' ? {} : { tab: value }, { replace: true })}
+          onValueChange={setTab}
           tabs={[
             {
               value: 'details',
@@ -230,7 +243,8 @@ function TaskDetailView({ task }: { task: TaskDetail }) {
           remove.mutate(task.id, {
             onSuccess: () => {
               notify.success(t('tasks.deleted', { code: task.code }))
-              void navigate('/tasks')
+              if (embedded) onDeleted?.()
+              else void navigate('/tasks')
             },
             onError: (error) => notify.error(errorMessage(error)),
           })

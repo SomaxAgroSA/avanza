@@ -1487,7 +1487,8 @@
       "done": "{{code}} movida a \"{{status}}\".",
       "message_one": "Para ir a \"{{status}}\", complete: {{fields}}.",
       "message_other": "Para ir a \"{{status}}\", complete: {{fields}}."
-    }
+    },
+    "openFullPage": "Abrir en página completa"
   },
   "tags": {
     "title": "Etiquetas",

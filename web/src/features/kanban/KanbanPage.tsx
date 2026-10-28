@@ -41,6 +41,7 @@ import { useTags } from '@/features/tags/queries'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
 import { TaskFormDialog, type TaskFormInitial } from '@/features/tasks/TaskFormDialog'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
+import { TaskDetailDialog } from '@/features/tasks/TaskDetailDialog'
 import { KanbanBoard, type KanbanDrop } from './KanbanBoard'
 import { QuickAddDialog } from './QuickAddDialog'
 import { boardKeys, useAllBoard, useBoard, useMoveCard } from './queries'
@@ -98,6 +99,8 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
     writeJson(VIEW_KEY, next)
   }
   const [openId, setOpenId] = useState<string | null>(null)
+  // tarefa completa numa janela sobre o quadro (não sai do Kanban)
+  const [fullId, setFullId] = useState<string | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [quickAdd, setQuickAdd] = useState<string | null>(null)
   const [fullForm, setFullForm] = useState<TaskFormInitial | null>(null)
@@ -323,7 +326,12 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
           setOpenId(null)
           setEditId(id)
         }}
+        onOpenFull={(id) => {
+          setOpenId(null)
+          setFullId(id)
+        }}
       />
+      <TaskDetailDialog taskId={fullId} onOpenChange={(open) => !open && setFullId(null)} />
       <TaskEditDialog taskId={editId} onOpenChange={(open) => !open && setEditId(null)} />
       {projectId && (
         <QuickAddDialog

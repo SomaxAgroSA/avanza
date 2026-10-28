@@ -1487,7 +1487,8 @@
       "done": "{{code}} movida para \"{{status}}\".",
       "message_one": "Para ir para \"{{status}}\", preencha: {{fields}}.",
       "message_other": "Para ir para \"{{status}}\", preencha: {{fields}}."
-    }
+    },
+    "openFullPage": "Abrir em página inteira"
   },
   "tags": {
     "title": "Tags",

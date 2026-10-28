@@ -260,6 +260,19 @@ describe('KanbanPage', () => {
     expect(await within(drawer).findByRole('combobox', { name: 'Status' })).toBeInTheDocument()
   })
 
+  it('"Abrir tarefa" no painel abre a tarefa completa numa janela, sem sair do Kanban', async () => {
+    const { router } = setup()
+    await userEvent.click(await screen.findByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ }))
+    const drawer = await screen.findByRole('dialog')
+    await userEvent.click(await within(drawer).findByRole('button', { name: 'Abrir tarefa' }))
+    const full = await screen.findByRole('dialog', { name: 'Erro ao salvar pedido' })
+    // as abas da tarefa ficam na janela e não mexem no endereço do quadro
+    await userEvent.click(within(full).getByRole('tab', { name: /Comentários/ }))
+    expect(router.state.location.pathname).toBe('/kanban/p1')
+    expect(router.state.location.search).toBe('')
+    expect(within(full).getByRole('link', { name: 'Abrir em página inteira' })).toHaveAttribute('href', '/tasks/1')
+  })
+
   it('criação rápida nasce na coluna escolhida', async () => {
     const { create } = setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Criar tarefa em Fazendo' }))

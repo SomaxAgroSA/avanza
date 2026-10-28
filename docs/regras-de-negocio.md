@@ -62,6 +62,7 @@ Cada status pode ter um **limite WIP** (máximo de tarefas na coluna; vazio ou 0
 - **Etapas:** o filtro de escolha múltipla mostra só as colunas escolhidas (ex.: só Concluído); sem escolha, todas. "Limpar filtros" traz todas de volta.
 - **Recolher coluna:** o botão no cabeçalho deixa a coluna como uma faixa estreita com o nome na vertical e a quantidade de cards; ela continua recebendo cards soltos. Clicar na faixa (ou no botão) expande.
 - **Compacto:** colunas mais estreitas (13 rem em vez de 16) e tudo menor — cabeçalhos mais baixos, texto, códigos, tags e ícones menores, a prioridade só com o ícone colorido (o nome aparece ao passar o mouse), título em até 2 linhas, sem os campos extras do tipo, até 2 tags e sem o + de criação rápida na coluna ("Nova tarefa" continua no topo).
+- **Abrir a tarefa:** clicar no card abre o painel lateral; "Abrir tarefa" abre a tarefa completa (abas, checklist, comentários, anexos, relações, histórico e ações) numa janela sobre o quadro, sem sair do Kanban. Na janela, "Abrir em página inteira" leva à página da tarefa.
 - **Altura fixa:** o quadro ocupa só a altura que sobra na tela, sem fazer a página rolar; sem raias, cada coluna rola por dentro (o cabeçalho fica parado); com raias, o quadro rola por dentro com o cabeçalho das colunas preso no topo.
 - Colunas recolhidas e o modo compacto ficam salvos no navegador da pessoa e valem para todos os quadros (os status são os mesmos).
 - Leitor do projeto e projeto arquivado: veem o quadro e comentam, mas não arrastam nem criam.

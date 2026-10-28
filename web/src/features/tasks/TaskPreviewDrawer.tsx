@@ -16,12 +16,15 @@ export function TaskPreviewDrawer({
   onOpenChange,
   onEdit,
   quickFields = false,
+  onOpenFull,
 }: {
   taskId: string | null
   onOpenChange: (open: boolean) => void
   onEdit?: (id: string) => void
   /** Status, prioridade e responsável editáveis no painel (Kanban). */
   quickFields?: boolean
+  /** "Abrir tarefa" abre a tarefa completa sem sair da tela (janela); sem isto, vai para a página da tarefa. */
+  onOpenFull?: (id: string) => void
 }) {
   const { t } = useTranslation()
   const task = useTask(taskId ?? undefined)
@@ -46,9 +49,15 @@ export function TaskPreviewDrawer({
       footer={
         data && (
           <>
-            <AppButton asChild variant="secondary" leftIcon={<ExternalLink />}>
-              <Link to={`/tasks/${data.id}`}>{t('tasks.openPage')}</Link>
-            </AppButton>
+            {onOpenFull ? (
+              <AppButton variant="secondary" leftIcon={<ExternalLink />} onClick={() => onOpenFull(data.id)}>
+                {t('tasks.openPage')}
+              </AppButton>
+            ) : (
+              <AppButton asChild variant="secondary" leftIcon={<ExternalLink />}>
+                <Link to={`/tasks/${data.id}`}>{t('tasks.openPage')}</Link>
+              </AppButton>
+            )}
             {data.capabilities.edit && onEdit && (
               <AppButton leftIcon={<Pencil />} onClick={() => onEdit(data.id)}>
                 {t('common.edit')}

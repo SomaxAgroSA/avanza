@@ -1487,7 +1487,8 @@
       "done": "{{code}} moved to \"{{status}}\".",
       "message_one": "To move to \"{{status}}\", fill in: {{fields}}.",
       "message_other": "To move to \"{{status}}\", fill in: {{fields}}."
-    }
+    },
+    "openFullPage": "Open as full page"
   },
   "tags": {
     "title": "Tags",
