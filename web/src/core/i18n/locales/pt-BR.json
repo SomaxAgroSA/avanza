@@ -301,6 +301,17 @@
       "description": "A recuperação de senha por e-mail não está configurada nesta plataforma. Um administrador pode redefinir a sua senha."
     },
     "hero": {
+      "board": "Quadro da equipe",
+      "live": "Ao vivo",
+      "columns": {
+        "todo": "A fazer",
+        "doing": "Em andamento",
+        "done": "Concluído"
+      },
+      "health": "Saúde do projeto",
+      "onTrack": "No prazo",
+      "moved": "Cartão movido para Concluído",
+      "now": "agora · toda a equipe já vê",
       "features": {
         "kanban": {
           "title": "Kanban e backlog",

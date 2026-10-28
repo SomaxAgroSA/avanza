@@ -39,6 +39,16 @@ describe('fluxo de autenticação', () => {
     expect(screen.getByText(`© ${new Date().getFullYear()} Avanza · SomaxAgro`)).toBeInTheDocument()
   })
 
+  it('a capa traz a prévia animada do quadro (decorativa, fora da leitura de tela)', async () => {
+    renderRoutes(routes, { repositories: fakeRepositories(), initialPath: '/login' })
+    const board = await screen.findByText('Quadro da equipe')
+    const preview = board.closest('[aria-hidden="true"]')
+    expect(preview).not.toBeNull()
+    expect(preview).toHaveClass('motion-safe:animate-float')
+    expect(screen.getByText('Ao vivo')).toBeInTheDocument()
+    expect(screen.getByText('Cartão movido para Concluído')).toBeInTheDocument()
+  })
+
   it('valida os campos antes de chamar a API', async () => {
     const login = vi.fn()
     renderRoutes(routes, { repositories: fakeRepositories({ auth: { login } }), initialPath: '/login' })
