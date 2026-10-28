@@ -39,20 +39,14 @@ describe('fluxo de autenticação', () => {
     expect(screen.getByText(`© ${new Date().getFullYear()} Avanza · SomaxAgro`)).toBeInTheDocument()
   })
 
-  it('a capa traz a prévia animada do quadro (decorativa, fora da leitura de tela)', async () => {
-    renderRoutes(routes, { repositories: fakeRepositories(), initialPath: '/login' })
-    const board = await screen.findByText('Quadro da equipe')
-    const preview = board.closest('[aria-hidden="true"]')
-    expect(preview).not.toBeNull()
-    expect(preview).toHaveClass('motion-safe:animate-float')
-    expect(screen.getByText('Ao vivo')).toBeInTheDocument()
-    // na prévia (computador) e na versão compacta do celular, as duas animadas e fora da leitura de tela
-    const moved = screen.getAllByText('Cartão movido para Concluído')
-    expect(moved).toHaveLength(2)
-    moved.forEach((el) => expect(el.closest('[aria-hidden="true"]')).not.toBeNull())
-    // um cartão é arrastado para "Concluído" e o aviso aparece em ciclo (na prévia e no celular)
-    expect(preview!.querySelectorAll('.motion-safe\\:animate-card-move')).toHaveLength(1)
-    expect(document.querySelectorAll('.motion-safe\\:animate-toast-cycle')).toHaveLength(2)
+  it('a capa traz o campo que responde ao cursor (Modelo G), decorativo e fora da leitura de tela', async () => {
+    const { container } = renderRoutes(routes, { repositories: fakeRepositories(), initialPath: '/login' })
+    await screen.findByRole('heading', { name: 'Sincronize projetos, tarefas e equipes.' })
+    const field = container.querySelector('aside canvas')
+    expect(field).not.toBeNull()
+    expect(field).toHaveAttribute('aria-hidden', 'true')
+    // a prévia de cartões saiu
+    expect(screen.queryByText('Quadro da equipe')).not.toBeInTheDocument()
   })
 
   it('valida os campos antes de chamar a API', async () => {

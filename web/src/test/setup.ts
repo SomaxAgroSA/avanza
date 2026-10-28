@@ -31,6 +31,9 @@ class ResizeObserverStub {
   disconnect() {}
 }
 window.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver
+
+// jsdom não desenha em <canvas> (avisaria "not implemented"): sem contexto, os desenhos decorativos não rodam
+HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof HTMLCanvasElement.prototype.getContext
 Element.prototype.scrollIntoView ??= () => {}
 Element.prototype.hasPointerCapture ??= () => false
 Element.prototype.releasePointerCapture ??= () => {}
