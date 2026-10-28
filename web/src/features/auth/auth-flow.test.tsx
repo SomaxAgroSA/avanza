@@ -47,6 +47,8 @@ describe('fluxo de autenticação', () => {
     expect(field).toHaveAttribute('aria-hidden', 'true')
     // a prévia de cartões saiu
     expect(screen.queryByText('Quadro da equipe')).not.toBeInTheDocument()
+    // segue o tema: claro aqui (Modelo H); no escuro, o Modelo G
+    expect(container.querySelector('aside')).toHaveAttribute('data-cover', 'light')
   })
 
   it('valida os campos antes de chamar a API', async () => {
