@@ -42,8 +42,8 @@ export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', 
     return (
       <div
         className={cn(
-          'relative flex min-h-11 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border bg-surface px-0.5 py-1.5 shadow-card transition-opacity',
-          compact && 'min-h-9 rounded-lg py-0.5',
+          'relative flex min-h-11 flex-col items-center justify-center gap-1 overflow-hidden rounded-md border border-border bg-surface px-0.5 py-1.5 shadow-card transition-opacity',
+          compact && 'min-h-9 py-0.5',
           wip === 'over' && 'border-danger',
           blocked && 'opacity-50',
           className,
@@ -58,8 +58,8 @@ export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', 
   return (
     <div
       className={cn(
-        'relative flex min-h-11 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2 shadow-card transition-opacity',
-        compact && 'min-h-9 gap-1.5 rounded-lg px-2.5 py-1',
+        'relative flex min-h-11 items-center gap-2 overflow-hidden rounded-md border border-border bg-surface px-3 py-2 shadow-card transition-opacity',
+        compact && 'min-h-9 gap-1.5 px-2.5 py-1',
         wip === 'over' && 'border-danger',
         blocked && 'opacity-50',
         className,
@@ -93,7 +93,9 @@ export const AppKanbanDropZone = forwardRef<HTMLDivElement, AppKanbanDropZonePro
     <div
       ref={ref}
       className={cn(
-        'flex min-h-24 flex-col gap-2 rounded-xl border border-transparent bg-surface-2 p-2 transition-colors',
+        // relative: textos só para leitor de tela (sr-only, absolutos) ficam presos à rolagem da coluna; sem
+        // isso eles escapam e esticam o quadro inteiro, criando uma 2ª barra de rolagem
+        'relative flex min-h-24 flex-col gap-2 rounded-xl border border-transparent bg-surface-2 p-2 transition-colors',
         over && !blocked && 'border-primary bg-primary-soft',
         blocked && 'cursor-not-allowed border-dashed border-border-strong opacity-50',
         className,
@@ -121,7 +123,7 @@ export const AppKanbanCard = forwardRef<HTMLDivElement, AppKanbanCardProps>(func
     <div
       ref={ref}
       className={cn(
-        'group flex select-none flex-col gap-2 rounded-xl border border-border bg-surface p-3 text-left shadow-card outline-none',
+        'group relative flex select-none flex-col gap-2 rounded-xl border border-border bg-surface p-3 text-left shadow-card outline-none',
         'transition-[border-color,box-shadow,opacity] duration-200 ease-out',
         // passar o mouse: a borda acende na cor da marca, com um halo suave (destaca o cartão que vai mexer)
         'hover:border-primary hover:ring-4 hover:ring-primary/25 focus-visible:ring-2 focus-visible:ring-ring',
