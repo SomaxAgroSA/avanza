@@ -9,7 +9,8 @@ backend/pb_data/
 backend/public/
 backend/.env
 
-# Ambiente
+# Ambiente (AMBIENTE-LOCAL.md tem senhas e endereços desta máquina)
+AMBIENTE-LOCAL.md
 .env
 .env.*
 !.env.example
