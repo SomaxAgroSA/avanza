@@ -6,28 +6,12 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 
 /** Três registros de 2020 no histórico (a API não cria registros com data antiga). */
-const OLD_AUDIT = {
-  name: '1799999999_test_old_audit.js',
-  content: [
-    'migrate((app) => {',
-    "  const collection = app.findCollectionByNameOrId('audit_logs')",
-    '  for (let i = 0; i < 3; i++) {',
-    '    const record = new Record(collection)',
-    "    record.set('entity_type', 'task')",
-    "    record.set('entity_id', 'antigo' + i)",
-    "    record.set('action', 'test.old')",
-    '    app.save(record)',
-    '  }',
-    "  app.db().newQuery(\"UPDATE audit_logs SET created = '2020-01-01 00:00:00.000Z' WHERE action = 'test.old'\").execute()",
-    '}, () => {})',
-    '',
-  ].join('\n'),
-}
+const OLD_AUDIT = "INSERT INTO audit_logs (id, entity_type, entity_id, action, created) SELECT 'antigo' || i || 'xxxxxxxx', 'task', 'antigo' || i, 'test.old', '2020-01-01T00:00:00Z' FROM generate_series(0, 2) AS i"
 
 describe('API Configurador geral', { timeout: 180000 }, () => {
   let pb
@@ -37,7 +21,7 @@ describe('API Configurador geral', { timeout: 180000 }, () => {
   let roles
 
   before(async () => {
-    pb = await startPocketBase(undefined, { extraMigrations: [OLD_AUDIT] })
+    pb = await startServer(undefined, { seedSql: [OLD_AUDIT] })
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)
     roles = (await root.get('/roles')).body.data

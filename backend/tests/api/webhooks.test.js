@@ -8,7 +8,7 @@ const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
 const http = require('node:http')
 const crypto = require('node:crypto')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 
 function startReceiver() {
   const requests = []
@@ -47,7 +47,7 @@ describe('API Webhooks', { timeout: 180000 }, () => {
   let doc
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     receiver = await startReceiver()
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)

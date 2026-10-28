@@ -1,17 +1,16 @@
 /**
- * Varredura de segurança (Fase 9): percorre TODAS as rotas registradas em main.pb.js.
+ * Varredura de segurança (Fase 9): percorre TODAS as rotas registradas (http/route-table.js).
  * - sem sessão, só health, openapi.json, login e a identidade da plataforma respondem; o resto é 401;
  * - com sessão, toda mutação sem o header CSRF é recusada (403 CSRF_CHECK_FAILED);
- * - a API genérica do PocketBase não entrega registro de nenhuma coleção a um usuário comum;
+ * - nenhuma rota fora da /api/v1 (como a antiga API genérica do PocketBase) entrega dados;
  * - respostas da API saem com os cabeçalhos de segurança.
  * Uma rota nova entra automaticamente na varredura.
  */
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
+const { ROUTES } = require('../../src/http/route-table')
 
 const RULES = [
   { label: 'POST /api/v1/auth/login', audience: '', duration: 60, maxRequests: 1000 },
@@ -33,14 +32,9 @@ const PUBLIC = [
 ]
 const MUTATIONS = ['POST', 'PUT', 'PATCH', 'DELETE']
 
+/** Rotas registradas no servidor (http/route-table.js), com os parâmetros no formato {nome}. */
 function registeredRoutes() {
-  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'pb_hooks', 'main.pb.js'), 'utf8')
-  const routes = []
-  // rotas da API ficam em apiRoute(...) (com o envelope de erros); routerAdd fica só para o frontend
-  const re = /(?:apiRoute|routerAdd)\(\s*'([A-Z]+)'\s*,\s*'([^']+)'/g
-  let m
-  while ((m = re.exec(source))) routes.push({ method: m[1], path: m[2] })
-  return routes.filter((r) => r.path.startsWith('/api/v1/') && !r.path.includes('{path...}'))
+  return ROUTES.map(([method, url]) => ({ method, path: url.replace(/:([a-zA-Z]+)/g, (_, name) => `{${name}}`) })).filter((r) => r.path.startsWith('/api/v1/'))
 }
 
 // ids com formato válido, mas inexistentes
@@ -53,7 +47,7 @@ describe('API — varredura de segurança', { timeout: 300000 }, () => {
   const routes = registeredRoutes()
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     await pb.updateSettings({ rateLimits: { enabled: true, rules: RULES } })
     admin = createClient(pb.api)
     await admin.login(pb.admin.email, pb.admin.password)

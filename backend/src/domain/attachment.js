@@ -93,6 +93,23 @@ function looksLikeText(bytes) {
   return control / bytes.length < 0.02
 }
 
+// Começos de HTML/XML que o navegador poderia interpretar (os mesmos que a detecção de tipo do
+// PocketBase reconhecia): seguidos de espaço ou ">" (ou "-->"/"?" nos comentários e no XML).
+const MARKUP_TAGS = ['!doctype html', 'html', 'head', 'script', 'iframe', 'h1', 'div', 'font', 'table', 'a', 'style', 'title', 'b', 'body', 'br', 'p', 'svg']
+
+/** Texto que na verdade é HTML/XML/SVG (ex.: página com script salva como .txt). */
+function looksLikeMarkup(bytes) {
+  let i = 0
+  if (startsWith(bytes, [0xef, 0xbb, 0xbf])) i = 3
+  while (i < bytes.length && (bytes[i] === 0x20 || (bytes[i] >= 0x09 && bytes[i] <= 0x0d))) i++
+  if (bytes[i] !== 0x3c) return false
+  let head = ''
+  for (let j = i + 1; j < bytes.length && j < i + 20; j++) head += String.fromCharCode(bytes[j])
+  head = head.toLowerCase()
+  if (head.indexOf('!--') === 0 || head.indexOf('?xml') === 0) return true
+  return MARKUP_TAGS.some((tag) => head.indexOf(tag) === 0 && /^[\s>/]/.test(head.charAt(tag.length) || '>'))
+}
+
 function extensionOf(name) {
   const match = /\.([A-Za-z0-9]{1,10})$/.exec(String(name || ''))
   return match ? match[1].toLowerCase() : ''
@@ -100,7 +117,7 @@ function extensionOf(name) {
 
 /**
  * Classifica o arquivo pelo nome E pelo conteúdo.
- * Retorna { mime, kind, ext } ou { error: 'unsupported_type' | 'type_mismatch' }.
+ * Retorna { mime, kind, ext } ou { error: 'unsupported_type' | 'type_mismatch' | 'invalid_file' }.
  */
 function classify(name, headBytes) {
   const ext = extensionOf(name)
@@ -108,6 +125,8 @@ function classify(name, headBytes) {
   if (!allowed) return { error: 'unsupported_type' }
   const family = sniff(headBytes || [])
   if (family !== allowed.family) return { error: 'type_mismatch' }
+  // segunda barreira: texto que é HTML/XML não entra nem com extensão de texto
+  if (family === 'text' && looksLikeMarkup(headBytes)) return { error: 'invalid_file' }
   return { mime: allowed.mime, kind: allowed.kind, ext }
 }
 

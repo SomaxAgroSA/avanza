@@ -5,7 +5,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 
 const LOGIN_RULE = { label: 'POST /api/v1/auth/login', audience: '', duration: 60, maxRequests: 1000 }
 const OTHER_RULES = [
@@ -19,7 +19,7 @@ describe('API /api/v1', { timeout: 120000 }, () => {
   let roles
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     await pb.updateSettings({ rateLimits: { enabled: true, rules: [LOGIN_RULE].concat(OTHER_RULES) } })
     admin = createClient(pb.api)
     const res = await admin.login(pb.admin.email, pb.admin.password)
@@ -95,10 +95,11 @@ describe('API /api/v1', { timeout: 120000 }, () => {
       assert.equal(JSON.stringify(res.body).includes(res.setCookie.split(';')[0].split('=')[1]), false, 'token não pode ir no body')
     })
 
-    it('API genérica do PocketBase não expõe collections', async () => {
+    it('nenhuma rota genérica expõe as tabelas (as antigas do PocketBase respondem 404)', async () => {
       for (const name of ['users', 'sessions', 'audit_logs', 'roles']) {
         const res = await fetch(`${pb.baseUrl}/api/collections/${name}/records`)
-        assert.equal(res.status, 403, name)
+        assert.equal(res.status, 404, name)
+        assert.equal((await res.json()).error.code, 'ROUTE_NOT_FOUND')
       }
       const auth = await fetch(`${pb.baseUrl}/api/collections/users/auth-with-password`, {
         method: 'POST',
@@ -287,7 +288,7 @@ describe('API /api/v1', { timeout: 120000 }, () => {
       }, { headers: { 'X-Correlation-Id': 'audit-corr-0001' } })
       assert.equal(created.status, 201)
 
-      const logs = await pb.listRecords('audit_logs', `filter=${encodeURIComponent(`entity_id="${created.body.data.id}"`)}`)
+      const logs = await pb.query('SELECT * FROM audit_logs WHERE entity_id = $1', [created.body.data.id])
       assert.equal(logs.length, 1)
       assert.equal(logs[0].action, 'user.created')
       assert.equal(logs[0].correlation_id, 'audit-corr-0001')
@@ -297,7 +298,7 @@ describe('API /api/v1', { timeout: 120000 }, () => {
     })
 
     it('login e logout geram histórico', async () => {
-      const logs = await pb.listRecords('audit_logs', `filter=${encodeURIComponent('action="auth.login" || action="auth.logout"')}`)
+      const logs = await pb.query("SELECT * FROM audit_logs WHERE action IN ('auth.login', 'auth.logout')")
       assert.ok(logs.some((l) => l.action === 'auth.login'))
       assert.ok(logs.some((l) => l.action === 'auth.logout'))
     })

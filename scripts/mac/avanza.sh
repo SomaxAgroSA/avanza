@@ -6,11 +6,14 @@
 #   scripts/mac/avanza.sh remover    desfaz o início automático e para o servidor (os dados ficam)
 #   scripts/mac/avanza.sh endereco   mostra o endereço de acesso (janela + terminal)
 #   scripts/mac/avanza.sh status     servidor no ar? em qual endereço?
+#   scripts/mac/avanza.sh migrar     leva os dados do PocketBase (~/Avanza/backend/pb_data) para o Supabase
 #
 # O servidor roda numa cópia fora de Documentos (AVANZA_DIR, padrão ~/Avanza): o macOS não deixa
-# programas iniciados no login lerem Documentos. Os dados e o .env da cópia nunca são sobrescritos.
-# Requisitos no repositório: dependências instaladas, `npm --prefix backend run setup` e
-# backend/.env com KAMBAN_HTTP=0.0.0.0:<porta> (para aceitar conexões da rede).
+# programas iniciados no login lerem Documentos. O .env da cópia nunca é sobrescrito (só ganha as
+# variáveis do Supabase que faltarem). Os dados ficam no Supabase local (Docker pelo Colima), que o
+# servidor sobe antes da API (ADR-044).
+# Requisitos: colima e supabase em ~/.local/bin (ou no PATH), dependências instaladas no repositório e
+# backend/.env com KAMBAN_HTTP=0.0.0.0:<porta> (para aceitar conexões da rede) e o Supabase.
 
 set -u
 
@@ -20,6 +23,8 @@ LABEL=com.avanza.server
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG_DIR="$HOME/Library/Logs/Avanza"
 DOMAIN="gui/$(id -u)"
+# o LaunchAgent não carrega o perfil do shell: colima, supabase e docker ficam em ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH:/usr/local/bin:/opt/homebrew/bin"
 
 porta() {
   local p
@@ -72,6 +77,14 @@ APPLESCRIPT
   return 0
 }
 
+# Motor do Docker (Colima) e Supabase local no ar (o banco e os arquivos do Avanza).
+subir_supabase() {
+  command -v colima >/dev/null || { echo "colima não encontrado (instale em ~/.local/bin)." >&2; return 1; }
+  command -v supabase >/dev/null || { echo "supabase não encontrado (instale em ~/.local/bin)." >&2; return 1; }
+  colima status >/dev/null 2>&1 || colima start || return 1
+  (cd "$ROOT" && supabase start >/dev/null) || { echo "O Supabase não subiu (rode 'supabase start' em $ROOT para ver o erro)." >&2; return 1; }
+}
+
 # Chamado pelo LaunchAgent, dentro da cópia.
 executar() {
   local node pid codigo marca
@@ -81,9 +94,10 @@ executar() {
     exit 1
   fi
   cd "$ROOT" || exit 1
-  [ -f backend/pb_public/index.html ] || { echo "Falta o build do web: rode o atualizar no repositório." >&2; exit 1; }
+  [ -f backend/public/index.html ] || { echo "Falta o build do web: rode o atualizar no repositório." >&2; exit 1; }
+  subir_supabase || exit 1
 
-  "$node" backend/scripts/dev.js &
+  "$node" backend/scripts/start.js &
   pid=$!
   trap 'kill -INT "$pid" 2>/dev/null' TERM INT
 
@@ -114,21 +128,55 @@ copiar_para_execucao() {
     echo "Rode este comando a partir do repositório, não de $RUN_DIR." >&2
     exit 1
   fi
-  [ -x "$ROOT/backend/bin/pocketbase" ] || { echo "Falta o PocketBase: rode 'npm --prefix backend run setup'." >&2; exit 1; }
-  [ -f "$ROOT/backend/.env" ] || { echo "Falta backend/.env (copie de backend/.env.example)." >&2; exit 1; }
+  [ -d "$ROOT/backend/node_modules" ] || { echo "Faltam as dependências: rode 'npm ci --prefix backend'." >&2; exit 1; }
+  [ -f "$ROOT/backend/.env" ] || { echo "Falta backend/.env (rode 'npm --prefix backend run setup')." >&2; exit 1; }
 
   echo "Gerando o build do web..."
   (cd "$ROOT" && npm run build >/dev/null) || { echo "O build do web falhou (rode 'npm run build' para ver o erro)." >&2; exit 1; }
 
   echo "Copiando para $RUN_DIR..."
-  for d in backend/bin backend/pb_hooks backend/pb_migrations backend/pb_public backend/scripts scripts/mac; do
+  for d in backend/src backend/db backend/scripts backend/public backend/node_modules supabase scripts/mac; do
     mkdir -p "$RUN_DIR/$d"
-    rsync -a --delete "$ROOT/$d/" "$RUN_DIR/$d/" || exit 1
+    rsync -a --delete --exclude .temp --exclude .branches "$ROOT/$d/" "$RUN_DIR/$d/" || exit 1
   done
-  [ -f "$RUN_DIR/backend/.env" ] || cp "$ROOT/backend/.env" "$RUN_DIR/backend/.env"
-  if [ ! -d "$RUN_DIR/backend/pb_data" ] && [ -d "$ROOT/backend/pb_data" ]; then
-    cp -R "$ROOT/backend/pb_data" "$RUN_DIR/backend/pb_data"
+  cp "$ROOT/backend/package.json" "$RUN_DIR/backend/package.json"
+  # sobras da versão PocketBase; o pb_data fica (volta atrás e origem do "migrar")
+  rm -rf "$RUN_DIR/backend/bin" "$RUN_DIR/backend/pb_hooks" "$RUN_DIR/backend/pb_migrations" "$RUN_DIR/backend/pb_public"
+  if [ -f "$RUN_DIR/backend/.env" ]; then
+    completar_env
+  else
+    cp "$ROOT/backend/.env" "$RUN_DIR/backend/.env"
   fi
+}
+
+# .env da cópia: acrescenta as variáveis do Supabase que faltarem (copiadas do repositório).
+completar_env() {
+  local var linha
+  for var in KAMBAN_DATABASE_URL KAMBAN_DB_SCHEMA KAMBAN_SUPABASE_URL KAMBAN_SUPABASE_SECRET_KEY KAMBAN_STORAGE_BUCKET KAMBAN_SECRET_KEY; do
+    grep -q "^$var=" "$RUN_DIR/backend/.env" && continue
+    linha=$(grep -m1 "^$var=" "$ROOT/backend/.env") || continue
+    printf '%s\n' "$linha" >> "$RUN_DIR/backend/.env"
+    echo "  .env da cópia: $var acrescentada"
+  done
+}
+
+# Virada: dados do PocketBase da cópia → Supabase (uma vez). O pb_data não é apagado.
+migrar() {
+  local node
+  node="${AVANZA_NODE:-$(command -v node)}"
+  [ -d "$RUN_DIR/backend/pb_data" ] || { echo "Não há dados do PocketBase em $RUN_DIR/backend/pb_data." >&2; exit 1; }
+  [ -f "$RUN_DIR/backend/scripts/import-pocketbase.js" ] || { echo "Rode o atualizar antes (a cópia ainda é a versão PocketBase)." >&2; exit 1; }
+  subir_supabase || exit 1
+  if agente_instalado; then
+    launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null
+    echo "Servidor parado para a migração."
+  fi
+  if ! (cd "$RUN_DIR/backend" && "$node" scripts/import-pocketbase.js --from "$RUN_DIR/backend/pb_data" "$@"); then
+    echo "A migração falhou; nada foi apagado do PocketBase. Corrija e rode de novo." >&2
+    [ -f "$PLIST" ] && launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null
+    exit 1
+  fi
+  [ -f "$PLIST" ] && launchctl bootstrap "$DOMAIN" "$PLIST" && echo "Servidor de volta no ar, agora com o Supabase."
 }
 
 instalar() {
@@ -161,6 +209,8 @@ instalar() {
   <dict>
     <key>AVANZA_NODE</key>
     <string>$node</string>
+    <key>PATH</key>
+    <string>$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string>
   </dict>
   <key>RunAtLoad</key>
   <true/>
@@ -193,7 +243,7 @@ atualizar() {
 remover() {
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null
   rm -f "$PLIST"
-  echo "Início automático removido e servidor parado. Os dados continuam em $RUN_DIR/backend/pb_data."
+  echo "Início automático removido e servidor parado. Os dados continuam no Supabase local (Docker)."
 }
 
 status() {
@@ -211,6 +261,7 @@ case "${1:-}" in
   remover) remover ;;
   endereco | endereço) if no_ar; then mostrar_endereco; else echo "Servidor fora do ar."; exit 1; fi ;;
   status) status ;;
+  migrar) shift; migrar "$@" ;;
   executar) executar ;;
-  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

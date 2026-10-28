@@ -23,8 +23,8 @@ export default defineConfig({
     proxy: { '/api': { target: API_TARGET, changeOrigin: false } },
   },
   build: {
-    // O build de produção é servido pelo próprio PocketBase (backend/pb_public).
-    outDir: '../backend/pb_public',
+    // O build de produção é servido pela própria API (backend/public).
+    outDir: '../backend/public',
     emptyOutDir: true,
     sourcemap: false,
     // Fontes sempre como arquivo: a CSP (font-src 'self') bloqueia as pequenas que viriam embutidas em data:.

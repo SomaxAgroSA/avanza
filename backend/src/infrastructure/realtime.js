@@ -1,82 +1,137 @@
 /**
- * Infraestrutura do tempo real: registro gravado → mudança (com os campos que levam ao projeto) e o
- * envio pelo broker de assinaturas do PocketBase (SSE em /api/realtime) para quem assina o tópico.
+ * Infraestrutura do tempo real: as conexões SSE desta instância e a escuta do canal do Postgres.
+ *
+ * Os gatilhos das tabelas observadas (db/migrations/0006_realtime.sql) avisam o canal
+ * "realtime_<esquema>" depois do commit, com os identificadores da mudança. Cada instância da API
+ * escuta o canal numa conexão dedicada, monta o evento uma vez (application/realtime.js#eventFor) e o
+ * entrega às conexões que assinam o tópico — no formato SSE do PocketBase, que o web já usa.
  */
 
-/** Onde cada coleção guarda o vínculo com o projeto, a tarefa, o elemento ou a pessoa. */
-const LINKS = {
-  tasks: { project: 'project_id' },
-  comments: { task: 'task_id' },
-  attachments: { task: 'task_id' },
-  task_relations: { task: 'source_task_id' },
-  sprints: { project: 'project_id' },
-  project_milestones: { project: 'project_id' },
-  projects: { self: true },
-  project_members: { project: 'project_id' },
-  project_groups: { project: 'project_id' },
-  plan_items: { project: 'project_id' },
-  plan_statuses: { project: 'project_id' },
-  plan_resources: { project: 'project_id' },
-  plan_item_links: { project: 'project_id' },
-  plan_item_updates: { project: 'project_id', item: 'item_id' },
-  plan_item_files: { project: 'project_id', item: 'item_id' },
-  plan_journal: { project: 'project_id' },
-  plan_issues: { project: 'project_id' },
-  plan_columns: { project: 'project_id' },
-  plan_settings: { project: 'project_id' },
-  notifications: { user: 'user_id', task: 'task_id' },
-}
-
-function changeFromRecord(record, action) {
-  const collection = record.collection().name
-  const link = LINKS[collection]
-  if (!link) return null
-  const read = (field) => (field ? record.getString(field) || null : null)
-  return {
-    collection,
-    action,
-    id: record.id,
-    projectId: link.self ? record.id : read(link.project),
-    taskId: read(link.task),
-    itemId: read(link.item),
-    userId: read(link.user),
-  }
-}
-
-/** Envia o aviso a cada conexão que assina o tópico. */
-function broadcast(app, event) {
-  const message = new SubscriptionMessage({ name: event.topic, data: JSON.stringify(event.payload) })
-  app
-    .subscriptionsBroker()
-    .chunkedClients(300)
-    .forEach((chunk) => {
-      chunk.forEach((client) => {
-        if (client.hasSubscription(event.topic)) client.send(message)
-      })
-    })
-}
+const crypto = require('node:crypto')
 
 /** Nome do sinal de vida: não é tópico de ninguém, então o navegador ignora. */
 const KEEPALIVE_EVENT = 'kamban_keepalive'
+const RECONNECT_MS = 2000
 
-/**
- * Sinal de vida para todas as conexões: o PocketBase fecha a conexão SSE depois de 5 min sem
- * mensagens; o navegador reconecta, refaz as assinaturas e busca as telas de novo — com centenas de
- * pessoas paradas lendo, isso vira carga à toa (e o aviso "Reconectando…" pisca).
- */
-function keepAlive(app) {
-  const message = new SubscriptionMessage({ name: KEEPALIVE_EVENT, data: '{}' })
-  let sent = 0
-  app
-    .subscriptionsBroker()
-    .chunkedClients(300)
-    .forEach((chunk) => {
-      chunk.forEach((client) => {
-        client.send(message)
-        sent++
-      })
-    })
-  return sent
+function sseMessage(clientId, name, data) {
+  return `id:${clientId}\nevent:${name}\ndata:${data}\n\n`
 }
 
-module.exports = { LINKS, KEEPALIVE_EVENT, changeFromRecord, broadcast, keepAlive }
+/**
+ * @param {object} runtime { db, log }
+ * @param {(change: object) => Promise<{ topic: string, payload: object }|null>} eventFor
+ */
+function createRealtimeHub(runtime, eventFor) {
+  const clients = new Map()
+  const channel = `realtime_${runtime.db.schema}`
+  let listener = null
+  let stopped = false
+
+  function send(client, name, data) {
+    try {
+      client.write(sseMessage(client.id, name, data))
+    } catch (_) {
+      clients.delete(client.id)
+    }
+  }
+
+  async function dispatch(payload) {
+    if (clients.size === 0) return
+    let change
+    try {
+      change = JSON.parse(payload)
+    } catch (_) {
+      return
+    }
+    // ninguém assina nada nesta instância: não monta o evento
+    if (![...clients.values()].some((c) => c.subscriptions.size > 0)) return
+    const event = await eventFor(change)
+    if (!event) return
+    const data = JSON.stringify(event.payload)
+    clients.forEach((client) => {
+      if (client.subscriptions.has(event.topic)) send(client, event.topic, data)
+    })
+  }
+
+  async function listen() {
+    if (stopped) return
+    try {
+      const client = await runtime.db.connect()
+      listener = client
+      client.on('notification', (msg) => {
+        if (msg.channel !== channel) return
+        // aviso em tempo real nunca derruba nada: o pior caso é a tela buscar na rede de segurança
+        dispatch(msg.payload).catch((err) => runtime.log.warn({ err }, 'tempo real: aviso não entregue'))
+      })
+      client.on('error', (err) => {
+        runtime.log.warn({ err }, 'tempo real: conexão de escuta caiu')
+        reconnect(client)
+      })
+      await client.query(`LISTEN "${channel}"`)
+    } catch (err) {
+      runtime.log.warn({ err }, 'tempo real: não foi possível escutar o canal')
+      reconnect(null)
+    }
+  }
+
+  function reconnect(client) {
+    if (client) {
+      try {
+        client.release(true)
+      } catch (_) {
+        // já devolvida
+      }
+    }
+    listener = null
+    if (stopped) return
+    const timer = setTimeout(listen, RECONNECT_MS)
+    timer.unref()
+  }
+
+  return {
+    channel,
+
+    start: listen,
+
+    /** Registra uma conexão SSE; `write(text)` escreve no corpo. Devolve o cliente (com o id). */
+    add(write) {
+      const client = { id: crypto.randomBytes(20).toString('base64url'), write, subscriptions: new Set(), userId: null }
+      clients.set(client.id, client)
+      send(client, 'PB_CONNECT', JSON.stringify({ clientId: client.id }))
+      return client
+    },
+
+    remove(id) {
+      clients.delete(id)
+    },
+
+    get(id) {
+      return clients.get(id) || null
+    },
+
+    /** Sinal de vida para todas as conexões desta instância; devolve quantas receberam. */
+    keepAlive() {
+      let sent = 0
+      clients.forEach((client) => {
+        send(client, KEEPALIVE_EVENT, '{}')
+        sent++
+      })
+      return sent
+    },
+
+    size: () => clients.size,
+
+    async stop() {
+      stopped = true
+      clients.clear()
+      if (listener) {
+        const client = listener
+        listener = null
+        await client.query(`UNLISTEN "${channel}"`).catch(() => {})
+        client.release()
+      }
+    },
+  }
+}
+
+module.exports = { createRealtimeHub, KEEPALIVE_EVENT }

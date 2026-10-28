@@ -1,23 +1,26 @@
-# KAMBAN em um comando:
-#   cp .env.docker.example .env   (defina o administrador)
+# Avanza em um comando (a API; os dados ficam no Supabase da empresa — Cloud ou auto-hospedado):
+#   cp .env.docker.example .env   (Supabase, chave do servidor e administrador)
 #   docker compose up -d
 #   abra http://localhost:8090
 # Em produção, coloque um proxy com HTTPS na frente (o cookie de sessão é Secure).
 services:
-  kamban:
+  avanza:
     build: .
-    image: kamban:latest
+    image: avanza:latest
     ports:
       - "8090:8090"
     environment:
       KAMBAN_ENV: production
-      KAMBAN_ADMIN_EMAIL: ${KAMBAN_ADMIN_EMAIL:?defina KAMBAN_ADMIN_EMAIL no .env}
-      KAMBAN_ADMIN_PASSWORD: ${KAMBAN_ADMIN_PASSWORD:?defina KAMBAN_ADMIN_PASSWORD no .env}
+      KAMBAN_DATABASE_URL: ${KAMBAN_DATABASE_URL:?defina KAMBAN_DATABASE_URL no .env}
+      KAMBAN_DB_SCHEMA: ${KAMBAN_DB_SCHEMA:-avanza}
+      KAMBAN_DB_SSL: ${KAMBAN_DB_SSL:-require}
+      KAMBAN_SUPABASE_URL: ${KAMBAN_SUPABASE_URL:?defina KAMBAN_SUPABASE_URL no .env}
+      KAMBAN_SUPABASE_SECRET_KEY: ${KAMBAN_SUPABASE_SECRET_KEY:?defina KAMBAN_SUPABASE_SECRET_KEY no .env}
+      KAMBAN_STORAGE_BUCKET: ${KAMBAN_STORAGE_BUCKET:-avanza-files}
+      KAMBAN_SECRET_KEY: ${KAMBAN_SECRET_KEY:?defina KAMBAN_SECRET_KEY no .env}
+      KAMBAN_TRUSTED_PROXY: ${KAMBAN_TRUSTED_PROXY:-}
+      KAMBAN_ADMIN_EMAIL: ${KAMBAN_ADMIN_EMAIL:-}
+      KAMBAN_ADMIN_PASSWORD: ${KAMBAN_ADMIN_PASSWORD:-}
       KAMBAN_ADMIN_NAME: ${KAMBAN_ADMIN_NAME:-Administrador}
       TZ: ${TZ:-America/Sao_Paulo}
-    volumes:
-      - kamban_data:/pb_data
     restart: unless-stopped
-
-volumes:
-  kamban_data:

@@ -6,7 +6,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 
 const PASSWORD = 'SenhaTeste123'
 
@@ -18,7 +18,7 @@ describe('API Tokens de API', { timeout: 180000 }, () => {
   const users = {}
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)
     const roles = (await root.get('/roles')).body.data

@@ -1,17 +1,16 @@
 /**
- * Teste de carga (manual): sobe um PocketBase isolado, cria um cenário realista e mede vazão e
+ * Teste de carga (manual): sobe a API isolada (esquema novo no Supabase local), cria um cenário realista e mede vazão e
  * latência sob concorrência crescente. Uso: npm --prefix backend run load  (ou node scripts/load-test.js)
  *
  * Cenário: 30 pessoas, um projeto grande (400 tarefas, quadro de gestão com 60 elementos) e um pequeno.
  * Cada "usuário virtual" repete, sem pausa, uma mistura parecida com o uso real: Kanban, listas,
  * tarefa, comentários, sino, quadro da Gestão e ~10% de escritas (editar tarefa, comentar).
  *
- * Variáveis: LOAD_LEVELS=5,10,20,40,80  LOAD_SECONDS=20  LOAD_TASKS=400  KAMBAN_HOOKS_POOL (repassado ao PocketBase;
- * padrão 60, o mesmo da produção).
+ * Variáveis: LOAD_LEVELS=5,10,20,40,80  LOAD_SECONDS=20  LOAD_TASKS=400  KAMBAN_DB_POOL (conexões da API
+ * com o Postgres; padrão 10, o mesmo da produção).
  */
 
-const { startPocketBase, createClient } = require('../tests/support/pb-harness')
-const { hooksPool } = require('./env')
+const { startServer, createClient } = require('../tests/support/server-harness')
 
 const LEVELS = (process.env.LOAD_LEVELS || '5,10,20,40,80').split(',').map(Number)
 const SECONDS = Number(process.env.LOAD_SECONDS || 20)
@@ -37,7 +36,7 @@ function percentile(sorted, p) {
 }
 
 async function main() {
-  const pb = await startPocketBase()
+  const pb = await startServer()
   try {
     // rate limit alto: o teste mede o servidor, não o limitador
     await pb.updateSettings({ rateLimits: { enabled: false, rules: [] } })
@@ -94,9 +93,8 @@ async function main() {
       return MIX[0]
     }
 
-    // aquecimento: cada VM do pool carrega os módulos na primeira chamada que atende; passar por todas
-    // mede o servidor já no ar há algum tempo (e não o custo de partida de cada VM)
-    const warm = hooksPool(process.env)
+    // aquecimento: conexões do pool abertas e o JIT do Node quente (mede o servidor já no ar há algum tempo)
+    const warm = Number(process.env.KAMBAN_DB_POOL || 10)
     await pool(Array.from({ length: warm * 6 }, (_, i) => i), warm, async () => {
       const [, , fn] = choose()
       await fn(pick(people).client)

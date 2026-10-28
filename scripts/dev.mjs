@@ -1,5 +1,5 @@
 /**
- * Sobe API (PocketBase, :8090) e web (Vite, :5173) juntos, com saída prefixada.
+ * Sobe API (Node, :8090 — precisa do Supabase local: supabase start) e web (Vite, :5173) juntos, com saída prefixada.
  * Ctrl+C encerra os dois — incluindo processos filhos (no Windows, via taskkill /T).
  */
 import { spawn, spawnSync } from 'node:child_process'
@@ -35,7 +35,7 @@ const children = services.map(({ name, color, cwd, args }) => {
   return child
 })
 
-/** Encerra o processo e todos os descendentes (o PocketBase é filho do script da API). */
+/** Encerra o processo e todos os descendentes (o servidor é filho do script da API). */
 function killTree(child) {
   if (child.exitCode !== null || !child.pid) return
   if (isWindows) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })

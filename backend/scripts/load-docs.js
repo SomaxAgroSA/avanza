@@ -1,6 +1,6 @@
 /**
  * Teste de carga (manual) do cenário "equipe pequena + muitos leitores da documentação":
- * sobe um PocketBase isolado e mede, ao mesmo tempo,
+ * sobe a API isolada (esquema novo no Supabase local) e mede, ao mesmo tempo,
  *  - DOCS_WORKERS pessoas trabalhando (Kanban, listas, tarefa, Gestão, gravações) com pausa de 1–3 s;
  *  - DOCS_READERS leitores logados abrindo páginas da documentação (árvore do espaço + página +
  *    imagens, como o navegador faz), cada um com a conexão do tempo real aberta e a conferência da
@@ -9,10 +9,10 @@
  *
  * Variáveis: DOCS_READERS=500  DOCS_ACCOUNTS=100 (contas dos leitores; cada uma em vários "navegadores")
  *   DOCS_LEVELS=60,30,15 (segundos, em média, entre duas páginas abertas por leitor)  DOCS_SECONDS=60
- *   DOCS_WORKERS=10  DOCS_PAGES=40  DOCS_IMAGES=2 (por página)  DOCS_SSE=1  KAMBAN_HOOKS_POOL.
+ *   DOCS_WORKERS=10  DOCS_PAGES=40  DOCS_IMAGES=2 (por página)  DOCS_SSE=1  KAMBAN_DB_POOL.
  */
 
-const { startPocketBase, createClient } = require('../tests/support/pb-harness')
+const { startServer, createClient } = require('../tests/support/server-harness')
 
 const READERS = Number(process.env.DOCS_READERS || 500)
 const ACCOUNTS = Number(process.env.DOCS_ACCOUNTS || 100)
@@ -86,7 +86,7 @@ async function openRealtime(baseUrl, client, userId, connections) {
 }
 
 async function main() {
-  const pb = await startPocketBase()
+  const pb = await startServer()
   const connections = []
   try {
     await pb.updateSettings({ rateLimits: { enabled: false, rules: [] } })

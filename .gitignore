@@ -7,7 +7,7 @@ coverage/
 # Backend: binário, dados, build do frontend e segredos
 backend/bin/
 backend/pb_data/
-backend/pb_public/
+backend/public/
 backend/.env
 
 # Ambiente

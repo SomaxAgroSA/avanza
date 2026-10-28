@@ -1,17 +1,10 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const { DEFAULT_HOOKS_POOL, hooksPool, serveArgs } = require('../../scripts/env')
+const { parseEnv } = require('../../scripts/env')
 
-describe('scripts/env — pool de VMs do JS no serve', () => {
-  it('usa 60 por padrão (o do PocketBase é 15)', () => {
-    assert.equal(DEFAULT_HOOKS_POOL, 60)
-    assert.equal(hooksPool({}), 60)
-    assert.deepEqual(serveArgs({}), ['--hooksPool=60'])
-  })
-
-  it('KAMBAN_HOOKS_POOL ajusta; valor inválido ou fora de 1–500 volta ao padrão', () => {
-    assert.equal(hooksPool({ KAMBAN_HOOKS_POOL: '30' }), 30)
-    assert.deepEqual(serveArgs({ KAMBAN_HOOKS_POOL: '120' }), ['--hooksPool=120'])
-    ;['', 'abc', '0', '-5', '2.5', '501'].forEach((value) => assert.equal(hooksPool({ KAMBAN_HOOKS_POOL: value }), 60, value))
+describe('scripts/env — leitura do backend/.env', () => {
+  it('lê CHAVE=valor, ignora comentários e tira aspas', () => {
+    const vars = parseEnv(['# comentário', 'KAMBAN_ENV=production', 'KAMBAN_HTTP = 0.0.0.0:8090 ', 'KAMBAN_ADMIN_NAME="Ana Souza"', "KAMBAN_X='a=b'", 'inválida', ''].join('\n'))
+    assert.deepEqual(vars, { KAMBAN_ENV: 'production', KAMBAN_HTTP: '0.0.0.0:8090', KAMBAN_ADMIN_NAME: 'Ana Souza', KAMBAN_X: 'a=b' })
   })
 })

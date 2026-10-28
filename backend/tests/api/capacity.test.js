@@ -1,10 +1,9 @@
 /**
- * Capacidade do servidor (regressão): nenhum middleware em JS no caminho do tempo real nem global.
+ * Capacidade do servidor (regressão): conexões do tempo real abertas não pesam nas requisições.
  *
- * No PocketBase um middleware em JS segura uma VM do pool durante todo o e.next(). Com middlewares
- * globais, cada conexão SSE aberta (uma por aba logada) prendia VMs por horas: com mais conexões do
- * que o pool, toda requisição passava a criar VMs na hora — segundos de resposta e gigabytes de
- * memória (500 leitores: p50 de 47 s). Aqui o pool tem 4 VMs e ficam abertas 24 conexões.
+ * No PocketBase, cada conexão SSE (uma por aba logada) chegou a prender VMs do JS e derrubar a API
+ * (500 leitores: p50 de 47 s; ADR-041). No servidor Node, uma conexão SSE é só um socket aberto — não
+ * segura conexão do banco nem trabalho: com 24 delas abertas, a API responde como sem elas.
  */
 
 const { describe, it, before, after } = require('node:test')
@@ -12,10 +11,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 const { connectRealtime } = require('../support/sse-client')
 
-const POOL = 4
 const CONNECTIONS = 24
 
 async function medianMs(fn, times) {
@@ -39,7 +37,7 @@ describe('API Capacidade', { timeout: 180000 }, () => {
   before(async () => {
     publicDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kamban-public-'))
     fs.writeFileSync(path.join(publicDir, 'index.html'), '<!doctype html><title>Avanza</title>')
-    pb = await startPocketBase({ KAMBAN_HOOKS_POOL: String(POOL) }, { publicDir })
+    pb = await startServer({}, { publicDir })
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)
     user = (await root.get('/auth/me')).body.data.user
@@ -66,7 +64,7 @@ describe('API Capacidade', { timeout: 180000 }, () => {
     assert.equal(missing.body.error.code, 'ROUTE_NOT_FOUND')
   })
 
-  it(`com ${CONNECTIONS} conexões do tempo real abertas e pool de ${POOL} VMs, a API responde como sem elas`, async () => {
+  it(`com ${CONNECTIONS} conexões do tempo real abertas, a API responde como sem elas`, async () => {
     const call = () => root.get('/auth/me')
     for (let i = 0; i < 10; i++) await call()
     const before = await medianMs(call, 15)
@@ -76,7 +74,6 @@ describe('API Capacidade', { timeout: 180000 }, () => {
       assert.equal((await live.subscribe([`user:${user.id}`])).status, 204)
     }
     const during = await medianMs(call, 15)
-    // com VMs presas, cada chamada criaria VMs novas e carregaria todos os módulos (centenas de ms)
     assert.ok(during < before * 3 + 60, `mediana ${during.toFixed(1)} ms com conexões abertas x ${before.toFixed(1)} ms sem elas`)
   })
 })

@@ -6,7 +6,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 const { connectRealtime } = require('../support/sse-client')
 
 describe('API Tempo real', { timeout: 180000 }, () => {
@@ -20,7 +20,7 @@ describe('API Tempo real', { timeout: 180000 }, () => {
   const connections = []
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)
     const roles = (await root.get('/roles')).body.data

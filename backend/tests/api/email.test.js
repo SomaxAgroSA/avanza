@@ -6,7 +6,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 const { startSmtpSink } = require('../support/smtp-sink')
 
 const PASSWORD = 'SenhaTeste123'
@@ -21,7 +21,7 @@ describe('API E-mail', { timeout: 180000 }, () => {
   let roles
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     smtp = await startSmtpSink()
     root = createClient(pb.api)
     await root.login(pb.admin.email, pb.admin.password)

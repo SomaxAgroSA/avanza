@@ -4,7 +4,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 
 const RULES = [
   { label: 'POST /api/v1/auth/login', audience: '', duration: 60, maxRequests: 1000 },
@@ -17,7 +17,7 @@ describe('API — bloqueio progressivo de conta', { timeout: 180000 }, () => {
   let admin
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     await pb.updateSettings({ rateLimits: { enabled: true, rules: RULES } })
     admin = createClient(pb.api)
     await admin.login(pb.admin.email, pb.admin.password)
@@ -38,7 +38,7 @@ describe('API — bloqueio progressivo de conta', { timeout: 180000 }, () => {
     assert.ok(locked.body.error.details.retry_after_seconds > 250)
     assert.equal(client.hasSession(), false)
     // o e-mail não fica gravado em claro
-    const attempts = await pb.listRecords('login_attempts')
+    const attempts = await pb.query('SELECT * FROM login_attempts')
     assert.ok(attempts.length === 5 && attempts.every((a) => !a.key.includes('ana') && a.key.length >= 64))
   })
 

@@ -1,8 +1,8 @@
 /**
  * Apoio dos testes de ponta a ponta (Fase 9).
  *
- * - Sobe um PocketBase isolado (dados temporários, migrations e hooks reais) servindo o build de
- *   produção do front (`backend/pb_public` — rode `npm run build` antes; `npm run e2e` já faz isso).
+ * - Sobe a API isolada (esquema e bucket novos no Supabase local, migrations reais) servindo o build de
+ *   produção do front (`backend/public` — rode `npm run build` antes; `npm run e2e` já faz isso).
  * - Navegador: Edge instalado na máquina (playwright-core, sem baixar navegadores). Para usar o
  *   Chrome: KAMBAN_E2E_CHANNEL=chrome.
  */
@@ -13,10 +13,10 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 
 const require = createRequire(import.meta.url)
-const { startPocketBase, createClient } = require('../backend/tests/support/pb-harness.js')
+const { startServer, createClient } = require('../backend/tests/support/server-harness.js')
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PUBLIC_DIR = path.join(ROOT, 'backend', 'pb_public')
+const PUBLIC_DIR = path.join(ROOT, 'backend', 'public')
 const AXE_SOURCE = fs.readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8')
 
 export const ADMIN = { email: 'admin@kamban.test', password: 'AdminTest12345' }
@@ -30,7 +30,7 @@ const RULES = [
 
 export async function startApp() {
   if (!fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) throw new Error('Build do front não encontrado: rode "npm run build" (ou "npm run e2e").')
-  const pb = await startPocketBase({}, { publicDir: PUBLIC_DIR })
+  const pb = await startServer({}, { publicDir: PUBLIC_DIR })
   await pb.updateSettings({ rateLimits: { enabled: true, rules: RULES } })
   const admin = createClient(pb.api)
   await admin.login(ADMIN.email, ADMIN.password)

@@ -4,7 +4,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 
 const RULES = [
   { label: 'POST /api/v1/auth/login', audience: '', duration: 60, maxRequests: 1000 },
@@ -32,7 +32,7 @@ describe('API /api/v1/tasks/{id}/attachments', { timeout: 180000 }, () => {
   let task
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     await pb.updateSettings({ rateLimits: { enabled: true, rules: RULES } })
     admin = createClient(pb.api)
     await admin.login(pb.admin.email, pb.admin.password)

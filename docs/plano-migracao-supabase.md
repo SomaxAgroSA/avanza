@@ -15,11 +15,13 @@ Ambiente local: Docker pelo **Colima** (sem administrador e sem a licença do Do
 | Etapa | Entrega | Pronto quando |
 |---|---|---|
 | A. Ambiente | Docker (Colima) + Supabase local + `supabase/config.toml` | ✅ 2026-10-28 |
-| B. Casos de uso assíncronos | código em `backend/src` (sai de `pb_hooks/src`), `async/await` em `application/`, testes unitários com `await` | testes unitários verdes |
-| C. Esquema Postgres | migrations SQL (`backend/db/migrations`) com os nomes das collections, cadastros iniciais e o executor de migrations | esquema sobe no Supabase local |
-| D. Repositórios SQL | infraestrutura nova sobre `pg` (transação por `unitOfWork`, consultas em lote) | testes de repositório verdes |
-| E. Servidor Node | Fastify com `/api/v1` (envelope, CSRF, cookie, limites, OpenAPI), arquivos no Storage, e-mail, rotinas com trava, tempo real SSE (`LISTEN/NOTIFY`), frontend com os cabeçalhos de segurança | suíte de API (contrato) verde |
-| F. Dados e operação | ETL do `pb_data` (SQLite → Postgres, arquivos → Storage), scripts (`npm run dev`, `scripts/mac/avanza.sh`), Docker, CI, documentação | E2E verde e a equipe migrada |
+| B. Casos de uso assíncronos | código em `backend/src` (sai de `pb_hooks/src`), `async/await` em `application/`, testes unitários com `await` | ✅ 458 testes unitários |
+| C. Esquema Postgres | migrations SQL (`backend/db/migrations`) com os nomes das collections, cadastros iniciais, lixeira do Storage, gatilhos do tempo real e o executor de migrations | ✅ |
+| D. Repositórios SQL | `infrastructure/repositories/*.js` sobre `pg` (transação do `unitOfWork` pelo contexto, consultas em lote, travas onde o SQLite serializava) | ✅ 101 testes de banco |
+| E. Servidor Node | Fastify com `/api/v1` (envelope, CSRF, cookie, limites por IP, OpenAPI), arquivos no Storage, e-mail (nodemailer), rotinas com trava, tempo real SSE (`LISTEN/NOTIFY`), frontend com os cabeçalhos de segurança | ✅ suíte de API (115 testes) verde |
+| F. Dados e operação | ETL do `pb_data` (`npm run import:pocketbase`, conferido com o banco da equipe), scripts (`npm run dev/start/setup`, `scripts/mac/avanza.sh` com `migrar`), Docker, CI | em andamento: E2E, documentação e a virada do servidor da equipe |
+
+**Diferenças conscientes em relação ao PocketBase** (todas cobertas por testes): ordenação de texto pela colação do banco (en_US, natural para pessoas) em vez da ordem por bytes; busca `ILIKE` ignora maiúsculas também com acento; e-mail único sem diferenciar maiúsculas; conflitos de gravação simultânea (número da tarefa, chaves únicas) tratados com trava ou com o erro de negócio; arquivos de registros apagados saem do Storage por uma lixeira (`storage_trash`) esvaziada pela rotina depois de 10 min; uploads de gravações desfeitas também; a segunda barreira de tipo de arquivo (HTML disfarçado de texto), que era do PocketBase, agora é do domínio (`domain/attachment.js`).
 
 ## 1. Resumo
 

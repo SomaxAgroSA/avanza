@@ -1,10 +1,12 @@
 /**
- * Handlers das rotas /api/v1. Cada função recebe o RequestEvent do PocketBase
- * e delega para um caso de uso via `handle` — sem regra de negócio aqui.
+ * Handlers das rotas /api/v1. Cada função recebe o evento da requisição (http/server.js) e delega
+ * para um caso de uso via `handle` — sem regra de negócio aqui.
  */
 
 const { handle } = require('./handler')
 const { appError } = require('../core/errors')
+const { readUploads, formValue, serveStored } = require('./files')
+const { withLock } = require('../infrastructure/locks')
 
 const PUBLIC = { auth: false }
 
@@ -13,10 +15,10 @@ const PUBLIC = { auth: false }
 function health(e) {
   return handle(
     e,
-    ({ services }) => {
+    async ({ e: event, services }) => {
       let database = 'ok'
       try {
-        $app.db().newQuery('SELECT 1').execute()
+        await event.runtime.db.one('SELECT 1')
       } catch (_) {
         database = 'error'
       }
@@ -39,8 +41,8 @@ function health(e) {
 function login(e) {
   return handle(
     e,
-    ({ ctx, services, body, cookies }) => {
-      const result = services.auth.login(body(), ctx)
+    async ({ ctx, services, body, cookies }) => {
+      const result = await services.auth.login(body(), ctx)
       cookies.setSession(result.token, result.session.expires_at, result.session.remember)
       return { data: { user: result.user, session: result.session } }
     },
@@ -49,32 +51,32 @@ function login(e) {
 }
 
 function logout(e) {
-  return handle(e, ({ ctx, services, cookies }) => {
-    services.auth.logout(ctx)
+  return handle(e, async ({ ctx, services, cookies }) => {
+    await services.auth.logout(ctx)
     cookies.clearSession()
     return { data: { logged_out: true } }
   })
 }
 
 function me(e) {
-  return handle(e, ({ ctx, services }) => ({ data: services.auth.getMe(ctx) }))
+  return handle(e, async ({ ctx, services }) => ({ data: await services.auth.getMe(ctx) }))
 }
 
 function revokeOtherSessions(e) {
-  return handle(e, ({ ctx, services }) => ({ data: services.auth.revokeOtherSessions(ctx) }))
+  return handle(e, async ({ ctx, services }) => ({ data: await services.auth.revokeOtherSessions(ctx) }))
 }
 
 function changePassword(e) {
-  return handle(e, ({ ctx, services, body }) => ({ data: services.auth.changePassword(ctx, body()) }))
+  return handle(e, async ({ ctx, services, body }) => ({ data: await services.auth.changePassword(ctx, body()) }))
 }
 
 function listSessions(e) {
-  return handle(e, ({ ctx, services }) => ({ data: services.auth.listMySessions(ctx) }))
+  return handle(e, async ({ ctx, services }) => ({ data: await services.auth.listMySessions(ctx) }))
 }
 
 function revokeSession(e) {
-  return handle(e, ({ ctx, services, param, cookies }) => {
-    const result = services.auth.revokeMySession(ctx, param('id'))
+  return handle(e, async ({ ctx, services, param, cookies }) => {
+    const result = await services.auth.revokeMySession(ctx, param('id'))
     if (result.current) cookies.clearSession()
     return { data: result }
   })
@@ -83,33 +85,33 @@ function revokeSession(e) {
 // ---------------------------------------------------------------- rbac
 
 function listPermissions(e) {
-  return handle(e, ({ ctx, services }) => ({ data: services.roles.listPermissions(ctx) }))
+  return handle(e, async ({ ctx, services }) => ({ data: await services.roles.listPermissions(ctx) }))
 }
 
 function listRoles(e) {
-  return handle(e, ({ ctx, services }) => ({ data: services.roles.listRoles(ctx) }))
+  return handle(e, async ({ ctx, services }) => ({ data: await services.roles.listRoles(ctx) }))
 }
 
 function getRole(e) {
-  return handle(e, ({ ctx, services, param }) => ({ data: services.roles.getRole(ctx, param('id')) }))
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.roles.getRole(ctx, param('id')) }))
 }
 
 function createRole(e) {
-  return handle(e, ({ ctx, services, body }) => ({ status: 201, data: services.roles.createRole(ctx, body()) }))
+  return handle(e, async ({ ctx, services, body }) => ({ status: 201, data: await services.roles.createRole(ctx, body()) }))
 }
 
 function updateRole(e) {
-  return handle(e, ({ ctx, services, body, param }) => ({ data: services.roles.updateRole(ctx, param('id'), body()) }))
+  return handle(e, async ({ ctx, services, body, param }) => ({ data: await services.roles.updateRole(ctx, param('id'), body()) }))
 }
 
 function updateRolePermissions(e) {
-  return handle(e, ({ ctx, services, body, param }) => ({
-    data: services.roles.updateRolePermissions(ctx, param('id'), body().permissions),
+  return handle(e, async ({ ctx, services, body, param }) => ({
+    data: await services.roles.updateRolePermissions(ctx, param('id'), body().permissions),
   }))
 }
 
 function deleteRole(e) {
-  return handle(e, ({ ctx, services, param }) => ({ data: services.roles.deleteRole(ctx, param('id')) }))
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.roles.deleteRole(ctx, param('id')) }))
 }
 
 // ---------------------------------------------------------------- users
@@ -124,41 +126,41 @@ function userInput(body) {
 }
 
 function listUsers(e) {
-  return handle(e, ({ ctx, services, query }) => {
-    const page = services.users.listUsers(ctx, query())
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.users.listUsers(ctx, query())
     return { data: page.items, meta: page.meta }
   })
 }
 
 function getUser(e) {
-  return handle(e, ({ ctx, services, param }) => ({ data: services.users.getUser(ctx, param('id')) }))
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.users.getUser(ctx, param('id')) }))
 }
 
 function createUser(e) {
-  return handle(e, ({ ctx, services, body }) => ({ status: 201, data: services.users.createUser(ctx, userInput(body())) }))
+  return handle(e, async ({ ctx, services, body }) => ({ status: 201, data: await services.users.createUser(ctx, userInput(body())) }))
 }
 
 function updateUser(e) {
-  return handle(e, ({ ctx, services, body, param }) => ({
-    data: services.users.updateUser(ctx, param('id'), userInput(body())),
+  return handle(e, async ({ ctx, services, body, param }) => ({
+    data: await services.users.updateUser(ctx, param('id'), userInput(body())),
   }))
 }
 
 function changeUserStatus(e) {
-  return handle(e, ({ ctx, services, body, param }) => ({
-    data: services.users.changeUserStatus(ctx, param('id'), body().status),
+  return handle(e, async ({ ctx, services, body, param }) => ({
+    data: await services.users.changeUserStatus(ctx, param('id'), body().status),
   }))
 }
 
 function resetUserPassword(e) {
-  return handle(e, ({ ctx, services, body, param }) => ({
-    data: services.users.resetPassword(ctx, param('id'), { password: body().password }),
+  return handle(e, async ({ ctx, services, body, param }) => ({
+    data: await services.users.resetPassword(ctx, param('id'), { password: body().password }),
   }))
 }
 
 function userHistory(e) {
-  return handle(e, ({ ctx, services, param, query }) => {
-    const page = services.audit.listEntityHistory(ctx, 'user', param('id'), query())
+  return handle(e, async ({ ctx, services, param, query }) => {
+    const page = await services.audit.listEntityHistory(ctx, 'user', param('id'), query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -166,8 +168,8 @@ function userHistory(e) {
 // ---------------------------------------------------------------- audit
 
 function listAuditLogs(e) {
-  return handle(e, ({ ctx, services, query }) => {
-    const page = services.audit.listAuditLogs(ctx, query())
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.audit.listAuditLogs(ctx, query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -175,16 +177,16 @@ function listAuditLogs(e) {
 // ---------------------------------------------------------------- projects
 
 function listProjects(e) {
-  return handle(e, ({ ctx, services, query }) => {
-    const page = services.projects.listProjects(ctx, query())
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.projects.listProjects(ctx, query())
     return { data: page.items, meta: page.meta }
   })
 }
 
 const projectAction = (fn, status) => (e) =>
-  handle(e, ({ ctx, services, param, body, query }) => ({
+  handle(e, async ({ ctx, services, param, body, query }) => ({
     status: status || 200,
-    data: fn(services.projects, ctx, { id: param('id'), userId: param('userId'), body, query }),
+    data: await fn(services.projects, ctx, { id: param('id'), userId: param('userId'), body, query }),
   }))
 
 const getProject = projectAction((s, ctx, r) => s.getProject(ctx, r.id))
@@ -201,8 +203,8 @@ const removeProjectMember = projectAction((s, ctx, r) => s.removeMember(ctx, r.i
 const projectMemberCandidates = projectAction((s, ctx, r) => s.memberCandidates(ctx, r.id, r.query()))
 
 function projectHistory(e) {
-  return handle(e, ({ ctx, services, param, query }) => {
-    const page = services.audit.listEntityHistory(ctx, 'project', param('id'), query())
+  return handle(e, async ({ ctx, services, param, query }) => {
+    const page = await services.audit.listEntityHistory(ctx, 'project', param('id'), query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -210,9 +212,9 @@ function projectHistory(e) {
 // ---------------------------------------------------------------- custom fields & task types
 
 const configAction = (service, fn, status) => (e) =>
-  handle(e, ({ ctx, services, param, body, query }) => ({
+  handle(e, async ({ ctx, services, param, body, query }) => ({
     status: status || 200,
-    data: fn(services[service], ctx, { id: param('id'), body, query }),
+    data: await fn(services[service], ctx, { id: param('id'), body, query }),
   }))
 
 const listCustomFields = configAction('customFields', (s, ctx, r) => s.listFields(ctx, r.query()))
@@ -230,8 +232,8 @@ const reorderTaskTypes = configAction('taskTypes', (s, ctx, r) => s.reorderTypes
 const setTaskTypeFields = configAction('taskTypes', (s, ctx, r) => s.setTypeFields(ctx, r.id, r.body().fields))
 
 function taskTypeHistory(e) {
-  return handle(e, ({ ctx, services, param, query }) => {
-    const page = services.audit.listEntityHistory(ctx, 'task_type', param('id'), query())
+  return handle(e, async ({ ctx, services, param, query }) => {
+    const page = await services.audit.listEntityHistory(ctx, 'task_type', param('id'), query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -257,8 +259,8 @@ const reorderPriorities = configAction('priorities', (s, ctx, r) => s.reorder(ct
 const taskAction = (fn, status) => configAction('tasks', fn, status)
 
 function listTasks(e) {
-  return handle(e, ({ ctx, services, query }) => {
-    const page = services.tasks.listTasks(ctx, query())
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.tasks.listTasks(ctx, query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -268,8 +270,8 @@ const updateTask = taskAction((s, ctx, r) => s.updateTask(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
 
 function taskHistory(e) {
-  return handle(e, ({ ctx, services, param, query }) => {
-    const page = services.audit.listEntityHistory(ctx, 'task', param('id'), query())
+  return handle(e, async ({ ctx, services, param, query }) => {
+    const page = await services.audit.listEntityHistory(ctx, 'task', param('id'), query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -292,55 +294,21 @@ const deleteComment = configAction('comments', (s, ctx, r) => s.deleteComment(ct
 const listTaskAttachments = configAction('attachments', (s, ctx, r) => s.listAttachments(ctx, r.id))
 const deleteAttachment = configAction('attachments', (s, ctx, r) => s.deleteAttachment(ctx, r.id))
 
-/** Arquivos do campo `files` com os primeiros bytes (o tipo real é decidido por eles, não pela extensão). */
-function readUploads(e) {
-  const { SNIFF_BYTES } = require(`${__hooks}/src/domain/attachment.js`)
-  let uploaded = []
-  try {
-    uploaded = e.findUploadedFiles('files') || []
-  } catch (_) {
-    uploaded = []
-  }
-  return uploaded.map((file) => {
-    const reader = file.reader.open()
-    let head = []
-    try {
-      head = toBytes(reader, SNIFF_BYTES)
-    } finally {
-      reader.close()
-    }
-    return { name: file.originalName, size: file.size, head, handle: file }
-  })
-}
-
-/** Serve um arquivo protegido (Range, nosniff, sem cache). */
-function serveProtected(e, key, name) {
-  const fsys = $app.newFilesystem()
-  try {
-    e.response.header().set('X-Content-Type-Options', 'nosniff')
-    e.response.header().set('Cache-Control', 'private, no-store')
-    fsys.serve(e.response, e.request, key, name)
-  } finally {
-    fsys.close()
-  }
-}
-
 /** Multipart: `files` (um ou mais), `field` opcional (campo de imagem/arquivo) ou `comment_id` (anexo do comentário). */
 function uploadTaskAttachments(e) {
-  return handle(e, ({ ctx, services, param }) => {
-    const files = readUploads(e)
-    const field = String(e.request.formValue('field') || '').trim()
-    const commentId = String(e.request.formValue('comment_id') || '').trim()
-    return { status: 201, data: services.attachments.uploadAttachments(ctx, param('id'), files, field || undefined, commentId || undefined) }
+  return handle(e, async ({ ctx, services, param }) => {
+    const files = await readUploads(e, 'files')
+    const field = await formValue(e, 'field')
+    const commentId = await formValue(e, 'comment_id')
+    return { status: 201, data: await services.attachments.uploadAttachments(ctx, param('id'), files, field || undefined, commentId || undefined) }
   })
 }
 
 /** Download/visualização: confere acesso e serve o arquivo protegido (Range, CSP sandbox e nosniff). */
 function attachmentFile(e) {
-  return handle(e, ({ ctx, services, param }) => {
-    const attachment = services.attachments.fileFor(ctx, param('id'))
-    serveProtected(e, services.deps.attachmentRepository.fileKeyOf(attachment.id), attachment.name)
-    return { handled: true }
+  return handle(e, async ({ ctx, services, param }) => {
+    const attachment = await services.attachments.fileFor(ctx, param('id'))
+    return serveStored(e, await services.deps.attachmentRepository.fileKeyOf(attachment.id), attachment.name)
   })
 }
 
@@ -390,25 +358,24 @@ const searchDocs = configAction('docPages', (s, ctx, r) => s.search(ctx, r.query
 const recentDocs = configAction('docPages', (s, ctx) => s.recent(ctx))
 
 function getDocVersion(e) {
-  return handle(e, ({ ctx, services, param }) => ({ data: services.docPages.getVersion(ctx, param('id'), param('version')) }))
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.docPages.getVersion(ctx, param('id'), param('version')) }))
 }
 
 function restoreDocVersion(e) {
-  return handle(e, ({ ctx, services, param }) => ({ data: services.docPages.restoreVersion(ctx, param('id'), param('version')) }))
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.docPages.restoreVersion(ctx, param('id'), param('version')) }))
 }
 
 function uploadDocFiles(e) {
-  return handle(e, ({ ctx, services, param }) => ({ status: 201, data: services.docPages.uploadFiles(ctx, param('id'), readUploads(e)) }))
+  return handle(e, async ({ ctx, services, param }) => ({ status: 201, data: await services.docPages.uploadFiles(ctx, param('id'), await readUploads(e, 'files')) }))
 }
 
 function docFile(e) {
-  return handle(e, ({ ctx, services, param }) => {
-    const file = services.docPages.fileFor(ctx, param('id'))
+  return handle(e, async ({ ctx, services, param }) => {
+    const file = await services.docPages.fileFor(ctx, param('id'))
     // imagens aparecem na página; o resto baixa como anexo
-    if (file.kind !== 'image' || e.request.url.query().get('download') === '1') e.response.header().set('Content-Disposition', 'attachment')
-    e.response.header().set('Content-Security-Policy', 'sandbox')
-    serveProtected(e, services.deps.docFileRepository.fileKeyOf(file.id), file.name)
-    return { handled: true }
+    if (file.kind !== 'image' || e.query().download === '1') e.setHeader('Content-Disposition', 'attachment')
+    e.setHeader('Content-Security-Policy', 'sandbox')
+    return serveStored(e, await services.deps.docFileRepository.fileKeyOf(file.id), file.name)
   })
 }
 const projectTimeline = configAction('timeline', (s, ctx, r) => s.getTimeline(ctx, r.id))
@@ -451,12 +418,12 @@ const deletePlanFile = configAction('planCollaboration', (s, ctx, r) => s.delete
 
 /** JSON (`content`, `parent_id`) ou multipart com `files` (imagens coladas/anexadas seguem junto). */
 function createPlanUpdate(e) {
-  return handle(e, ({ ctx, services, param, body }) => ({ status: 201, data: services.planCollaboration.createUpdate(ctx, param('id'), body(), readUploads(e)) }))
+  return handle(e, async ({ ctx, services, param, body }) => ({ status: 201, data: await services.planCollaboration.createUpdate(ctx, param('id'), body(), await readUploads(e, 'files')) }))
 }
 
 /** Multipart `files`: o autor anexa mais à atualização. */
 function addPlanUpdateFiles(e) {
-  return handle(e, ({ ctx, services, param }) => ({ status: 201, data: services.planCollaboration.addFiles(ctx, param('id'), readUploads(e)) }))
+  return handle(e, async ({ ctx, services, param }) => ({ status: 201, data: await services.planCollaboration.addFiles(ctx, param('id'), await readUploads(e, 'files')) }))
 }
 
 // quadro — GP-4 (gestão, linha de base e relatório)
@@ -480,24 +447,23 @@ const deletePlanColumn = configAction('planColumns', (s, ctx, r) => s.deleteColu
 
 /** Download/visualização: confere acesso; imagens aparecem, o resto baixa como anexo. */
 function planFile(e) {
-  return handle(e, ({ ctx, services, param }) => {
-    const file = services.planCollaboration.fileFor(ctx, param('id'))
-    if (file.kind !== 'image' || e.request.url.query().get('download') === '1') e.response.header().set('Content-Disposition', 'attachment')
-    e.response.header().set('Content-Security-Policy', 'sandbox')
-    serveProtected(e, services.deps.planFileRepository.fileKeyOf(file.id), file.name)
-    return { handled: true }
+  return handle(e, async ({ ctx, services, param }) => {
+    const file = await services.planCollaboration.fileFor(ctx, param('id'))
+    if (file.kind !== 'image' || e.query().download === '1') e.setHeader('Content-Disposition', 'attachment')
+    e.setHeader('Content-Security-Policy', 'sandbox')
+    return serveStored(e, await services.deps.planFileRepository.fileKeyOf(file.id), file.name)
   })
 }
 
 function planItemHistory(e) {
-  return handle(e, ({ ctx, services, param, query }) => {
-    const page = services.audit.listEntityHistory(ctx, 'plan_item', param('id'), query())
+  return handle(e, async ({ ctx, services, param, query }) => {
+    const page = await services.audit.listEntityHistory(ctx, 'plan_item', param('id'), query())
     return { data: page.items, meta: page.meta }
   })
 }
 function listReportTasks(e) {
-  return handle(e, ({ ctx, services, query }) => {
-    const page = services.reports.listIndicatorTasks(ctx, query())
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.reports.listIndicatorTasks(ctx, query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -505,8 +471,8 @@ function listReportTasks(e) {
 // ---------------------------------------------------------------- notifications
 
 function listNotifications(e) {
-  return handle(e, ({ ctx, services, query }) => {
-    const page = services.notifications.listNotifications(ctx, query())
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.notifications.listNotifications(ctx, query())
     return { data: page.items, meta: page.meta }
   })
 }
@@ -515,46 +481,22 @@ const readNotification = configAction('notifications', (s, ctx, r) => s.markRead
 const readAllNotifications = configAction('notifications', (s, ctx) => s.markAllRead(ctx))
 const runDueRemindersNow = configAction('notifications', (s, ctx) => s.runDueRemindersNow(ctx))
 
-/** Rotina diária (cron): lembretes de prazo. Roda fora de requisição, sem usuário. */
-function runDueReminders() {
-  const { createContainer } = require(`${__hooks}/src/infrastructure/container.js`)
-  const result = createContainer($app).notifications.sendDueReminders(new Date())
-  $app.logger().info('kamban: lembretes de prazo', 'created', result.created)
-  return result
-}
-
-/** Remove tentativas de login antigas (fora da janela do bloqueio). */
-function purgeLoginAttempts() {
-  const { createContainer } = require(`${__hooks}/src/infrastructure/container.js`)
-  const { WINDOW_MINUTES } = require(`${__hooks}/src/domain/lockout.js`)
-  const removed = createContainer($app).deps.loginAttemptRepository.purgeBefore(new Date(Date.now() - WINDOW_MINUTES * 60000))
-  $app.logger().info('kamban: limpeza de tentativas de login', 'removed', removed)
-  return removed
-}
-
 // ---------------------------------------------------------------- Configurador geral
 
 /** Público: nome e endereços da identidade (tela de login, título e ícone da aba). */
 function platformInfo(e) {
-  return handle(e, ({ services }) => ({ data: services.platformSettings.publicInfo() }), PUBLIC)
+  return handle(e, async ({ services }) => ({ data: await services.platformSettings.publicInfo() }), PUBLIC)
 }
 
 /** Público: logo/ícone. Arquivo protegido servido com nosniff e CSP sandbox (SVG sem nada ativo). */
 function platformBranding(e) {
   return handle(
     e,
-    ({ services, param }) => {
-      const file = services.platformSettings.brandingFile(param('slot'))
-      e.response.header().set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-      e.response.header().set('X-Content-Type-Options', 'nosniff')
-      e.response.header().set('Cache-Control', 'public, max-age=86400')
-      const fsys = $app.newFilesystem()
-      try {
-        fsys.serve(e.response, e.request, file.key, file.name)
-      } finally {
-        fsys.close()
-      }
-      return { handled: true }
+    async ({ services, param }) => {
+      const file = await services.platformSettings.brandingFile(param('slot'))
+      e.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+      e.setHeader('Cache-Control', 'public, max-age=86400')
+      return serveStored(e, file.key, file.name)
     },
     PUBLIC,
   )
@@ -562,42 +504,17 @@ function platformBranding(e) {
 
 const getPlatformSettings = configAction('platformSettings', (s, ctx) => s.getSettings(ctx))
 const updatePlatformSettings = configAction('platformSettings', (s, ctx, r) => s.updateSettings(ctx, r.body()))
-const removePlatformBranding = (e) => handle(e, ({ ctx, services, param }) => ({ data: services.platformSettings.removeBranding(ctx, param('slot')) }))
+const removePlatformBranding = (e) => handle(e, async ({ ctx, services, param }) => ({ data: await services.platformSettings.removeBranding(ctx, param('slot')) }))
 const passwordPolicy = configAction('platformSettings', (s, ctx) => s.passwordPolicy(ctx))
 const runAuditRetention = configAction('platformSettings', (s, ctx) => s.runRetentionNow(ctx))
 
 /** Multipart com um arquivo em `file`; lê o conteúdo inteiro (até o limite) para conferir o tipo e o SVG. */
 function uploadPlatformBranding(e) {
-  return handle(e, ({ ctx, services, param }) => {
-    const { BRANDING_MAX_BYTES } = require(`${__hooks}/src/domain/platform-settings.js`)
-    let uploaded = []
-    try {
-      uploaded = e.findUploadedFiles('file') || []
-    } catch (_) {
-      uploaded = []
-    }
-    const file = uploaded[0]
-    let upload = null
-    if (file) {
-      const reader = file.reader.open()
-      let bytes = []
-      try {
-        bytes = toBytes(reader, BRANDING_MAX_BYTES + 1)
-      } finally {
-        reader.close()
-      }
-      upload = { name: file.originalName, size: file.size, bytes, handle: file }
-    }
-    return { data: services.platformSettings.uploadBranding(ctx, param('slot'), upload) }
+  return handle(e, async ({ ctx, services, param }) => {
+    const file = (await readUploads(e, 'file'))[0]
+    const upload = file ? { name: file.name, size: file.size, bytes: file.bytes, handle: file.handle } : null
+    return { data: await services.platformSettings.uploadBranding(ctx, param('slot'), upload) }
   })
-}
-
-/** Rotina diária (cron): retenção do histórico de auditoria. */
-function purgeAuditLogs() {
-  const { createContainer } = require(`${__hooks}/src/infrastructure/container.js`)
-  const result = createContainer($app).platformSettings.purgeAuditLogs()
-  $app.logger().info('kamban: retenção do histórico', 'removed', result.removed)
-  return result
 }
 
 // ---------------------------------------------------------------- e-mail (integrações)
@@ -608,44 +525,26 @@ const sendTestEmail = configAction('email', (s, ctx, r) => s.sendTest(ctx, r.bod
 const emailOutbox = configAction('email', (s, ctx) => s.outboxSummary(ctx))
 const resendInvite = configAction('accountLinks', (s, ctx, r) => s.resendInvite(ctx, r.id))
 
-/** Uma execução por vez (a rotina por minuto e o "Enviar agora" não mandam o mesmo e-mail duas vezes). */
-function withEmailLock(fn) {
-  const store = $app.store()
-  const key = 'kamban.email.flush'
-  const since = store.get(key)
-  if (since && Date.now() - since < 5 * 60000) return { sent: 0, failed: 0, retrying: 0, busy: true }
-  store.set(key, Date.now())
-  try {
-    return fn()
-  } finally {
-    store.remove(key)
-  }
-}
-
 function flushEmailOutboxNow(e) {
-  return handle(e, ({ ctx, services }) => ({ data: withEmailLock(() => services.email.flushNow(ctx)) }))
-}
-
-/** Rotina por minuto (cron): envia a fila de e-mails. */
-function flushEmailOutbox() {
-  const { createContainer } = require(`${__hooks}/src/infrastructure/container.js`)
-  const result = withEmailLock(() => createContainer($app).email.flushOutbox())
-  if (result.sent || result.failed || result.retrying) $app.logger().info('kamban: fila de e-mails', 'sent', result.sent, 'failed', result.failed, 'retrying', result.retrying)
-  return result
+  return handle(e, async ({ ctx, services }) => {
+    // uma execução por vez: a rotina por minuto e o "Enviar agora" não mandam o mesmo e-mail duas vezes
+    const run = await withLock(e.runtime.db, 'job:email-outbox', () => services.email.flushNow(ctx))
+    return { data: run.busy ? { sent: 0, failed: 0, retrying: 0, busy: true } : run.result }
+  })
 }
 
 /** Público: "Esqueci minha senha" — responde igual exista ou não a conta. */
 function requestPasswordReset(e) {
-  return handle(e, ({ ctx, services, body }) => ({ data: services.accountLinks.requestReset(body(), ctx) }), PUBLIC)
+  return handle(e, async ({ ctx, services, body }) => ({ data: await services.accountLinks.requestReset(body(), ctx) }), PUBLIC)
 }
 
 /** Público: a tela de nova senha confere o link (e recebe as exigências da senha). */
 function checkPasswordReset(e) {
-  return handle(e, ({ services, query }) => ({ data: services.accountLinks.checkToken(query().token) }), PUBLIC)
+  return handle(e, async ({ services, query }) => ({ data: await services.accountLinks.checkToken(query().token) }), PUBLIC)
 }
 
 function confirmPasswordReset(e) {
-  return handle(e, ({ ctx, services, body }) => ({ data: services.accountLinks.confirm(body(), ctx) }), PUBLIC)
+  return handle(e, async ({ ctx, services, body }) => ({ data: await services.accountLinks.confirm(body(), ctx) }), PUBLIC)
 }
 
 // ---------------------------------------------------------------- tokens de API
@@ -667,29 +566,12 @@ const testWebhook = configAction('webhooks', (s, ctx, r) => s.test(ctx, r.id))
 const webhookDeliveries = configAction('webhooks', (s, ctx, r) => s.deliveries(ctx, r.id))
 const redeliverWebhook = configAction('webhooks', (s, ctx, r) => s.redeliver(ctx, r.id))
 
-/** Rotina por minuto (cron): envia as entregas que venceram (uma execução por vez). */
-function flushWebhooks() {
-  const store = $app.store()
-  const key = 'kamban.webhooks.flush'
-  const since = store.get(key)
-  if (since && Date.now() - since < 10 * 60000) return { busy: true }
-  store.set(key, Date.now())
-  try {
-    const { createContainer } = require(`${__hooks}/src/infrastructure/container.js`)
-    const result = createContainer($app).webhooks.flush()
-    if (result.sent || result.failed || result.retrying) $app.logger().info('kamban: webhooks', 'sent', result.sent, 'failed', result.failed, 'retrying', result.retrying)
-    return result
-  } finally {
-    store.remove(key)
-  }
-}
-
 // ---------------------------------------------------------------- misc
 
 function notFound(e) {
   return handle(
     e,
-    () => {
+    async () => {
       throw appError('ROUTE_NOT_FOUND')
     },
     PUBLIC,
@@ -697,8 +579,8 @@ function notFound(e) {
 }
 
 function openapi(e) {
-  const spec = require(`${__hooks}/src/http/openapi.js`)
-  e.response.header().set('Cache-Control', 'no-store')
+  const spec = require('./openapi')
+  e.setHeader('Cache-Control', 'no-store')
   return e.json(200, spec.build())
 }
 
@@ -861,9 +743,6 @@ module.exports = {
   notificationsUnreadCount,
   readNotification,
   readAllNotifications,
-  runDueReminders,
-  purgeLoginAttempts,
-  purgeAuditLogs,
   platformInfo,
   platformBranding,
   getPlatformSettings,
@@ -876,7 +755,6 @@ module.exports = {
   sendTestEmail,
   emailOutbox,
   flushEmailOutboxNow,
-  flushEmailOutbox,
   requestPasswordReset,
   checkPasswordReset,
   confirmPasswordReset,
@@ -894,7 +772,6 @@ module.exports = {
   testWebhook,
   webhookDeliveries,
   redeliverWebhook,
-  flushWebhooks,
   runAuditRetention,
   runDueRemindersNow,
   uploadTaskAttachments,

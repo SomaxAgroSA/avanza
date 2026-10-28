@@ -37,6 +37,17 @@ describe('domain/attachment — tipo real pelo conteúdo', () => {
     assert.deepEqual(att.classify('sem-extensao', PNG), { error: 'unsupported_type' })
   })
 
+  it('texto que é HTML/XML disfarçado é recusado (segunda barreira, antes feita pelo PocketBase)', () => {
+    assert.deepEqual(att.classify('nota.txt', bytes('<!DOCTYPE html><html><script>alert(1)</script></html>')), { error: 'invalid_file' })
+    assert.deepEqual(att.classify('nota.txt', bytes([0xef, 0xbb, 0xbf], '  \n<SCRIPT>alert(1)</SCRIPT>')), { error: 'invalid_file' })
+    assert.deepEqual(att.classify('dados.csv', bytes('<?xml version="1.0"?><x/>')), { error: 'invalid_file' })
+    assert.deepEqual(att.classify('nota.md', bytes('<svg onload="x"/>')), { error: 'invalid_file' })
+    assert.deepEqual(att.classify('nota.txt', bytes('<!-- comentário -->')), { error: 'invalid_file' })
+    // texto comum que começa com "<" mas não é marcação continua aceito
+    assert.equal(att.classify('nota.txt', bytes('<3 obrigado pela ajuda')).mime, 'text/plain')
+    assert.equal(att.classify('nota.md', bytes('<abc> não é tag de HTML')).mime, 'text/plain')
+  })
+
   it('nome seguro: sem caminho, sem caracteres de controle, tamanho limitado, extensão preservada', () => {
     assert.equal(att.safeFileName('../../etc/passwd.txt'), 'passwd.txt')
     assert.equal(att.safeFileName('C:\\temp\\Relatório final.pdf'), 'Relatório final.pdf')

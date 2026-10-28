@@ -5,7 +5,7 @@
 
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { startPocketBase, createClient } = require('../support/pb-harness')
+const { startServer, createClient } = require('../support/server-harness')
 const { seedDemo } = require('../../scripts/demo-data')
 
 describe('API Dados de demonstração', { timeout: 180000 }, () => {
@@ -13,7 +13,7 @@ describe('API Dados de demonstração', { timeout: 180000 }, () => {
   let admin
 
   before(async () => {
-    pb = await startPocketBase()
+    pb = await startServer()
     admin = createClient(pb.api)
     await admin.login(pb.admin.email, pb.admin.password)
   })

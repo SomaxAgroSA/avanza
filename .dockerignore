@@ -2,7 +2,7 @@
 **/node_modules
 backend/bin
 backend/pb_data
-backend/pb_public
+backend/public
 backend/.env
 .env
 e2e
