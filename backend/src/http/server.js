@@ -1,6 +1,7 @@
 /**
  * Servidor HTTP (Fastify): a API /api/v1 (tabela em route-table.js, ações em routes.js), o tempo
- * real (/api/realtime, SSE) e o frontend (build do web) com os cabeçalhos de segurança.
+ * real (/api/realtime, SSE), o MCP para o Claude (/api/mcp) e o frontend (build do web) com os
+ * cabeçalhos de segurança.
  *
  * `runtime` = { config, db, storage, realtime, log } — montado em src/server.js.
  */
@@ -198,6 +199,9 @@ function buildServer(runtime, options) {
   // tempo real (mesmo protocolo do PocketBase que o web já usa)
   app.get('/api/realtime', (request, reply) => require('./realtime').connect(createEvent(request, reply, runtime)))
   app.post('/api/realtime', (request, reply) => require('./realtime').subscribe(createEvent(request, reply, runtime)))
+
+  // MCP: ferramentas para o Claude, com token de API (http/mcp.js)
+  require('./mcp').register(app, runtime)
 
   if (config.isTest) {
     // só nos testes: ajusta os limites por IP como a API de configurações do PocketBase fazia

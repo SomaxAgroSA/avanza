@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Copy, KeyRound, Plus } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
-import { API_TOKEN_EXPIRY_DAYS, curlExample, type ApiToken, type ApiTokenExpiry, type CreatedApiToken } from '@/domain/api-tokens'
+import { API_TOKEN_EXPIRY_DAYS, claudeMcpCommand, curlExample, type ApiToken, type ApiTokenExpiry, type CreatedApiToken } from '@/domain/api-tokens'
 import { useTokenColumns } from './use-token-columns'
 import {
   AppButton,
@@ -174,6 +174,14 @@ function CreateTokenDialog({ open, onOpenChange, onCreated }: { open: boolean; o
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium text-fg">{t('apiTokens.example')}</p>
             <code className="block overflow-x-auto whitespace-pre rounded-md bg-surface-2 px-3 py-2 text-xs">{curlExample(window.location.origin, created.token)}</code>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium text-fg">{t('apiTokens.claude')}</p>
+            <div className="flex items-start gap-2">
+              <code className="block min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-md bg-surface-2 px-3 py-2 text-xs">{claudeMcpCommand(window.location.origin, created.token)}</code>
+              <AppIconButton label={t('apiTokens.copyClaude')} icon={<Copy />} variant="secondary" onClick={() => copy(claudeMcpCommand(window.location.origin, created.token))} />
+            </div>
+            <p className="text-xs text-muted">{t('apiTokens.claudeHint')}</p>
           </div>
         </div>
       ) : (

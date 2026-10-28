@@ -44,6 +44,7 @@ Os dois ficam no mesmo **projeto** (mesmos membros e permissões), mas não se m
 - **Relatórios** com indicadores clicáveis; dashboard pessoal.
 - Sessão segura (cookie HttpOnly, proteção CSRF, CSP, bloqueio progressivo de login, sessões ativas).
 - **API REST documentada** (`/api/v1`, OpenAPI) — a mesma que a interface usa —, com **tokens de API** pessoais (`Authorization: Bearer`) para scripts e integrações.
+- **Claude conectado (MCP):** o Claude Code e o Claude Desktop criam projetos e gerenciam tarefas, quadro, backlog e sprints em nome da pessoa, com as permissões dela (`/api/mcp`; ver [docs/api.md](docs/api.md#mcp-conectar-o-claude)).
 - **Configurador geral:** nome, logo e ícone da plataforma, política de senha, bloqueio de login e retenção do histórico.
 - **E-mail:** "Esqueci minha senha", convite de usuário e notificações por e-mail (SMTP com fila e novas tentativas).
 - **Tempo real:** quadros, tarefas e notificações se atualizam sozinhos quando alguém muda algo.

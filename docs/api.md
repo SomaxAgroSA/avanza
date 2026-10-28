@@ -315,6 +315,33 @@ curl -H "Authorization: Bearer kb_pat_..." https://kamban.empresa.com/api/v1/tas
 
 Auditoria: `api_token.created` (nome, prefixo, prazo — nunca o valor) e `api_token.revoked`.
 
+## MCP (conectar o Claude)
+Servidor **MCP** (Model Context Protocol) em **`POST /api/mcp`** (fora de `/api/v1`), para o Claude criar projetos e gerenciar tarefas em nome de uma pessoa. Transporte "Streamable HTTP" **sem estado** (protocolo `2025-11-25`, `2025-06-18` ou `2025-03-26`; JSON-RPC 2.0, lote aceito): cada `POST` leva uma mensagem e recebe a resposta em JSON; só notificações → **202** sem corpo. Sem sessão (`Mcp-Session-Id`) nem fluxo do servidor: `GET`/`DELETE` → **405** (`Allow: POST`). Código em `backend/src/mcp/` (protocolo, validação dos argumentos, catálogo) e `backend/src/http/mcp.js` (transporte).
+
+- **Acesso:** só com **token de API** (`Authorization: Bearer kb_pat_…`) — o cookie do navegador não vale. Sem token/inválido/vencido/revogado → **401** com `WWW-Authenticate: Bearer`. As ferramentas agem como a pessoa do token, com as permissões do perfil e a regra de acesso a cada projeto; o histórico registra a pessoa, o `User-Agent` do cliente e o correlation id (header `X-Correlation-Id` em toda resposta).
+- **Transporte:** header `Origin` de outro endereço → **403**; `MCP-Protocol-Version` desconhecida → **400**; JSON inválido → **400** com o erro `-32700`; corpo até 1 MB. O limite por IP de `/api/` vale aqui.
+- **Métodos:** `initialize` (só a capacidade `tools`; `instructions` explicam o produto ao modelo), `ping`, `tools/list`, `tools/call`. Outros → `-32601`.
+- **Resultado de ferramenta:** `content: [{ type: "text", text: "<JSON>" }]`. Erro de validação, permissão ou regra volta como resultado com `isError: true` e o texto `{ "error": { code, message, details } }` (os mesmos códigos da API — ex.: `VALIDATION_ERROR` com `details.fields`, inclusive `unknown_field` para argumento que a ferramenta não tem); ferramenta desconhecida → erro do protocolo `-32602`.
+
+| Grupo | Ferramentas (argumentos em snake_case, como a API) |
+|---|---|
+| Conta | `whoami` |
+| Projetos | `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `list_project_members`, `find_member_candidates`, `add_project_member` |
+| Configuração | `get_task_settings` (status, prioridades, tipos e etiquetas), `get_task_type` (campos personalizados) |
+| Tarefas | `list_tasks` (filtros da `GET /tasks`; `categories` em lista; resumos enxutos), `get_task`, `create_task`, `update_task`, `move_task`, `delete_task`, `list_task_comments`, `add_task_comment`, `get_task_history`, `get_task_relations`, `link_tasks` |
+| Kanban e planejamento | `get_board` (`limit_per_column`, padrão 50), `get_backlog` (`limit`, padrão 100), `list_sprints`, `create_sprint`, `update_sprint` |
+| Relatórios | `get_report` |
+
+Conectar o **Claude Code** (o comando aparece em Minha conta → Tokens de API ao criar o token):
+```bash
+claude mcp add --transport http avanza https://avanza.empresa.com/api/mcp --header "Authorization: Bearer kb_pat_..."
+```
+**Claude Desktop** (`claude_desktop_config.json`), pela ponte `mcp-remote` (precisa do Node):
+```json
+{ "mcpServers": { "avanza": { "command": "npx", "args": ["-y", "mcp-remote", "https://avanza.empresa.com/api/mcp", "--header", "Authorization:${AVANZA_AUTH}"], "env": { "AVANZA_AUTH": "Bearer kb_pat_..." } } } }
+```
+Conectores do claude.ai (web/celular) exigem OAuth — fica para a evolução do SSO.
+
 ## Tempo real
 Conexão SSE servida pela própria API em `/api/realtime` (fora de `/api/v1`; mesmo protocolo do PocketBase, que o web já usava): o `GET` abre o fluxo e o primeiro evento, `PB_CONNECT`, traz o `clientId`; o `POST /api/realtime` `{ clientId, subscriptions }` define os tópicos e exige o **cookie de sessão** e o header `X-Requested-With: kamban` (401 sem sessão, 403 sem o header ou se o `clientId` for de outra pessoa, 404 se o `clientId` não existe nesta instância).
 

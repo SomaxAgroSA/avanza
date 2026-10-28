@@ -37,8 +37,10 @@ backend/
 │   ├── application/         # casos de uso (assíncronos), auditoria, presenters (DTO), portas (ports.js)
 │   ├── infrastructure/      # config (env), database (pool/transações), migrate, storage, secrets, adapters,
 │   │                        # jobs/cron/locks, realtime (LISTEN), repositories/*.js (SQL), container
+│   ├── mcp/                 # MCP para o Claude: protocolo JSON-RPC, validação dos argumentos, catálogo de
+│   │                        # ferramentas (adaptador dos casos de uso, como as rotas)
 │   └── http/                # server (Fastify), route-table + routes, handler (envelope, CSRF, sessão),
-│                            # files, rate-limit, realtime (SSE), OpenAPI
+│                            # files, rate-limit, realtime (SSE), mcp (transporte de /api/mcp), OpenAPI
 ├── tests/
 │   ├── unit/                # domínio + aplicação com fakes em memória (node --test)
 │   ├── db/                  # repositórios e gatilhos contra o Postgres do Supabase local
@@ -54,7 +56,8 @@ Regras de dependência (de fora para dentro):
 | `domain` | `core` | banco, HTTP, application |
 | `application` | `domain`, `core`, portas (`application/ports.js`) | banco, HTTP |
 | `infrastructure` | tudo acima + `pg`, Storage, nodemailer (`database.js` é o único que conhece o `pg`) | `http` |
-| `http` | `application` via container | regras de negócio |
+| `http` | `application` via container, `mcp` | regras de negócio |
+| `mcp` | `application` via container (recebido no contexto), `domain` (só listas de valores para os esquemas), `core` | HTTP, banco, regras de negócio |
 
 **Código assíncrono**: casos de uso e repositórios devolvem Promises. Os fakes dos testes unitários também (um `await` esquecido falha no teste), e o ESLint proíbe callback `async` em `forEach`/`filter`/`some`/`every`/`find`/`sort`/`reduce` (a Promise não seria esperada) — use `for...of` ou `Promise.all`.
 
@@ -103,6 +106,9 @@ Estratégia de cache: `staleTime` 30s; listas usam `keepPreviousData` na pagina�
 ## Tempo real
 - **Servidor:** gatilhos `notify_change` nas tabelas de `domain/realtime.js#WATCHED` (migration `0006_realtime.sql`) avisam o canal `realtime_<esquema>` com os identificadores da mudança; o Postgres só entrega depois do commit. Cada instância da API escuta o canal numa conexão dedicada (`infrastructure/realtime.js`), monta o aviso uma vez (`application/realtime.js#eventFor`, projeto descoberto pela tarefa quando preciso) e o entrega às conexões SSE que assinam o tópico. `http/realtime.js` serve `/api/realtime` no mesmo protocolo do PocketBase (`PB_CONNECT` + `POST` das assinaturas), confere a sessão do cookie e o CSRF e deixa só os tópicos autorizados. A rotina `realtime-keepalive` manda um sinal de vida a cada 3 min (proxies derrubam conexões paradas).
 - **Web:** `core/realtime/realtime-client.ts` (uma conexão `EventSource` por aba, assinaturas com contagem, reconexão), injetado por `RealtimeContext`; `useLiveProject(id)` / `useLiveNotifications(id)` (`presentation/common/use-live.ts`) traduzem cada aviso nas chaves do cache a invalidar (`domain/realtime.ts`), agrupadas em 250 ms e no máximo uma busca a cada 2,5 s por tela; `useLiveRefetchInterval` deixa a consulta periódica em 5 min com o tempo real ligado e `useRealtimeResync` (no AppShell) busca de novo as telas abertas ao reconectar.
+
+## MCP (Claude)
+`POST /api/mcp` (`http/mcp.js`): confere `Origin`, a versão do protocolo e o token de API (`apiTokens.authenticate`), monta o mesmo `ctx` das rotas (`authMethod: 'token'`) e entrega a mensagem a `mcp/protocol.js`, que valida os argumentos (`mcp/schema.js`) e chama a ferramenta (`mcp/tools.js`) — que só delega para o caso de uso do contêiner. Ver [api.md](api.md#mcp-conectar-o-claude) e o ADR-045.
 
 ## Fluxo de uma requisição
 

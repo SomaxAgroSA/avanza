@@ -46,6 +46,7 @@ Both live in the same **project** (same members and permissions) but stay separa
 - **Reports** with clickable indicators; personal dashboard.
 - Secure sessions (HttpOnly cookie, CSRF protection, CSP, progressive login lockout, active sessions).
 - **Documented REST API** (`/api/v1`, OpenAPI) — the same one the interface uses — with personal **API tokens** (`Authorization: Bearer`) for scripts and integrations.
+- **Claude integration (MCP):** Claude Code and Claude Desktop can create projects and manage tasks, the board, the backlog and sprints on a person's behalf, with their permissions (`/api/mcp`; see [docs/api.md](docs/api.md#mcp-conectar-o-claude)).
 - **General settings:** platform name, logo and icon, password policy, login lockout and history retention.
 - **Email:** "Forgot my password", user invitations and email notifications (SMTP with a queue and retries).
 - **Realtime:** boards, tasks and notifications update on their own when someone changes something.

@@ -565,3 +565,13 @@ Telas abertas se atualizam sozinhas quando alguém muda algo — sem recarregar 
 - A opção nova entra **no fim da lista**, ativa, com a **cor seguinte** à da última opção na paleta; o rótulo vai até 60 caracteres e o campo até 200 opções. O padrão do campo não muda. A opção vale para todos os tipos que usam o campo e pode ser renomeada, recolorida, reordenada ou desativada depois em Configurações → Campos.
 - Campo com a configuração desligada recusa a criação (`FIELD_OPTIONS_LOCKED`), inclusive para o Admin — ele edita as opções em Configurações.
 - O histórico do campo registra quem adicionou ou reativou a opção ("Adicionou opção ao campo").
+
+## 21. Conectar o Claude (MCP)
+
+O Claude (Claude Code e Claude Desktop) pode trabalhar no Avanza em nome de uma pessoa: consultar e criar projetos, criar, editar, mover, comentar e relacionar tarefas, ver o quadro, o backlog, as sprints e os relatórios.
+
+- **Como conectar:** a pessoa cria um **token de API** (§17) e configura o Claude com o endereço `…/api/mcp` e o token. Ao criar o token, a tela mostra o comando pronto do Claude Code. Quem não pode criar tokens não conecta o Claude.
+- **Em nome de quem:** o Claude age **como a pessoa do token**, com as permissões do perfil dela e o papel em cada projeto — o mesmo que ela faria na tela: projeto em que não é membro não existe para ele; leitor só consulta e comenta. Tudo o que muda fica no histórico em nome dela (o registro guarda o programa usado, ex.: Claude Code) e gera as notificações de sempre.
+- **Mesmas regras:** obrigatoriedade por status (§10), transições permitidas, WIP, datas e validações valem do mesmo jeito; quando falta um campo, o Claude recebe a lista do que falta e pode completar.
+- **O que não faz:** nada que exija o navegador (tokens, senha, sessões), nem administração (usuários, perfis, configurações). Excluir só tarefas, e as ferramentas de excluir e arquivar pedem que o Claude confirme com a pessoa antes.
+- **Cortar o acesso:** revogar o token (§17) desconecta o Claude na hora; desativar a pessoa também.

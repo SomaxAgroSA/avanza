@@ -34,3 +34,8 @@ export interface CreatedApiToken extends ApiToken {
 export function curlExample(baseUrl: string, token: string): string {
   return `curl -H "Authorization: Bearer ${token}" ${baseUrl}/api/v1/auth/me`
 }
+
+/** Comando que conecta o Claude Code ao MCP do Avanza (`/api/mcp`) com o mesmo token. */
+export function claudeMcpCommand(baseUrl: string, token: string): string {
+  return `claude mcp add --transport http avanza ${baseUrl}/api/mcp --header "Authorization: Bearer ${token}"`
+}

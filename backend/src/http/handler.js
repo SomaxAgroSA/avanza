@@ -153,4 +153,4 @@ function renderPlatformError(e, status, err) {
   return e.json(status === 413 ? 413 : payload.status, failure(payload.error, { correlationId }))
 }
 
-module.exports = { handle, renderPlatformError, containerFor, randomString, CSRF_HEADER, CSRF_VALUE }
+module.exports = { handle, renderPlatformError, containerFor, resolveCorrelationId, randomString, CSRF_HEADER, CSRF_VALUE }

@@ -48,6 +48,10 @@ describe('Minha conta — tokens de API', () => {
     expect(await screen.findByText('Copie o seu token agora')).toBeInTheDocument()
     expect(screen.getByLabelText('Token')).toHaveValue('kb_pat_ab12' + 'x'.repeat(36))
     expect(screen.getByText(/curl -H "Authorization: Bearer kb_pat_ab12x+"/)).toBeInTheDocument()
+    // conectar o Claude (MCP) com o mesmo token
+    expect(screen.getByText('Conectar ao Claude (Claude Code)')).toBeInTheDocument()
+    expect(screen.getByText(/claude mcp add --transport http avanza http:\/\/\S+\/api\/mcp --header "Authorization: Bearer kb_pat_ab12x+"/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copiar comando do Claude' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Já copiei' }))
     await waitFor(() => expect(screen.queryByText('Copie o seu token agora')).not.toBeInTheDocument())
     expect(screen.queryByDisplayValue('kb_pat_ab12' + 'x'.repeat(36))).not.toBeInTheDocument()

@@ -3,7 +3,7 @@
 > Diretriz §27, §28 e §32. Toda regra aqui tem teste unitário ou de API correspondente (ver [testing.md](testing.md)).
 
 ## Superfície exposta
-- Apenas `/api/v1` (e o tempo real em `/api/realtime`) é usada pela aplicação; qualquer outro caminho em `/api/` responde 404 no envelope (teste de API).
+- Apenas `/api/v1` (e o tempo real em `/api/realtime`) é usada pela aplicação; o MCP para o Claude fica em `/api/mcp` (só com token de API); qualquer outro caminho em `/api/` responde 404 no envelope (teste de API).
 - Só a API fala com o banco, pela conexão direta do Postgres. Todas as tabelas do esquema `avanza` têm **RLS ligado sem nenhuma política** e nenhum privilégio para os papéis `anon`/`authenticated` (migration `0004_lockdown.sql`): a API REST (PostgREST) e o Realtime do Supabase não leem nem gravam nada, mesmo que alguém exponha o esquema por engano (teste de banco). O Supabase Studio é administrativo: em produção, restrinja o acesso ao painel e às credenciais do projeto.
 
 ## Autenticação e sessão
@@ -92,6 +92,12 @@ Limites por IP (`http/rate-limit.js`, antes de ler o corpo): login 10/min; `/api
 - `Authorization: Bearer` não usa cookie, então não há CSRF a proteger: o header de CSRF é dispensado só nesse caso, e com o token o cookie é ignorado (não dá para combinar os dois).
 - O token herda as permissões do perfil atual a cada chamada; pessoa desativada, token vencido ou revogado → 401 imediato.
 - Um token vazado não consegue se perpetuar: não cria outros tokens, não troca a senha nem mexe nas sessões (`TOKEN_NOT_ALLOWED`). Revogar está em Minha conta e, para o Admin, em Integrações.
+
+## MCP (Claude)
+- `/api/mcp` aceita **só** `Authorization: Bearer` (token de API); o cookie é ignorado, então não há CSRF. As ferramentas chamam os mesmos casos de uso da API: RBAC, acesso por projeto (sem acesso = `*_NOT_FOUND`), validação e auditoria iguais; nenhuma ferramenta de administração (usuários, perfis, configurações, tokens).
+- **DNS rebinding:** requisição com `Origin` diferente do host pedido é recusada (403); como o acesso exige o token (que um site não tem), uma página maliciosa não consegue chamar as ferramentas.
+- **Entrada:** argumentos conferidos contra o esquema de cada ferramenta (tipos, listas, tamanhos e campos desconhecidos) antes do caso de uso, que valida de novo as regras. Erros inesperados voltam como `INTERNAL_ERROR` sem detalhes e vão para o log com a ferramenta e o correlation id.
+- **Instruções injetadas:** o texto de tarefas e comentários chega ao modelo como dado; o que o Claude pode fazer está limitado às permissões da pessoa, e excluir/arquivar pedem confirmação explícita (anotação `destructiveHint` + orientação no `initialize`). Clientes como o Claude Code pedem aprovação por ferramenta — recomende manter a aprovação para as que alteram dados.
 
 ## Webhooks
 - **Só para quem administra** (`integrations.manage`): um webhook recebe eventos de todos os projetos.
