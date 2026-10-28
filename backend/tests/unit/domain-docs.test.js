@@ -1,10 +1,10 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const content = require('../../pb_hooks/src/domain/doc-content')
-const tree = require('../../pb_hooks/src/domain/doc-tree')
-const docs = require('../../pb_hooks/src/domain/docs')
-const { createPrincipal } = require('../../pb_hooks/src/domain/rbac')
+const content = require('../../src/domain/doc-content')
+const tree = require('../../src/domain/doc-tree')
+const docs = require('../../src/domain/docs')
+const { createPrincipal } = require('../../src/domain/rbac')
 
 const FILE = 'abcdefghij12345'
 const p = (...children) => ({ type: 'paragraph', content: children })

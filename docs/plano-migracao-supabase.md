@@ -1,9 +1,25 @@
-# Plano de migração: PocketBase → Supabase (duas edições)
+# Plano de migração: PocketBase → Supabase
 
-> Situação (2026-10-01): **fase 0 concluída** (ganhos rápidos no PocketBase, seção 4). O usuário decidiu
-> oferecer **duas edições, escolhidas na instalação** (seção 2). A edição Supabase ainda não foi iniciada.
+> **Situação (2026-10-28): o PocketBase sai de vez** (ADR-044, revê o ADR-040). Uma edição só: API em
+> Node sobre o Supabase. As seções 2 e 8 (duas edições, escolha e trava) ficam como histórico; a
+> arquitetura alvo (seção 6) e o mapeamento continuam valendo. Andamento na seção 0.
 > Base das estimativas: o código atual (backend com 12,6 mil linhas de domínio/aplicação e 9,2 mil de
 > infraestrutura/HTTP/migrations) e o teste de carga `npm --prefix backend run load`.
+
+## 0. Andamento da substituição (branch `migracao-supabase`)
+
+Ambiente local: Docker pelo **Colima** (sem administrador e sem a licença do Docker Desktop) e o
+**Supabase CLI** (`supabase start` na raiz do repositório; Studio em http://127.0.0.1:54323, Postgres em
+`127.0.0.1:54322`). Depois de reiniciar a máquina: `colima start` e `supabase start`.
+
+| Etapa | Entrega | Pronto quando |
+|---|---|---|
+| A. Ambiente | Docker (Colima) + Supabase local + `supabase/config.toml` | ✅ 2026-10-28 |
+| B. Casos de uso assíncronos | código em `backend/src` (sai de `pb_hooks/src`), `async/await` em `application/`, testes unitários com `await` | testes unitários verdes |
+| C. Esquema Postgres | migrations SQL (`backend/db/migrations`) com os nomes das collections, cadastros iniciais e o executor de migrations | esquema sobe no Supabase local |
+| D. Repositórios SQL | infraestrutura nova sobre `pg` (transação por `unitOfWork`, consultas em lote) | testes de repositório verdes |
+| E. Servidor Node | Fastify com `/api/v1` (envelope, CSRF, cookie, limites, OpenAPI), arquivos no Storage, e-mail, rotinas com trava, tempo real SSE (`LISTEN/NOTIFY`), frontend com os cabeçalhos de segurança | suíte de API (contrato) verde |
+| F. Dados e operação | ETL do `pb_data` (SQLite → Postgres, arquivos → Storage), scripts (`npm run dev`, `scripts/mac/avanza.sh`), Docker, CI, documentação | E2E verde e a equipe migrada |
 
 ## 1. Resumo
 

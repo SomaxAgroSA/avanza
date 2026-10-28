@@ -1,9 +1,9 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const settings = require('../../pb_hooks/src/domain/platform-settings')
-const lockout = require('../../pb_hooks/src/domain/lockout')
-const user = require('../../pb_hooks/src/domain/user')
+const settings = require('../../src/domain/platform-settings')
+const lockout = require('../../src/domain/lockout')
+const user = require('../../src/domain/user')
 
 describe('domain/platform-settings — valores e limites seguros', () => {
   it('padrões valem enquanto ninguém muda; valores guardados inválidos ou desconhecidos são ignorados', () => {

@@ -4,7 +4,7 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const { planReport, levelOf, HEALTH_FACTORS } = require('../../pb_hooks/src/domain/plan-report')
+const { planReport, levelOf, HEALTH_FACTORS } = require('../../src/domain/plan-report')
 
 const CATEGORY = { st_todo: 'todo', st_doing: 'in_progress', st_stuck: 'blocked', st_done: 'done', st_cancel: 'canceled' }
 const item = (id, extra) => Object.assign({ id, groupId: 'g1', parentId: null, statusId: 'st_todo', startDate: null, endDate: null, resourceIds: [], metrics: {} }, extra)

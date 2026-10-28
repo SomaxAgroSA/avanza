@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const timeline = require('../../pb_hooks/src/domain/timeline')
+const timeline = require('../../src/domain/timeline')
 
 const d = (day) => new Date(`${day}T00:00:00.000Z`)
 

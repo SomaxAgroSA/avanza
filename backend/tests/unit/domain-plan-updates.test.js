@@ -4,7 +4,7 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const updates = require('../../pb_hooks/src/domain/plan-updates')
+const updates = require('../../src/domain/plan-updates')
 
 const u = (id, extra) => Object.assign({ id, itemId: 'i1', parentId: null, authorId: 'ana', content: id, deletedAt: null, createdAt: new Date(`2026-01-0${id.length}T10:00:00Z`) }, extra)
 

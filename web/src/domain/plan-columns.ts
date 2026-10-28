@@ -1,6 +1,6 @@
 /**
  * Colunas personalizadas do quadro (Gerenciamento de Projetos, GP-5). As regras (quem define, validação
- * dos valores, troca de tipo) ficam no servidor (backend/pb_hooks/src/domain/plan-columns.js); aqui
+ * dos valores, troca de tipo) ficam no servidor (backend/src/domain/plan-columns.js); aqui
  * ficam os tipos, os limites da tela, a ordenação e as somas dos recortes.
  */
 import type { OptionColor } from './task-config'

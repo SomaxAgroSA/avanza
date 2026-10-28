@@ -1,10 +1,10 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const { PERMISSIONS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, isKnownPermission } = require('../../pb_hooks/src/domain/permissions')
-const rbac = require('../../pb_hooks/src/domain/rbac')
-const session = require('../../pb_hooks/src/domain/session')
-const user = require('../../pb_hooks/src/domain/user')
+const { PERMISSIONS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, isKnownPermission } = require('../../src/domain/permissions')
+const rbac = require('../../src/domain/rbac')
+const session = require('../../src/domain/session')
+const user = require('../../src/domain/user')
 
 const principal = (roleCode, permissions, extra) =>
   rbac.createPrincipal(Object.assign({ userId: 'u1', roleId: 'r-' + roleCode, roleCode, permissions }, extra))

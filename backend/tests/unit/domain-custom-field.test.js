@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const cf = require('../../pb_hooks/src/domain/custom-field')
+const cf = require('../../src/domain/custom-field')
 
 describe('domain/custom-field — catálogo de tipos', () => {
   it('suporta todos os tipos da diretriz', () => {

@@ -1,8 +1,8 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const project = require('../../pb_hooks/src/domain/project')
-const { createPrincipal } = require('../../pb_hooks/src/domain/rbac')
+const project = require('../../src/domain/project')
+const { createPrincipal } = require('../../src/domain/rbac')
 
 const principal = (permissions, userId = 'u1', roleCode = 'MEMBER') =>
   createPrincipal({ userId, roleId: 'r', roleCode, permissions })

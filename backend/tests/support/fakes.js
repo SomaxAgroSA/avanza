@@ -1,9 +1,11 @@
 /**
  * Implementações em memória das portas da aplicação, usadas nos testes unitários.
- * Espelham o contrato dos repositórios PocketBase (pb_hooks/src/infrastructure).
+ * Espelham o contrato dos repositórios Postgres (src/infrastructure): para a aplicação, todo método de
+ * repositório, o `unitOfWork`, o mailer e o cliente HTTP devolvem Promise — um `await` esquecido
+ * aparece no teste (chega uma Promise onde se esperava o valor).
  */
 
-const { DEFAULT_ROLES, DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } = require('../../pb_hooks/src/domain/permissions')
+const { DEFAULT_ROLES, DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } = require('../../src/domain/permissions')
 
 let seq = 0
 const nextId = (prefix) => `${prefix}${++seq}`
@@ -287,7 +289,7 @@ function createFakeRepositories(store) {
     fileKeyOf: (slot) => `platform/${slot}`,
   }
 
-  const { DEFAULT_SETTINGS: EMAIL_DEFAULTS } = require('../../pb_hooks/src/domain/email')
+  const { DEFAULT_SETTINGS: EMAIL_DEFAULTS } = require('../../src/domain/email')
   const emailSettingsRepository = {
     get: () => ({ values: Object.assign({}, EMAIL_DEFAULTS, store.emailSettings.values), hasPassword: !!store.emailSettings.password }),
     save: (values, password) => {
@@ -1266,7 +1268,7 @@ function createFakeMailer() {
     failNext(reason) {
       failure = reason
     },
-    send(message) {
+    async send(message) {
       if (failure) {
         const reason = failure
         failure = null
@@ -1290,7 +1292,7 @@ function createFakeHttpClient() {
     fail(reason) {
       failure = reason
     },
-    post(url, body, headers, timeout) {
+    async post(url, body, headers, timeout) {
       this.requests.push({ url, body, headers, timeout })
       if (failure) throw new Error(failure)
       return response
@@ -1298,16 +1300,30 @@ function createFakeHttpClient() {
   }
 }
 
+/** Mesmo repositório com a interface assíncrona dos reais: cada método devolve uma Promise. */
+function asyncRepository(repo) {
+  const wrapped = {}
+  Object.keys(repo).forEach((key) => {
+    const value = repo[key]
+    wrapped[key] = typeof value === 'function' ? (...args) => new Promise((resolve) => resolve(value.apply(repo, args))) : value
+  })
+  return wrapped
+}
+
 function createFakeDeps(options) {
   const store = createFakeStore()
-  const repos = createFakeRepositories(store)
+  const raw = createFakeRepositories(store)
+  const repos = {}
+  Object.keys(raw).forEach((key) => {
+    repos[key] = asyncRepository(raw[key])
+  })
   const clock = createFakeClock(options && options.start)
   return Object.assign({}, repos, {
     store,
     clock,
     tokens: createFakeTokens(),
     sessionPolicy: { ttlHours: 12, rememberTtlDays: 30, idleMinutes: 120, touchIntervalSeconds: 300 },
-    unitOfWork: { run: (fn) => fn(repos) },
+    unitOfWork: { run: async (fn) => fn(repos) },
     mailer: createFakeMailer(),
     httpClient: createFakeHttpClient(),
     crypto: { hmacSha256Hex: (secret, data) => `hmac(${secret}|${data})` },
@@ -1316,9 +1332,9 @@ function createFakeDeps(options) {
 }
 
 /** Cria um usuário diretamente no store (atalho para arrange dos testes). */
-function seedUser(deps, overrides) {
+async function seedUser(deps, overrides) {
   const roleCode = (overrides && overrides.roleCode) || 'MEMBER'
-  const role = deps.roleRepository.findByCode(roleCode)
+  const role = await deps.roleRepository.findByCode(roleCode)
   const data = Object.assign(
     { name: 'Ana', email: `ana${++seq}@example.com`, password: 'senhaForte123', status: 'active', roleId: role.id },
     overrides,

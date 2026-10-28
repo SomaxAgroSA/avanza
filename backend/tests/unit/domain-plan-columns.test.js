@@ -4,7 +4,7 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const cols = require('../../pb_hooks/src/domain/plan-columns')
+const cols = require('../../src/domain/plan-columns')
 
 let seq = 0
 const newId = () => `op${++seq}`

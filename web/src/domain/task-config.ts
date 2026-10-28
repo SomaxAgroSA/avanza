@@ -1,6 +1,6 @@
 /**
  * Tipos de tarefa e campos personalizados — tipos e regras de apresentação.
- * Espelha backend/pb_hooks/src/domain/custom-field.js (o backend continua sendo a autoridade).
+ * Espelha backend/src/domain/custom-field.js (o backend continua sendo a autoridade).
  */
 
 export const FIELD_TYPES = [

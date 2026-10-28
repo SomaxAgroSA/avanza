@@ -1,5 +1,5 @@
 /**
- * Projetos — tipos e regras de apresentação (espelham backend/pb_hooks/src/domain/project.js).
+ * Projetos — tipos e regras de apresentação (espelham backend/src/domain/project.js).
  */
 
 export const PROJECT_STATUSES = ['planning', 'active', 'paused', 'completed', 'cancelled'] as const

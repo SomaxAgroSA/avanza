@@ -2,7 +2,7 @@
  * Quadro do projeto — Gerenciamento de Projetos (docs/diretriz_feature_gerenciamento_projetos.md).
  * Módulo à parte das tarefas: grupos (fases), elementos e subelementos com etiquetas próprias de
  * status e de recursos. Os cálculos (duração, progresso, totais do grupo, numeração) vêm prontos do
- * servidor (backend/pb_hooks/src/domain/plan.js); aqui ficam os tipos, as regras de edição na tela,
+ * servidor (backend/src/domain/plan.js); aqui ficam os tipos, as regras de edição na tela,
  * a barra de status e os formatos compactos. A organização da tela (seções, filtros, agrupar por)
  * fica em plan-view.ts.
  */

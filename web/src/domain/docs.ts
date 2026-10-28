@@ -1,6 +1,6 @@
 /**
  * Documentação (expansão, Onda 2). Regras de acesso, conteúdo e árvore ficam no servidor
- * (backend/pb_hooks/src/domain/docs.js, doc-content.js, doc-tree.js); aqui, os tipos e a
+ * (backend/src/domain/docs.js, doc-content.js, doc-tree.js); aqui, os tipos e a
  * organização da árvore na tela (o arraste espelha as regras do servidor para dar retorno na hora).
  */
 import type { UserSummary } from './projects'

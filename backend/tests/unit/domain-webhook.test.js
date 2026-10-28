@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const webhook = require('../../pb_hooks/src/domain/webhook')
+const webhook = require('../../src/domain/webhook')
 
 describe('domain/webhook — eventos', () => {
   it('catálogo público de eventos (nomes estáveis) com grupos; assinatura por evento ou por grupo inteiro', () => {

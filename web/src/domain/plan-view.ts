@@ -3,7 +3,7 @@
  * busca, filtros (barra, pessoa e por coluna), ordenação, agrupar por (status, recurso, cronograma),
  * totais das visões filtradas/agrupadas, dependências vistas de cada elemento e as colunas do Kanban (GP-4).
  *
- * Os totais seguem a mesma fórmula do servidor (backend/pb_hooks/src/domain/plan.js `groupSummary`),
+ * Os totais seguem a mesma fórmula do servidor (backend/src/domain/plan.js `groupSummary`),
  * aplicada só aos elementos visíveis — sem filtro, o rodapé usa os totais que vêm do servidor.
  */
 import type { OptionColor } from './task-config'

@@ -1,10 +1,10 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const task = require('../../pb_hooks/src/domain/task')
-const { resolveAccess } = require('../../pb_hooks/src/domain/project')
-const { createPrincipal } = require('../../pb_hooks/src/domain/rbac')
-const { DEFAULT_ROLE_PERMISSIONS } = require('../../pb_hooks/src/domain/permissions')
+const task = require('../../src/domain/task')
+const { resolveAccess } = require('../../src/domain/project')
+const { createPrincipal } = require('../../src/domain/rbac')
+const { DEFAULT_ROLE_PERMISSIONS } = require('../../src/domain/permissions')
 
 const project = { id: 'p1', key: 'CRM', ownerId: 'owner', archivedAt: null }
 

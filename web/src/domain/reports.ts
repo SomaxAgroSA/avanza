@@ -1,5 +1,5 @@
 /**
- * Relatórios e indicadores (espelha backend/pb_hooks/src/domain/report.js).
+ * Relatórios e indicadores (espelha backend/src/domain/report.js).
  * O período é sempre explícito: atalhos viram datas locais (início do primeiro dia até o fim do
  * último), e o fuso (getTimezoneOffset) vai junto para o servidor contar "hoje" e os dias da série.
  */

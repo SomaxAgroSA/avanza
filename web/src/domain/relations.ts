@@ -1,5 +1,5 @@
 /**
- * Relacionamentos entre tarefas (espelha backend/pb_hooks/src/domain/relation.js).
+ * Relacionamentos entre tarefas (espelha backend/src/domain/relation.js).
  * Cada relação chega no ponto de vista da tarefa aberta: "bloqueia" de um lado é
  * "bloqueado por" do outro. Pai/filho são subtarefas; "fork de" é a origem do fork.
  */

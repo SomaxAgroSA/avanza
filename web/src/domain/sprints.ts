@@ -1,5 +1,5 @@
 /**
- * Sprints do projeto (planejamento do backlog). Espelha backend/pb_hooks/src/domain/sprint.js:
+ * Sprints do projeto (planejamento do backlog). Espelha backend/src/domain/sprint.js:
  * só planejamento — sem velocidade, burndown ou compromisso de sprint.
  */
 

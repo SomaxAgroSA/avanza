@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const report = require('../../pb_hooks/src/domain/report')
+const report = require('../../src/domain/report')
 
 const at = (iso) => new Date(iso)
 

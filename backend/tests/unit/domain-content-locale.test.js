@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const locale = require('../../pb_hooks/src/domain/content-locale')
+const locale = require('../../src/domain/content-locale')
 
 describe('domain/content-locale — cadastros traduzidos', () => {
   it('idioma da requisição: primeiro suportado do Accept-Language; padrão pt-BR', () => {

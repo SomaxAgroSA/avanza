@@ -2,21 +2,21 @@ const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
 const { createFakeDeps, seedUser } = require('../support/fakes')
-const { createAuthService } = require('../../pb_hooks/src/application/auth')
-const lockout = require('../../pb_hooks/src/domain/lockout')
+const { createAuthService } = require('../../src/application/auth')
+const lockout = require('../../src/domain/lockout')
 
 const ctx = { ip: '10.0.0.1', userAgent: 'test-agent', correlationId: 'corr-1' }
 
-function setup() {
+async function setup() {
   const deps = createFakeDeps({ start: '2026-09-30T12:00:00.000Z' })
   const auth = createAuthService(deps)
-  const user = seedUser(deps, { email: 'ana@example.com', password: 'senhaForte123', roleCode: 'MEMBER' })
+  const user = await seedUser(deps, { email: 'ana@example.com', password: 'senhaForte123', roleCode: 'MEMBER' })
   return { deps, auth, user }
 }
 
-const codeOf = (fn) => {
+const codeOf = async (fn) => {
   try {
-    fn()
+    await fn()
   } catch (err) {
     return err.code
   }
@@ -38,10 +38,10 @@ describe('domain/lockout', () => {
 })
 
 describe('application/auth — bloqueio progressivo de conta', () => {
-  it('após 5 senhas erradas a conta fica bloqueada (até com a senha certa) e libera depois do prazo', () => {
-    const { auth, deps } = setup()
-    for (let i = 0; i < 5; i++) assert.equal(codeOf(() => auth.login({ email: 'ana@example.com', password: `errada${i}xxxxx` }, ctx)), 'INVALID_CREDENTIALS')
-    assert.throws(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx), (err) => {
+  it('após 5 senhas erradas a conta fica bloqueada (até com a senha certa) e libera depois do prazo', async () => {
+    const { auth, deps } = await setup()
+    for (let i = 0; i < 5; i++) assert.equal(await codeOf(() => auth.login({ email: 'ana@example.com', password: `errada${i}xxxxx` }, ctx)), 'INVALID_CREDENTIALS')
+    await assert.rejects(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx), (err) => {
       assert.equal(err.code, 'ACCOUNT_LOCKED')
       assert.equal(err.details.retry_after_seconds, 300)
       return true
@@ -50,31 +50,31 @@ describe('application/auth — bloqueio progressivo de conta', () => {
     assert.equal(deps.store.audit.at(-1).action, 'auth.login_locked')
 
     deps.clock.advanceMinutes(5)
-    assert.equal(codeOf(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)), 'OK')
+    assert.equal(await codeOf(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)), 'OK')
   })
 
-  it('entrar com sucesso zera a contagem; tentativas bloqueadas não prolongam o bloqueio', () => {
-    const { auth, deps } = setup()
-    for (let i = 0; i < 4; i++) codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx))
-    auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)
-    for (let i = 0; i < 4; i++) assert.equal(codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx)), 'INVALID_CREDENTIALS')
+  it('entrar com sucesso zera a contagem; tentativas bloqueadas não prolongam o bloqueio', async () => {
+    const { auth, deps } = await setup()
+    for (let i = 0; i < 4; i++) await codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx))
+    await auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)
+    for (let i = 0; i < 4; i++) assert.equal(await codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx)), 'INVALID_CREDENTIALS')
 
-    codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx))
+    await codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx))
     deps.clock.advanceMinutes(3)
     // durante o bloqueio, nem a senha é conferida nem conta nova falha
-    assert.equal(codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx)), 'ACCOUNT_LOCKED')
+    assert.equal(await codeOf(() => auth.login({ email: 'ana@example.com', password: 'errada12345' }, ctx)), 'ACCOUNT_LOCKED')
     deps.clock.advanceMinutes(2)
-    assert.equal(codeOf(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)), 'OK')
+    assert.equal(await codeOf(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)), 'OK')
   })
 
-  it('e-mail inexistente se comporta igual (não revela quais contas existem)', () => {
-    const { auth, deps } = setup()
-    for (let i = 0; i < 5; i++) assert.equal(codeOf(() => auth.login({ email: 'ninguem@example.com', password: 'qualquer123' }, ctx)), 'INVALID_CREDENTIALS')
-    assert.equal(codeOf(() => auth.login({ email: 'ninguem@example.com', password: 'qualquer123' }, ctx)), 'ACCOUNT_LOCKED')
+  it('e-mail inexistente se comporta igual (não revela quais contas existem)', async () => {
+    const { auth, deps } = await setup()
+    for (let i = 0; i < 5; i++) assert.equal(await codeOf(() => auth.login({ email: 'ninguem@example.com', password: 'qualquer123' }, ctx)), 'INVALID_CREDENTIALS')
+    assert.equal(await codeOf(() => auth.login({ email: 'ninguem@example.com', password: 'qualquer123' }, ctx)), 'ACCOUNT_LOCKED')
     // o e-mail nunca é gravado em claro: a chave passa pelo hash (SHA-256 no servidor real)
     assert.ok(deps.store.loginAttempts.every((a) => a.key === deps.tokens.hash('login:ninguem@example.com')))
     assert.ok(deps.store.loginAttempts.every((a) => a.key !== 'ninguem@example.com'))
     // outra conta não é afetada
-    assert.equal(codeOf(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)), 'OK')
+    assert.equal(await codeOf(() => auth.login({ email: 'ana@example.com', password: 'senhaForte123' }, ctx)), 'OK')
   })
 })

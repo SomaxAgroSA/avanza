@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const realtime = require('../../pb_hooks/src/domain/realtime')
+const realtime = require('../../src/domain/realtime')
 
 describe('domain/realtime — tópicos', () => {
   it('tópicos do projeto e da pessoa; o resto não é aceito', () => {

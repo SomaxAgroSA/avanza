@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const apiToken = require('../../pb_hooks/src/domain/api-token')
+const apiToken = require('../../src/domain/api-token')
 
 describe('domain/api-token', () => {
   it('formato kb_pat_ + 40 caracteres; o prefixo mostrado identifica sem revelar', () => {

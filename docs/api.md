@@ -1,6 +1,6 @@
 # API REST `/api/v1`
 
-Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `backend/pb_hooks/src/http/openapi.js`).
+Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `backend/src/http/openapi.js`).
 
 ## Convenções
 

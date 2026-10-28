@@ -17,7 +17,7 @@ type GroupRow = PlanReport['groups'][number]
 /**
  * Relatórios do quadro (GP-4 — diretriz §16): saúde do projeto (o pior dos fatores, sempre com cada
  * fator e o seu valor), resumo, cronograma, esforço, recursos e grupos. Os números vêm do servidor
- * (backend/pb_hooks/src/domain/plan-report.js), com "hoje" no fuso de quem consulta.
+ * (backend/src/domain/plan-report.js), com "hoje" no fuso de quem consulta.
  */
 export function PlanReports({ plan }: { plan: Plan }) {
   const { t } = useTranslation()

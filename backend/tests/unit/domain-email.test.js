@@ -1,8 +1,8 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const email = require('../../pb_hooks/src/domain/email')
-const authToken = require('../../pb_hooks/src/domain/auth-token')
+const email = require('../../src/domain/email')
+const authToken = require('../../src/domain/auth-token')
 
 describe('domain/email — configurações do envio', () => {
   it('desligado por padrão; ligar exige servidor, remetente e endereço da plataforma', () => {

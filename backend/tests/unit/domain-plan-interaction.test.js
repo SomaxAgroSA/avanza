@@ -5,9 +5,9 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const links = require('../../pb_hooks/src/domain/plan-links')
-const importDomain = require('../../pb_hooks/src/domain/plan-import')
-const plan = require('../../pb_hooks/src/domain/plan')
+const links = require('../../src/domain/plan-links')
+const importDomain = require('../../src/domain/plan-import')
+const plan = require('../../src/domain/plan')
 
 describe('domain/plan-links — dependências', () => {
   it('"A depende de B" é gravado como "B bloqueia A"; relacionado mantém o sentido', () => {

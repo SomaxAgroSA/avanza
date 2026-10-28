@@ -25,7 +25,7 @@ Convenções: ver [ADR-006](decisions.md#adr-006--campos-de-data-do-pocketbase-c
 `code` (text, único, `^[A-Z][A-Z0-9_]{1,31}$`), `name`, `description`, `is_system` (bool), `created`, `updated`. Perfis de sistema: SUPER_ADMIN, ADMIN, MANAGER, MEMBER, VIEWER.
 
 ### `permissions`
-`code` (único, ex.: `tasks.edit`), `module`, `description`. Populada pelo seed a partir de `pb_hooks/src/domain/permissions.js`.
+`code` (único, ex.: `tasks.edit`), `module`, `description`. Populada pelo seed a partir de `src/domain/permissions.js`.
 
 ### `role_permissions`
 `role_id` → roles (cascade), `permission_id` → permissions (cascade). Índice único `(role_id, permission_id)`, índice em `permission_id`.

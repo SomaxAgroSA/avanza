@@ -3,7 +3,7 @@
 > Diretriz §7. Decisão em [ADR-005](decisions.md#adr-005--catálogo-de-permissões-definido-pelo-sistema-matriz-configurável).
 
 ## Modelo
-- **Catálogo** (definido pelo sistema): `backend/pb_hooks/src/domain/permissions.js`, espelhado em `web/src/domain/permissions.ts`.
+- **Catálogo** (definido pelo sistema): `backend/src/domain/permissions.js`, espelhado em `web/src/domain/permissions.ts`.
 - **Matriz perfil × permissão** (configurável): collection `role_permissions`, editada em *Configurações → Permissões*.
 - **Perfis**: 5 de sistema (não excluíveis) + perfis personalizados (*Configurações → Perfis*).
 
@@ -70,10 +70,10 @@ A permissão global é necessária, mas não suficiente: também conta o víncul
 | Excluir | `projects.delete` **e** (dono ou `projects.view_all`) **e** projeto arquivado |
 | Sair do projeto | ser membro (o dono não sai sem transferir a posse) |
 
-Papéis no projeto: **gestor** (administra o projeto), **membro** (trabalha nas tarefas), **leitor** (consulta e comenta; não edita). A API devolve `capabilities` em cada projeto para a interface habilitar só o que é permitido. Regras em `backend/pb_hooks/src/domain/project.js`.
+Papéis no projeto: **gestor** (administra o projeto), **membro** (trabalha nas tarefas), **leitor** (consulta e comenta; não edita). A API devolve `capabilities` em cada projeto para a interface habilitar só o que é permitido. Regras em `backend/src/domain/project.js`.
 
 ## Tarefas, comentários e configurações (Fase 4)
-Regras em `backend/pb_hooks/src/domain/task.js`.
+Regras em `backend/src/domain/task.js`.
 
 | Ação | Exige |
 |---|---|

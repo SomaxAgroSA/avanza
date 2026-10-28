@@ -1,5 +1,5 @@
 /**
- * Catálogo de permissões conhecido pelo frontend (espelha backend/pb_hooks/src/domain/permissions.js).
+ * Catálogo de permissões conhecido pelo frontend (espelha backend/src/domain/permissions.js).
  * A UI usa permissões apenas para esconder/desabilitar ações — a autorização real é sempre do backend.
  */
 export const PERMISSION_CODES = [

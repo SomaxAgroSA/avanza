@@ -4,7 +4,7 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const mgmt = require('../../pb_hooks/src/domain/plan-management')
+const mgmt = require('../../src/domain/plan-management')
 
 describe('domain/plan-management — diário', () => {
   it('registro datado: data (AAAA-MM-DD) e texto obrigatórios, até 5.000 caracteres', () => {

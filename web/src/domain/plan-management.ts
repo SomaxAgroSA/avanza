@@ -1,7 +1,7 @@
 /**
  * Quadro do projeto — GP-4: Gestão (Diário do projeto e Gestão dos problemas) e relatório com a saúde
  * do projeto (diretriz §15 e §16). As regras (quem registra, edita, exclui; cálculos do relatório e
- * da saúde) ficam no servidor (backend/pb_hooks/src/domain/plan-management.js e plan-report.js);
+ * da saúde) ficam no servidor (backend/src/domain/plan-management.js e plan-report.js);
  * aqui ficam os tipos e os limites da tela.
  */
 import type { UserSummary } from './projects'

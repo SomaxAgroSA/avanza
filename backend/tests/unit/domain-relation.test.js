@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const relation = require('../../pb_hooks/src/domain/relation')
+const relation = require('../../src/domain/relation')
 
 describe('domain/relation — tipos e perspectiva', () => {
   it('normaliza o tipo pedido (inclusive os inversos) para o que é gravado', () => {

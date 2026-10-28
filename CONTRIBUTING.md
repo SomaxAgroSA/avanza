@@ -37,7 +37,7 @@ npm --prefix backend run demo                # opcional: dados de demonstração
 - **Design system:** use os componentes `App*` de `@/presentation/components`; nada de widget nativo do navegador (ex.: `<input type="date">`). Listagens com `AppDataTable`; criar/editar em `AppDialog`; visualizar em `AppDrawer`.
 - **Cores** só por tokens do tema (`web/src/styles/index.css`); claro e escuro com contraste AA.
 - **Textos** nunca fixos: chaves de i18n nos três idiomas (pt-BR, en, es) — o teste de locales exige as mesmas chaves.
-- **API:** envelope `{ data, meta, error }`, snake_case, códigos de erro estáveis; mutação exige o cabeçalho `X-Requested-With: kamban`. Rota nova → atualize `backend/pb_hooks/src/http/openapi.js` e `docs/api.md`.
+- **API:** envelope `{ data, meta, error }`, snake_case, códigos de erro estáveis; mutação exige o cabeçalho `X-Requested-With: kamban`. Rota nova → atualize `backend/src/http/openapi.js` e `docs/api.md`.
 - **Permissões:** o servidor sempre valida (catálogo em `domain/permissions.js` e `web/src/domain/permissions.ts`).
 - **Auditoria:** toda mutação relevante grava em `audit_logs` na mesma transação, sem dados sensíveis.
 - **Regras de negócio novas:** documente em [docs/regras-de-negocio.md](docs/regras-de-negocio.md), em linguagem funcional.

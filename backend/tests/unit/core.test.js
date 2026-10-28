@@ -1,10 +1,10 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
-const { appError, isAppError, toErrorPayload } = require('../../pb_hooks/src/core/errors')
-const { success, failure } = require('../../pb_hooks/src/core/response')
-const { validate, rules } = require('../../pb_hooks/src/core/validation')
-const { parsePagination, parseSort, buildPageMeta } = require('../../pb_hooks/src/core/pagination')
+const { appError, isAppError, toErrorPayload } = require('../../src/core/errors')
+const { success, failure } = require('../../src/core/response')
+const { validate, rules } = require('../../src/core/validation')
+const { parsePagination, parseSort, buildPageMeta } = require('../../src/core/pagination')
 
 describe('core/errors', () => {
   it('cria erro de aplicação com código, status e detalhes', () => {
@@ -110,7 +110,7 @@ describe('core/validation', () => {
   })
 
   it('assertValid lança VALIDATION_ERROR com os campos', () => {
-    const { assertValid } = require('../../pb_hooks/src/core/validation')
+    const { assertValid } = require('../../src/core/validation')
     assert.throws(
       () => assertValid({}, { email: [rules.required()] }),
       (err) => err.code === 'VALIDATION_ERROR' && err.details.fields.email === 'required',

@@ -1,6 +1,6 @@
 /**
  * Nós próprios do editor rico: destaque (callout), sumário e imagem com largura.
- * Os nomes e atributos espelham o que o servidor aceita (backend/pb_hooks/src/domain/doc-content.js).
+ * Os nomes e atributos espelham o que o servidor aceita (backend/src/domain/doc-content.js).
  */
 import { mergeAttributes, Node } from '@tiptap/core'
 import Image from '@tiptap/extension-image'

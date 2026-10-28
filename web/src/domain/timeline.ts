@@ -1,5 +1,5 @@
 /**
- * Timeline do projeto (expansão, Onda 1). Regras de datas espelham backend/pb_hooks/src/domain/timeline.js;
+ * Timeline do projeto (expansão, Onda 1). Regras de datas espelham backend/src/domain/timeline.js;
  * o resto é a geometria da tela (dias inteiros, escala por zoom, grupos e régua).
  *
  * Dias são números (dias desde 1970-01-01 em UTC): as datas da API são "dia puro" (meia-noite UTC),
