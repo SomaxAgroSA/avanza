@@ -106,16 +106,26 @@ function requiredIn(link, statusId) {
   return !!statusId && Array.isArray(link.required_status_ids) && link.required_status_ids.indexOf(statusId) >= 0
 }
 
+/** Campos preenchidos pelos anexos: só dá para enviar o arquivo depois que a tarefa existe. */
+const ATTACHED_LATER = ['file', 'image']
+
+function attachedLater(field) {
+  return ATTACHED_LATER.indexOf(field.type) >= 0
+}
+
 /**
  * Valida os valores de campos personalizados de uma tarefa.
  * - `links`: campos do tipo ({ field (DTO com id, name, type, config, options), required, visible });
  * - `raw`: valores enviados, por nome técnico do campo (ausente = mantém o atual);
  * - `current`: valores salvos, por ID do campo.
  * - `statusId`: status em que a tarefa vai ficar — soma os campos exigidos nesse status.
+ * - `options.creating`: na criação, campos de arquivo/imagem obrigatórios não são exigidos (o anexo só
+ *   pode ser enviado depois que a tarefa existe); nas alterações e mudanças de status seguintes, são.
  * Retorna { values (por ID, já normalizados; null = vazio), errors (por nome) }.
  * Valores que não mudaram não são revalidados (ex.: opção desativada depois de escolhida).
  */
-function validateCustomValues(links, raw, current, statusId) {
+function validateCustomValues(links, raw, current, statusId, options) {
+  const creating = !!(options && options.creating)
   const input = raw || {}
   const saved = current || {}
   const values = {}
@@ -141,7 +151,7 @@ function validateCustomValues(links, raw, current, statusId) {
       }
       value = result.value
     }
-    if (requiredIn(link, statusId) && cf.isEmptyValue(value)) {
+    if (requiredIn(link, statusId) && cf.isEmptyValue(value) && !(creating && attachedLater(field))) {
       errors[field.name] = 'required'
       return
     }

@@ -147,6 +147,38 @@ describe('API /api/v1/task-types e /custom-fields', { timeout: 120000 }, () => {
     assert.equal((await admin.post(`${taskPath}/move`, { status_id: st('ANALISE') })).status, 200)
   })
 
+  it('arquivo obrigatório: a tarefa é criada sem ele (o anexo vem depois) e a edição seguinte exige o arquivo', async () => {
+    const ok = (res) => {
+      assert.ok(res.status < 300, JSON.stringify(res.body))
+      return res.body.data
+    }
+    const evidencias = ok(await admin.post('/custom-fields', { label: 'Ata da reunião', type: 'file' }))
+    const persona = ok(await admin.post('/custom-fields', { label: 'Pessoa da ata', type: 'text' }))
+    const type = ok(await admin.post('/task-types', { key: 'REUNIAO', name: 'Reunião de alinhamento' }))
+    const fields = [{ field_id: evidencias.id, required: true }, { field_id: persona.id, required: true }]
+    assert.equal((await admin.put(`/task-types/${type.id}/fields`, { fields })).status, 200)
+    const project = ok(await admin.post('/projects', { name: 'Reuniões', key: 'REU' }))
+    const base = { project_id: project.id, task_type_id: type.id, title: 'Teste' }
+
+    // os outros obrigatórios continuam exigidos na criação
+    const missing = await admin.post('/tasks', base)
+    assert.deepEqual(missing.body.error.details.fields, { 'custom_values.pessoa_da_ata': 'required' })
+    const created = await admin.post('/tasks', Object.assign({ custom_values: { pessoa_da_ata: 'teste' } }, base))
+    assert.equal(created.status, 201, JSON.stringify(created.body))
+    const taskPath = `/tasks/${created.body.data.id}`
+
+    // depois de criada, salvar exige o arquivo; anexado no campo, salva
+    const edit = await admin.patch(taskPath, { title: 'Teste editado' })
+    assert.equal(edit.status, 400)
+    assert.deepEqual(edit.body.error.details.fields, { 'custom_values.ata_da_reuniao': 'required' })
+    const form = new FormData()
+    form.append('files', new Blob([Buffer.from('%PDF-1.4\n%evidencia\n')], { type: 'application/pdf' }), 'ata.pdf')
+    form.append('field', 'ata_da_reuniao')
+    const upload = await admin.post(`${taskPath}/attachments`, form)
+    assert.equal(upload.status, 201, JSON.stringify(upload.body))
+    assert.equal((await admin.patch(taskPath, { title: 'Teste editado' })).status, 200)
+  })
+
   it('tipos traduzidos: padrão já traduzido, idioma pelo Accept-Language e tradução editável', async () => {
     const lang = (value) => ({ headers: { 'Accept-Language': value } })
     const byKey = (list, key) => list.find((t) => t.key === key)

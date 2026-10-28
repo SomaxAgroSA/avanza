@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
-import { isRequiredIn, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
+import { isRequiredIn, isRequiredOnCreate, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
 import { customValueIssues, datesIssue, parseHours, type TaskDetail, type TaskInput } from '@/domain/tasks'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
 import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppSkeleton, AppTextField, AppTextarea, notify } from '@/presentation/components'
@@ -350,7 +350,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                   <CustomFieldInput
                     key={link.field.id}
                     field={link.field}
-                    required={isRequiredIn(link, draft.statusId)}
+                    required={isEdit ? isRequiredIn(link, draft.statusId) : isRequiredOnCreate(link, draft.statusId)}
                     value={draft.values[link.field.name]}
                     error={valueErrors[link.field.name]}
                     references={references}

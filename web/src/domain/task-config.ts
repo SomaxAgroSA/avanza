@@ -132,6 +132,18 @@ export function isRequiredIn(link: Pick<TaskTypeField, 'required' | 'visible' | 
   return !!statusId && link.requiredStatusIds.includes(statusId)
 }
 
+/**
+ * Exigido ao criar a tarefa (espelha backend/domain/task.js `options.creating`): campos de arquivo/imagem
+ * só recebem o anexo depois que a tarefa existe, então ficam para as alterações seguintes.
+ */
+export function isRequiredOnCreate(
+  link: Pick<TaskTypeField, 'required' | 'visible' | 'requiredStatusIds'> & { field: Pick<CustomField, 'type'> },
+  statusId: string | null | undefined,
+): boolean {
+  if (link.field.type === 'file' || link.field.type === 'image') return false
+  return isRequiredIn(link, statusId)
+}
+
 export interface TaskTypeDetail extends TaskType {
   fields: TaskTypeField[]
 }

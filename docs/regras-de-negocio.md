@@ -235,6 +235,7 @@ Cada tipo de tarefa define, campo a campo, **quando** ele precisa estar preenchi
 | campo **oculto** | nunca (não aparece no formulário) |
 
 - **A regra vale para o status em que a tarefa vai ficar.** Ao criar, editar ou mudar de status, a tarefa precisa ter preenchidos os campos exigidos nesse status. Exemplo: se "Parecer do analista" é exigido em Análise, a tarefa só entra em Análise com o parecer preenchido.
+- **Campos de arquivo e imagem são a exceção na criação:** o anexo só pode ser enviado depois que a tarefa existe, então eles não são exigidos ao criar (o formulário não os marca com *). A partir daí valem as regras acima: para salvar uma edição ou mudar para um status que exige o campo, anexe antes (no próprio campo ou na aba Anexos).
 - **Vale para toda mudança de status:** arrastar no Kanban, "Mover para" no Planejamento, troca rápida de status na tarefa, formulário completo e API.
 - **Preencher e mover:** quando falta algum campo, a tela abre um pop-up só com os campos que faltam; ao salvar, grava os valores e aplica a mudança de status. Cancelar deixa a tarefa onde estava.
 - **Enquanto a tarefa está num status que exige o campo, ele não pode ser apagado.** Voltando para um status que não exige, pode.

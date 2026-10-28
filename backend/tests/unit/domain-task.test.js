@@ -186,6 +186,19 @@ describe('domain/task — regras', () => {
     assert.deepEqual(task.validateCustomValues(links, { versao: '1.0' }, {}).errors, {})
   })
 
+  it('arquivo/imagem obrigatório não é exigido ao criar (só dá para anexar depois); nas alterações seguintes, sim', () => {
+    const evidencias = { field: { id: 'f9', name: 'evidencias', type: 'file', config: {} }, required: true, visible: true }
+    const print = { field: { id: 'f8', name: 'print', type: 'image', config: {} }, required: false, visible: true, required_status_ids: ['analise'] }
+    const versao = { field: { id: 'f2', name: 'versao', type: 'text', config: {} }, required: true, visible: true }
+    const links = [evidencias, print, versao]
+    assert.deepEqual(task.validateCustomValues(links, { versao: '1.0' }, {}, 'analise', { creating: true }).errors, {})
+    // os demais obrigatórios continuam exigidos na criação
+    assert.deepEqual(task.validateCustomValues(links, {}, {}, 'analise', { creating: true }).errors, { versao: 'required' })
+    // depois de criada, o arquivo passa a ser exigido (editar ou mudar de status)
+    assert.deepEqual(task.validateCustomValues(links, {}, { f2: '1.0' }, 'analise').errors, { evidencias: 'required', print: 'required' })
+    assert.deepEqual(task.validateCustomValues(links, {}, { f2: '1.0', f9: ['a1'], f8: ['a2'] }, 'analise').errors, {})
+  })
+
   it('valor já salvo não é revalidado (opção desativada depois continua válida)', () => {
     const links = [{ field: { id: 'f2', name: 'severidade', type: 'select', config: {}, options: [{ id: 'o1', is_active: false }] }, required: true, visible: true }]
     assert.deepEqual(task.validateCustomValues(links, { severidade: 'o1' }, { f2: 'o1' }), { values: { f2: 'o1' }, errors: {} })

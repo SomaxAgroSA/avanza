@@ -574,7 +574,7 @@ function createTaskService(deps) {
       const def = link.field.default_value
       if (link.visible && rawValues[link.field.name] === undefined && def !== null && def !== undefined) rawValues[link.field.name] = def
     })
-    const checked = taskDomain.validateCustomValues(links, rawValues, {}, status.id)
+    const checked = taskDomain.validateCustomValues(links, rawValues, {}, status.id, { creating: true })
     if (Object.keys(checked.errors).length > 0) throw invalidCustom(checked.errors, status)
     await assertReferences(ctx, links, checked.values, {}, null)
     const createDatesIssue = timelineDomain.datesIssue(data.start_date || null, data.due_date || null)
