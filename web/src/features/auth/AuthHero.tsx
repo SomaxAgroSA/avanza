@@ -11,7 +11,12 @@ interface MockCard {
   avatar: string
   progress?: string
   done?: boolean
+  /** O cartão que a animação leva de "Em andamento" para "Concluído". */
+  moving?: boolean
 }
+
+/** O cartão que a animação arrasta para "Concluído" (a vaga de lá tem a altura dele). */
+const MOVING: MockCard = { tag: 'bg-danger', title: 'w-full', avatar: 'bg-warning-soft', progress: 'w-2/3', moving: true }
 
 const COLUMNS: { key: 'todo' | 'doing' | 'done'; cards: MockCard[] }[] = [
   {
@@ -24,7 +29,7 @@ const COLUMNS: { key: 'todo' | 'doing' | 'done'; cards: MockCard[] }[] = [
   {
     key: 'doing',
     cards: [
-      { tag: 'bg-danger', title: 'w-full', avatar: 'bg-warning-soft', progress: 'w-2/3' },
+      MOVING,
       { tag: 'bg-primary', title: 'w-2/3', avatar: 'bg-primary-soft', progress: 'w-1/3' },
     ],
   },
@@ -43,9 +48,29 @@ const FEATURES: { key: 'kanban' | 'plan' | 'live'; icon: LucideIcon }[] = [
   { key: 'live', icon: RefreshCw },
 ]
 
+function MockCardView({ card, className }: { card: MockCard; className?: string }) {
+  return (
+    <div className={cn('rounded-md border border-border bg-surface p-2 shadow-card', className)}>
+      <span className={cn('block h-1.5 w-7 rounded-full', card.tag)} />
+      <span className="mt-2 block h-1.5 w-full rounded-full bg-surface-3" />
+      <span className={cn('mt-1 block h-1.5 rounded-full bg-surface-3', card.title)} />
+      {card.progress && (
+        <span className="mt-2 block h-1 overflow-hidden rounded-full bg-surface-3">
+          <span className={cn('block h-full rounded-full bg-primary', card.progress)} />
+        </span>
+      )}
+      <span className="mt-2 flex items-center justify-between">
+        {card.done ? <CheckCircle2 className="size-3.5 text-success" /> : <span className="h-1.5 w-5 rounded-full bg-surface-3" />}
+        <span className={cn('size-4 rounded-full ring-2 ring-surface', card.avatar)} />
+      </span>
+    </div>
+  )
+}
+
 /**
- * Prévia ilustrativa do produto na capa: um quadro que flutua devagar, com o "ao vivo" pulsando e o aviso
- * de cartão movido. Decorativa (fora da árvore de acessibilidade); parada para quem pede menos movimento.
+ * Prévia ilustrativa do produto na capa: o quadro flutua, um cartão é arrastado de "Em andamento" para a
+ * vaga em "Concluído", o aviso de cartão movido aparece e a saúde do projeto sobe — em ciclo, com o "ao
+ * vivo" pulsando. Decorativa (fora da árvore de acessibilidade); parada para quem pede menos movimento.
  */
 function ProductPreview() {
   const { t } = useTranslation()
@@ -78,21 +103,14 @@ function ProductPreview() {
                 <span className="rounded bg-surface-3 px-1.5 tabular-nums">{column.cards.length}</span>
               </div>
               <div className="mt-2 flex flex-col gap-1.5">
-                {column.cards.map((card, index) => (
-                  <div key={index} className="rounded-md border border-border bg-surface p-2 shadow-card">
-                    <span className={cn('block h-1.5 w-7 rounded-full', card.tag)} />
-                    <span className="mt-2 block h-1.5 w-full rounded-full bg-surface-3" />
-                    <span className={cn('mt-1 block h-1.5 rounded-full bg-surface-3', card.title)} />
-                    {card.progress && (
-                      <span className="mt-2 block h-1 overflow-hidden rounded-full bg-surface-3">
-                        <span className={cn('block h-full rounded-full bg-primary', card.progress)} />
-                      </span>
-                    )}
-                    <span className="mt-2 flex items-center justify-between">
-                      {card.done ? <CheckCircle2 className="size-3.5 text-success" /> : <span className="h-1.5 w-5 rounded-full bg-surface-3" />}
-                      <span className={cn('size-4 rounded-full ring-2 ring-surface', card.avatar)} />
-                    </span>
+                {/* a vaga onde o cartão arrastado cai (mesma altura dele) */}
+                {column.key === 'done' && (
+                  <div className="rounded-md border border-dashed border-primary-border">
+                    <MockCardView card={MOVING} className="invisible" />
                   </div>
+                )}
+                {column.cards.map((card, index) => (
+                  <MockCardView key={index} card={card} className={card.moving ? 'relative z-10 motion-safe:animate-card-move' : undefined} />
                 ))}
               </div>
             </div>
@@ -102,13 +120,13 @@ function ProductPreview() {
         <div className="mt-3 flex items-center gap-3 rounded-lg bg-surface-2 px-3 py-2">
           <span className="text-[11px] font-semibold text-muted">{t('auth.hero.health')}</span>
           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-3">
-            <span className="block h-full w-[72%] rounded-full bg-success" />
+            <span className="block h-full w-[72%] rounded-full bg-success motion-safe:animate-health" />
           </span>
           <span className="rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-semibold text-success-soft-fg">{t('auth.hero.onTrack')}</span>
         </div>
       </div>
 
-      <div className="absolute bottom-0 -right-3 flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg shadow-float xl:-right-6">
+      <div className="absolute bottom-0 -right-3 flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg shadow-float motion-safe:animate-toast-cycle xl:-right-6">
         <span className="flex size-7 items-center justify-center rounded-full bg-success-soft text-success-soft-fg">
           <CheckCircle2 className="size-4" />
         </span>
@@ -121,11 +139,11 @@ function ProductPreview() {
   )
 }
 
-/** Versão compacta da prévia (celular): o "ao vivo" pulsando e o aviso de cartão movido, flutuando. */
+/** Versão compacta da prévia (celular): o aviso de cartão movido aparece e some em ciclo, com o "ao vivo" pulsando. */
 function LiveToast() {
   const { t } = useTranslation()
   return (
-    <div aria-hidden className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg shadow-float motion-safe:animate-float">
+    <div aria-hidden className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg shadow-float motion-safe:animate-toast-cycle">
       <span className="relative flex size-2.5 shrink-0">
         <span className="absolute inline-flex size-full rounded-full bg-success opacity-75 motion-safe:animate-ping" />
         <span className="relative inline-flex size-2.5 rounded-full bg-success" />

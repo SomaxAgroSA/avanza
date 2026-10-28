@@ -49,7 +49,10 @@ describe('fluxo de autenticação', () => {
     // na prévia (computador) e na versão compacta do celular, as duas animadas e fora da leitura de tela
     const moved = screen.getAllByText('Cartão movido para Concluído')
     expect(moved).toHaveLength(2)
-    moved.forEach((el) => expect(el.closest('[aria-hidden="true"]')).toHaveClass('motion-safe:animate-float'))
+    moved.forEach((el) => expect(el.closest('[aria-hidden="true"]')).not.toBeNull())
+    // um cartão é arrastado para "Concluído" e o aviso aparece em ciclo (na prévia e no celular)
+    expect(preview!.querySelectorAll('.motion-safe\\:animate-card-move')).toHaveLength(1)
+    expect(document.querySelectorAll('.motion-safe\\:animate-toast-cycle')).toHaveLength(2)
   })
 
   it('valida os campos antes de chamar a API', async () => {

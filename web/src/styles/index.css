@@ -175,6 +175,10 @@
   --animate-scale-in: kb-scale-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
   /* decorativa (prévia do quadro na capa do login): usar com motion-safe: */
   --animate-float: kb-float 7s ease-in-out infinite;
+  /* capa do login: o cartão vai de "Em andamento" para "Concluído", o aviso aparece e a saúde sobe (ciclo de 9 s) */
+  --animate-card-move: kb-card-move 9s ease-in-out infinite;
+  --animate-toast-cycle: kb-toast-cycle 9s ease-in-out infinite;
+  --animate-health: kb-health 9s ease-in-out infinite;
 }
 
 @keyframes kb-fade-in {
@@ -200,6 +204,26 @@
 @keyframes kb-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+/* a distância de uma coluna: o próprio cartão + o respiro da coluna (p-2 dos dois lados) + o vão (gap-2) */
+@keyframes kb-card-move {
+  0%, 12% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  18% { transform: translate(0, -6px) rotate(-2deg) scale(1.05); }
+  38% { transform: translate(calc(100% + 1.5rem), -6px) rotate(2deg) scale(1.05); }
+  44%, 86% { transform: translate(calc(100% + 1.5rem), 0) rotate(0deg) scale(1); opacity: 1; }
+  92% { transform: translate(calc(100% + 1.5rem), 0); opacity: 0; }
+  96% { transform: translate(0, 0); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes kb-toast-cycle {
+  0%, 40% { opacity: 0; transform: translateY(8px) scale(0.97); }
+  46%, 84% { opacity: 1; transform: translateY(0) scale(1); }
+  90%, 100% { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+@keyframes kb-health {
+  0%, 40% { width: 58%; }
+  50%, 88% { width: 72%; }
+  100% { width: 58%; }
 }
 
 @layer base {
