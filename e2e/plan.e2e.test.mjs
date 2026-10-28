@@ -187,6 +187,9 @@ describe('E2E — Quadro do projeto (Gerenciamento)', { timeout: 300000 }, () =>
     await page.getByRole('button', { name: 'Ações do grupo 2.0 Iniciação (cópia)', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Excluir grupo' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir' }).click()
+    // a confirmação só fecha quando a exclusão termina; aberta, ela deixa o quadro aria-hidden e o
+    // localizador por papel já não acha a tabela (o "detached" passaria antes da resposta da API)
+    await page.getByRole('alertdialog').waitFor({ state: 'detached' })
     await copy.waitFor({ state: 'detached' })
     data = await board()
     assert.deepEqual(data.groups.map((g) => `${g.number} ${g.name}`), ['1.0 Iniciação', '1.1 Kickoff interno'])
@@ -407,6 +410,9 @@ describe('E2E — Quadro do projeto (Gerenciamento)', { timeout: 300000 }, () =>
     const reply = adminPanel.getByRole('combobox', { name: /Responder a Mário Membro/ })
     await reply.fill('Obrigado, vou revisar.')
     await adminPanel.getByRole('button', { name: 'Responder' }).last().click()
+    // a caixa da resposta só fecha quando a resposta foi gravada; antes disso o getByText já acharia o
+    // texto digitado nela (o React copia o valor da textarea controlada para o conteúdo)
+    await reply.waitFor({ state: 'detached' })
     await adminPanel.getByText('Obrigado, vou revisar.').waitFor()
     const inbox = (await api(mario.page, 'GET', '/notifications')).json.data
     assert.equal(inbox[0].type, 'plan_reply')

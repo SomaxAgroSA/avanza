@@ -78,6 +78,9 @@ describe('E2E — Documentação', { timeout: 300000 }, () => {
     await editor.locator('img[src^="/api/v1/docs/files/"]').waitFor()
     await page.getByRole('button', { name: 'Inserir' }).click()
     await page.getByRole('menuitem', { name: 'Tabela' }).click()
+    // o menu fecha (o foco passa um instante pelo body) e só então devolve o foco ao texto: digitar
+    // antes disso perde as teclas e o Tab vai para o link "Pular para o conteúdo"
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Conteúdo da página')
     await page.keyboard.type('Campo')
     await page.keyboard.press('Tab')
     await page.keyboard.type('Regra')
