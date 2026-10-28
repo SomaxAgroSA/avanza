@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Lock } from 'lucide-react'
+import { Lock, Upload } from 'lucide-react'
 import type { CustomField, FieldValue } from '@/domain/task-config'
 import {
+  AppButton,
   AppDatePicker,
   AppFormField,
   AppMultiSelect,
@@ -15,7 +16,7 @@ import {
 import { ColorDot } from './config-visuals'
 
 export interface CustomFieldInputProps {
-  field: Pick<CustomField, 'id' | 'label' | 'type' | 'description' | 'config' | 'options'>
+  field: Pick<CustomField, 'id' | 'name' | 'label' | 'type' | 'description' | 'config' | 'options'>
   value: FieldValue | undefined
   onChange: (value: FieldValue) => void
   required?: boolean
@@ -31,6 +32,11 @@ export interface CustomFieldReferences {
   projects?: Array<{ id: string; key: string; name: string }>
   /** Anexos da tarefa (campos de imagem/arquivo escolhem entre eles). */
   attachments?: Array<{ id: string; name: string; kind: 'image' | 'document'; url: string }>
+  /**
+   * Envio direto no campo de imagem/arquivo (tarefa já criada): anexa os arquivos à tarefa ligados ao
+   * campo e devolve os ids aceitos. Sem isso, o campo só escolhe entre os anexos que já existem.
+   */
+  uploadFiles?: (files: File[], fieldName: string) => Promise<string[]>
 }
 
 const NONE = '__none__'
@@ -152,15 +158,28 @@ export function CustomFieldInput({ field, value, onChange, required, error, disa
     case 'file': {
       if (!references?.attachments) break
       const choices = references.attachments.filter((a) => field.type === 'file' || a.kind === 'image')
-      return (
+      const selected = Array.isArray(value) ? value : []
+      const multiselect = (
         <AppMultiSelect
           {...common}
-          hint={common.hint ?? t('fields.attachmentHint')}
-          value={Array.isArray(value) ? value : []}
+          hint={common.hint ?? t(references.uploadFiles ? 'fields.attachmentUploadHint' : 'fields.attachmentHint')}
+          value={selected}
           onValueChange={onChange}
           placeholder={choices.length === 0 ? t('fields.noAttachments') : undefined}
           options={choices.map((a) => ({ value: a.id, label: a.name }))}
         />
+      )
+      if (!references.uploadFiles) return multiselect
+      return (
+        <div className="grid gap-2">
+          {multiselect}
+          <FieldUpload
+            image={field.type === 'image'}
+            disabled={disabled}
+            upload={(files) => references.uploadFiles!(files, field.name)}
+            onUploaded={(ids) => onChange([...selected, ...ids.filter((id) => !selected.includes(id))])}
+          />
+        </div>
       )
     }
     default:
@@ -174,6 +193,35 @@ function rangeHint(t: (key: string, options?: Record<string, unknown>) => string
   if (config.min !== undefined) return t('fields.min', { min: config.min })
   if (config.max !== undefined) return t('fields.max', { max: config.max })
   return undefined
+}
+
+/** Botão "Enviar arquivo/imagem" do campo: escolhe os arquivos e os entrega ao envio da tarefa. */
+function FieldUpload({ image, disabled, upload, onUploaded }: { image: boolean; disabled?: boolean; upload: (files: File[]) => Promise<string[]>; onUploaded: (ids: string[]) => void }) {
+  const { t } = useTranslation()
+  const input = useRef<HTMLInputElement>(null)
+  const [sending, setSending] = useState(false)
+
+  async function send(list: FileList | null) {
+    const files = Array.from(list ?? [])
+    if (files.length === 0) return
+    setSending(true)
+    try {
+      const ids = await upload(files)
+      if (ids.length > 0) onUploaded(ids)
+    } finally {
+      setSending(false)
+      if (input.current) input.current.value = ''
+    }
+  }
+
+  return (
+    <div>
+      <input ref={input} type="file" multiple hidden accept={image ? 'image/*' : undefined} onChange={(e) => void send(e.target.files)} />
+      <AppButton type="button" size="sm" variant="secondary" loading={sending} disabled={disabled} leftIcon={<Upload aria-hidden />} onClick={() => input.current?.click()}>
+        {t(image ? 'fields.uploadImage' : 'fields.uploadFile')}
+      </AppButton>
+    </div>
+  )
 }
 
 /** Tipos cujo preenchimento depende de módulos das próximas fases (pessoas, projetos, anexos). */

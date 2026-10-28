@@ -1208,6 +1208,9 @@
       "file": "Anexe depois de criar a tarefa (aba Anexos)"
     },
     "attachmentHint": "Escolha entre os anexos da tarefa (envie novos na aba Anexos).",
+    "attachmentUploadHint": "Escolha entre os anexos da tarefa ou envie um novo.",
+    "uploadFile": "Enviar arquivo",
+    "uploadImage": "Enviar imagem",
     "noAttachments": "Nenhum anexo na tarefa ainda",
     "optionEnterHint": "Enter na opção cria a próxima."
   },

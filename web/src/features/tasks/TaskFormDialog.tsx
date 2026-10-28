@@ -15,6 +15,8 @@ import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskAttachments, useTaskMutations } from './queries'
+import { PROJECT_OPTIONS_QUERY } from './required-fields'
+import { useFieldAttachmentUpload } from './use-attachment-uploader'
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 
@@ -41,7 +43,6 @@ interface LookupOption {
   category?: StatusCategory
 }
 
-const PROJECT_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 
 interface Draft {
   projectId: string
@@ -101,15 +102,18 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [valueErrors, setValueErrors] = useState<Record<string, string>>({})
 
-  const projects = useProjects(PROJECT_QUERY, open && !isEdit && !projectId)
   const types = useTaskTypes(false)
   // o formulário fica montado nas telas: fechado, não busca nada além das listas gerais (já em cache)
   const typeDetail = useTaskType(open ? draft.typeId || undefined : undefined)
+  // projetos: para escolher o da tarefa (criação fora de um projeto) e como opções de campos do tipo "projeto"
+  const hasProjectField = (typeDetail.data?.fields ?? []).some((link) => link.visible && link.field.type === 'project')
+  const projects = useProjects(PROJECT_OPTIONS_QUERY, open && ((!isEdit && !projectId) || hasProjectField))
   const statuses = useStatuses(false)
   const priorities = usePriorities(false)
   const members = useProjectMembers(open ? draft.projectId || undefined : undefined)
   // campos de imagem/arquivo escolhem entre os anexos da tarefa (só na edição: na criação ainda não há anexos)
   const taskAttachments = useTaskAttachments(open ? task?.id : undefined)
+  const uploadToField = useFieldAttachmentUpload(task?.id ?? '')
   const tags = useTags(open)
   const sprints = useSprints(open ? draft.projectId || undefined : undefined)
 
@@ -130,8 +134,10 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       people: activeMembers.map((m) => ({ id: m.user.id, name: m.user.name })),
       projects: (projects.data?.items ?? []).map((p) => ({ id: p.id, key: p.key, name: p.name })),
       attachments: task ? (taskAttachments.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url })) : undefined,
+      // na edição o arquivo pode ser enviado pelo próprio campo (na criação a tarefa ainda não existe)
+      uploadFiles: task ? uploadToField : undefined,
     }),
-    [activeMembers, projects.data, task, taskAttachments.data],
+    [activeMembers, projects.data, task, taskAttachments.data, uploadToField],
   )
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))

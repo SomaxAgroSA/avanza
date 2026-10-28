@@ -1208,6 +1208,9 @@
       "file": "Adjunte después de crear la tarea (pestaña Adjuntos)"
     },
     "attachmentHint": "Elija entre los adjuntos de la tarea (suba nuevos en la pestaña Adjuntos).",
+    "attachmentUploadHint": "Elige entre los adjuntos de la tarea o sube uno nuevo.",
+    "uploadFile": "Subir archivo",
+    "uploadImage": "Subir imagen",
     "noAttachments": "Aún no hay adjuntos en la tarea",
     "optionEnterHint": "Enter en la opción crea la siguiente."
   },

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
 import { fileIssue } from '@/domain/attachments'
+import { notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { compressImage } from './image-compress'
 import { useAttachmentMutations } from './queries'
@@ -55,4 +57,38 @@ export function useFileUploader<O>(upload: (file: File, options?: O) => Promise<
 export function useAttachmentUploader(taskId: string) {
   const { upload } = useAttachmentMutations(taskId)
   return useFileUploader<{ commentId?: string; field?: string }>((file, options) => upload.mutateAsync({ file, ...options }))
+}
+
+/**
+ * Envio direto no campo de imagem/arquivo da tarefa (edição e "Preencha para mover"): o arquivo vira
+ * anexo já ligado ao campo — sem precisar passar pela aba Anexos. Devolve os ids aceitos; os recusados
+ * aparecem num aviso com o motivo.
+ */
+export function useFieldAttachmentUpload(taskId: string) {
+  const { t } = useTranslation()
+  const errorMessage = useErrorMessage()
+  const { upload } = useAttachmentMutations(taskId)
+  const { mutateAsync } = upload
+  return useCallback(
+    async (files: File[], field: string): Promise<string[]> => {
+      const ids: string[] = []
+      for (const original of files) {
+        const issue = fileIssue(original)
+        if (issue) {
+          notify.error(`${original.name}: ${t(`validation.${issue}`, { defaultValue: issue })}`)
+          continue
+        }
+        try {
+          const file = original.type.startsWith('image/') ? await compressImage(original) : original
+          const saved = await mutateAsync({ file, field })
+          saved.forEach((attachment) => ids.push(attachment.id))
+        } catch (error) {
+          const code = isAppError(error) && error.code === 'VALIDATION_ERROR' ? error.fieldErrors().files : undefined
+          notify.error(`${original.name}: ${code ? t(`validation.${code}`, { defaultValue: code }) : errorMessage(error)}`)
+        }
+      }
+      return ids
+    },
+    [mutateAsync, t, errorMessage],
+  )
 }

@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { valueIssue, type FieldValue } from '@/domain/task-config'
 import { AppButton, AppDialog, AppSkeleton, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
-import { useProjectMembers } from '@/features/projects/queries'
+import { useProjectMembers, useProjects } from '@/features/projects/queries'
 import { CustomFieldInput } from '@/features/task-config/CustomFieldInput'
 import { useTask, useTaskAttachments, useTaskMutations } from './queries'
-import { missingForStatus } from './required-fields'
+import { missingForStatus, PROJECT_OPTIONS_QUERY } from './required-fields'
+import { useFieldAttachmentUpload } from './use-attachment-uploader'
 
 export interface RequiredFieldsRequest {
   taskId: string
@@ -38,12 +39,17 @@ function RequiredFieldsForm({ request, onClose }: { request: RequiredFieldsReque
   const [pending, setPending] = useState(false)
 
   const links = useMemo(() => (task.data?.fields ?? []).filter((link) => request.fieldNames.includes(link.field.name)), [task.data, request.fieldNames])
+  // tudo o que um campo exigido pode pedir precisa estar à mão aqui: sem isso a tarefa não sai do lugar
+  const projects = useProjects(PROJECT_OPTIONS_QUERY, links.some((link) => link.field.type === 'project'))
+  const uploadToField = useFieldAttachmentUpload(request.taskId)
   const references = useMemo(
     () => ({
       people: (members.data ?? []).filter((m) => m.user.status === 'active').map((m) => ({ id: m.user.id, name: m.user.name })),
+      projects: (projects.data?.items ?? []).map((p) => ({ id: p.id, key: p.key, name: p.name })),
       attachments: (attachments.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url })),
+      uploadFiles: uploadToField,
     }),
-    [members.data, attachments.data],
+    [members.data, projects.data, attachments.data, uploadToField],
   )
   const valueOf = (name: string) => (name in values ? values[name] : task.data?.customValues[name])
 

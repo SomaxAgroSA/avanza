@@ -431,6 +431,7 @@ function CustomFieldForm({ open, onOpenChange, field, onSaved }: CustomFieldForm
               <CustomFieldInput
                 field={{
                   id: 'default',
+                  name: 'default',
                   label: t('fields.fields.defaultValue'),
                   type: draft.type,
                   description: t('fields.defaultHint'),

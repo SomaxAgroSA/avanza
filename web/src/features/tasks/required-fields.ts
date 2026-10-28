@@ -10,3 +10,6 @@ export function missingForStatus(error: unknown): { status: { id: string; name: 
   const status = error.details.status as { id: string; name: string } | null | undefined
   return { status: status ?? null, fieldNames: names }
 }
+
+/** Projetos visíveis como opções dos campos do tipo "projeto" (e do seletor de projeto da tarefa). */
+export const PROJECT_OPTIONS_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }

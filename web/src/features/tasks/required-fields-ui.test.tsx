@@ -64,4 +64,54 @@ describe('obrigatório por status — preencher para mover', () => {
     expect(update).toHaveBeenNthCalledWith(3, 't1', { statusId: 's-analise' })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
+
+  it('arquivo e projeto exigidos no status: o pop-up envia o arquivo pelo campo e lista os projetos', async () => {
+    const evidencias = { id: 'f9', name: 'evidencias', label: 'Evidências', type: 'file', description: '', config: {}, options: [], defaultValue: null } as unknown as CustomField
+    const relacionado = { id: 'f7', name: 'projeto_relacionado', label: 'Projeto relacionado', type: 'project', description: '', config: {}, options: [], defaultValue: null } as unknown as CustomField
+    const withFiles = {
+      ...task,
+      fields: [
+        { field: evidencias, order: 0, required: false, visible: true, showOnCard: false, requiredStatusIds: ['s-analise'] },
+        { field: relacionado, order: 1, required: false, visible: true, showOnCard: false, requiredStatusIds: ['s-analise'] },
+      ],
+    } as unknown as TaskDetail
+    const missing = new AppError({
+      code: 'VALIDATION_ERROR',
+      message: 'invalid',
+      status: 400,
+      details: { fields: { 'custom_values.evidencias': 'required', 'custom_values.projeto_relacionado': 'required' }, status: { id: 's-analise', name: 'Análise' } },
+    })
+    const update = vi.fn().mockRejectedValueOnce(missing).mockResolvedValue(withFiles)
+    const upload = vi.fn(async () => [{ id: 'a9', name: 'ata.pdf', kind: 'document', url: '/api/v1/attachments/a9/file' }])
+    const { container } = renderRoutes([{ path: '/tasks/t1', element: <TaskQuickFields task={withFiles} /> }], {
+      repositories: fakeRepositories({
+        tasks: { get: () => Promise.resolve(withFiles), update },
+        statuses: { list: () => Promise.resolve(STATUSES) },
+        projects: {
+          listMembers: () => Promise.resolve([]),
+          list: () => Promise.resolve({ items: [{ id: 'p2', key: 'ERP', name: 'ERP' }], meta: { page: 1, perPage: 100, total: 1, totalPages: 1 } }),
+        },
+        attachments: { list: () => Promise.resolve([]), upload },
+      } as never),
+      initialPath: '/tasks/t1',
+    })
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Status' }))
+    await userEvent.click(await screen.findByRole('option', { name: /Análise/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Preencha para mover para "Análise"' })
+
+    // o arquivo vai pelo próprio campo (sem passar pela aba Anexos)
+    expect(within(dialog).getByRole('button', { name: 'Enviar arquivo' })).toBeInTheDocument()
+    const input = container.ownerDocument.querySelector('input[type=file]') as HTMLInputElement
+    const file = new File(['%PDF-1.4'], 'ata.pdf', { type: 'application/pdf' })
+    await userEvent.upload(input, file)
+    await waitFor(() => expect(upload).toHaveBeenCalledWith('t1', file, { field: 'evidencias', commentId: undefined }))
+
+    // o campo de projeto tem opções
+    await userEvent.click(within(dialog).getByRole('combobox', { name: /Projeto relacionado/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'ERP · ERP' }))
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar e mover' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('t1', { customValues: { evidencias: ['a9'], projeto_relacionado: 'p2' } }))
+  })
 })

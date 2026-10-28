@@ -1208,6 +1208,9 @@
       "file": "Attach after creating the task (Attachments tab)"
     },
     "attachmentHint": "Choose among the task's attachments (upload new ones in the Attachments tab).",
+    "attachmentUploadHint": "Pick one of the task attachments or upload a new one.",
+    "uploadFile": "Upload file",
+    "uploadImage": "Upload image",
     "noAttachments": "No attachments on the task yet",
     "optionEnterHint": "Press Enter in an option to add the next one."
   },
