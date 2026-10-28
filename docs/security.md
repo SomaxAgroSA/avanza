@@ -40,9 +40,9 @@
 
 ## Anexos e conteúdo do usuário (Fase 4)
 - **Tipo real pelo conteúdo, nunca só pela extensão:** `domain/attachment.js` lê os primeiros bytes (assinaturas PNG/JPEG/GIF/WebP/PDF/ZIP/OLE; texto só sem bytes nulos) e exige que batam com a extensão. Texto que na verdade é HTML/XML/SVG (ex.: página com script salva como `.txt`) também é recusado pelo domínio (antes, essa segunda barreira era do PocketBase).
-- **Proibidos:** SVG, HTML, executáveis e qualquer tipo fora da lista. Até 20 MB por arquivo; uma requisição de upload por arquivo (limite de corpo 21 MB).
+- **Proibidos** (anexos e arquivos do projeto, mesma validação): SVG, HTML, executáveis e qualquer tipo fora da lista. Até 20 MB por arquivo; uma requisição de upload por arquivo (limite de corpo 21 MB).
 - **Nome seguro:** só o nome base, sem caminhos nem caracteres de controle, até 150 caracteres.
-- **Download protegido:** os arquivos ficam num bucket **privado** do Supabase Storage, que só o servidor acessa (chave secreta); o arquivo só sai por `/api/v1/attachments/{id}/file`, que confere o acesso ao projeto (404 para quem não vê). Resposta com `X-Content-Type-Options: nosniff`, CSP `sandbox` e `Cache-Control: private, no-store`; `?download=1` força download.
+- **Download protegido:** os arquivos ficam num bucket **privado** do Supabase Storage, que só o servidor acessa (chave secreta); o arquivo só sai por `/api/v1/attachments/{id}/file` (ou `/api/v1/project-files/{id}/file`, arquivos do projeto), que confere o acesso ao projeto (404 para quem não vê). Resposta com `X-Content-Type-Options: nosniff`, CSP `sandbox` e `Cache-Control: private, no-store`; `?download=1` força download.
 - **Markdown seguro:** descrições e comentários são renderizados como elementos React (`AppMarkdown`), sem HTML cru; links só `http(s)`. Campos URL também só `http(s)`.
 - **Menções:** o servidor aceita só pessoas ativas com acesso ao projeto.
 - **Notificações:** só chegam a quem continua com acesso ao projeto e está ativo; cada pessoa lê e marca apenas as suas (as de outra pessoa respondem 404). O texto exibido é guardado na notificação; clicar abre a tarefa, que confere o acesso de novo.

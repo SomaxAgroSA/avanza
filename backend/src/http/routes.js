@@ -320,6 +320,24 @@ function attachmentFile(e) {
   })
 }
 
+// ---------------------------------------------------------------- arquivos do projeto
+
+const listProjectFiles = configAction('projectFiles', (s, ctx, r) => s.listFiles(ctx, r.id))
+const deleteProjectFile = configAction('projectFiles', (s, ctx, r) => s.deleteFile(ctx, r.id))
+
+/** Multipart: `files` (um ou mais). */
+function uploadProjectFiles(e) {
+  return handle(e, async ({ ctx, services, param }) => ({ status: 201, data: await services.projectFiles.uploadFiles(ctx, param('id'), await readUploads(e, 'files')) }))
+}
+
+/** Download/visualização: confere acesso e serve o arquivo protegido (Range, CSP sandbox e nosniff). */
+function projectFileContent(e) {
+  return handle(e, async ({ ctx, services, param }) => {
+    const file = await services.projectFiles.fileFor(ctx, param('id'))
+    return serveStored(e, await services.deps.projectFileRepository.fileKeyOf(file.id), file.name)
+  })
+}
+
 // ---------------------------------------------------------------- kanban
 
 const projectBoard = configAction('board', (s, ctx, r) => s.getBoard(ctx, r.id))
@@ -788,6 +806,10 @@ module.exports = {
   uploadTaskAttachments,
   attachmentFile,
   deleteAttachment,
+  listProjectFiles,
+  uploadProjectFiles,
+  projectFileContent,
+  deleteProjectFile,
   revokeSession,
   listPermissions,
   listRoles,

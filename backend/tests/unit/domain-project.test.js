@@ -96,6 +96,14 @@ describe('domain/project — acesso', () => {
       archive: true,
       delete: false,
       transfer: false,
+      upload_files: false,
     })
+    // arquivos do projeto: enviar exige tasks.edit + colaborar (o leitor do projeto só vê)
+    const withTasks = ALL.concat('tasks.edit')
+    assert.equal(project.capabilities(project.resolveAccess(principal(withTasks), base, { role: 'manager' }), base).upload_files, true)
+    assert.equal(project.capabilities(project.resolveAccess(principal(withTasks), base, { role: 'member' }), base).upload_files, true)
+    assert.equal(project.capabilities(project.resolveAccess(principal(withTasks), base, { role: 'viewer' }), base).upload_files, false)
+    const archived = Object.assign({}, base, { archivedAt: new Date() })
+    assert.equal(project.capabilities(project.resolveAccess(principal(withTasks), archived, { role: 'manager' }), archived).upload_files, false)
   })
 })

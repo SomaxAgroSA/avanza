@@ -62,6 +62,7 @@ function createFakeStore() {
     taskTags: [],
     comments: [],
     attachments: [],
+    projectFiles: [],
     notifications: [],
     sprints: [],
     milestones: [],
@@ -1100,6 +1101,23 @@ function createFakeRepositories(store) {
     },
   }
 
+  let projectFileClock = 0
+  const projectFileRepository = {
+    findById: (id) => store.projectFiles.find((f) => f.id === id) || null,
+    /** Mais recentes primeiro. */
+    listByProject: (projectId) => store.projectFiles.filter((f) => f.projectId === projectId).slice().sort((a, b) => b.createdAt - a.createdAt),
+    create: (data) => {
+      projectFileClock += 1
+      const item = Object.assign({ id: nextId('pf_'), createdAt: new Date(Date.UTC(2026, 2, 1, 0, 0, projectFileClock)) }, data)
+      delete item.handle
+      store.projectFiles.push(item)
+      return item
+    },
+    delete: (id) => {
+      store.projectFiles = store.projectFiles.filter((f) => f.id !== id)
+    },
+  }
+
   const taskValueRepository = {
     listByTasks: (taskIds) => {
       const map = {}
@@ -1288,6 +1306,7 @@ function createFakeRepositories(store) {
     taskTagRepository,
     commentRepository,
     attachmentRepository,
+    projectFileRepository,
     notificationRepository,
     statusRepository: createFakeLookupRepository(store, 'statuses', 'status'),
     priorityRepository: createFakeLookupRepository(store, 'priorities', 'priority'),

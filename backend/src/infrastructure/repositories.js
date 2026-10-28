@@ -35,6 +35,7 @@ function createRepositories(db, ctx) {
 
     projectRepository: projects.createProjectRepository(db, ctx),
     projectMemberRepository: projects.createProjectMemberRepository(db, ctx),
+    projectFileRepository: projects.createProjectFileRepository(db, ctx),
 
     customFieldRepository: taskConfig.createCustomFieldRepository(db, ctx),
     taskTypeRepository: taskConfig.createTaskTypeRepository(db, ctx),

@@ -20,6 +20,7 @@ const { createTaskService } = require('../application/tasks')
 const { createTagService } = require('../application/tags')
 const { createCommentService } = require('../application/comments')
 const { createAttachmentService } = require('../application/attachments')
+const { createProjectFileService } = require('../application/project-files')
 const { createNotificationService } = require('../application/notifications')
 const { createBoardService } = require('../application/board')
 const { createBacklogService } = require('../application/backlog')
@@ -105,6 +106,7 @@ function createContainer(runtime, options) {
     tags: createTagService(deps),
     comments: createCommentService(deps),
     attachments: createAttachmentService(deps),
+    projectFiles: createProjectFileService(deps),
     notifications: createNotificationService(deps),
     board: createBoardService(deps),
     backlog: createBacklogService(deps),

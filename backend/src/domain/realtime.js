@@ -14,6 +14,7 @@ const WATCHED = Object.freeze([
   'tasks',
   'comments',
   'attachments',
+  'project_files',
   'task_relations',
   'sprints',
   'project_milestones',

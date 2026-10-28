@@ -74,6 +74,11 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
         ['projects', 'members', p],
         ALL_PROJECTS_BOARD,
       ]
+    case 'project_files':
+      return [
+        ['projects', 'files', p],
+        ['projects', 'history', p],
+      ]
     case 'notifications':
       return [['notifications']]
     default:

@@ -174,6 +174,7 @@
     "TAG_NOT_FOUND": "Etiqueta no encontrada.",
     "TAG_NAME_IN_USE": "Ya existe una etiqueta con este nombre.",
     "ATTACHMENT_NOT_FOUND": "Adjunto no encontrado.",
+    "PROJECT_FILE_NOT_FOUND": "Archivo del proyecto no encontrado.",
     "TRANSITION_NOT_ALLOWED": "El flujo configurado no permite este cambio de estado.",
     "NOT_IN_BACKLOG": "Esta tarea ya está en curso o cerrada y salió de la planificación. Actualice la página.",
     "SPRINT_NOT_FOUND": "Sprint no encontrado.",
@@ -760,6 +761,8 @@
       "project.deleted": "Eliminó el proyecto",
       "project.owner_changed": "Transfirió la propiedad del proyecto",
       "project.member_added": "Agregó un miembro",
+      "project.file_added": "Subió archivos al proyecto",
+      "project.file_deleted": "Eliminó un archivo del proyecto",
       "project.member_role_changed": "Cambió el rol de un miembro",
       "project.member_removed": "Quitó un miembro",
       "project.member_left": "Salió del proyecto",
@@ -973,6 +976,7 @@
     "backToList": "Volver a proyectos",
     "tabs": {
       "overview": "Resumen",
+      "files": "Archivos",
       "members": "Miembros ({{count}})",
       "history": "Historial",
       "settings": "Configuración",
@@ -1527,6 +1531,17 @@
     "download": "Descargar",
     "previous": "Imagen anterior",
     "next": "Imagen siguiente"
+  },
+  "projectFiles": {
+    "deleteTitle": "¿Eliminar el archivo \"{{name}}\"?",
+    "description": "Documentos e imágenes del proyecto que no pertenecen a una tarea: contratos, actas, cronogramas, presentaciones.",
+    "uploaded_one": "{{count}} archivo subido al proyecto.",
+    "uploaded_other": "{{count}} archivos subidos al proyecto.",
+    "empty": "No hay archivos en el proyecto",
+    "emptyHint": "Arrastra archivos aquí o haz clic para elegir.",
+    "emptyReadOnly": "Cuando el equipo suba archivos, aparecerán aquí.",
+    "deleteDescription": "El archivo se eliminará del proyecto. El registro queda en el historial.",
+    "deleted": "Archivo \"{{name}}\" eliminado."
   },
   "attachments": {
     "hint": "Imágenes (PNG, JPG, GIF, WebP), PDF, Office, ZIP y texto — hasta {{max}} por archivo. Las fotos grandes se reducen antes del envío.",

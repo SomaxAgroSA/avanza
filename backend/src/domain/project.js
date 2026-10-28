@@ -91,6 +91,31 @@ function allowed(access, project, action) {
   }
 }
 
+/**
+ * Arquivos do projeto (regras de negócio §22), com a regra dos anexos das tarefas: ver e baixar = quem
+ * vê o projeto; enviar = `tasks.edit` + colaborar (dono, gestor, membro ou quem vê todos os projetos);
+ * excluir = quem enviou ou o gestor. Projeto arquivado é só leitura.
+ * Ações: view | upload | delete (`file` = { uploadedBy } no delete).
+ */
+function assertFileAccess(access, project, action, file) {
+  if (!access.canView) throw appError('PROJECT_NOT_FOUND')
+  if (action === 'view') return
+  const principal = access.principal
+  const contributor = access.viewAll || access.isOwner || access.role === 'manager' || access.role === 'member'
+  if (!rbac.can(principal, 'tasks.edit') || !contributor) throw appError('FORBIDDEN')
+  if (action === 'delete' && !(access.isManager || (file && principal && file.uploadedBy === principal.userId))) throw appError('FORBIDDEN')
+  if (project.archivedAt) throw appError('PROJECT_ARCHIVED')
+}
+
+function allowedFile(access, project, action, file) {
+  try {
+    assertFileAccess(access, project, action, file)
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
 /** Capacidades do usuário atual no projeto (a interface usa para habilitar ações). */
 function capabilities(access, project) {
   return {
@@ -99,6 +124,7 @@ function capabilities(access, project) {
     archive: allowed(access, project, 'archive'),
     delete: allowed(access, project, 'delete'),
     transfer: allowed(access, project, 'transfer'),
+    upload_files: allowedFile(access, project, 'upload'),
   }
 }
 
@@ -113,5 +139,6 @@ module.exports = {
   datesIssue,
   resolveAccess,
   assertAccess,
+  assertFileAccess,
   capabilities,
 }

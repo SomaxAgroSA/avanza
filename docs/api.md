@@ -35,7 +35,7 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 | 400 | `VALIDATION_ERROR`, `BAD_REQUEST`, `USE_CHANGE_PASSWORD` |
 | 401 | `UNAUTHENTICATED`, `SESSION_EXPIRED`, `INVALID_CREDENTIALS` |
 | 403 | `FORBIDDEN`, `ACCOUNT_DISABLED`, `CSRF_CHECK_FAILED`, `PRIVILEGE_ESCALATION`, `CANNOT_EDIT_OWN_ROLE`, `CANNOT_DISABLE_SELF`, `ROLE_IMMUTABLE`, `FIELD_OPTIONS_LOCKED` |
-| 404 | `ROUTE_NOT_FOUND`, `USER_NOT_FOUND`, `ROLE_NOT_FOUND`, `SESSION_NOT_FOUND`, `PROJECT_NOT_FOUND`, `MEMBER_NOT_FOUND`, `FIELD_NOT_FOUND`, `TASK_TYPE_NOT_FOUND`, `STATUS_NOT_FOUND`, `PRIORITY_NOT_FOUND`, `TASK_NOT_FOUND`, `COMMENT_NOT_FOUND`, `TAG_NOT_FOUND`, `ATTACHMENT_NOT_FOUND`, `NOTIFICATION_NOT_FOUND`, `SPRINT_NOT_FOUND`, `RELATION_NOT_FOUND`, `MILESTONE_NOT_FOUND`, `GROUP_NOT_FOUND`, `DOC_SPACE_NOT_FOUND`, `DOC_PAGE_NOT_FOUND`, `DOC_VERSION_NOT_FOUND`, `DOC_FILE_NOT_FOUND` |
+| 404 | `ROUTE_NOT_FOUND`, `USER_NOT_FOUND`, `ROLE_NOT_FOUND`, `SESSION_NOT_FOUND`, `PROJECT_NOT_FOUND`, `MEMBER_NOT_FOUND`, `FIELD_NOT_FOUND`, `TASK_TYPE_NOT_FOUND`, `STATUS_NOT_FOUND`, `PRIORITY_NOT_FOUND`, `TASK_NOT_FOUND`, `COMMENT_NOT_FOUND`, `TAG_NOT_FOUND`, `ATTACHMENT_NOT_FOUND`, `PROJECT_FILE_NOT_FOUND`, `NOTIFICATION_NOT_FOUND`, `SPRINT_NOT_FOUND`, `RELATION_NOT_FOUND`, `MILESTONE_NOT_FOUND`, `GROUP_NOT_FOUND`, `DOC_SPACE_NOT_FOUND`, `DOC_PAGE_NOT_FOUND`, `DOC_VERSION_NOT_FOUND`, `DOC_FILE_NOT_FOUND` |
 | 409 | `TRANSITION_NOT_ALLOWED`, `RELATION_EXISTS`, `RELATION_CYCLE`, `NOT_IN_BACKLOG`, `EMAIL_ALREADY_IN_USE`, `ROLE_CODE_IN_USE`, `ROLE_IN_USE`, `PROJECT_KEY_IN_USE`, `PROJECT_ARCHIVED`, `PROJECT_NOT_ARCHIVED`, `MEMBER_ALREADY_EXISTS`, `CANNOT_REMOVE_OWNER`, `OWNER_ROLE_LOCKED`, `FIELD_NAME_IN_USE`, `FIELD_IN_USE`, `TASK_TYPE_KEY_IN_USE`, `TASK_TYPE_IN_USE`, `STATUS_KEY_IN_USE`, `STATUS_IN_USE`, `STATUS_IS_DEFAULT`, `PRIORITY_KEY_IN_USE`, `PRIORITY_IN_USE`, `PRIORITY_IS_DEFAULT`, `TAG_NAME_IN_USE`, `DOC_SPACE_KEY_IN_USE`, `DOC_PAGE_CYCLE`, `DOC_PAGE_TOO_DEEP`, `DOC_PAGE_IS_HOME` |
 | 429 | `RATE_LIMITED`, `ACCOUNT_LOCKED` (bloqueio progressivo de login; `details.retry_after_seconds`) |
 | 500 | `INTERNAL_ERROR` (sem detalhes internos; use o correlation id nos logs) |
@@ -87,7 +87,12 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 | PATCH | `/projects/{id}/members/{userId}` | gestor + `projects.edit` | `{ role }`; papel do dono é fixo (`OWNER_ROLE_LOCKED`) |
 | DELETE | `/projects/{id}/members/{userId}` | gestor, ou o próprio membro (sair) | dono não sai (`CANNOT_REMOVE_OWNER`) |
 
-Projeto sem acesso responde **404 `PROJECT_NOT_FOUND`** (não revela existência).
+| GET | `/projects/{id}/files` | ver o projeto | **arquivos do projeto** (fora das tarefas), mais recentes primeiro; cada um com `uploaded_by`, `url` e `capabilities.delete` |
+| POST | `/projects/{id}/files` | `tasks.edit` + colaborador (dono, gestor, membro ou `projects.view_all`) | multipart `files` (até 10 por envio, 20 MB cada; mesmos tipos dos anexos, decididos pelo **conteúdo**); projeto arquivado → `PROJECT_ARCHIVED` |
+| GET | `/project-files/{id}/file` | ver o projeto | download/visualização protegida (`?download=1` força download); sem acesso → 404 `PROJECT_FILE_NOT_FOUND` |
+| DELETE | `/project-files/{id}` | quem enviou ou o gestor (com `tasks.edit`) | exclui; o arquivo sai do Storage pela lixeira |
+
+Projeto sem acesso responde **404 `PROJECT_NOT_FOUND`** (não revela existência). O projeto traz `capabilities.upload_files` (pode enviar arquivos). Histórico: `project.file_added` / `project.file_deleted` (também eventos de webhook).
 
 ## Endpoints — Fase 3 (Tipos de tarefa e campos personalizados)
 
@@ -326,7 +331,7 @@ Servidor **MCP** (Model Context Protocol) em **`POST /api/mcp`** (fora de `/api/
 | Grupo | Ferramentas (argumentos em snake_case, como a API) |
 |---|---|
 | Conta | `whoami` |
-| Projetos | `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `list_project_members`, `find_member_candidates`, `add_project_member` |
+| Projetos | `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `list_project_members`, `find_member_candidates`, `add_project_member`, `list_project_files` |
 | Configuração | `get_task_settings` (status, prioridades, tipos e etiquetas), `get_task_type` (campos personalizados) |
 | Tarefas | `list_tasks` (filtros da `GET /tasks`; `categories` em lista; resumos enxutos), `get_task`, `create_task`, `update_task`, `move_task`, `delete_task`, `list_task_comments`, `add_task_comment`, `get_task_history`, `get_task_relations`, `link_tasks` |
 | Kanban e planejamento | `get_board` (`limit_per_column`, padrão 50), `get_backlog` (`limit`, padrão 100), `list_sprints`, `create_sprint`, `update_sprint` |

@@ -30,6 +30,7 @@ import { managementLink } from '@/features/plan/paths'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
+import { ProjectFilesPanel } from './ProjectFilesPanel'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
 import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
 
@@ -103,6 +104,8 @@ function ProjectDetail({ project }: { project: Project }) {
   const tabs = [
     { value: 'overview', label: t('projects.tabs.overview'), content: <Overview project={project} /> },
     ...(canViewTasks ? [{ value: 'tasks', label: t('projects.tabs.tasks'), content: <ProjectTasksPanel project={project} /> }] : []),
+    // documentos do projeto fora das tarefas (contratos, atas, cronogramas)
+    { value: 'files', label: t('projects.tabs.files'), content: <ProjectFilesPanel project={project} /> },
     // quadro de gestão do projeto (Gerenciamento de Projetos — módulo à parte das tarefas)
     { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },
     { value: 'history', label: t('projects.tabs.history'), content: <ProjectHistory projectId={project.id} /> },

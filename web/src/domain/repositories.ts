@@ -3,7 +3,7 @@ import type { ListQuery, Page } from './pagination'
 import type { PermissionCode } from './permissions'
 import type { CustomField, FieldConfig, FieldOption, FieldType, FieldValue, OptionColor, TaskType, TaskTypeDetail, TaskTypeIcon, TranslatedLocale, TypeTexts } from './task-config'
 import type { LookupItem, StatusCategory, TaskPriority, TaskStatus } from './workflow'
-import type { Attachment } from './attachments'
+import type { Attachment, ProjectFile } from './attachments'
 import type { AppNotification } from './notifications'
 import type { Board } from './kanban'
 import type { BacklogView } from './backlog'
@@ -324,6 +324,13 @@ export interface AttachmentRepository {
   remove(id: string): Promise<void>
 }
 
+/** Arquivos do projeto (aba Arquivos): um arquivo por envio. */
+export interface ProjectFileRepository {
+  list(projectId: string): Promise<ProjectFile[]>
+  upload(projectId: string, file: File): Promise<ProjectFile[]>
+  remove(id: string): Promise<void>
+}
+
 export interface NotificationRepository {
   list(query: { page: number; perPage: number; unreadOnly?: boolean }): Promise<Page<AppNotification>>
   unreadCount(): Promise<number>
@@ -498,6 +505,7 @@ export interface Repositories {
   tags: TagRepository
   comments: CommentRepository
   attachments: AttachmentRepository
+  projectFiles: ProjectFileRepository
   notifications: NotificationRepository
   board: BoardRepository
   backlog: BacklogRepository

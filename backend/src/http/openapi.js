@@ -478,6 +478,33 @@ function build() {
       '/attachments/{id}': {
         delete: op('Exclui (quem enviou ou gestor); sai também dos campos de imagem/arquivo', ['attachments'], { 200: ok('Excluído', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
+      '/projects/{id}/files': {
+        get: op('Arquivos do projeto (fora das tarefas), mais recentes primeiro — quem vê o projeto', ['attachments'], {
+          200: ok('Arquivos', { type: 'array', items: ref('ProjectFile') }),
+          404: errorResponse('PROJECT_NOT_FOUND'),
+        }, { parameters: [idParam] }),
+        post: op(
+          'Envia arquivos ao projeto (tasks.edit + colaborador; projeto arquivado → 409). Mesmos tipos e limites dos anexos: tipo decidido pelo CONTEÚDO, até 20 MB por arquivo e 10 por envio',
+          ['attachments'],
+          { 201: ok('Enviados', { type: 'array', items: ref('ProjectFile') }), 403: errorResponse('FORBIDDEN'), 409: errorResponse('PROJECT_ARCHIVED') },
+          {
+            parameters: [idParam, csrfHeader],
+            requestBody: {
+              required: true,
+              content: { 'multipart/form-data': { schema: { type: 'object', required: ['files'], properties: { files: { type: 'array', items: { type: 'string', format: 'binary' } } } } } },
+            },
+          },
+        ),
+      },
+      '/project-files/{id}/file': {
+        get: op('Baixa/visualiza o arquivo do projeto (confere acesso ao projeto; nosniff + CSP sandbox; ?download=1 força download)', ['attachments'], {
+          200: { description: 'Conteúdo do arquivo', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } },
+          404: errorResponse('PROJECT_FILE_NOT_FOUND'),
+        }, { parameters: [idParam, { name: 'download', in: 'query', schema: { type: 'string', enum: ['1'] } }] }),
+      },
+      '/project-files/{id}': {
+        delete: op('Exclui o arquivo do projeto (quem enviou ou gestor)', ['attachments'], { 200: ok('Excluído', { type: 'object' }), 404: errorResponse('PROJECT_FILE_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
+      },
       '/board': {
         get: op('Quadro Kanban de todos os projetos abertos que a pessoa vê (membro, dono ou projects.view_all): mesmas colunas, total somando os projetos; cada card traz o projeto e capabilities.move (permissão no projeto do card)', ['kanban'], {
           200: ok('Quadro (project: null; projects: os projetos incluídos)', ref('Board')),
@@ -1236,6 +1263,21 @@ function build() {
             capabilities: { type: 'object', properties: { delete: { type: 'boolean' } } },
           },
         },
+        ProjectFile: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            project_id: { type: 'string' },
+            name: { type: 'string' },
+            mime: { type: 'string' },
+            kind: { type: 'string', enum: ['image', 'document'] },
+            size: { type: 'integer' },
+            uploaded_by: ref('UserSummary'),
+            created_at: { type: 'string', format: 'date-time' },
+            url: { type: 'string', description: '/api/v1/project-files/{id}/file' },
+            capabilities: { type: 'object', properties: { delete: { type: 'boolean' } } },
+          },
+        },
         Board: {
           type: 'object',
           properties: {
@@ -1660,7 +1702,7 @@ function build() {
             my_role: { type: ['string', 'null'], enum: ['owner', 'manager', 'member', 'viewer', null] },
             capabilities: {
               type: 'object',
-              properties: { edit: { type: 'boolean' }, manage_members: { type: 'boolean' }, archive: { type: 'boolean' }, delete: { type: 'boolean' }, transfer: { type: 'boolean' } },
+              properties: { edit: { type: 'boolean' }, manage_members: { type: 'boolean' }, archive: { type: 'boolean' }, delete: { type: 'boolean' }, transfer: { type: 'boolean' }, upload_files: { type: 'boolean' } },
             },
           },
         },

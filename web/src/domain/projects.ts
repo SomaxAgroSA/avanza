@@ -29,6 +29,8 @@ export interface ProjectCapabilities {
   archive: boolean
   delete: boolean
   transfer: boolean
+  /** Enviar arquivos ao projeto (aba Arquivos). */
+  uploadFiles: boolean
 }
 
 export interface UserSummary {

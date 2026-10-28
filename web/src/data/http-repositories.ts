@@ -37,11 +37,12 @@ import type { DocPageDto, DocSpaceDto, DocTreePageDto } from './dtos'
 import type { DocFile, DocSpaceInput, RichContent } from '@/domain/docs'
 import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
-import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
+import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import { toBacklog, toBoard, toReport, toReportTask, toSprint, toNotification, toTaskRelations } from './mappers'
-import { toAttachment, toComment, toCustomField, toFieldOption, toPriority, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
+import { toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import type {
   AttachmentRepository,
+  ProjectFileRepository,
   CommentRepository,
   NotificationRepository,
   BoardRepository,
@@ -536,6 +537,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     tags: createHttpTagRepository(api),
     comments: createHttpCommentRepository(api),
     attachments: createHttpAttachmentRepository(api),
+    projectFiles: createHttpProjectFileRepository(api),
     notifications: createHttpNotificationRepository(api),
     board: createHttpBoardRepository(api),
     backlog: createHttpBacklogRepository(api),
@@ -589,6 +591,22 @@ export function createHttpTagRepository(api: ApiClient): TagRepository {
     },
     async remove(id) {
       await api.del(path(id))
+    },
+  }
+}
+
+export function createHttpProjectFileRepository(api: ApiClient): ProjectFileRepository {
+  return {
+    async list(projectId) {
+      return (await api.get<ProjectFileDto[]>(`/projects/${encodeURIComponent(projectId)}/files`)).data.map(toProjectFile)
+    },
+    async upload(projectId, file) {
+      const form = new FormData()
+      form.append('files', file, file.name)
+      return (await api.postForm<ProjectFileDto[]>(`/projects/${encodeURIComponent(projectId)}/files`, form)).data.map(toProjectFile)
+    },
+    async remove(id) {
+      await api.del(`/project-files/${encodeURIComponent(id)}`)
     },
   }
 }

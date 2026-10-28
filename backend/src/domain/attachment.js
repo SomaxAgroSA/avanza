@@ -135,6 +135,19 @@ function sizeIssue(size) {
   return size > MAX_FILE_SIZE ? 'file_too_large' : null
 }
 
+/**
+ * Confere um arquivo enviado (`{ name, size, head }`): nome seguro, tamanho e tipo pelo conteúdo.
+ * Retorna { name, size, mime, kind } ou { error, name }.
+ */
+function inspectUpload(file) {
+  const name = safeFileName(file && file.name)
+  const issue = sizeIssue(file && file.size)
+  if (issue) return { error: issue, name }
+  const type = classify(name, (file && file.head) || [])
+  if (type.error) return { error: type.error, name }
+  return { name, size: file.size, mime: type.mime, kind: type.kind }
+}
+
 /** Nome exibido/baixado: só o nome base, sem caracteres perigosos, até 150 caracteres. */
 function safeFileName(name) {
   const base = String(name || '')
@@ -160,6 +173,7 @@ module.exports = {
   ALLOWED_EXTENSIONS: Object.keys(ALLOWED),
   classify,
   sizeIssue,
+  inspectUpload,
   safeFileName,
   extensionOf,
 }

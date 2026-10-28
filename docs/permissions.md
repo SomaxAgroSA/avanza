@@ -69,6 +69,9 @@ A permissão global é necessária, mas não suficiente: também conta o víncul
 | Transferir posse | `projects.edit` **e** (dono ou `projects.view_all`) |
 | Excluir | `projects.delete` **e** (dono ou `projects.view_all`) **e** projeto arquivado |
 | Sair do projeto | ser membro (o dono não sai sem transferir a posse) |
+| Ver/baixar arquivos do projeto | ver o projeto |
+| Enviar arquivos ao projeto | `tasks.edit` **e** (dono, gestor, membro ou `projects.view_all`) **e** projeto não arquivado |
+| Excluir arquivo do projeto | o acima **e** (quem enviou ou gestor) |
 
 Papéis no projeto: **gestor** (administra o projeto), **membro** (trabalha nas tarefas), **leitor** (consulta e comenta; não edita). A API devolve `capabilities` em cada projeto para a interface habilitar só o que é permitido. Regras em `backend/src/domain/project.js`.
 

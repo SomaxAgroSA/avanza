@@ -1,8 +1,10 @@
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
-const { createTestDatabase } = require('../support/db-harness')
+const crypto = require('node:crypto')
+const { createTestDatabase, TEST_STORAGE } = require('../support/db-harness')
+const { createStorage } = require('../../src/infrastructure/storage')
 const { insertRow } = require('../../src/infrastructure/sql')
-const { createProjectRepository, createProjectMemberRepository } = require('../../src/infrastructure/repositories/projects')
+const { createProjectRepository, createProjectMemberRepository, createProjectFileRepository } = require('../../src/infrastructure/repositories/projects')
 
 describe('repositórios de projetos e membros', () => {
   let t
@@ -166,5 +168,60 @@ describe('repositórios de projetos e membros', () => {
     await projects.delete(extra.id)
     assert.equal(await projects.findById(extra.id), null)
     assert.equal(await members.find(extra.id, users.ana.id), null)
+  })
+
+  describe('arquivos do projeto', () => {
+    let storage
+    let files
+
+    before(async () => {
+      storage = createStorage(Object.assign({}, TEST_STORAGE, { bucket: `avanza-t-${crypto.randomBytes(4).toString('hex')}` }))
+      await storage.ensureBucket()
+      files = createProjectFileRepository(t.db, { storage })
+    })
+
+    after(async () => {
+      if (storage) await storage.dropBucket()
+    })
+
+    it('grava no Storage, lista os mais recentes primeiro, exclui pela lixeira e sai em cascata com o projeto', async () => {
+      const project = await projects.create({ name: 'Arquivos', key: 'ARQ', status: 'active', priority: 'medium', ownerId: users.ana.id, createdBy: users.ana.id })
+      const bytes = Buffer.from('%PDF-1.7 conteúdo')
+      const first = await files.create({
+        projectId: project.id,
+        handle: { buffer: bytes, mime: 'application/pdf', name: 'Contrato Final.pdf' },
+        name: 'Contrato Final.pdf',
+        mime: 'application/pdf',
+        kind: 'document',
+        size: bytes.length,
+        uploadedBy: users.ana.id,
+      })
+      assert.deepEqual(await files.findById(first.id), {
+        id: first.id,
+        projectId: project.id,
+        name: 'Contrato Final.pdf',
+        mime: 'application/pdf',
+        kind: 'document',
+        size: bytes.length,
+        uploadedBy: users.ana.id,
+        createdAt: first.createdAt,
+      })
+      const key = await files.fileKeyOf(first.id)
+      assert.match(key, new RegExp(`^project_files/${first.id}/contrato_final_[a-z0-9]{10}\\.pdf$`))
+      assert.deepEqual(await storage.read(key), bytes)
+      await assert.rejects(files.fileKeyOf('naoexiste123456'), (err) => err.code === 'PROJECT_FILE_NOT_FOUND')
+
+      const second = await files.create({ projectId: project.id, handle: { buffer: Buffer.from('a'), name: 'b.txt' }, name: 'b.txt', mime: 'text/plain', kind: 'document', size: 1, uploadedBy: null })
+      assert.deepEqual((await files.listByProject(project.id)).map((f) => f.id), [second.id, first.id])
+
+      await files.delete(first.id)
+      assert.equal(await files.findById(first.id), null)
+      assert.ok(await t.db.one('SELECT key FROM storage_trash WHERE key = $1', [key]))
+      assert.deepEqual(await storage.read(key), bytes)
+
+      await t.db.exec('DELETE FROM projects WHERE id = $1', [project.id])
+      assert.equal(await files.findById(second.id), null)
+      assert.ok(await t.db.one("SELECT key FROM storage_trash WHERE key LIKE $1", [`project_files/${second.id}/%`]))
+    })
   })
 })

@@ -141,6 +141,11 @@ Pacote de publicação: `tests/api/demo.test.js` roda os **dados de demonstraç�
 - API real com a migration 1790000029 (`api/api-tokens.test.js`): Bearer sem cookie nem CSRF, o token prevalece sobre o cookie, permissões do perfil, `TOKEN_NOT_ALLOWED`, revogar e desativar cortam o acesso, lista do Admin.
 - Interface (`features/account/api-tokens.test.tsx`) e E2E (`e2e/tokens.e2e.test.mjs`: criar na tela, usar com `curl`-like fora do navegador, revogar). A página entra na varredura de acessibilidade.
 
+## Arquivos do projeto
+- Unitários (`application-project-files.test.js`, `domain-project.test.js`): quem envia/exclui/vê, validação pelo conteúdo antes de gravar, projeto arquivado, histórico, `capabilities.upload_files`.
+- Banco (`db/repositories-projects.test.js`): Storage, ordem, lixeira na exclusão e na cascata do projeto. API real (`api/project-files.test.js`): multipart, download protegido (nosniff, CSP sandbox), leitor, fora do projeto, exclusão, arquivado.
+- Web (`features/projects/project-files-ui.test.tsx`): galeria, envio um a um com recusa no navegador, sem área de envio para quem só vê, exclusão com confirmação; tempo real em `domain/realtime.test.ts`.
+
 ## MCP (Claude)
 - Unitários (`unit/mcp.test.js`): validação dos argumentos pelo esquema (códigos da API), protocolo (negociação da versão, notificações, lote, erros do JSON-RPC, erro da ferramenta como `isError` sem vazar detalhes) e catálogo (nomes, esquemas fechados, anotações; mapeamento dos argumentos para os casos de uso e resumos enxutos).
 - API real (`api/mcp.test.js`): só token (401 com `WWW-Authenticate`; cookie não vale), `Origin`, versão do protocolo, `GET` 405, JSON inválido `-32700`, `initialize`/notificação 202/`tools/list`, fluxo criar projeto → tarefa → mover → comentar → quadro com histórico em nome da pessoa, erros de validação e de campos exigidos, projeto sem acesso, token revogado.

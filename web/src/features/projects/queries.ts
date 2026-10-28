@@ -10,6 +10,7 @@ export const projectKeys = {
   members: (id: string) => ['projects', 'members', id] as const,
   candidates: (id: string, search: string) => ['projects', 'candidates', id, search] as const,
   history: (id: string) => ['projects', 'history', id] as const,
+  files: (id: string) => ['projects', 'files', id] as const,
 }
 
 export function useProjects(query: ProjectListQuery, enabled = true) {
@@ -94,5 +95,25 @@ export function useMemberMutations(projectId: string) {
       onSuccess: invalidate,
     }),
     remove: useMutation({ mutationFn: (userId: string) => projects.removeMember(projectId, userId), onSuccess: invalidate }),
+  }
+}
+
+/** Arquivos do projeto (aba Arquivos). */
+export function useProjectFiles(projectId: string) {
+  const { projectFiles } = useRepositories()
+  return useQuery({ queryKey: projectKeys.files(projectId), queryFn: () => projectFiles.list(projectId) })
+}
+
+/** Enviar (um arquivo por vez) e excluir; o histórico do projeto também muda. */
+export function useProjectFileMutations(projectId: string) {
+  const { projectFiles } = useRepositories()
+  const queryClient = useQueryClient()
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: projectKeys.files(projectId) })
+    void queryClient.invalidateQueries({ queryKey: projectKeys.history(projectId) })
+  }
+  return {
+    upload: useMutation({ mutationFn: (file: File) => projectFiles.upload(projectId, file), onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: (id: string) => projectFiles.remove(id), onSuccess: invalidate }),
   }
 }

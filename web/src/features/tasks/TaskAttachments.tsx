@@ -63,13 +63,15 @@ export function DeleteAttachmentDialog<T extends FileItem>({
   loading,
   onCancel,
   onConfirm,
+  title,
   description,
 }: {
   attachment: T | null
   loading: boolean
   onCancel: () => void
   onConfirm: (attachment: T) => void
-  /** Texto do aviso (padrão: o dos anexos da tarefa). */
+  /** Título e texto do aviso (padrão: os dos anexos da tarefa). */
+  title?: string
   description?: string
 }) {
   const { t } = useTranslation()
@@ -77,7 +79,7 @@ export function DeleteAttachmentDialog<T extends FileItem>({
     <AppConfirmDialog
       open={!!attachment}
       onOpenChange={(open) => !open && onCancel()}
-      title={t('attachments.deleteTitle', { name: attachment?.name ?? '' })}
+      title={title ?? t('attachments.deleteTitle', { name: attachment?.name ?? '' })}
       description={description ?? t('attachments.deleteDescription')}
       confirmLabel={t('common.delete')}
       loading={loading}

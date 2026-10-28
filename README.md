@@ -27,7 +27,7 @@ Os dois ficam no mesmo **projeto** (mesmos membros e permissões), mas não se m
 - Tipos de tarefa com formulário próprio e **17 tipos de campo** personalizado (texto, número, data, seleção, pessoa, URL…); tipos traduzidos.
 - Fluxo de status configurável, **transições permitidas**, **campos obrigatórios por status** (pede o preenchimento ao mover) e **limite WIP** por coluna.
 - Kanban com arrastar, raias e criação rápida; Planejamento com **sprints** e backlog; Timeline das tarefas com marcos.
-- Comentários com **@menções** e **imagens coladas** (Ctrl+V), anexos com verificação do tipo real do arquivo, checklist, tags, relacionamentos (bloqueia, depende, duplica), subtarefas, fork e notificações.
+- Comentários com **@menções** e **imagens coladas** (Ctrl+V), anexos com verificação do tipo real do arquivo (também na aba **Arquivos** do projeto, para documentos fora das tarefas), checklist, tags, relacionamentos (bloqueia, depende, duplica), subtarefas, fork e notificações.
 
 **Gestão de projetos**
 - Quadro com grupos e subgrupos numerados, elementos e subelementos, edição direto na célula, arrastar, seleção em massa, filtros, agrupar e importar CSV.

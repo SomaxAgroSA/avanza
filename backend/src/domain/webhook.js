@@ -12,6 +12,8 @@ const EVENTS = Object.freeze([
   'project.deleted',
   'project.member_added',
   'project.member_removed',
+  'project.file_added',
+  'project.file_deleted',
   'task.created',
   'task.updated',
   'task.deleted',

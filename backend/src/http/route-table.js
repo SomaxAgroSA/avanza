@@ -89,6 +89,10 @@ const ROUTES = [
   ['POST', '/api/v1/tasks/:id/attachments', 'uploadTaskAttachments', 21 * MB],
   ['GET', '/api/v1/attachments/:id/file', 'attachmentFile'],
   ['DELETE', '/api/v1/attachments/:id', 'deleteAttachment'],
+  ['GET', '/api/v1/projects/:id/files', 'listProjectFiles'],
+  ['POST', '/api/v1/projects/:id/files', 'uploadProjectFiles', 21 * MB],
+  ['GET', '/api/v1/project-files/:id/file', 'projectFileContent'],
+  ['DELETE', '/api/v1/project-files/:id', 'deleteProjectFile'],
   ['GET', '/api/v1/board', 'allProjectsBoard'],
   ['GET', '/api/v1/projects/:id/board', 'projectBoard'],
   ['POST', '/api/v1/tasks/:id/move', 'moveTask', JSON_LIMIT],
@@ -222,6 +226,6 @@ const ROUTES = [
 ]
 
 /** Rotas multipart (upload de arquivos): o limite vale para o conjunto dos arquivos. */
-const MULTIPART = new Set(['uploadTaskAttachments', 'createPlanUpdate', 'addPlanUpdateFiles', 'uploadDocFiles', 'uploadPlatformBranding'])
+const MULTIPART = new Set(['uploadTaskAttachments', 'uploadProjectFiles', 'createPlanUpdate', 'addPlanUpdateFiles', 'uploadDocFiles', 'uploadPlatformBranding'])
 
 module.exports = { ROUTES, MULTIPART, MB }

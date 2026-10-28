@@ -86,7 +86,7 @@ export interface ProjectDto {
   updated_at: string | null
   member_count: number
   my_role: string | null
-  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean }
+  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean; upload_files?: boolean }
 }
 
 export interface ProjectMemberDto {
@@ -261,6 +261,19 @@ export interface AttachmentDto {
   id: string
   task_id: string
   comment_id?: string | null
+  name: string
+  mime: string
+  kind: string
+  size: number
+  uploaded_by: UserSummaryDto | null
+  created_at: string | null
+  url: string
+  capabilities: { delete: boolean }
+}
+
+export interface ProjectFileDto {
+  id: string
+  project_id: string
   name: string
   mime: string
   kind: string

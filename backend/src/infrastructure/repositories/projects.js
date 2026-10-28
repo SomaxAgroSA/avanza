@@ -5,7 +5,8 @@
  */
 
 const { appError } = require('../../core/errors')
-const { ident, direction, likePattern, toDbDate, insertRow, updateRow, findRow, findRows, deleteRow } = require('../sql')
+const { newId, ident, direction, likePattern, toDbDate, insertRow, updateRow, findRow, findRows, deleteRow } = require('../sql')
+const { storedFileName } = require('../storage')
 
 /** Violação de índice único do Postgres (23505) no índice `index`. */
 function isUniqueViolation(err, index) {
@@ -237,4 +238,62 @@ function createProjectMemberRepository(db) {
   }
 }
 
-module.exports = { createProjectRepository, createProjectMemberRepository }
+/** Arquivos do projeto (regras §22); o conteúdo fica no Storage em "project_files/<id>/<nome guardado>". */
+function createProjectFileRepository(db, ctx) {
+  function toEntity(row) {
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      name: row.name,
+      mime: row.mime,
+      kind: row.kind,
+      size: row.size,
+      uploadedBy: row.uploaded_by || null,
+      createdAt: row.created,
+    }
+  }
+
+  return {
+    async findById(id) {
+      const row = await findRow(db, 'project_files', id)
+      return row ? toEntity(row) : null
+    },
+    /** Mais recentes primeiro. */
+    async listByProject(projectId) {
+      return (await db.query('SELECT * FROM project_files WHERE project_id = $1 ORDER BY created DESC, id DESC', [projectId])).map(toEntity)
+    },
+    /**
+     * `data.handle` é o arquivo enviado ({ buffer, mime, name } — http/files.js). Tipo e tamanho já foram
+     * conferidos pelo caso de uso (pelo conteúdo, não pela extensão).
+     */
+    async create(data) {
+      const handle = data.handle || {}
+      const id = newId()
+      const file = storedFileName(handle.name || data.name)
+      await ctx.storage.put(`project_files/${id}/${file}`, handle.buffer, data.mime || handle.mime)
+      const row = await insertRow(db, 'project_files', {
+        id,
+        project_id: data.projectId,
+        file,
+        name: data.name || '',
+        mime: data.mime || '',
+        kind: data.kind || '',
+        size: data.size || 0,
+        uploaded_by: data.uploadedBy || null,
+      })
+      return toEntity(row)
+    },
+    /** O gatilho do banco manda o arquivo para a lixeira do Storage. */
+    async delete(id) {
+      await deleteRow(db, 'project_files', id)
+    },
+    /** Chave do arquivo no Storage (para servir o download). */
+    async fileKeyOf(id) {
+      const row = await findRow(db, 'project_files', id)
+      if (!row) throw appError('PROJECT_FILE_NOT_FOUND')
+      return `project_files/${row.id}/${row.file}`
+    },
+  }
+}
+
+module.exports = { createProjectRepository, createProjectMemberRepository, createProjectFileRepository }

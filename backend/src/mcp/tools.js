@@ -245,6 +245,15 @@ const TOOLS = [
     run: (args, { services, ctx }) => services.projects.listMembers(ctx, args.project_id),
   },
   {
+    name: 'list_project_files',
+    title: 'List project files',
+    description:
+      'Lists the files attached to a project itself (contracts, minutes, schedules — not task attachments), newest first: name, type, size, who uploaded and when. The url downloads the file with the same API token.',
+    inputSchema: schema({ project_id: PROJECT_ID }, ['project_id']),
+    annotations: READ,
+    run: (args, { services, ctx }) => services.projectFiles.listFiles(ctx, args.project_id),
+  },
+  {
     name: 'find_member_candidates',
     title: 'Find people to add',
     description: 'Searches active users who are not yet members of the project (up to 20). Requires being a project manager.',

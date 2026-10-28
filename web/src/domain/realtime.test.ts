@@ -62,6 +62,10 @@ describe('domain/realtime — o que atualizar na tela', () => {
       ['projects', 'members', 'p1'],
       ['tasks', 'board-all'],
     ])
+    expect(invalidationKeys(event('project_files'))).toEqual([
+      ['projects', 'files', 'p1'],
+      ['projects', 'history', 'p1'],
+    ])
     expect(invalidationKeys(event('notifications', { projectId: null }))).toEqual([['notifications']])
     expect(invalidationKeys(event('desconhecida'))).toEqual([])
   })

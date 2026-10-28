@@ -16,6 +16,11 @@ export interface FileItem {
   capabilities: { delete: boolean }
 }
 
+/** Arquivo do projeto (aba Arquivos), fora das tarefas. */
+export interface ProjectFile extends FileItem {
+  projectId: string
+}
+
 export interface Attachment extends FileItem {
   taskId: string
   /** Anexo de comentário (null = anexo da tarefa). */

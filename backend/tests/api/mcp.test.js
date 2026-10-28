@@ -143,6 +143,7 @@ describe('API MCP', { timeout: 180000 }, () => {
     const comment = await tool('add_task_comment', { task_id: created.data.id, content: 'Comentário pelo Claude' })
     assert.equal(comment.isError, false, JSON.stringify(comment.data))
     assert.equal((await tool('list_task_comments', { task_id: created.data.id })).data.length, 1)
+    assert.deepEqual((await tool('list_project_files', { project_id: project.data.id })).data, [])
 
     const updated = await tool('update_task', { task_id: created.data.id, due_date: null, title: 'Primeira tarefa (revisada)' })
     assert.equal(updated.data.title, 'Primeira tarefa (revisada)')

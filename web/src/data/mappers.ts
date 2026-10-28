@@ -15,7 +15,7 @@ import type { AuditEntry, CurrentUser, Permission, Role, RoleSummary, Session, U
 import { isPermissionCode, type PermissionCode } from '@/domain/permissions'
 import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/core/i18n'
 import { isThemePreference } from '@/core/theme/theme'
-import type { Attachment } from '@/domain/attachments'
+import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
@@ -24,7 +24,7 @@ import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
 import type { FieldValue } from '@/domain/task-config'
-import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
+import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
@@ -147,6 +147,7 @@ export function toProject(dto: ProjectDto): Project {
       archive: !!dto.capabilities?.archive,
       delete: !!dto.capabilities?.delete,
       transfer: !!dto.capabilities?.transfer,
+      uploadFiles: !!dto.capabilities?.upload_files,
     },
   }
 }
@@ -289,6 +290,21 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     attachmentCount: dto.attachment_count ?? 0,
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
+  }
+}
+
+export function toProjectFile(dto: ProjectFileDto): ProjectFile {
+  return {
+    id: dto.id,
+    projectId: dto.project_id,
+    name: dto.name,
+    mime: dto.mime,
+    kind: dto.kind === 'image' ? 'image' : 'document',
+    size: dto.size,
+    uploadedBy: dto.uploaded_by ? toUserSummary(dto.uploaded_by) : null,
+    createdAt: toDate(dto.created_at),
+    url: dto.url,
+    capabilities: { delete: !!dto.capabilities?.delete },
   }
 }
 

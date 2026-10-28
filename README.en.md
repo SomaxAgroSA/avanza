@@ -29,7 +29,7 @@ Both live in the same **project** (same members and permissions) but stay separa
 - Task types with their own form and **17 custom field types** (text, number, date, select, person, URL…); translated types.
 - Configurable status workflow, **allowed transitions**, **required fields per status** (asks for them when moving) and **WIP limits** per column.
 - Kanban with drag and drop, swimlanes and quick create; Planning with **sprints** and backlog; task Timeline with milestones.
-- Comments with **@mentions** and **pasted images** (Ctrl+V), attachments with real file type checks, checklist, tags, relations (blocks, depends on, duplicates), subtasks, fork and notifications.
+- Comments with **@mentions** and **pasted images** (Ctrl+V), attachments with real file type checks (also in the project **Files** tab, for documents outside tasks), checklist, tags, relations (blocks, depends on, duplicates), subtasks, fork and notifications.
 
 **Project management**
 - Board with numbered groups and subgroups, items and subitems, inline cell editing, drag and drop, bulk selection, filters, group by and CSV import.

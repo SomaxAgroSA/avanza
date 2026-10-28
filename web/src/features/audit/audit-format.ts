@@ -33,6 +33,8 @@ export const AUDIT_ACTIONS = [
   'project.deleted',
   'project.owner_changed',
   'project.member_added',
+  'project.file_added',
+  'project.file_deleted',
   'project.member_role_changed',
   'project.member_removed',
   'project.member_left',
