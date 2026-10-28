@@ -206,6 +206,41 @@ describe('KanbanPage', () => {
     expect(screen.queryByText('Nova tela de login')).not.toBeInTheDocument()
   })
 
+  it('filtro de etapas: só as colunas escolhidas; Limpar filtros traz todas de volta', async () => {
+    setup()
+    await screen.findByText('Erro ao salvar pedido')
+    await userEvent.click(screen.getByTestId('kanban-stage-filter'))
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'Fazendo' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByTestId('kanban-stage-filter')).toHaveTextContent('Etapas: Fazendo')
+    expect(screen.queryByTestId('kanban-cell-all::s1')).not.toBeInTheDocument()
+    expect(within(screen.getByTestId('kanban-cell-all::s2')).getByText('Nova tela de login')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    expect(await screen.findByTestId('kanban-cell-all::s1')).toBeInTheDocument()
+  })
+
+  it('recolher coluna vira faixa com a contagem; compacto esconde os campos do card; as duas escolhas ficam salvas', async () => {
+    const first = setup()
+    await screen.findByText('Erro ao salvar pedido')
+    await userEvent.click(screen.getByRole('button', { name: 'Recolher a coluna A fazer' }))
+    const strip = screen.getByTestId('kanban-cell-all::s1')
+    expect(within(strip).queryByText('Erro ao salvar pedido')).not.toBeInTheDocument()
+    expect(within(strip).getByRole('button', { name: 'Expandir a coluna A fazer (2)' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Compacto' }))
+    expect(screen.getByRole('button', { name: 'Compacto' })).toHaveAttribute('aria-pressed', 'true')
+    expect(JSON.parse(window.localStorage.getItem('kamban.kanban.view') ?? '{}')).toEqual({ collapsed: ['s1'], compact: true })
+    first.unmount()
+
+    // volta igual: coluna recolhida e compacto; expandir mostra os cards sem os campos extras
+    setup()
+    const again = await screen.findByTestId('kanban-cell-all::s1')
+    await userEvent.click(within(again).getByRole('button', { name: /Expandir a coluna A fazer/ }))
+    expect(await screen.findByText('Erro ao salvar pedido')).toBeInTheDocument()
+    expect(screen.queryByText('Crítica')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Compacto' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('raias por responsável agrupam os cards', async () => {
     setup()
     await screen.findByText('Erro ao salvar pedido')

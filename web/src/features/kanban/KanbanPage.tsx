@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Navigate, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ChevronDown, KanbanSquare, Plus } from 'lucide-react'
+import { Archive, ChevronDown, KanbanSquare, Minimize2, Plus } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { readJson, safeStorage, writeJson } from '@/core/storage/safe-storage'
 import {
@@ -14,11 +14,14 @@ import {
   matchesFilters,
   neighborsInProject,
   projectFilterOptions,
+  parseBoardView,
   SWIMLANES,
+  toggleCollapsed,
+  visibleColumns,
   wipState,
+  type BoardView,
   type BoardCard,
   type BoardFilters,
-  type BoardProject,
   type BoardSelectFilter,
   type Swimlane,
 } from '@/domain/kanban'
@@ -46,6 +49,7 @@ import { missingForStatus } from '@/features/tasks/required-fields'
 
 const LAST_PROJECT_KEY = 'kamban.kanban.project'
 const SWIMLANE_KEY = 'kamban.kanban.swimlane'
+const VIEW_KEY = 'kamban.kanban.view'
 
 /**
  * `/kanban` abre a última escolha (um projeto ou "Todos os projetos"); sem escolha, todos os projetos.
@@ -87,12 +91,19 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
     setSwimlaneState(value)
     writeJson(SWIMLANE_KEY, value)
   }
+  // colunas recolhidas e modo compacto: valem para todos os quadros (os status são os mesmos)
+  const [view, setViewState] = useState<BoardView>(() => parseBoardView(readJson<unknown>(VIEW_KEY, null)))
+  const setView = (next: BoardView) => {
+    setViewState(next)
+    writeJson(VIEW_KEY, next)
+  }
   const [openId, setOpenId] = useState<string | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [quickAdd, setQuickAdd] = useState<string | null>(null)
   const [fullForm, setFullForm] = useState<TaskFormInitial | null>(null)
 
-  const data = board.data
+  // filtro "Etapas": o quadro mostra só as colunas escolhidas
+  const data = useMemo(() => (board.data ? { ...board.data, columns: visibleColumns(board.data.columns, filters.statuses) } : undefined), [board.data, filters.statuses])
   // tempo real: o projeto do quadro ou, no de todos, os projetos que cabem nas assinaturas da aba
   const liveIds = useMemo(() => (all && data ? liveProjectIds(data, MAX_LIVE_PROJECTS).ids : []), [all, data])
   useLiveProject(projectId)
@@ -213,7 +224,24 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
             onReset={() => setFilters(EMPTY_FILTERS)}
             filters={
               <>
-                {all && <ProjectFilter options={projectOptions} value={filters.projects} onChange={(projects) => setFilters((f) => ({ ...f, projects }))} />}
+                <CheckFilter
+                  label={t('kanban.filters.stages')}
+                  testId="kanban-stage-filter"
+                  options={(board.data?.columns ?? []).map((c) => ({ value: c.status.id, label: c.status.name, short: c.status.name }))}
+                  value={filters.statuses}
+                  countLabel={(count) => t('kanban.filters.stageCount', { count })}
+                  onChange={(statuses) => setFilters((f) => ({ ...f, statuses }))}
+                />
+                {all && (
+                  <CheckFilter
+                    label={t('kanban.filters.project')}
+                    testId="kanban-project-filter"
+                    options={projectOptions.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}`, short: p.key }))}
+                    value={filters.projects}
+                    countLabel={(count) => t('kanban.filters.projectCount', { count })}
+                    onChange={(projects) => setFilters((f) => ({ ...f, projects }))}
+                  />
+                )}
                 {filterSelect('assignee', t('tasks.fields.assignee'), [
                   { value: 'me', label: t('kanban.filters.me') },
                   { value: 'none', label: t('tasks.unassigned') },
@@ -248,6 +276,16 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
                   onValueChange={(value) => setSwimlane(value as Swimlane)}
                   options={SWIMLANES.map((s) => ({ value: s, label: t(`kanban.swimlanes.${s}`) }))}
                 />
+                <AppButton
+                  variant={view.compact ? 'soft' : 'secondary'}
+                  size="sm"
+                  leftIcon={<Minimize2 />}
+                  aria-pressed={view.compact}
+                  title={t('kanban.compactHint')}
+                  onClick={() => setView({ ...view, compact: !view.compact })}
+                >
+                  {t('kanban.compact')}
+                </AppButton>
               </>
             }
           />
@@ -271,6 +309,8 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
             onMove={onMove}
             onBlocked={(from, to) => notify.warning(t('kanban.transitionBlocked', { from: from.status.name, to: to.status.name }))}
             onDraggingChange={setDragging}
+            view={view}
+            onToggleCollapse={(statusId) => setView(toggleCollapsed(view, statusId))}
           />
         </div>
       ) : null}
@@ -303,30 +343,41 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
   )
 }
 
-/** Filtro de projeto (quadro de todos os projetos): escolha múltipla entre os projetos com cards. */
-function ProjectFilter({ options, value, onChange }: { options: BoardProject[]; value: string[]; onChange: (value: string[]) => void }) {
+/** Filtro de escolha múltipla da barra (etapas; projetos no quadro de todos): vazio = todos. */
+function CheckFilter({
+  label,
+  options,
+  value,
+  countLabel,
+  onChange,
+  testId,
+}: {
+  label: string
+  options: Array<{ value: string; label: string; short: string }>
+  value: string[]
+  countLabel: (count: number) => string
+  onChange: (value: string[]) => void
+  testId?: string
+}) {
   const { t } = useTranslation()
-  const label = t('kanban.filters.project')
-  const chosen = options.filter((p) => value.includes(p.id))
+  const chosen = options.filter((o) => value.includes(o.value))
   const summary =
-    chosen.length === 0
-      ? t('kanban.filters.all', { name: label })
-      : t('kanban.filters.selected', { name: label, value: chosen.length === 1 ? chosen[0]?.key : t('kanban.filters.projectCount', { count: chosen.length }) })
+    chosen.length === 0 ? t('kanban.filters.all', { name: label }) : t('kanban.filters.selected', { name: label, value: chosen.length === 1 ? chosen[0]?.short : countLabel(chosen.length) })
   return (
     <AppDropdown
       align="start"
       className="max-h-80 overflow-auto"
       trigger={
-        <AppButton variant="secondary" size="sm" className="w-full justify-between sm:w-44" rightIcon={<ChevronDown />} data-testid="kanban-project-filter">
+        <AppButton variant="secondary" size="sm" className="w-full justify-between sm:w-44" rightIcon={<ChevronDown />} data-testid={testId}>
           <span className="truncate">{summary}</span>
         </AppButton>
       }
-      items={options.map((project) => ({
+      items={options.map((option) => ({
         type: 'checkbox' as const,
-        key: project.id,
-        label: `${project.key} · ${project.name}`,
-        checked: value.includes(project.id),
-        onCheckedChange: (checked: boolean) => onChange(checked ? [...value, project.id] : value.filter((id) => id !== project.id)),
+        key: option.value,
+        label: option.label,
+        checked: value.includes(option.value),
+        onCheckedChange: (checked: boolean) => onChange(checked ? [...value, option.value] : value.filter((id) => id !== option.value)),
       }))}
     />
   )

@@ -1642,7 +1642,10 @@
       "project": "Proyecto",
       "selected": "{{name}}: {{value}}",
       "projectCount_one": "{{count}} proyecto",
-      "projectCount_other": "{{count}} proyectos"
+      "projectCount_other": "{{count}} proyectos",
+      "stages": "Etapas",
+      "stageCount_one": "{{count}} etapa",
+      "stageCount_other": "{{count}} etapas"
     },
     "swimlanes": {
       "label": "Agrupar en carriles",
@@ -1687,7 +1690,11 @@
       "needsFullForm": "Este tipo tiene campos obligatorios: complételos en el formulario.",
       "requiredFieldsHint": "Este tipo tiene campos obligatorios: continuará en el formulario completo.",
       "descriptionSprint": "La tarea empieza en \"{{name}}\", en el sprint \"{{sprint}}\". Los demás datos se pueden completar después."
-    }
+    },
+    "compact": "Compacto",
+    "compactHint": "Columnas más estrechas y tarjetas más simples, para ver más columnas a la vez",
+    "collapse": "Contraer la columna {{name}}",
+    "expand": "Expandir la columna {{name}}"
   },
   "sprints": {
     "none": "Sin sprint",

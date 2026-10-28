@@ -59,6 +59,10 @@ Cada status pode ter um **limite WIP** (máximo de tarefas na coluna; vazio ou 0
 - Mover um card é uma troca de status: segue as seções 2 a 4, notifica o responsável e o criador e grava o histórico. Reordenar dentro da mesma coluna não gera histórico.
 - Criação rápida (+ na coluna): a tarefa nasce no status da coluna. Se o tipo tiver campo obrigatório sem valor padrão, a criação continua no formulário completo.
 - Filtros, busca e raias (por responsável, prioridade ou tipo) só mudam a visualização.
+- **Etapas:** o filtro de escolha múltipla mostra só as colunas escolhidas (ex.: só Concluído); sem escolha, todas. "Limpar filtros" traz todas de volta.
+- **Recolher coluna:** o botão no cabeçalho deixa a coluna como uma faixa estreita com o nome na vertical e a quantidade de cards; ela continua recebendo cards soltos. Clicar na faixa (ou no botão) expande.
+- **Compacto:** colunas mais estreitas (13 rem em vez de 16) e cards enxutos — título em até 2 linhas, sem os campos extras do tipo, até 2 tags e sem o + de criação rápida na coluna ("Nova tarefa" continua no topo).
+- Colunas recolhidas e o modo compacto ficam salvos no navegador da pessoa e valem para todos os quadros (os status são os mesmos).
 - Leitor do projeto e projeto arquivado: veem o quadro e comentam, mas não arrastam nem criam.
 
 ### Todos os projetos

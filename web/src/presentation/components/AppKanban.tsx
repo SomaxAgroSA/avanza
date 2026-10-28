@@ -1,5 +1,7 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react'
+import { FoldHorizontal, UnfoldHorizontal } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
+import { AppIconButton } from './AppIconButton'
 
 export type AppKanbanWipState = 'none' | 'ok' | 'full' | 'over'
 
@@ -21,11 +23,35 @@ export interface AppKanbanColumnHeaderProps {
   actions?: ReactNode
   /** Destino não permitido para o card em arraste. */
   blocked?: boolean
+  /** Coluna recolhida: faixa estreita só com a contagem e o botão de expandir. */
+  collapsed?: boolean
+  /** Recolher/expandir a coluna (o rótulo diz qual das duas). */
+  onToggleCollapse?: () => void
+  toggleLabel?: string
   className?: string
 }
 
 /** Cabeçalho da coluna do quadro: nome, contagem/limite WIP e ações. */
-export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', accent, actions, blocked, className }: AppKanbanColumnHeaderProps) {
+export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', accent, actions, blocked, collapsed, onToggleCollapse, toggleLabel, className }: AppKanbanColumnHeaderProps) {
+  const toggle = onToggleCollapse && (
+    <AppIconButton size="sm" variant="ghost" icon={collapsed ? <UnfoldHorizontal /> : <FoldHorizontal />} label={toggleLabel ?? ''} onClick={onToggleCollapse} />
+  )
+  if (collapsed) {
+    return (
+      <div
+        className={cn(
+          'relative flex min-h-11 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border bg-surface px-0.5 py-1.5 shadow-card transition-opacity',
+          wip === 'over' && 'border-danger',
+          blocked && 'opacity-50',
+          className,
+        )}
+      >
+        {accent && <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: accent }} />}
+        <span className="sr-only">{title}</span>
+        {toggle}
+      </div>
+    )
+  }
   return (
     <div
       className={cn(
@@ -42,6 +68,7 @@ export function AppKanbanColumnHeader({ title, count, countLabel, wip = 'none', 
         {countLabel && <span className="sr-only"> {countLabel}</span>}
       </span>
       {actions}
+      {toggle}
     </div>
   )
 }

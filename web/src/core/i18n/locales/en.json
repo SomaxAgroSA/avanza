@@ -1642,7 +1642,10 @@
       "project": "Project",
       "selected": "{{name}}: {{value}}",
       "projectCount_one": "{{count}} project",
-      "projectCount_other": "{{count}} projects"
+      "projectCount_other": "{{count}} projects",
+      "stages": "Stages",
+      "stageCount_one": "{{count}} stage",
+      "stageCount_other": "{{count}} stages"
     },
     "swimlanes": {
       "label": "Group into swimlanes",
@@ -1687,7 +1690,11 @@
       "needsFullForm": "This type has required fields: complete them in the form.",
       "requiredFieldsHint": "This type has required fields: you will continue in the full form.",
       "descriptionSprint": "The task starts in \"{{name}}\", in sprint \"{{sprint}}\". Other details can be filled in later."
-    }
+    },
+    "compact": "Compact",
+    "compactHint": "Narrower columns and leaner cards, to see more columns at once",
+    "collapse": "Collapse the {{name}} column",
+    "expand": "Expand the {{name}} column"
   },
   "sprints": {
     "none": "No sprint",

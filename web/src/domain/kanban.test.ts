@@ -7,6 +7,11 @@ import {
   buildLanes,
   canMoveCard,
   canTransition,
+  columnTemplate,
+  DEFAULT_VIEW,
+  parseBoardView,
+  toggleCollapsed,
+  visibleColumns,
   containerId,
   EMPTY_FILTERS,
   isAllProjects,
@@ -186,5 +191,26 @@ describe('domain/kanban — quadro de todos os projetos', () => {
     expect(liveProjectIds(all, 2)).toEqual({ ids: ['p1', 'p2'], complete: false })
     // RH (sem cards) fica de fora mesmo vindo primeiro; a lista sai na ordem do quadro
     expect(liveProjectIds({ ...all, projects: [rh, erp, crm] }, 2)).toEqual({ ids: ['p2', 'p1'], complete: false })
+  })
+})
+
+describe('domain/kanban — visão do quadro', () => {
+  it('filtro de etapas: só as escolhidas, na ordem do fluxo; vazio ou etapa que sumiu = todas', () => {
+    expect(visibleColumns(board.columns, ['c', 'a']).map((c) => c.status.id)).toEqual(['a', 'c'])
+    expect(visibleColumns(board.columns, [])).toHaveLength(3)
+    expect(visibleColumns(board.columns, ['sumiu'])).toHaveLength(3)
+  })
+
+  it('colunas recolhidas ficam estreitas; o modo compacto estreita as abertas', () => {
+    expect(columnTemplate(board.columns, DEFAULT_VIEW)).toBe('minmax(16rem, 1fr) minmax(16rem, 1fr) minmax(16rem, 1fr)')
+    const view = toggleCollapsed({ collapsed: [], compact: true }, 'b')
+    expect(columnTemplate(board.columns, view)).toBe('minmax(13rem, 1fr) 2.75rem minmax(13rem, 1fr)')
+    expect(toggleCollapsed(view, 'b').collapsed).toEqual([])
+  })
+
+  it('preferência salva: descarta o que não tem o formato', () => {
+    expect(parseBoardView({ collapsed: ['a', 3], compact: true })).toEqual({ collapsed: ['a'], compact: true })
+    expect(parseBoardView('lixo')).toEqual(DEFAULT_VIEW)
+    expect(parseBoardView(null)).toEqual(DEFAULT_VIEW)
   })
 })

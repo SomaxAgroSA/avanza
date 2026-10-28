@@ -56,12 +56,56 @@ export interface BoardFilters {
   sprint: string
   /** Quadro de todos os projetos: só os projetos escolhidos (vazio = todos). */
   projects: string[]
+  /** Etapas (colunas de status) mostradas; vazio = todas. */
+  statuses: string[]
 }
 
 /** Filtros de escolha única (os que viram uma lista de seleção na barra). */
-export type BoardSelectFilter = Exclude<keyof BoardFilters, 'search' | 'projects'>
+export type BoardSelectFilter = Exclude<keyof BoardFilters, 'search' | 'projects' | 'statuses'>
 
-export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', tag: '', sprint: '', projects: [] }
+export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', tag: '', sprint: '', projects: [], statuses: [] }
+
+/** Colunas da etapa escolhida no filtro "Etapas" (vazio = todas; etapa que sumiu do fluxo é ignorada). */
+export function visibleColumns(columns: BoardColumn[], statuses: string[]): BoardColumn[] {
+  if (statuses.length === 0) return columns
+  const shown = columns.filter((c) => statuses.includes(c.status.id))
+  return shown.length > 0 ? shown : columns
+}
+
+/** Como a pessoa prefere ver o quadro (fica no navegador): colunas recolhidas e modo compacto. */
+export interface BoardView {
+  /** Status das colunas recolhidas (viram uma faixa estreita com o nome e a contagem). */
+  collapsed: string[]
+  /** Colunas mais estreitas e cards mais enxutos. */
+  compact: boolean
+}
+
+export const DEFAULT_VIEW: BoardView = { collapsed: [], compact: false }
+
+/** Lê a preferência salva, descartando o que não tem o formato esperado. */
+export function parseBoardView(value: unknown): BoardView {
+  const raw = value && typeof value === 'object' ? (value as Partial<BoardView>) : {}
+  return {
+    collapsed: Array.isArray(raw.collapsed) ? raw.collapsed.filter((id): id is string => typeof id === 'string') : [],
+    compact: raw.compact === true,
+  }
+}
+
+export function toggleCollapsed(view: BoardView, statusId: string): BoardView {
+  const collapsed = view.collapsed.includes(statusId) ? view.collapsed.filter((id) => id !== statusId) : [...view.collapsed, statusId]
+  return { ...view, collapsed }
+}
+
+/** Largura mínima de cada coluna aberta (rem): abaixo disso o quadro rola na horizontal. */
+export const COLUMN_MIN_REM = { normal: 16, compact: 13 } as const
+/** Largura da coluna recolhida. */
+export const COLLAPSED_COLUMN = '2.75rem'
+
+/** grid-template-columns do quadro: recolhidas estreitas; as demais dividem o espaço. */
+export function columnTemplate(columns: BoardColumn[], view: BoardView): string {
+  const open = `minmax(${view.compact ? COLUMN_MIN_REM.compact : COLUMN_MIN_REM.normal}rem, 1fr)`
+  return columns.map((c) => (view.collapsed.includes(c.status.id) ? COLLAPSED_COLUMN : open)).join(' ')
+}
 
 function normalize(text: string): string {
   return text

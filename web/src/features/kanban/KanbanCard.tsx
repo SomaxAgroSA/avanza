@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { BoardCard } from '@/domain/kanban'
+import { cn } from '@/core/utils/cn'
 import type { FieldType } from '@/domain/task-config'
 import { AppAvatar, AppBadge, AppKanbanCard } from '@/presentation/components'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
@@ -20,9 +21,20 @@ const isEmpty = (value: unknown) => value === null || value === undefined || val
  * Conteúdo do card: código, prioridade, título, campos "no card", tags, prazo, indicadores e responsável.
  * `showProject` (quadro de todos os projetos): etiqueta com a chave do projeto do card.
  */
-export function KanbanCardContent({ card, references, showProject = false }: { card: BoardCard; references?: CustomFieldReferences; showProject?: boolean }) {
+export function KanbanCardContent({
+  card,
+  references,
+  showProject = false,
+  compact = false,
+}: {
+  card: BoardCard
+  references?: CustomFieldReferences
+  showProject?: boolean
+  /** Modo compacto: título em até 2 linhas, sem os campos extras, até 2 tags. */
+  compact?: boolean
+}) {
   const { t } = useTranslation()
-  const fields = card.cardFields.filter((f) => !NOT_ON_CARD.includes(f.field.type) && !isEmpty(f.value))
+  const fields = compact ? [] : card.cardFields.filter((f) => !NOT_ON_CARD.includes(f.field.type) && !isEmpty(f.value))
   return (
     <>
       <div className="flex items-center justify-between gap-2">
@@ -37,7 +49,7 @@ export function KanbanCardContent({ card, references, showProject = false }: { c
         </span>
         {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" />}
       </div>
-      <p className="line-clamp-3 text-sm font-medium break-words text-fg">{card.title}</p>
+      <p className={cn('text-sm font-medium break-words text-fg', compact ? 'line-clamp-2' : 'line-clamp-3')}>{card.title}</p>
       {fields.length > 0 && (
         <dl className="flex flex-col gap-0.5 text-xs">
           {fields.map(({ field, value }) => (
@@ -50,7 +62,7 @@ export function KanbanCardContent({ card, references, showProject = false }: { c
           ))}
         </dl>
       )}
-      <TagList tags={card.tags} max={3} />
+      <TagList tags={card.tags} max={compact ? 2 : 3} />
       <div className="flex min-h-6 items-center justify-between gap-2 text-xs">
         <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           {card.dueDate && <DueDate task={card} />}
@@ -79,12 +91,14 @@ export function SortableKanbanCard({
   onOpen,
   references,
   showProject = false,
+  compact = false,
 }: {
   card: BoardCard
   locked: boolean
   onOpen: (id: string) => void
   references?: CustomFieldReferences
   showProject?: boolean
+  compact?: boolean
 }) {
   const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id, disabled: locked })
@@ -112,9 +126,10 @@ export function SortableKanbanCard({
       locked={locked}
       dragging={isDragging}
       style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={compact ? 'gap-1.5 p-2.5' : undefined}
       onClick={() => onOpen(card.id)}
     >
-      <KanbanCardContent card={card} references={references} showProject={showProject} />
+      <KanbanCardContent card={card} references={references} showProject={showProject} compact={compact} />
     </AppKanbanCard>
   )
 }

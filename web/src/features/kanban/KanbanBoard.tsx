@@ -36,8 +36,12 @@ import {
   type BoardColumn,
   type Lane,
   type Swimlane,
+  columnTemplate,
+  DEFAULT_VIEW,
+  type BoardView,
 } from '@/domain/kanban'
 import { isClosedCategory } from '@/domain/workflow'
+import { cn } from '@/core/utils/cn'
 import { AppAvatar, AppIconButton, AppKanbanCard, AppKanbanColumnHeader, AppKanbanDropZone } from '@/presentation/components'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
 import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
@@ -69,6 +73,9 @@ export interface KanbanBoardProps {
   /** Soltou numa coluna fora das transições permitidas. */
   onBlocked: (from: BoardColumn, to: BoardColumn) => void
   onDraggingChange?: (dragging: boolean) => void
+  /** Colunas recolhidas e modo compacto (preferência da pessoa). */
+  view?: BoardView
+  onToggleCollapse?: (statusId: string) => void
 }
 
 const isContainer = (id: UniqueIdentifier) => String(id).includes('::')
@@ -80,7 +87,7 @@ interface DragState {
   board: Board
 }
 
-export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpen, onQuickAdd, onMove, onBlocked, onDraggingChange }: KanbanBoardProps) {
+export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpen, onQuickAdd, onMove, onBlocked, onDraggingChange, view = DEFAULT_VIEW, onToggleCollapse }: KanbanBoardProps) {
   const { t } = useTranslation()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -218,6 +225,7 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
   const active = activeId ? cards.get(activeId)?.card : undefined
   const originStatus = drag && activeId ? parseContainer(drag.origin).statusId : null
   const showLanes = swimlane !== 'none'
+  const isCollapsed = (column: BoardColumn) => view.collapsed.includes(column.status.id)
   const showProject = isAllProjects(board)
 
   return (
@@ -232,8 +240,9 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
     >
       {/* rolagem horizontal com "encaixe" por coluna no celular */}
       <div className="relative -mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:snap-none sm:px-0" data-testid="kanban-board">
-        {/* colunas crescem para ocupar a largura; abaixo de 16rem cada, o quadro rola na horizontal */}
-        <div className="grid min-w-full gap-3" style={{ gridTemplateColumns: `repeat(${board.columns.length}, minmax(16rem, 1fr))` }}>
+        {/* colunas crescem para ocupar a largura; abaixo do mínimo (16rem, 13rem no compacto) o quadro rola na
+            horizontal; as recolhidas viram uma faixa estreita */}
+        <div className={cn('grid min-w-full', view.compact ? 'gap-2' : 'gap-3')} style={{ gridTemplateColumns: columnTemplate(board.columns, view) }}>
           {board.columns.map((column) => {
             // no quadro de todos os projetos o limite (que é por projeto) não aparece
             const wipLimit = boardWipLimit(board, column)
@@ -248,8 +257,12 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
                   countLabel={wipLimit ? t('kanban.wipCount', { count: column.total, limit: wipLimit }) : t('kanban.count', { count: column.total })}
                   wip={wip}
                   blocked={blocked}
+                  collapsed={isCollapsed(column)}
+                  onToggleCollapse={onToggleCollapse && (() => onToggleCollapse(column.status.id))}
+                  toggleLabel={t(isCollapsed(column) ? 'kanban.expand' : 'kanban.collapse', { name: column.status.name })}
                   actions={
-                    onQuickAdd && (
+                    onQuickAdd &&
+                    !view.compact && (
                       <AppIconButton
                         size="sm"
                         variant="ghost"
@@ -273,6 +286,20 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
               )}
               {board.columns.map((column) => {
                 const key = containerId(lane.id, column.status.id)
+                if (isCollapsed(column)) {
+                  return (
+                    <CollapsedCell
+                      key={key}
+                      id={key}
+                      ids={containers[key] ?? []}
+                      blocked={!!drag && !!activeId && !allowed(key)}
+                      tall={!showLanes}
+                      name={column.status.name}
+                      expandLabel={t('kanban.expand', { name: column.status.name })}
+                      onExpand={onToggleCollapse && (() => onToggleCollapse(column.status.id))}
+                    />
+                  )
+                }
                 return (
                   <Cell
                     key={key}
@@ -294,7 +321,7 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
                     {(containers[key] ?? []).map((cardId) => {
                       const card = cards.get(cardId)?.card
                       return card ? (
-                        <SortableKanbanCard key={cardId} card={card} locked={!canMoveCard(board, card)} onOpen={onOpen} references={references} showProject={showProject} />
+                        <SortableKanbanCard key={cardId} card={card} locked={!canMoveCard(board, card)} onOpen={onOpen} references={references} showProject={showProject} compact={view.compact} />
                       ) : null
                     })}
                   </Cell>
@@ -307,12 +334,52 @@ export function KanbanBoard({ board, swimlane, lanes, visible, references, onOpe
 
       <DragOverlay dropAnimation={null}>
         {active ? (
-          <AppKanbanCard overlay className="w-72">
-            <KanbanCardContent card={active} references={references} showProject={showProject} />
+          <AppKanbanCard overlay className={view.compact ? 'w-56 gap-1.5 p-2.5' : 'w-72'}>
+            <KanbanCardContent card={active} references={references} showProject={showProject} compact={view.compact} />
           </AppKanbanCard>
         ) : null}
       </DragOverlay>
     </DndContext>
+  )
+}
+
+/**
+ * Coluna recolhida: faixa estreita com o nome na vertical e a quantidade de cards; continua recebendo
+ * cards soltos (o card entra e fica escondido). Clicar expande.
+ */
+function CollapsedCell({
+  id,
+  ids,
+  blocked,
+  tall,
+  name,
+  expandLabel,
+  onExpand,
+}: {
+  id: string
+  ids: string[]
+  blocked: boolean
+  tall: boolean
+  name: string
+  expandLabel: string
+  onExpand?: () => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <SortableContext id={id} items={ids} strategy={verticalListSortingStrategy}>
+      <AppKanbanDropZone ref={setNodeRef} over={isOver} blocked={blocked} aria-label={name} data-testid={`kanban-cell-${id}`} className={cn('items-center p-1', tall && 'min-h-40')}>
+        <button
+          type="button"
+          onClick={onExpand}
+          title={expandLabel}
+          aria-label={`${expandLabel} (${ids.length})`}
+          className="flex flex-1 flex-col items-center gap-2 rounded-lg py-2 text-xs font-medium text-muted hover:bg-surface-3 hover:text-fg"
+        >
+          <span className="rounded-full bg-surface-3 px-1.5 py-0.5 tabular-nums">{ids.length}</span>
+          <span className="[writing-mode:vertical-rl]">{name}</span>
+        </button>
+      </AppKanbanDropZone>
+    </SortableContext>
   )
 }
 
