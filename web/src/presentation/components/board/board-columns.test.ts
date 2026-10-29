@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COLLAPSED_WIDTH, canShift, moveColumn, normalizeColumns, placeAfter, setCollapsed, setHidden, shiftColumn, visibleColumns, type BoardColumnDef } from './board-columns'
+import { COLLAPSED_WIDTH, boardTableStyle, canShift, moveColumn, normalizeColumns, placeAfter, setCollapsed, setHidden, shiftColumn, visibleColumns, type BoardColumnDef } from './board-columns'
 
 const defs: BoardColumnDef[] = [
   { id: 'name', width: 320, pinned: true },
@@ -50,5 +50,12 @@ describe('estado das colunas do quadro', () => {
       ['status', 200, false],
       ['schedule', COLLAPSED_WIDTH, true],
     ])
+  })
+
+  it('largura da tabela: soma das colunas (+ reserva do fim) em px, nunca em % (senão a tabela fica com 1.000.000 px num pai de largura intrínseca)', () => {
+    expect(boardTableStyle([320, 140, 44])).toEqual({ width: '504px', minWidth: '100%' })
+    expect(boardTableStyle([320, 140], 40)).toEqual({ width: '500px', minWidth: '100%' })
+    expect(boardTableStyle([])).toEqual({ width: '0px', minWidth: '100%' })
+    expect(boardTableStyle([320, 140]).width).not.toContain('%')
   })
 })

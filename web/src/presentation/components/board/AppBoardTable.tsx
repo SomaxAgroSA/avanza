@@ -6,7 +6,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsLeftRight, ChevronsRightLeft, EyeOff, Filter, GripVertical, MoreHorizontal, X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { AppDropdown, type AppDropdownItem } from '../AppDropdown'
-import { visibleColumns, type BoardColumnDef } from './board-columns'
+import { BOARD_TRAIL_WIDTH, boardTableStyle, visibleColumns, type BoardColumnDef } from './board-columns'
 import type { BoardColumnsApi } from './use-board-columns'
 
 /** Extras entregues à célula: a alça de arrastar (só na 1ª coluna, quando a tabela é ordenável). */
@@ -70,7 +70,8 @@ const RESIZE_STEP = 16
  * Tabela de grupo do quadro (estilo Monday): faixa colorida à esquerda, 1ª coluna fixa ao rolar,
  * cabeçalho com menu por coluna (ordenar, recolher, ocultar, mover), arrastar para reordenar,
  * redimensionar (mouse ou setas), linha de adicionar, rodapé de totais e modo recolhido.
- * Ocupa a largura toda: uma coluna vazia no fim absorve a sobra (as colunas mantêm a largura).
+ * Ocupa a largura toda: uma coluna vazia no fim absorve a sobra (as colunas mantêm a largura); a largura
+ * vem de `boardTableStyle` (px, nunca %), então a rolagem lateral acaba na última coluna.
  * Linhas arrastáveis (`sortable`), destaque de selecionadas e "Filtrar" no menu da coluna (`onFilter`).
  * O estado das colunas vem de `useBoardColumns` e vale para todas as tabelas do quadro.
  */
@@ -99,8 +100,8 @@ export function AppBoardTable<Row>({
   const [dropAt, setDropAt] = useState<{ id: string; after: boolean } | null>(null)
   const dragId = useRef<string | null>(null)
   const widthOf = (c: (typeof visible)[number]) => (live && live.id === c.id ? live.width : c.effectiveWidth)
-  const total = visible.reduce((sum, c) => sum + widthOf(c), 0)
-  const tableStyle: CSSProperties = { width: `max(${total}px, 100%)` }
+  // mesma reserva recolhido ou não: as tabelas de todos os grupos acabam no mesmo ponto
+  const tableStyle: CSSProperties = boardTableStyle(visible.map(widthOf), headerTrail ? BOARD_TRAIL_WIDTH : 0)
   const accentStyle: CSSProperties = { borderLeftColor: accent }
   const cellPad = nested ? 'px-2 py-1' : 'px-2 py-1.5'
   const rowHeight = nested ? 'h-8' : 'h-9'

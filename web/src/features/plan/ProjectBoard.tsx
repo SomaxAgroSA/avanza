@@ -434,7 +434,9 @@ function Board({ plan, onOpenPanel }: { plan: Plan; onOpenPanel: (itemId: string
           }
         />
       ) : (
-        <div className="overflow-x-auto pb-2">
+        // `relative`: o que é posicionado dentro do quadro (ex.: textos só para leitor de tela) fica no
+        // contêiner que rola, sem alargar o <main>
+        <div className="relative overflow-x-auto pb-2">
           <BoardDnd
             containers={containers}
             labelOf={(id) => (id.startsWith('grp:') ? groupTitle(groupById.get(id.slice(4)) ?? ({ name: id, number: null } as PlanGroup)) : (itemById.get(id)?.name ?? id))}
@@ -629,7 +631,7 @@ function Subitems({
   const list = ids ? ids.map((id) => byId.get(id)).filter((i): i is PlanItem => !!i) : (section.subitems.get(item.id) ?? [])
   const group = ctx.groupById.get(item.groupId)
   return (
-    <div className="overflow-x-auto py-2 pl-12 pr-2">
+    <div className="relative overflow-x-auto py-2 pl-12 pr-2">
       <AppBoardTable
         nested
         caption={t('plan.subitemsOf', { name: item.name })}

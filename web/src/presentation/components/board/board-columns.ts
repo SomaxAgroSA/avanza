@@ -102,6 +102,19 @@ export const setCollapsed = (state: BoardColumnsState, id: string, collapsed: bo
   collapsed: toggle(state.collapsed, id, collapsed),
 })
 
+/** Reserva no fim da tabela para o conteúdo depois da última coluna (ex.: "+" de nova coluna). */
+export const BOARD_TRAIL_WIDTH = 40
+
+/**
+ * Largura da tabela do quadro: a soma das colunas (+ a reserva do fim) em px, esticada até a largura
+ * do contêiner por `min-width: 100%` (a coluna vazia do fim absorve a sobra).
+ * Nunca `width` em %: dentro de um pai de largura intrínseca (`w-max`, que alinha os grupos), o Chrome
+ * trata a tabela de largura percentual como infinita (1.000.000 px) e a rolagem lateral não acaba.
+ */
+export function boardTableStyle(widths: number[], trail = 0): { width: string; minWidth: string } {
+  return { width: `${widths.reduce((sum, w) => sum + w, trail)}px`, minWidth: '100%' }
+}
+
 /** Colunas visíveis, na ordem, com a largura efetiva. */
 export function visibleColumns<T extends BoardColumnDef>(defs: T[], state: BoardColumnsState): Array<T & { effectiveWidth: number; collapsed: boolean }> {
   const byId = new Map(defs.map((d) => [d.id, d]))

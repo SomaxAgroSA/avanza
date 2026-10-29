@@ -140,17 +140,19 @@ export function BoardGroup({
   const caption = parent ? `${groupTitle(parent)} | ${groupTitle(group)}` : groupTitle(group)
   const count = section.headerOnly ? t('plan.subgroupsCount', { count: section.subgroups }) : t('plan.itemsCount', { count: section.items.length })
   const title = <GroupTitle section={section} collapsed={collapsed} onToggle={onToggle} count={count} actions={actions} dragHandle={dragHandle} />
+  // fora da tabela, o título fica parado à esquerda ao rolar para o lado (como a 1ª coluna)
+  const stickyTitle = <div className="w-fit sm:sticky sm:left-0">{title}</div>
 
   if (section.headerOnly)
     return (
       <section aria-label={caption} className="pt-2">
-        {title}
+        {stickyTitle}
       </section>
     )
 
   return (
     <section aria-label={caption} className="flex flex-col gap-1">
-      {!collapsed && title}
+      {!collapsed && stickyTitle}
       <AppBoardTable
         caption={caption}
         accent={optionColor(group.color)}

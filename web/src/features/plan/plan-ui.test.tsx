@@ -219,6 +219,17 @@ describe('Quadro do projeto (Gerenciamento)', () => {
     expect(within(screen.getByRole('table', { name: '1.0 Iniciação' })).getByRole('button', { name: 'Editar nome de Elaborar pré-cronograma' })).toBeInTheDocument()
   })
 
+  it('largura das tabelas em px (nunca %), a mesma em todos os grupos, recolhidos ou não — a rolagem acaba na última coluna', async () => {
+    setup()
+    await screen.findByRole('table', { name: '1.0 Iniciação' })
+    await userEvent.click(screen.getByRole('button', { name: 'Recolher 1.0 Iniciação' }))
+    const tables = [screen.getByRole('table', { name: '1.0 Iniciação' }), screen.getByRole('table', { name: '2.0 Planejamento | 2.1 Plano do Projeto' })]
+    const widths = tables.map((table) => table.style.width)
+    expect(widths[0]).toMatch(/^\d+px$/)
+    expect(widths[1]).toBe(widths[0])
+    tables.forEach((table) => expect(table.style.minWidth).toBe('100%'))
+  })
+
   it('menu da coluna: ordena e oculta (vale para todos os grupos)', async () => {
     setup()
     const ini = await screen.findByRole('table', { name: '1.0 Iniciação' })
