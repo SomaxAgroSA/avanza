@@ -873,6 +873,7 @@ function createTaskRepository(app) {
       estimatedHours: number('estimated_hours'),
       actualHours: number('actual_hours'),
       checklist: parseJsonField(record, 'checklist') || [],
+      reportExcluded: record.getBool('report_excluded'),
       position: record.getFloat('position'),
       createdAt: toDate(record.getDateTime('created')),
       updatedAt: toDate(record.getDateTime('updated')),
@@ -902,6 +903,7 @@ function createTaskRepository(app) {
     estimated_hours: -0,
     actual_hours: -0,
     checklist: '',
+    report_excluded: false,
     position: -0,
     created: '',
     updated: '',
@@ -942,6 +944,7 @@ function createTaskRepository(app) {
       estimatedHours: hours(row.estimated_hours),
       actualHours: hours(row.actual_hours),
       checklist,
+      reportExcluded: !!row.report_excluded,
       position: row.position,
       createdAt: toDate(row.created),
       updatedAt: toDate(row.updated),
@@ -974,6 +977,7 @@ function createTaskRepository(app) {
       else if (DATES[key]) record.set(DATES[key], toPbDate(value))
       else if (NUMBERS[key]) record.set(NUMBERS[key], value === null ? 0 : value)
       else if (key === 'checklist') record.set('checklist', value || [])
+      else if (key === 'reportExcluded') record.set('report_excluded', !!value)
       else if (key === 'position') record.set('position', value)
     })
   }
@@ -1177,6 +1181,7 @@ function createTaskRepository(app) {
       if (query.assigneeId) exprs.push($dbx.hashExp({ 'tasks.assignee_id': query.assigneeId }))
       if (query.tagId) exprs.push($dbx.exp('tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = {:tag})', { tag: query.tagId }))
       if (query.sprintId) exprs.push($dbx.hashExp({ 'tasks.sprint_id': query.sprintId === 'none' ? '' : query.sprintId }))
+      if (query.inReport !== undefined) exprs.push($dbx.exp('tasks.report_excluded = {:excluded}', { excluded: query.inReport ? 0 : 1 }))
       if (query.statusIds) {
         exprs.push(query.statusIds.length ? $dbx.in.apply(null, ['tasks.status_id'].concat(query.statusIds)) : $dbx.exp('1 = 0'))
       }

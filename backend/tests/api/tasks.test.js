@@ -133,6 +133,21 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.deepEqual((await member.client.get('/tasks?category=done')).body.data.map((t) => t.code), ['CRM-1'])
   })
 
+  it('informe do projeto: entra por padrão, liga/desliga com histórico e filtra a listagem', async () => {
+    const task = (await member.client.get('/tasks?search=CRM-2')).body.data[0]
+    assert.equal(task.in_report, true)
+    const off = await member.client.put(`/tasks/${task.id}/report`, { in_report: false })
+    assert.equal(off.status, 200, JSON.stringify(off.body))
+    assert.equal(off.body.data.in_report, false)
+    assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&in_report=false`)).body.data.map((t) => t.code), ['CRM-2'])
+    assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&in_report=true`)).body.data.map((t) => t.code), ['CRM-1'])
+    const history = (await member.client.get(`/tasks/${task.id}/history`)).body.data
+    assert.deepEqual([history[0].old_value, history[0].new_value], [{ in_report: true }, { in_report: false }])
+    assert.equal((await viewer.client.put(`/tasks/${task.id}/report`, { in_report: true })).status, 403)
+    assert.equal((await member.client.put(`/tasks/${task.id}/report`, { in_report: true }, { csrf: false })).status, 403)
+    assert.equal((await member.client.put(`/tasks/${task.id}/report`, { in_report: true })).body.data.in_report, true)
+  })
+
   it('protege acesso: leitor não edita, estranho não vê, CSRF exigido, exclusão por gestor', async () => {
     const task = (await member.client.get('/tasks?search=CRM-2')).body.data[0]
     assert.equal((await viewer.client.patch(`/tasks/${task.id}`, { title: 'x' })).status, 403)

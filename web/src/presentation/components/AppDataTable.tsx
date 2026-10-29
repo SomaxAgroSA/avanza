@@ -49,6 +49,8 @@ export interface DataTableColumn<T> {
 }
 
 export interface DataTableRowActions<T> {
+  /** Ação própria da tela, antes do "Visualizar" (ex.: incluir a tarefa no informe). */
+  leading?: (row: T) => ReactNode
   /** Clique na linha (e o botão "Visualizar"): abre a visualização rápida. */
   onView?: (row: T) => void
   /** Duplo clique na linha: abre a página completa (no teclado, use o "Abrir" do menu da linha). */
@@ -466,6 +468,7 @@ function RowActions<T extends RowData>({ row, actions }: { row: T; actions: Data
 
   return (
     <div className="flex items-center justify-end gap-0.5">
+      {actions.leading?.(row)}
       {actions.onView && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} onClick={() => actions.onView?.(row)} />}
       {actions.onEdit && (
         <AppIconButton size="sm" label={t('common.edit')} icon={<Pencil />} disabled={!canEdit} onClick={() => actions.onEdit?.(row)} />

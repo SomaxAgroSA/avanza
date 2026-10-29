@@ -74,6 +74,7 @@ function item(id: string, title: string, extra: Partial<TaskSummary> = {}): Task
     attachmentCount: 0,
     subtaskProgress: { done: 0, total: 0 },
     blocked: false,
+    inReport: true,
     ...extra,
   }
 }

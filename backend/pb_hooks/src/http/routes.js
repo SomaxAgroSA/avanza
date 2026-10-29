@@ -265,6 +265,7 @@ function listTasks(e) {
 const getTask = taskAction((s, ctx, r) => s.getTask(ctx, r.id))
 const createTask = taskAction((s, ctx, r) => s.createTask(ctx, r.body()), 201)
 const updateTask = taskAction((s, ctx, r) => s.updateTask(ctx, r.id, r.body()))
+const setTaskReport = taskAction((s, ctx, r) => s.setTaskReport(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
 
 function taskHistory(e) {
@@ -756,6 +757,7 @@ module.exports = {
   getTask,
   createTask,
   updateTask,
+  setTaskReport,
   deleteTask,
   taskHistory,
   listTags,

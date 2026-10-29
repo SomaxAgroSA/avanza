@@ -26,6 +26,7 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { AuditTimeline } from '@/features/audit/AuditTimeline'
 import { useCan } from '@/features/auth/session'
 import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
+import { ProjectReportPanel } from './report/ProjectReportPanel'
 import { managementLink } from '@/features/plan/paths'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
@@ -113,6 +114,15 @@ function ProjectDetail({ project }: { project: Project }) {
       value: 'settings',
       label: t('projects.tabs.settings'),
       content: <ProjectSettings project={project} onArchive={setArchived} onDelete={() => setDeleting(true)} />,
+    })
+  }
+
+  // por último, onde o informe é montado e baixado (escolha das tarefas na aba Tarefas)
+  if (canViewTasks) {
+    tabs.push({
+      value: 'report',
+      label: t('projects.tabs.report'),
+      content: <ProjectReportPanel project={project} onChooseTasks={() => setParams({ tab: 'tasks' }, { replace: true })} />,
     })
   }
 

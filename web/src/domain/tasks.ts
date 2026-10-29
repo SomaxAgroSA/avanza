@@ -83,6 +83,8 @@ export interface TaskSummary {
   subtaskProgress: { done: number; total: number }
   /** Algum bloqueio (bloqueado por / depende de) ainda aberto. */
   blocked: boolean
+  /** Entra no informe do projeto (aba Informe); padrão: sim. */
+  inReport: boolean
 }
 
 export interface TaskCapabilities {

@@ -320,3 +320,49 @@ describe('application/tasks — listagem', () => {
     assert.deepEqual(s.tasks.listTasks(s.ctx.mario, { category: 'done' }).items.map((t) => t.code), ['CRM-1'])
   })
 })
+
+describe('application/tasks — informe do projeto', () => {
+  it('toda tarefa entra no informe por padrão; quem edita tira e devolve, com histórico', () => {
+    const s = setup()
+    const task = s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(task.in_report, true)
+
+    const out = s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: false })
+    assert.equal(out.in_report, false)
+    const audit = s.deps.store.audit.at(-1)
+    assert.equal(audit.action, 'task.updated')
+    assert.deepEqual(audit.oldValue, { in_report: true })
+    assert.deepEqual(audit.newValue, { in_report: false })
+
+    const before = s.deps.store.audit.length
+    s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: false })
+    assert.equal(s.deps.store.audit.length, before)
+    assert.equal(s.tasks.setTaskReport(s.ctx.gabi, task.id, { in_report: true }).in_report, true)
+  })
+
+  it('não exige os campos obrigatórios do status (só liga/desliga)', () => {
+    const s = setup()
+    const task = s.tasks.createTask(s.ctx.mario, newBug(s))
+    s.deps.taskValueRepository.replace(task.id, {}, {})
+    assert.equal(s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: false }).in_report, false)
+  })
+
+  it('valida o valor e o acesso (leitor não altera; estranho não enxerga)', () => {
+    const s = setup()
+    const task = s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(codeOf(() => s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: 'sim' })), 'VALIDATION_ERROR:{"in_report":"invalid_type"}')
+    assert.equal(codeOf(() => s.tasks.setTaskReport(s.ctx.lia, task.id, { in_report: false })), 'FORBIDDEN')
+    assert.equal(codeOf(() => s.tasks.setTaskReport(s.ctx.outsider, task.id, { in_report: false })), 'TASK_NOT_FOUND')
+  })
+
+  it('a listagem filtra por in_report', () => {
+    const s = setup()
+    const a = s.tasks.createTask(s.ctx.mario, newBug(s))
+    const b = s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Outra' }))
+    s.tasks.setTaskReport(s.ctx.mario, b.id, { in_report: false })
+    const codes = (value) => s.tasks.listTasks(s.ctx.mario, { project_id: s.project.id, in_report: value }).items.map((t) => t.code)
+    assert.deepEqual(codes('true'), [a.code])
+    assert.deepEqual(codes('false'), [b.code])
+    assert.equal(codeOf(() => codes('talvez')), 'VALIDATION_ERROR:{"in_report":"invalid_option"}')
+  })
+})

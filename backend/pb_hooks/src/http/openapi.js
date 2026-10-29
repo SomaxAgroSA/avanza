@@ -381,6 +381,7 @@ function build() {
             { name: 'category', in: 'query', schema: { type: 'string' }, description: 'categorias de status separadas por vírgula (ex.: backlog,todo,in_progress)' },
             { name: 'tag_id', in: 'query', schema: { type: 'string' } },
             { name: 'sprint_id', in: 'query', schema: { type: 'string' }, description: 'id da sprint ou `none` (sem sprint)' },
+            { name: 'in_report', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'entra (true) ou não (false) no informe do projeto' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
@@ -401,6 +402,14 @@ function build() {
           requestBody: jsonBody(ref('TaskInput')),
         }),
         delete: op('Exclui (tasks.delete + gestor do projeto ou autor)', ['tasks'], { 200: ok('Excluída', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/tasks/{id}/report': {
+        put: op('Liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['in_report'], properties: { in_report: { type: 'boolean' } } }),
+        }),
       },
       '/tasks/{id}/history': {
         get: op('Histórico da tarefa com valores legíveis', ['tasks'], { 200: ok('Registros', { type: 'array', items: ref('AuditEntry') }, true) }, { parameters: [idParam] }),
@@ -1070,6 +1079,7 @@ function build() {
             parent_task_id: { type: ['string', 'null'] },
             subtask_progress: { type: 'object', properties: { done: { type: 'integer' }, total: { type: 'integer' } } },
             blocked: { type: 'boolean', description: 'algum bloqueador (bloqueia/depende de) ainda aberto' },
+            in_report: { type: 'boolean', description: 'entra no informe do projeto (padrão: true)' },
             start_date: { type: ['string', 'null'], format: 'date-time', description: 'início planejado (timeline)' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
             estimated_hours: { type: ['number', 'null'] },
