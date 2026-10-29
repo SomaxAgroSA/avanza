@@ -385,6 +385,7 @@ const forkTask = configAction('relations', (s, ctx, r) => s.forkTask(ctx, r.id, 
 // ---------------------------------------------------------------- relatórios
 
 const getReport = configAction('reports', (s, ctx, r) => s.getReport(ctx, r.query()))
+const executiveDashboard = configAction('executive', (s, ctx, r) => s.getDashboard(ctx, r.query()))
 
 // ---------------------------------------------------------------- documentação (expansão, Onda 2)
 
@@ -715,6 +716,7 @@ module.exports = {
   deleteTaskRelation,
   forkTask,
   getReport,
+  executiveDashboard,
   listDocSpaces,
   createDocSpace,
   getDocSpace,

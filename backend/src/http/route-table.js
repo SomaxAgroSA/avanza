@@ -186,6 +186,7 @@ const ROUTES = [
   ['GET', '/api/v1/docs/files/:id', 'docFile'],
   ['GET', '/api/v1/reports', 'getReport'],
   ['GET', '/api/v1/reports/tasks', 'listReportTasks'],
+  ['GET', '/api/v1/executive', 'executiveDashboard'],
   ['GET', '/api/v1/notifications', 'listNotifications'],
   ['GET', '/api/v1/notifications/unread-count', 'notificationsUnreadCount'],
   ['POST', '/api/v1/notifications/read-all', 'readAllNotifications'],

@@ -934,6 +934,21 @@ function build() {
       '/docs/recent': {
         get: op('Páginas publicadas mais recentes dos espaços visíveis', ['docs'], { 200: ok('Recentes', { type: 'array', items: { type: 'object' } }) }),
       },
+      '/executive': {
+        get: op(
+          'Painel executivo (executive.view): Gestão de projetos + Kanban de TODOS os projetos (mesmo sem ser membro), só leitura — resumo, portfólio com a saúde de cada projeto, Gestão (status, cronograma, esforço, problemas, marcos), Kanban (funil, criadas × concluídas, tempos, atrasadas), série de entregas (semana/mês) e o que já foi feito (arquivados só nas entregas)',
+          ['reports'],
+          { 200: ok('Painel', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') },
+          {
+            parameters: [
+              { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'ids separados por vírgula (até 200); vazio = todos' },
+              { name: 'from', in: 'query', schema: { type: 'string', format: 'date' }, description: 'início (dia no fuso de tz_offset ou ISO); vazio = desde o início' },
+              { name: 'to', in: 'query', schema: { type: 'string', format: 'date' }, description: 'fim (o dia inteiro); vazio = agora' },
+              { name: 'tz_offset', in: 'query', schema: { type: 'integer', minimum: -840, maximum: 840 } },
+            ],
+          },
+        ),
+      },
       '/reports/tasks': {
         get: op(
           'Detalhamento de um indicador (reports.view): as tarefas por trás do número, paginadas, com o mesmo período, escopo e filtros de /reports — o total sempre bate com o indicador. Nos indicadores de tempo, cada item traz metric_hours',

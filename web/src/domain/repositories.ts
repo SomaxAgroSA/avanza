@@ -9,6 +9,7 @@ import type { Board } from './kanban'
 import type { BacklogView } from './backlog'
 import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relations'
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
+import type { ExecutiveDashboard, ExecutiveQuery } from './executive'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
 import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent } from './docs'
 import type { Sprint, SprintInput } from './sprints'
@@ -386,6 +387,11 @@ export interface ReportRepository {
   listTasks(query: ReportQuery, metric: ReportMetric, page: { page: number; perPage: number }): Promise<Page<ReportTask>>
 }
 
+/** Painel executivo: Gestão de projetos + Kanban de atividades consolidados (permissão executive.view). */
+export interface ExecutiveRepository {
+  get(query: ExecutiveQuery): Promise<ExecutiveDashboard>
+}
+
 /** Timeline do projeto (tarefas com datas, dependências, sprints e marcos numa chamada). */
 export interface TimelineRepository {
   get(projectId: string): Promise<Timeline>
@@ -527,6 +533,7 @@ export interface Repositories {
   backlog: BacklogRepository
   relations: RelationRepository
   reports: ReportRepository
+  executive: ExecutiveRepository
   timeline: TimelineRepository
   milestones: MilestoneRepository
   plan: PlanRepository

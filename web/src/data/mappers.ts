@@ -17,6 +17,8 @@ import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@/core/i18n'
 import { isThemePreference } from '@/core/theme/theme'
 import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
+import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
+import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
 import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
 import { SPACE_ICONS, SPACE_VISIBILITIES, type DocPage, type DocSpace, type DocTreePage, type RichContent } from '@/domain/docs'
@@ -976,5 +978,116 @@ export function toWebhookDelivery(dto: WebhookDeliveryDto): WebhookDelivery {
     nextAttemptAt: toDate(dto.next_attempt_at),
     deliveredAt: toDate(dto.delivered_at),
     createdAt: toDate(dto.created_at),
+  }
+}
+
+/* ------------------------------------------------------------------ painel executivo */
+
+const projectRef = (dto: ExecutiveProjectRefDto): ExecutiveProjectRef => ({ id: dto.id, key: dto.key, name: dto.name })
+const person = (dto: ExecutivePersonDto | null | undefined): ExecutivePerson | null => (dto ? { id: dto.id, name: dto.name, avatarUrl: dto.avatar_url ?? null } : null)
+
+function toExecutiveHealth(dto: ExecutiveDto['portfolio'][number]['health'] | null | undefined): ExecutiveHealth {
+  if (!dto) return { level: 'none', factors: [] }
+  return {
+    level: oneOf(HEALTH_LEVELS, dto.level, 'none'),
+    factors: (dto.factors ?? [])
+      .filter((f): f is typeof f & { key: HealthFactorKey } => (HEALTH_FACTORS as readonly string[]).includes(f.key))
+      .map((f) => ({ ...f, level: oneOf(HEALTH_LEVELS, f.level, 'none') })),
+  }
+}
+
+export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
+  const s = dto.summary
+  const plan = dto.plan
+  const k = dto.kanban
+  return {
+    generatedAt: new Date(dto.generated_at),
+    period: { from: toDate(dto.period?.from), to: toDate(dto.period?.to) ?? new Date(dto.generated_at) },
+    projects: (dto.projects ?? []).map((p) => ({
+      ...projectRef(p),
+      cover: toColor(PROJECT_COVERS, p.color, 'violet'),
+      icon: toIcon(PROJECT_ICONS, p.icon, 'folder'),
+      archived: !!p.archived,
+    })),
+    summary: {
+      activeProjects: s.active_projects,
+      health: { ok: s.health.ok ?? 0, attention: s.health.attention ?? 0, critical: s.health.critical ?? 0, none: s.health.none ?? 0 },
+      progress: s.progress ?? null,
+      deliveries: { tasks: s.deliveries.tasks, planItems: s.deliveries.plan_items, milestones: s.deliveries.milestones },
+      overdue: { tasks: s.overdue.tasks, planItems: s.overdue.plan_items },
+      openIssues: s.open_issues,
+      criticalBugs: s.critical_bugs,
+    },
+    portfolio: (dto.portfolio ?? []).map((row) => ({
+      project: {
+        ...projectRef(row.project),
+        cover: toColor(PROJECT_COVERS, row.project.color, 'violet'),
+        icon: toIcon(PROJECT_ICONS, row.project.icon, 'folder'),
+        status: oneOf(PROJECT_STATUSES, row.project.status, 'active'),
+        priority: oneOf(PROJECT_PRIORITIES, row.project.priority, 'medium'),
+        startDate: row.project.start_date ?? null,
+        dueDate: row.project.due_date ?? null,
+        owner: person(row.project.owner),
+      },
+      health: toExecutiveHealth(row.health),
+      progress:
+        row.progress && typeof row.progress.value === 'number' ? { value: row.progress.value, source: row.progress.source === 'plan' ? 'plan' : 'tasks' } : null,
+      plan: row.plan ?? null,
+      tasks: row.tasks,
+      nextMilestone: row.next_milestone ? { id: row.next_milestone.id, name: row.next_milestone.name, dueDate: row.next_milestone.due_date } : null,
+      openIssues: row.open_issues ?? 0,
+    })),
+    plan: plan
+      ? {
+          items: plan.items,
+          statusDistribution: (plan.status_distribution ?? []).map((d) => ({ category: oneOf([...PLAN_STATUS_CATEGORIES, 'none'] as const, d.category, 'none'), count: d.count })),
+          schedule: { onTime: plan.schedule.on_time, overdue: plan.schedule.overdue, unscheduled: plan.schedule.unscheduled, done: plan.schedule.done },
+          effort: { estimated: plan.effort.estimated ?? null, actual: plan.effort.actual ?? null, remaining: plan.effort.remaining ?? null },
+          issues: (plan.issues ?? []).map((i) => ({
+            id: i.id,
+            number: i.number,
+            description: i.description,
+            state: oneOf(ISSUE_STATES, i.state, 'pending'),
+            openedOn: i.opened_on ?? null,
+            project: projectRef(i.project),
+          })),
+          openIssuesTotal: plan.open_issues_total ?? 0,
+          upcomingMilestones: (plan.upcoming_milestones ?? []).map((m) => ({ id: m.id, name: m.name, dueDate: m.due_date, project: projectRef(m.project) })),
+        }
+      : null,
+    kanban: {
+      funnel: { backlog: k.funnel.backlog ?? 0, todo: k.funnel.todo ?? 0, in_progress: k.funnel.in_progress ?? 0, done: k.funnel.done ?? 0, cancelled: k.funnel.cancelled ?? 0 },
+      created: k.created,
+      completed: k.completed,
+      leadTime: duration(k.lead_time),
+      cycleTime: duration(k.cycle_time),
+      overdue: k.overdue,
+      blocked: k.blocked,
+      criticalBugs: k.critical_bugs,
+      overdueTasks: (k.overdue_tasks ?? []).map((task) => ({
+        id: task.id,
+        code: task.code ?? null,
+        title: task.title,
+        project: projectRef(task.project),
+        dueDate: task.due_date,
+        status: {
+          id: task.status.id,
+          name: task.status.name,
+          color: toColor(OPTION_COLORS, task.status.color, 'gray'),
+          category: (STATUS_CATEGORIES as readonly string[]).includes(task.status.category ?? '') ? oneOf(STATUS_CATEGORIES, task.status.category ?? '', 'todo') : undefined,
+        },
+      })),
+    },
+    timeline: {
+      bucket: dto.timeline?.bucket === 'week' ? 'week' : 'month',
+      points: (dto.timeline?.points ?? []).map((p) => ({ start: p.start, tasksCreated: p.tasks_created, tasksCompleted: p.tasks_completed, planItemsCompleted: p.plan_items_completed })),
+    },
+    achievements: (dto.achievements ?? []).map((a) => ({
+      project: { ...projectRef(a.project), archived: !!a.project.archived },
+      tasksDone: a.tasks_done,
+      planItemsDone: a.plan_items_done,
+      milestonesDone: (a.milestones_done ?? []).map((m) => ({ id: m.id, name: m.name, dueDate: m.due_date ?? null })),
+      recent: (a.recent ?? []).map((r) => ({ kind: r.kind === 'plan_item' ? 'plan_item' : 'task', id: r.id, code: r.code ?? null, title: r.title, completedAt: toDate(r.completed_at) })),
+    })),
   }
 }

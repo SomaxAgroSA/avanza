@@ -305,6 +305,12 @@ describe('mcp/tools', () => {
     assert.equal(out.items[0].code, 'C-1')
   })
 
+  it('get_executive_dashboard: projetos separados por vírgula e o período como veio', async () => {
+    const { calls, services } = spyServices({ 'executive.getDashboard': { summary: {} } })
+    await byName('get_executive_dashboard').run({ project_ids: ['p1', 'p2'], from: '2026-01-01', tz_offset: 180 }, { services, ctx })
+    assert.deepEqual(calls[0], { service: 'executive', method: 'getDashboard', args: [{ from: '2026-01-01', project_ids: 'p1,p2', tz_offset: '180' }] })
+  })
+
   it('get_timeline: tarefas enxutas, o resto como veio', async () => {
     const timeline = { project: { id: 'p1' }, capabilities: { edit: true }, tasks: [{ id: 't1', code: 'C-1', title: 'T', tags: [], card_fields: [] }], dependencies: [], milestones: [], sprints: [], truncated: false }
     const { services } = spyServices({ 'timeline.getTimeline': timeline })

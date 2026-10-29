@@ -702,3 +702,85 @@ export interface WebhookDeliveryDto {
   delivered_at: string | null
   created_at: string | null
 }
+
+// ---------------------------------------------------------------- Painel executivo (GET /executive)
+
+export interface ExecutiveProjectRefDto {
+  id: string
+  key: string
+  name: string
+}
+
+export interface ExecutivePersonDto {
+  id: string
+  name: string
+  avatar_url: string | null
+}
+
+export interface ExecutiveDto {
+  generated_at: string
+  period: { from: string | null; to: string }
+  filters?: { project_ids?: string[] }
+  projects: Array<ExecutiveProjectRefDto & { color: string | null; icon: string | null; archived: boolean }>
+  summary: {
+    active_projects: number
+    health: Partial<Record<string, number>>
+    progress: number | null
+    deliveries: { tasks: number; plan_items: number; milestones: number }
+    overdue: { tasks: number; plan_items: number }
+    open_issues: number
+    critical_bugs: number
+  }
+  portfolio: Array<{
+    project: ExecutiveProjectRefDto & {
+      color: string | null
+      icon: string | null
+      status: string
+      priority: string
+      start_date: string | null
+      due_date: string | null
+      owner: ExecutivePersonDto | null
+    }
+    health: { level: string; factors: Array<{ key: string; level: string; value: number | null; count?: number; of?: number; planned?: number | null; actual?: number | null; hours?: number | null }> }
+    progress: { value: number | null; source: string | null } | null
+    plan: { total: number; done: number; open: number; overdue: number; stuck: number } | null
+    tasks: { total: number; open: number; overdue: number; done: number }
+    next_milestone: { id: string; name: string; due_date: string } | null
+    open_issues: number
+  }>
+  plan: {
+    items: { total: number; done: number; open: number; overdue: number; stuck: number; canceled: number }
+    status_distribution: Array<{ category: string; count: number }>
+    schedule: { on_time: number; overdue: number; unscheduled: number; done: number }
+    effort: { estimated: number | null; actual: number | null; remaining: number | null }
+    issues: Array<{ id: string; number: number; description: string; state: string; opened_on: string | null; project: ExecutiveProjectRefDto; owner?: ExecutivePersonDto | null }>
+    open_issues_total: number
+    upcoming_milestones: Array<{ id: string; name: string; due_date: string; project: ExecutiveProjectRefDto }>
+  } | null
+  kanban: {
+    funnel: Partial<Record<string, number>>
+    created: number
+    completed: number
+    lead_time: DurationDto
+    cycle_time: DurationDto
+    overdue: number
+    blocked: number
+    critical_bugs: number
+    overdue_tasks: Array<{
+      id: string
+      code: string | null
+      title: string
+      project: ExecutiveProjectRefDto
+      due_date: string
+      status: { id: string; name: string; color: string | null; category: string | null }
+    }>
+  }
+  timeline: { bucket: string; points: Array<{ start: string; tasks_created: number; tasks_completed: number; plan_items_completed: number }> }
+  achievements: Array<{
+    project: ExecutiveProjectRefDto & { archived: boolean }
+    tasks_done: number
+    plan_items_done: number
+    milestones_done: Array<{ id: string; name: string; due_date: string | null }>
+    recent: Array<{ kind: string; id: string; code: string | null; title: string; completed_at: string | null }>
+  }>
+}

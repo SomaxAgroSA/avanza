@@ -28,6 +28,7 @@ const { createBacklogService } = require('../application/backlog')
 const { createSprintService } = require('../application/sprints')
 const { createRelationService } = require('../application/relations')
 const { createReportService } = require('../application/reports')
+const { createExecutiveService } = require('../application/executive')
 const { createTimelineService } = require('../application/timeline')
 const { createMilestoneService } = require('../application/milestones')
 const { createPlanService } = require('../application/plan')
@@ -115,6 +116,7 @@ function createContainer(runtime, options) {
     sprints: createSprintService(deps),
     relations: createRelationService(deps),
     reports: createReportService(deps),
+    executive: createExecutiveService(deps),
     timeline: createTimelineService(deps),
     milestones: createMilestoneService(deps),
     plan: createPlanService(deps),

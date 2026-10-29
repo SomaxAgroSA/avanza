@@ -296,15 +296,16 @@ function createTaskRepository(db) {
         params.push(value)
         return `$${params.length}`
       }
-      if (!query.scope.viewAll) where.push(`project_id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
+      if (query.scope && !query.scope.viewAll) where.push(`project_id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
       if (!query.includeArchived) where.push('project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)')
       if (query.projectId) where.push(`project_id = ${param(query.projectId)}`)
+      if (query.projectIds) where.push(`project_id = ANY(${param(query.projectIds)}::text[])`)
       if (query.assigneeId) where.push(query.assigneeId === 'none' ? 'assignee_id IS NULL' : `assignee_id = ${param(query.assigneeId)}`)
       if (query.typeId) where.push(`task_type_id = ${param(query.typeId)}`)
       if (query.priorityId) where.push(`priority_id = ${param(query.priorityId)}`)
       if (query.statusId) where.push(`status_id = ${param(query.statusId)}`)
       const rows = await db.query(
-        `SELECT id, project_id, task_type_id, status_id, priority_id, assignee_id, created, started_at, completed_at, due_date FROM tasks
+        `SELECT id, project_id, task_type_id, status_id, priority_id, assignee_id, created, started_at, completed_at, due_date${query.withTitles ? ', code, title' : ''} FROM tasks
          ${where.length ? `WHERE ${where.join(' AND ')}` : ''}`,
         params,
       )
@@ -319,6 +320,7 @@ function createTaskRepository(db) {
         startedAt: r.started_at,
         completedAt: r.completed_at,
         dueDate: r.due_date,
+        ...(query.withTitles ? { code: r.code, title: r.title } : {}),
       }))
     },
 
@@ -780,6 +782,11 @@ function createMilestoneRepository(db) {
     /** Pela data (sem data primeiro, como o '' no SQLite); empate pela criação. */
     async listByProject(projectId) {
       const rows = await db.query('SELECT * FROM project_milestones WHERE project_id = $1 ORDER BY due_date ASC NULLS FIRST, created ASC, id ASC', [projectId])
+      return rows.map(toEntity)
+    },
+    async listByProjects(projectIds) {
+      if (!projectIds || projectIds.length === 0) return []
+      const rows = await db.query('SELECT * FROM project_milestones WHERE project_id = ANY($1::text[]) ORDER BY due_date ASC NULLS FIRST, created ASC, id ASC', [projectIds])
       return rows.map(toEntity)
     },
     async create(data) {

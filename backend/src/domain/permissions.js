@@ -30,6 +30,8 @@ const PERMISSIONS = Object.freeze([
   { code: 'users.disable', module: 'users' },
 
   { code: 'reports.view', module: 'reports' },
+  // Painel executivo: Gestão de projetos + Kanban de todos os projetos, só leitura (Admin por padrão)
+  { code: 'executive.view', module: 'executive' },
 
   { code: 'docs.view', module: 'docs' },
   { code: 'docs.edit', module: 'docs' },

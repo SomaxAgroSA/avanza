@@ -1,5 +1,6 @@
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
+const { PERMISSIONS } = require('../../src/domain/permissions')
 const { createTestDatabase } = require('../support/db-harness')
 const { migrate } = require('../../src/infrastructure/migrate')
 const { assertSchemaName } = require('../../src/infrastructure/database')
@@ -18,7 +19,7 @@ describe('migrations', () => {
     const [counts] = await t.db.query(
       'SELECT (SELECT count(*) FROM permissions) AS permissions, (SELECT count(*) FROM roles) AS roles, (SELECT count(*) FROM task_types) AS types',
     )
-    assert.deepEqual(counts, { permissions: 31, roles: 5, types: 8 })
+    assert.deepEqual(counts, { permissions: PERMISSIONS.length, roles: 5, types: 8 })
   })
 
   it('não reaplicam o que já rodou', async () => {

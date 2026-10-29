@@ -148,6 +148,13 @@ function createProjectRepository(db) {
       return rows.map(toEntity)
     },
 
+    /** Todos os projetos, inclusive arquivados, pela chave (painel executivo); `ids` restringe. */
+    async listAll(query) {
+      const ids = query && query.ids
+      const rows = ids ? await db.query('SELECT * FROM projects WHERE id = ANY($1::text[]) ORDER BY "key" ASC, "id" ASC', [ids]) : await db.query('SELECT * FROM projects ORDER BY "key" ASC, "id" ASC')
+      return rows.map(toEntity)
+    },
+
     async create(data) {
       const row = await uniqueAs('idx_projects_key', 'PROJECT_KEY_IN_USE', () => insertRow(db, TABLE, columns(FIELDS, data)))
       return toEntity(row)

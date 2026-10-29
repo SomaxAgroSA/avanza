@@ -1,5 +1,6 @@
 const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
+const { PERMISSIONS } = require('../../src/domain/permissions')
 const crypto = require('node:crypto')
 const bcrypt = require('bcryptjs')
 const { createTestDatabase, TEST_STORAGE } = require('../support/db-harness')
@@ -204,12 +205,12 @@ describe('repositórios do núcleo (Postgres)', () => {
       await roles.setPermissionCodes(role.id, [])
       assert.deepEqual(await roles.getPermissionCodes(role.id), [])
       // os outros perfis não mudam
-      assert.equal((await roles.getPermissionCodes(roleIds.ADMIN)).length, 31)
+      assert.equal((await roles.getPermissionCodes(roleIds.ADMIN)).length, PERMISSIONS.length)
     })
 
     it('listam o catálogo de permissões por módulo e código', async () => {
       const list = await core.createPermissionRepository(t.db).list()
-      assert.equal(list.length, 31)
+      assert.equal(list.length, PERMISSIONS.length)
       const keys = list.map((p) => `${p.module}|${p.code}`)
       assert.deepEqual(keys, keys.slice().sort())
       assert.deepEqual(Object.keys(list[0]).sort(), ['code', 'id', 'module'])

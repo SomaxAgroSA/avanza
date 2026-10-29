@@ -5,6 +5,7 @@ import {
   ChartGantt,
   CheckSquare,
   FolderKanban,
+  Gauge,
   KanbanSquare,
   LayoutDashboard,
   ListTodo,
@@ -32,6 +33,8 @@ export interface NavItem {
 /** Estrutura de navegação (diretriz §36). Fonte única para sidebar, breadcrumb e command palette. */
 export const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard },
+  // visão consolidada para a diretoria (Gestão de projetos + Kanban de atividades)
+  { id: 'executive', labelKey: 'nav.executive', to: '/executive', icon: Gauge, anyOf: ['executive.view'] },
   {
     id: 'projects',
     labelKey: 'nav.projects',

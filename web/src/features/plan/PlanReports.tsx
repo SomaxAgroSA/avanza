@@ -3,14 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { AlertTriangle, CalendarCheck, CalendarOff, CalendarX, CheckCircle2, Clock, Gauge, HeartPulse, Hourglass, ListChecks, PauseCircle, Sigma, TrendingUp } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatNumber, type Plan } from '@/domain/plan'
-import type { HealthFactor, HealthLevel, PlanReport } from '@/domain/plan-management'
+import type { PlanReport } from '@/domain/plan-management'
 import { AppBadge, AppBarList, AppCard, AppDataTable, AppEmptyState, AppErrorState, AppSkeleton, AppStatCard, useDataTableState, type DataTableColumn } from '@/presentation/components'
 import { optionColor, optionText } from '@/features/task-config/config-theme'
 import type { OptionColor } from '@/domain/task-config'
 import { ProgressBar } from './cells'
+import { factorDetail, HEALTH_TONE } from './health-visuals'
 import { usePlanReport } from './queries'
-
-const LEVEL_TONE: Record<HealthLevel, 'success' | 'warning' | 'danger' | 'neutral'> = { ok: 'success', attention: 'warning', critical: 'danger', none: 'neutral' }
 
 type GroupRow = PlanReport['groups'][number]
 
@@ -170,7 +169,7 @@ function HealthCard({ data }: { data: PlanReport }) {
         <h2 id="plan-health" className="flex items-center gap-2 text-base font-semibold text-fg">
           <HeartPulse className="size-5 text-muted" aria-hidden /> {t('plan.report.health.title')}
         </h2>
-        <AppBadge tone={LEVEL_TONE[health.level]} dot className="text-sm">
+        <AppBadge tone={HEALTH_TONE[health.level]} dot className="text-sm">
           {t(`plan.report.health.levels.${health.level}`)}
         </AppBadge>
         <p className="text-xs text-muted">{t('plan.report.health.hint')}</p>
@@ -180,7 +179,7 @@ function HealthCard({ data }: { data: PlanReport }) {
           <li key={factor.key} className="flex flex-col gap-1 rounded-lg border border-border bg-surface-2 p-3">
             <span className="flex items-center justify-between gap-2">
               <span className="text-sm font-medium text-fg">{t(`plan.report.health.factors.${factor.key}`)}</span>
-              <AppBadge tone={LEVEL_TONE[factor.level]}>{t(`plan.report.health.levels.${factor.level}`)}</AppBadge>
+              <AppBadge tone={HEALTH_TONE[factor.level]}>{t(`plan.report.health.levels.${factor.level}`)}</AppBadge>
             </span>
             <span className="text-xs text-muted">{factorDetail(t, factor)}</span>
           </li>
@@ -188,20 +187,4 @@ function HealthCard({ data }: { data: PlanReport }) {
       </ul>
     </section>
   )
-}
-
-function factorDetail(t: ReturnType<typeof useTranslation>['t'], factor: HealthFactor): string {
-  if (factor.level === 'none') return t(`plan.report.health.noData.${factor.key}`)
-  switch (factor.key) {
-    case 'schedule':
-      return t('plan.report.health.detail.schedule', { value: factor.value, count: factor.count ?? 0, of: factor.of ?? 0 })
-    case 'progress':
-      return t('plan.report.health.detail.progress', { planned: factor.planned ?? 0, actual: factor.actual ?? 0, value: factor.value })
-    case 'stuck':
-      return t('plan.report.health.detail.stuck', { value: factor.value, count: factor.count ?? 0, of: factor.of ?? 0 })
-    case 'effort':
-      return t('plan.report.health.detail.effort', { value: factor.value, hours: factor.hours ?? 0 })
-    default:
-      return t('plan.report.health.detail.issues', { count: factor.value ?? 0 })
-  }
 }

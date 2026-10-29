@@ -626,3 +626,16 @@ Projetos, tipos de tarefa e espaços da Documentação têm os seus ícones padr
 - O servidor só aceita, em cada lugar, um ícone padrão dele ou um que está na biblioteca (o ícone que o item já tinha continua valendo).
 - Importar e remover ficam no histórico ("Importou ícones", "Removeu um ícone").
 - Os ícones importados são baixados só quando aparecem na tela — o carregamento inicial do sistema não aumenta.
+
+## 26. Painel executivo
+
+Tela **Painel executivo** (menu lateral) para a diretoria acompanhar, num lugar só, a **Gestão de projetos** e o **Kanban de atividades** de todos os projetos.
+
+- **Quem vê:** quem tem a permissão **Ver painel executivo** (`executive.view`) — Admin por padrão; os outros perfis ganham pela matriz de perfis (ex.: um perfil Diretoria). Com ela, o painel mostra **todos os projetos**, mesmo os de que a pessoa não é membro, só para leitura; abrir um projeto, uma tarefa ou um elemento continua com a regra de acesso de sempre.
+- **Filtros:** projetos (escolha múltipla; padrão **Todos os projetos**) e período (padrão **Desde o início**; também este mês, últimos 90 dias, este ano e personalizado). O período vale para as entregas (o que foi concluído) e a série no tempo; a situação atual (abertas, atrasadas, saúde) é sempre a de hoje.
+- **Arquivados:** ficam fora do portfólio, da Gestão e do Kanban; entram nas **entregas** e em **O que já foi feito**, marcados como arquivados.
+- **Saúde do projeto:** a mesma do relatório da Gestão de projetos (o pior entre cronograma, progresso, parados, esforço e problemas). Projeto sem elementos no quadro aparece como "Sem quadro de gestão"; o progresso dele vem das tarefas (concluídas ÷ não canceladas).
+- **Entregas:** tarefa concluída no período, elemento de primeiro nível concluído no período (a data de conclusão é gravada quando ele entra numa etiqueta da categoria "feito" e apagada quando sai; elementos concluídos antes desta versão usam a última alteração como data) e marco "feito" com data no período.
+- **Sem números por pessoa:** a visão é por projeto (decisão da diretoria).
+- **Imprimir/PDF:** o botão gera uma versão limpa da tela para reuniões.
+- O Claude (MCP) consulta o mesmo painel com `get_executive_dashboard`, com a mesma permissão.

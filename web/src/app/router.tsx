@@ -94,6 +94,10 @@ export const routes: RouteObject[] = [
         children: [{ path: 'reports', ...page(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))) }],
       },
       {
+        element: <PermissionGate permission="executive.view" />,
+        children: [{ path: 'executive', ...page(() => import('@/features/executive/ExecutivePage').then((m) => ({ default: m.ExecutivePage }))) }],
+      },
+      {
         element: <PermissionGate permission="docs.view" />,
         children: [
           { path: 'docs', ...page(() => import('@/features/docs/DocsHomePage').then((m) => ({ default: m.DocsHomePage }))) },

@@ -71,6 +71,7 @@ export function fakeRepositories(overrides: {
   backlog?: Partial<Repositories['backlog']>
   relations?: Partial<Repositories['relations']>
   reports?: Partial<Repositories['reports']>
+  executive?: Partial<Repositories['executive']>
   sprints?: Partial<Repositories['sprints']>
   timeline?: Partial<Repositories['timeline']>
   milestones?: Partial<Repositories['milestones']>
@@ -318,6 +319,10 @@ export function fakeRepositories(overrides: {
       get: notImplemented,
       listTasks: notImplemented,
       ...overrides.reports,
+    },
+    executive: {
+      get: notImplemented,
+      ...overrides.executive,
     },
     relations: {
       list: () => Promise.resolve({ parent: null, children: [], subtaskProgress: { done: 0, total: 0 }, forkedFrom: null, forks: [], relations: [], capabilities: { link: false, fork: false, createSubtask: false, edit: false } }),

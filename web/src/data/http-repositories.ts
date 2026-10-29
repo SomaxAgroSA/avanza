@@ -14,6 +14,8 @@ import type {
   UserRepository,
 } from '@/domain/repositories'
 import type { Permission } from '@/domain/entities'
+import type { ExecutiveDto } from './dtos'
+import { toExecutiveDashboard } from './mappers'
 import type { BacklogDto, BoardDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import type { MilestoneInput } from '@/domain/timeline'
 import { toDocPage, toDocSpace, toDocTreePage, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
@@ -51,6 +53,7 @@ import type {
   BacklogRepository,
   RelationRepository,
   ReportRepository,
+  ExecutiveRepository,
   TimelineRepository,
   PlanRepository,
   MilestoneRepository,
@@ -561,6 +564,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     backlog: createHttpBacklogRepository(api),
     relations: createHttpRelationRepository(api),
     reports: createHttpReportRepository(api),
+    executive: createHttpExecutiveRepository(api),
     timeline: createHttpTimelineRepository(api),
     milestones: createHttpMilestoneRepository(api),
     plan: createHttpPlanRepository(api),
@@ -698,6 +702,23 @@ export function createHttpReportRepository(api: ApiClient): ReportRepository {
         query: { ...params(query), metric, page: page.page, perPage: page.perPage },
       })
       return { items: data.map(toReportTask), ...meta }
+    },
+  }
+}
+
+/** Painel executivo: sem `project_ids` = todos; sem `from` = desde o início; sem `to` = até hoje. */
+export function createHttpExecutiveRepository(api: ApiClient): ExecutiveRepository {
+  return {
+    async get(query) {
+      const { data } = await api.get<ExecutiveDto>('/executive', {
+        query: {
+          project_ids: query.projectIds.length ? query.projectIds.join(',') : undefined,
+          from: query.from ?? undefined,
+          to: query.to ?? undefined,
+          tz_offset: String(query.tzOffset),
+        },
+      })
+      return toExecutiveDashboard(data)
     },
   }
 }

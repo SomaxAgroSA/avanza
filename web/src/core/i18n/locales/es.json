@@ -250,7 +250,8 @@
     "docs": "Documentación",
     "management": "Gestión de proyectos",
     "general": "General",
-    "integrations": "Integraciones"
+    "integrations": "Integraciones",
+    "executive": "Panel ejecutivo"
   },
   "commandPalette": {
     "title": "Paleta de comandos",
@@ -539,6 +540,7 @@
       "kanban": "Kanban",
       "users": "Usuarios",
       "reports": "Informes",
+      "executive": "Panel ejecutivo",
       "settings": "Configuración",
       "audit": "Auditoría",
       "docs": "Documentación",
@@ -563,6 +565,7 @@
       "users.edit": "Editar usuarios",
       "users.disable": "Activar/desactivar usuarios",
       "reports.view": "Ver informes",
+      "executive.view": "Ver el panel ejecutivo",
       "settings.manage": "Gestionar configuración",
       "permissions.manage": "Gestionar perfiles y permisos",
       "audit.view": "Consultar auditoría",
@@ -1963,6 +1966,150 @@
       "duration": "Duración",
       "empty": "Ninguna tarea en este indicador.",
       "now": "Situación actual, con los filtros del informe."
+    }
+  },
+  "executive": {
+    "title": "Panel ejecutivo",
+    "description": "Cómo están los proyectos y qué se ha entregado, en la Gestión de proyectos y el Kanban de actividades.",
+    "updatedAt": "Actualizado a las {{time}}",
+    "print": "Imprimir / PDF",
+    "loadError": "No se pudo cargar el panel ejecutivo.",
+    "filters": {
+      "projects": "Proyectos",
+      "allProjects": "Todos los proyectos",
+      "archived": "{{name}} (archivado)",
+      "period": "Período",
+      "from": "Desde",
+      "to": "Hasta",
+      "invalidPeriod": "Elige las dos fechas del período (la final no puede ser anterior a la inicial)."
+    },
+    "periods": {
+      "all": "Desde el inicio",
+      "year": "Este año",
+      "90d": "Últimos 90 días",
+      "month": "Este mes",
+      "custom": "Personalizado"
+    },
+    "scope": {
+      "sinceStart": "Desde el inicio hasta {{to}}",
+      "range": "Del {{from}} al {{to}}",
+      "allProjects": "todos los proyectos",
+      "someProjects_one": "{{count}} proyecto seleccionado",
+      "someProjects_other": "{{count}} proyectos seleccionados"
+    },
+    "health": {
+      "none": "Sin tablero de gestión"
+    },
+    "summary": {
+      "title": "Resumen",
+      "activeProjects": "Proyectos activos",
+      "activeHint": "Sin contar los archivados",
+      "health": "Salud",
+      "ok": "al día",
+      "attention": "atención",
+      "critical": "crítico",
+      "none_one": "{{count}} sin tablero de gestión",
+      "none_other": "{{count}} sin tablero de gestión",
+      "healthHint": "Según el tablero de gestión de cada proyecto",
+      "progress": "Avance medio",
+      "progressHint": "Promedio de los proyectos activos",
+      "deliveries": "Entregas en el período",
+      "deliveriesHint": "{{tasks}} tareas · {{items}} elementos · {{milestones}} hitos",
+      "overdue": "Atrasos",
+      "overdueHint": "{{tasks}} tareas · {{items}} elementos",
+      "openIssues": "Problemas abiertos",
+      "criticalBugs_one": "+ {{count}} bug crítico",
+      "criticalBugs_other": "+ {{count}} bugs críticos",
+      "noCriticalBugs": "Ningún bug crítico"
+    },
+    "portfolio": {
+      "title": "Portafolio",
+      "description": "Un proyecto activo por fila, de los críticos a los saludables.",
+      "project": "Proyecto",
+      "health": "Salud",
+      "progress": "Avance",
+      "dueDate": "Plazo",
+      "nextMilestone": "Próximo hito",
+      "dueAndMilestone": "Plazo y próximo hito",
+      "tasks": "Tareas",
+      "issues": "Problemas",
+      "noOwner": "Sin responsable",
+      "progressOf": "Avance de {{name}}",
+      "source": {
+        "plan": "por la Gestión",
+        "tasks": "por las tareas"
+      },
+      "noProgress": "Sin medición",
+      "tasksOpen": "{{count}} abiertas",
+      "tasksOverdue": "{{count}} atrasadas",
+      "empty": "Ningún proyecto activo en el filtro",
+      "emptyHint": "Elige otros proyectos o mira abajo lo que ya se hizo.",
+      "reason": {
+        "schedule": "{{value}}% atrasado",
+        "progress": "{{value}} puntos por debajo de lo planificado",
+        "stuck": "{{value}}% detenidos",
+        "effort": "{{value}}% por encima de lo estimado",
+        "issues_one": "{{count}} abierto",
+        "issues_other": "{{count}} abiertos"
+      }
+    },
+    "plan": {
+      "title": "Gestión de proyectos",
+      "description": "Elementos de los tableros de gestión de los proyectos activos.",
+      "empty": "Ningún tablero de gestión en el filtro",
+      "emptyHint": "Los proyectos filtrados aún no tienen elementos en la Gestión de proyectos.",
+      "byStatus": "Elementos por estado",
+      "total_one": "{{count}} elemento",
+      "total_other": "{{count}} elementos",
+      "noStatus": "Sin estado",
+      "schedule": "Cronograma",
+      "done": "Terminados",
+      "effort": "Esfuerzo",
+      "issues": "Problemas abiertos",
+      "issuesShown": "{{shown}} de {{total}}",
+      "noIssues": "Ningún problema abierto.",
+      "openedOn": "abierto el {{date}}",
+      "milestones": "Próximos hitos (30 días)",
+      "noMilestones": "Ningún hito en los próximos 30 días."
+    },
+    "kanban": {
+      "title": "Kanban de actividades",
+      "description": "Tareas de los proyectos activos.",
+      "empty": "Ninguna tarea en el filtro",
+      "emptyHint": "Los proyectos filtrados aún no tienen tareas.",
+      "funnel": "Tareas por etapa",
+      "tasks_one": "{{count}} tarea",
+      "tasks_other": "{{count}} tareas",
+      "created": "Creadas en el período",
+      "completed": "Finalizadas en el período",
+      "overdueTasks": "Tareas atrasadas",
+      "noOverdue": "Ninguna tarea atrasada.",
+      "dueOn": "plazo {{date}}"
+    },
+    "timeline": {
+      "title": "Entregas a lo largo del tiempo",
+      "weekly": "Por semana",
+      "monthly": "Por mes",
+      "tasksCompleted": "Tareas finalizadas",
+      "planItemsCompleted": "Elementos terminados",
+      "tasksCreated": "Tareas creadas",
+      "empty": "Nada creado ni entregado en el período."
+    },
+    "achievements": {
+      "title": "Lo que ya se hizo",
+      "description": "Por proyecto, en el período (incluye los proyectos archivados).",
+      "archived": "Archivado",
+      "tasksDone_one": "{{count}} tarea finalizada",
+      "tasksDone_other": "{{count}} tareas finalizadas",
+      "planItemsDone_one": "{{count}} elemento terminado",
+      "planItemsDone_other": "{{count}} elementos terminados",
+      "milestonesDone_one": "{{count}} hito alcanzado",
+      "milestonesDone_other": "{{count}} hitos alcanzados",
+      "milestones": "Hitos alcanzados",
+      "recent": "Finalizaciones más recientes",
+      "element": "Elemento",
+      "empty": "Nada finalizado en el período",
+      "emptyHint": "Amplía el período o elige otros proyectos."
     }
   },
   "timeline": {

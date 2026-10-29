@@ -22,6 +22,7 @@ export const PERMISSION_CODES = [
   'users.edit',
   'users.disable',
   'reports.view',
+  'executive.view',
   'docs.view',
   'docs.edit',
   'docs.manage',

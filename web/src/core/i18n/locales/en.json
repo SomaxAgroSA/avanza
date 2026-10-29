@@ -250,7 +250,8 @@
     "docs": "Documentation",
     "management": "Project management",
     "general": "General",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "executive": "Executive dashboard"
   },
   "commandPalette": {
     "title": "Command palette",
@@ -539,6 +540,7 @@
       "kanban": "Kanban",
       "users": "Users",
       "reports": "Reports",
+      "executive": "Executive dashboard",
       "settings": "Settings",
       "audit": "Audit",
       "docs": "Documentation",
@@ -563,6 +565,7 @@
       "users.edit": "Edit users",
       "users.disable": "Enable/disable users",
       "reports.view": "View reports",
+      "executive.view": "View the executive dashboard",
       "settings.manage": "Manage settings",
       "permissions.manage": "Manage roles and permissions",
       "audit.view": "View audit log",
@@ -1963,6 +1966,150 @@
       "duration": "Duration",
       "empty": "No tasks in this indicator.",
       "now": "Current situation, with the report filters."
+    }
+  },
+  "executive": {
+    "title": "Executive dashboard",
+    "description": "How projects are doing and what has been delivered, across Project management and the activities Kanban.",
+    "updatedAt": "Updated at {{time}}",
+    "print": "Print / PDF",
+    "loadError": "Could not load the executive dashboard.",
+    "filters": {
+      "projects": "Projects",
+      "allProjects": "All projects",
+      "archived": "{{name}} (archived)",
+      "period": "Period",
+      "from": "From",
+      "to": "To",
+      "invalidPeriod": "Choose both dates of the period (the end cannot be before the start)."
+    },
+    "periods": {
+      "all": "Since the beginning",
+      "year": "This year",
+      "90d": "Last 90 days",
+      "month": "This month",
+      "custom": "Custom"
+    },
+    "scope": {
+      "sinceStart": "Since the beginning until {{to}}",
+      "range": "From {{from}} to {{to}}",
+      "allProjects": "all projects",
+      "someProjects_one": "{{count}} project selected",
+      "someProjects_other": "{{count}} projects selected"
+    },
+    "health": {
+      "none": "No management board"
+    },
+    "summary": {
+      "title": "Summary",
+      "activeProjects": "Active projects",
+      "activeHint": "Archived ones not included",
+      "health": "Health",
+      "ok": "on track",
+      "attention": "attention",
+      "critical": "critical",
+      "none_one": "{{count}} without a management board",
+      "none_other": "{{count}} without a management board",
+      "healthHint": "From each project management board",
+      "progress": "Average progress",
+      "progressHint": "Average of active projects",
+      "deliveries": "Deliveries in the period",
+      "deliveriesHint": "{{tasks}} tasks · {{items}} elements · {{milestones}} milestones",
+      "overdue": "Overdue",
+      "overdueHint": "{{tasks}} tasks · {{items}} elements",
+      "openIssues": "Open issues",
+      "criticalBugs_one": "+ {{count}} critical bug",
+      "criticalBugs_other": "+ {{count}} critical bugs",
+      "noCriticalBugs": "No critical bugs"
+    },
+    "portfolio": {
+      "title": "Portfolio",
+      "description": "One active project per row, from critical to healthy.",
+      "project": "Project",
+      "health": "Health",
+      "progress": "Progress",
+      "dueDate": "Due date",
+      "nextMilestone": "Next milestone",
+      "dueAndMilestone": "Due date and next milestone",
+      "tasks": "Tasks",
+      "issues": "Issues",
+      "noOwner": "No owner",
+      "progressOf": "Progress of {{name}}",
+      "source": {
+        "plan": "from Management",
+        "tasks": "from tasks"
+      },
+      "noProgress": "Not measured",
+      "tasksOpen": "{{count}} open",
+      "tasksOverdue": "{{count}} overdue",
+      "empty": "No active project in the filter",
+      "emptyHint": "Choose other projects or see what has been done below.",
+      "reason": {
+        "schedule": "{{value}}% overdue",
+        "progress": "{{value}} points behind plan",
+        "stuck": "{{value}}% stuck",
+        "effort": "{{value}}% over estimate",
+        "issues_one": "{{count}} open",
+        "issues_other": "{{count}} open"
+      }
+    },
+    "plan": {
+      "title": "Project management",
+      "description": "Elements of the management boards of active projects.",
+      "empty": "No management board in the filter",
+      "emptyHint": "The filtered projects have no elements in Project management yet.",
+      "byStatus": "Elements by status",
+      "total_one": "{{count}} element",
+      "total_other": "{{count}} elements",
+      "noStatus": "No status",
+      "schedule": "Schedule",
+      "done": "Done",
+      "effort": "Effort",
+      "issues": "Open issues",
+      "issuesShown": "{{shown}} of {{total}}",
+      "noIssues": "No open issues.",
+      "openedOn": "opened on {{date}}",
+      "milestones": "Upcoming milestones (30 days)",
+      "noMilestones": "No milestones in the next 30 days."
+    },
+    "kanban": {
+      "title": "Activities Kanban",
+      "description": "Tasks of active projects.",
+      "empty": "No tasks in the filter",
+      "emptyHint": "The filtered projects have no tasks yet.",
+      "funnel": "Tasks by stage",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks",
+      "created": "Created in the period",
+      "completed": "Completed in the period",
+      "overdueTasks": "Overdue tasks",
+      "noOverdue": "No overdue tasks.",
+      "dueOn": "due {{date}}"
+    },
+    "timeline": {
+      "title": "Deliveries over time",
+      "weekly": "Per week",
+      "monthly": "Per month",
+      "tasksCompleted": "Tasks completed",
+      "planItemsCompleted": "Elements completed",
+      "tasksCreated": "Tasks created",
+      "empty": "Nothing created or delivered in the period."
+    },
+    "achievements": {
+      "title": "What has been done",
+      "description": "Per project, in the period (archived projects included).",
+      "archived": "Archived",
+      "tasksDone_one": "{{count}} task completed",
+      "tasksDone_other": "{{count}} tasks completed",
+      "planItemsDone_one": "{{count}} element completed",
+      "planItemsDone_other": "{{count}} elements completed",
+      "milestonesDone_one": "{{count}} milestone reached",
+      "milestonesDone_other": "{{count}} milestones reached",
+      "milestones": "Milestones reached",
+      "recent": "Most recent completions",
+      "element": "Element",
+      "empty": "Nothing completed in the period",
+      "emptyHint": "Widen the period or choose other projects."
     }
   },
   "timeline": {

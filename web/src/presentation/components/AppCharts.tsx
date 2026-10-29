@@ -124,21 +124,26 @@ export interface AppTrendPoint {
   label: string
   a: number
   b: number
+  /** Terceira série (opcional; ver `seriesC`). */
+  c?: number
 }
 
 export interface AppTrendChartProps {
   points: AppTrendPoint[]
   seriesA: string
   seriesB: string
+  /** Terceira série, em tom neutro (ex.: "Tarefas criadas" ao lado das entregas). */
+  seriesC?: string
   /** Descrição acessível (ex.: "Criadas e concluídas por dia"). */
   title: string
   height?: number
   className?: string
 }
 
-/** Colunas lado a lado (série A em destaque, série B em sucesso) com legenda e tabela acessível. */
-export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, className }: AppTrendChartProps) {
-  const max = Math.max(1, ...points.map((p) => Math.max(p.a, p.b)))
+/** Colunas lado a lado (série A em destaque, B no lima e C, opcional, neutra) com legenda e tabela acessível. */
+export function AppTrendChart({ points, seriesA, seriesB, seriesC, title, height = 160, className }: AppTrendChartProps) {
+  const max = Math.max(1, ...points.map((p) => Math.max(p.a, p.b, seriesC ? (p.c ?? 0) : 0)))
+  const barWidth = seriesC ? 'w-1/3' : 'w-1/2'
   // no máximo ~12 rótulos no eixo para não embaralhar
   const every = Math.max(1, Math.ceil(points.length / 12))
   return (
@@ -153,12 +158,21 @@ export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, c
           <span className="size-2.5 rounded-sm bg-accent" />
           {seriesB}
         </span>
+        {seriesC && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm bg-muted" />
+            {seriesC}
+          </span>
+        )}
       </div>
       <div className="flex items-end gap-1 overflow-x-auto" style={{ height }} aria-hidden>
         {points.map((p, i) => (
           <div key={p.key} className="group relative flex h-full min-w-2 flex-1 items-end justify-center gap-px rounded-sm transition-colors hover:bg-surface-2">
-            <span className="w-1/2 max-w-3 rounded-t-sm bg-primary transition-opacity group-hover:opacity-90" style={{ height: `${(p.a / max) * 100}%`, minHeight: p.a ? 2 : 0 }} />
-            <span className="w-1/2 max-w-3 rounded-t-sm bg-accent transition-opacity group-hover:opacity-90" style={{ height: `${(p.b / max) * 100}%`, minHeight: p.b ? 2 : 0 }} />
+            <span className={cn(barWidth, 'max-w-3 rounded-t-sm bg-primary transition-opacity group-hover:opacity-90')} style={{ height: `${(p.a / max) * 100}%`, minHeight: p.a ? 2 : 0 }} />
+            <span className={cn(barWidth, 'max-w-3 rounded-t-sm bg-accent transition-opacity group-hover:opacity-90')} style={{ height: `${(p.b / max) * 100}%`, minHeight: p.b ? 2 : 0 }} />
+            {seriesC && (
+              <span className={cn(barWidth, 'max-w-3 rounded-t-sm bg-muted transition-opacity group-hover:opacity-90')} style={{ height: `${((p.c ?? 0) / max) * 100}%`, minHeight: p.c ? 2 : 0 }} />
+            )}
             {/* valores do ponto ao passar o mouse (a tabela sr-only abaixo cobre leitores de tela) */}
             <span
               className={cn(
@@ -169,6 +183,7 @@ export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, c
               <span className="block">{p.label}</span>
               <span className="block">
                 {seriesA}: {p.a} · {seriesB}: {p.b}
+                {seriesC && ` · ${seriesC}: ${p.c ?? 0}`}
               </span>
             </span>
           </div>
@@ -188,6 +203,7 @@ export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, c
             <th scope="col">—</th>
             <th scope="col">{seriesA}</th>
             <th scope="col">{seriesB}</th>
+            {seriesC && <th scope="col">{seriesC}</th>}
           </tr>
         </thead>
         <tbody>
@@ -196,6 +212,7 @@ export function AppTrendChart({ points, seriesA, seriesB, title, height = 160, c
               <th scope="row">{p.label}</th>
               <td>{p.a}</td>
               <td>{p.b}</td>
+              {seriesC && <td>{p.c ?? 0}</td>}
             </tr>
           ))}
         </tbody>

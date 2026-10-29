@@ -36,12 +36,13 @@ export function AppShell() {
   useRealtimeResync()
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-bg">
+    <div className="flex h-dvh overflow-hidden bg-bg" data-print="flow">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2">
         {t('common.skipToContent')}
       </a>
 
       <aside
+        data-print="hide"
         className={cn(
           'hidden shrink-0 border-r border-border bg-surface transition-[width] duration-200 md:block',
           collapsed ? 'w-[60px]' : 'w-60',
@@ -60,11 +61,11 @@ export function AppShell() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col" data-print="flow">
         <Topbar />
         {/* `relative`: elementos absolutos (ex.: tabelas sr-only) ficam presos à rolagem do main; sem isso
             esticam o documento, surge uma 2ª barra de rolagem e a tela "treme" quando um menu trava o body */}
-        <main id="main" tabIndex={-1} className="relative min-h-0 flex-1 overflow-y-auto focus:outline-none">
+        <main id="main" tabIndex={-1} data-print="flow" className="relative min-h-0 flex-1 overflow-y-auto focus:outline-none">
           {/* ocupa toda a largura disponível (telas largas também); só o respiro lateral varia */}
           <div className="w-full px-4 py-6 sm:px-6 lg:px-8 2xl:px-10">
             <Outlet />
@@ -84,7 +85,7 @@ function Topbar() {
   const trail = findNavTrail(location.pathname)
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6">
+    <header data-print="hide" className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6">
       <AppIconButton className="md:hidden" label={t('nav.openMenu')} icon={<Menu />} onClick={() => setMobileNavOpen(true)} showTooltip={false} />
       <div className="min-w-0 flex-1">
         <AppBreadcrumb items={trail.map((item, i) => ({ label: t(item.labelKey), to: i < trail.length - 1 ? item.to : undefined }))} />

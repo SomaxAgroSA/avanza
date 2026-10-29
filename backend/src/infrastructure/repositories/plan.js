@@ -163,6 +163,10 @@ function createPlanStatusRepository(db) {
     async listByProject(projectId) {
       return (await db.query('SELECT * FROM plan_statuses WHERE project_id = $1 ORDER BY position, created, id', [projectId])).map(toEntity)
     },
+    async listByProjects(projectIds) {
+      if (!projectIds || projectIds.length === 0) return []
+      return (await db.query('SELECT * FROM plan_statuses WHERE project_id = ANY($1::text[]) ORDER BY position, created, id', [projectIds])).map(toEntity)
+    },
   })
 }
 
@@ -224,6 +228,7 @@ function createPlanItemRepository(db) {
     progressSet: row.progress_set,
     position: row.position,
     createdBy: row.created_by || null,
+    completedAt: row.completed_at || null,
     createdAt: row.created,
     updatedAt: row.updated,
   })
@@ -254,6 +259,11 @@ function createPlanItemRepository(db) {
     async listByProject(projectId, limit) {
       const rows = await db.query('SELECT * FROM plan_items WHERE project_id = $1 ORDER BY position, created, id LIMIT $2', [projectId, limit || null])
       return rows.map(toEntity)
+    },
+    /** Elementos de vários projetos (painel executivo). */
+    async listByProjects(projectIds) {
+      if (!projectIds || projectIds.length === 0) return []
+      return (await db.query('SELECT * FROM plan_items WHERE project_id = ANY($1::text[]) ORDER BY position, created, id', [projectIds])).map(toEntity)
     },
     async listByGroups(groupIds) {
       if (!groupIds || groupIds.length === 0) return []
@@ -308,6 +318,10 @@ function createPlanLinkRepository(db) {
     },
     async listByProject(projectId) {
       return (await db.query('SELECT * FROM plan_item_links WHERE project_id = $1 ORDER BY created, id', [projectId])).map(toEntity)
+    },
+    async listByProjects(projectIds) {
+      if (!projectIds || projectIds.length === 0) return []
+      return (await db.query('SELECT * FROM plan_item_links WHERE project_id = ANY($1::text[]) ORDER BY created, id', [projectIds])).map(toEntity)
     },
     async create(data) {
       // par único (idx_plan_item_links_pair): a concorrente recebe o mesmo erro da conferência da aplicação
@@ -540,6 +554,10 @@ function createPlanIssueRepository(db) {
   return Object.assign(basicRepository(db, 'plan_issues', toEntity, SPEC, true), {
     async listByProject(projectId) {
       return (await db.query('SELECT * FROM plan_issues WHERE project_id = $1 ORDER BY number, id', [projectId])).map(toEntity)
+    },
+    async listByProjects(projectIds) {
+      if (!projectIds || projectIds.length === 0) return []
+      return (await db.query('SELECT * FROM plan_issues WHERE project_id = ANY($1::text[]) ORDER BY project_id, number, id', [projectIds])).map(toEntity)
     },
     /**
      * Maior número do projeto (0 se não houver). Trava o projeto até o fim da transação: quem cria

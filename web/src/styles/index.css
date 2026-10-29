@@ -71,52 +71,55 @@
   --kb-gradient-hero: linear-gradient(110deg, var(--kb-surface) 40%, oklch(0.944 0.04 125.5));
 }
 
-.dark {
-  --kb-bg: oklch(0.182 0.013 160);
-  --kb-surface: oklch(0.223 0.019 158);
-  --kb-surface-2: oklch(0.25 0.02 160);
-  --kb-surface-3: oklch(0.275 0.021 160);
-  --kb-border: oklch(0.295 0.021 165);
-  --kb-border-strong: oklch(0.36 0.022 162);
-  --kb-text: oklch(0.938 0.012 154);
-  --kb-text-muted: oklch(0.69 0.023 158);
-  --kb-text-subtle: oklch(0.66 0.02 158);
+/* Impressão sempre em cores claras (os tokens do escuro só valem na tela). */
+@media not print {
+  .dark {
+    --kb-bg: oklch(0.182 0.013 160);
+    --kb-surface: oklch(0.223 0.019 158);
+    --kb-surface-2: oklch(0.25 0.02 160);
+    --kb-surface-3: oklch(0.275 0.021 160);
+    --kb-border: oklch(0.295 0.021 165);
+    --kb-border-strong: oklch(0.36 0.022 162);
+    --kb-text: oklch(0.938 0.012 154);
+    --kb-text-muted: oklch(0.69 0.023 158);
+    --kb-text-subtle: oklch(0.66 0.02 158);
 
-  --kb-primary: var(--kb-brand-primary);
-  --kb-primary-hover: oklch(0.58 0.15 150.6);
-  --kb-primary-fg: oklch(1 0 0);
-  --kb-primary-text: var(--kb-brand-accent);
-  --kb-on-cover: oklch(0.99 0 0);
-  --kb-on-cover-muted: oklch(0.93 0.02 150);
-  --kb-primary-soft: oklch(0.292 0.057 154.9); /* 22% do verde sobre a superfície */
-  --kb-primary-soft-fg: var(--kb-brand-accent);
-  --kb-primary-border: oklch(0.536 0.146 150.6 / 0.4);
+    --kb-primary: var(--kb-brand-primary);
+    --kb-primary-hover: oklch(0.58 0.15 150.6);
+    --kb-primary-fg: oklch(1 0 0);
+    --kb-primary-text: var(--kb-brand-accent);
+    --kb-on-cover: oklch(0.99 0 0);
+    --kb-on-cover-muted: oklch(0.93 0.02 150);
+    --kb-primary-soft: oklch(0.292 0.057 154.9); /* 22% do verde sobre a superfície */
+    --kb-primary-soft-fg: var(--kb-brand-accent);
+    --kb-primary-border: oklch(0.536 0.146 150.6 / 0.4);
 
-  --kb-success: oklch(0.7 0.14 155);
-  --kb-success-soft: oklch(0.3 0.06 155);
-  --kb-success-soft-fg: oklch(0.85 0.1 155);
-  --kb-warning: oklch(0.8 0.14 80);
-  --kb-warning-soft: oklch(0.33 0.06 80);
-  --kb-warning-soft-fg: oklch(0.88 0.1 85);
-  --kb-danger: oklch(0.66 0.19 25);
-  --kb-danger-hover: oklch(0.71 0.18 25);
-  --kb-danger-fg: oklch(0.16 0.02 156);
-  --kb-danger-soft: oklch(0.32 0.08 25);
-  --kb-danger-soft-fg: oklch(0.86 0.09 25);
-  --kb-info-soft: oklch(0.31 0.06 230);
-  --kb-info-soft-fg: oklch(0.85 0.08 230);
+    --kb-success: oklch(0.7 0.14 155);
+    --kb-success-soft: oklch(0.3 0.06 155);
+    --kb-success-soft-fg: oklch(0.85 0.1 155);
+    --kb-warning: oklch(0.8 0.14 80);
+    --kb-warning-soft: oklch(0.33 0.06 80);
+    --kb-warning-soft-fg: oklch(0.88 0.1 85);
+    --kb-danger: oklch(0.66 0.19 25);
+    --kb-danger-hover: oklch(0.71 0.18 25);
+    --kb-danger-fg: oklch(0.16 0.02 156);
+    --kb-danger-soft: oklch(0.32 0.08 25);
+    --kb-danger-soft-fg: oklch(0.86 0.09 25);
+    --kb-info-soft: oklch(0.31 0.06 230);
+    --kb-info-soft-fg: oklch(0.85 0.08 230);
 
-  --kb-option-fg-l: 0.8;
-  --kb-option-fg-c: 0.12;
+    --kb-option-fg-l: 0.8;
+    --kb-option-fg-c: 0.12;
 
-  --kb-ring: oklch(0.761 0.174 129.6 / 0.5);
-  --kb-overlay: oklch(0.05 0.01 156 / 0.6);
-  --kb-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
-  --kb-shadow-lg: 0 8px 40px oklch(0 0 0 / 0.5);
+    --kb-ring: oklch(0.761 0.174 129.6 / 0.5);
+    --kb-overlay: oklch(0.05 0.01 156 / 0.6);
+    --kb-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
+    --kb-shadow-lg: 0 8px 40px oklch(0 0 0 / 0.5);
 
-  --kb-gradient-brand: linear-gradient(140deg, oklch(0.172 0.016 156.8) 0%, oklch(0.419 0.1 153.6) 55%, var(--kb-brand-primary) 100%);
-  --kb-gradient-subtle: linear-gradient(180deg, oklch(0.292 0.057 154.9 / 0.45), transparent);
-  --kb-gradient-hero: linear-gradient(110deg, var(--kb-surface) 40%, oklch(0.332 0.054 134.4));
+    --kb-gradient-brand: linear-gradient(140deg, oklch(0.172 0.016 156.8) 0%, oklch(0.419 0.1 153.6) 55%, var(--kb-brand-primary) 100%);
+    --kb-gradient-subtle: linear-gradient(180deg, oklch(0.292 0.057 154.9 / 0.45), transparent);
+    --kb-gradient-hero: linear-gradient(110deg, var(--kb-surface) 40%, oklch(0.332 0.054 134.4));
+  }
 }
 
 @theme inline {
@@ -352,4 +355,61 @@
 }
 @utility bg-hero-gradient {
   background-image: var(--kb-gradient-hero);
+}
+
+/*
+ * Impressão / PDF (ex.: Painel executivo): só o conteúdo da página, em A4 e cores claras.
+ * O AppShell marca o menu e a barra superior com data-print="hide" e os contêineres que rolam
+ * com data-print="flow" (no papel, o conteúdo corre em páginas em vez de rolar).
+ * `.kb-print-fit`: tabelas largas encolhem para caber na largura da folha.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body {
+    background: var(--kb-surface);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-print='hide'] {
+    display: none !important;
+  }
+  [data-print='flow'] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .kb-print-fit table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed;
+    font-size: 0.7rem;
+  }
+  .kb-print-fit .truncate {
+    white-space: normal !important;
+    overflow: visible !important;
+  }
+  .kb-print-fit th,
+  .kb-print-fit td {
+    width: auto !important;
+    min-width: 0 !important;
+    position: static !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+    overflow-wrap: anywhere;
+  }
+  .kb-print-fit .overflow-x-auto {
+    overflow: visible !important;
+  }
+  .kb-print-fit tr {
+    break-inside: avoid;
+  }
 }
