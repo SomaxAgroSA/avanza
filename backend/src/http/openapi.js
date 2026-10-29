@@ -942,6 +942,7 @@ function build() {
           {
             parameters: [
               { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'ids separados por vírgula (até 200); vazio = todos' },
+              { name: 'statuses', in: 'query', schema: { type: 'string' }, description: 'status do projeto separados por vírgula (planning, active, paused, completed, cancelled); vazio = todos' },
               { name: 'from', in: 'query', schema: { type: 'string', format: 'date' }, description: 'início (dia no fuso de tz_offset ou ISO); vazio = desde o início' },
               { name: 'to', in: 'query', schema: { type: 'string', format: 'date' }, description: 'fim (o dia inteiro); vazio = agora' },
               { name: 'tz_offset', in: 'query', schema: { type: 'integer', minimum: -840, maximum: 840 } },

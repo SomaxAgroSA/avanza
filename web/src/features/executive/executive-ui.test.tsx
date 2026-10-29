@@ -33,8 +33,8 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     generatedAt: new Date(2026, 9, 29, 10, 42),
     period: { from: null, to: new Date(2026, 9, 29, 23, 59, 59, 999) },
     projects: [
-      { ...crm, cover: 'blue', icon: 'folder', archived: false },
-      { ...erp, cover: 'slate', icon: 'box', archived: true },
+      { ...crm, cover: 'blue', icon: 'folder', status: 'active', archived: false },
+      { ...erp, cover: 'slate', icon: 'box', status: 'completed', archived: true },
     ],
     summary: {
       activeProjects: 12,
@@ -130,7 +130,7 @@ describe('Painel executivo', () => {
   it('estado primeiro: saúde do portfólio e só três números na faixa de destaque', async () => {
     const { get } = setup()
     expect(await screen.findByText('Atualizado às 10:42')).toBeInTheDocument()
-    expect(get).toHaveBeenCalledWith({ projectIds: [], from: null, to: null, tzOffset: new Date().getTimezoneOffset() })
+    expect(get).toHaveBeenCalledWith({ projectIds: [], statuses: [], from: null, to: null, tzOffset: new Date().getTimezoneOffset() })
 
     const hero = screen.getByRole('region', { name: 'Resumo' })
     expect(within(hero).getByRole('img', { name: 'Saúde do portfólio: Em dia 7, Atenção 3, Crítico 2' })).toBeInTheDocument()
@@ -295,13 +295,30 @@ describe('Painel executivo', () => {
     expect(within(period).getByRole('radio', { name: 'Desde o início' })).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(within(period).getByRole('radio', { name: 'Este ano' }))
     const now = new Date()
-    await waitFor(() => expect(get).toHaveBeenLastCalledWith({ projectIds: ['p2'], from: `${now.getFullYear()}-01-01`, to: localDay(now), tzOffset: now.getTimezoneOffset() }))
+    await waitFor(() => expect(get).toHaveBeenLastCalledWith({ projectIds: ['p2'], statuses: [], from: `${now.getFullYear()}-01-01`, to: localDay(now), tzOffset: now.getTimezoneOffset() }))
     expect(router.state.location.search).toContain('period=year')
 
     await userEvent.click(screen.getByRole('combobox', { name: /^Projetos/ }))
     await userEvent.click(within(await screen.findByRole('option', { name: 'Todos os projetos' })).getByRole('button'))
     await waitFor(() => expect(get).toHaveBeenLastCalledWith(expect.objectContaining({ projectIds: [] })))
     expect(router.state.location.search).not.toContain('projects=')
+  })
+
+  it('filtro pelo status do projeto: manda statuses, fica na URL e a lista de projetos mostra só os desses status', async () => {
+    const { get, router } = setup()
+    await screen.findByText('Atualizado às 10:42')
+    await userEvent.click(screen.getByRole('combobox', { name: 'Status do projeto Todos os status' }))
+    const list = await screen.findByRole('listbox')
+    expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos os status', 'Planejamento', 'Em andamento', 'Pausado', 'Concluído', 'Cancelado'])
+    await userEvent.click(within(within(list).getByRole('option', { name: 'Em andamento' })).getByRole('button'))
+    await waitFor(() => expect(get).toHaveBeenLastCalledWith(expect.objectContaining({ statuses: ['active'] })))
+    expect(router.state.location.search).toContain('status=active')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('combobox', { name: 'Status do projeto Em andamento' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: /^Projetos/ }))
+    const projects = await screen.findByRole('listbox')
+    expect(within(projects).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos os projetos', 'CRM · CRM'])
   })
 
   it('período personalizado manda as duas datas; incompleto avisa e não consulta; escolher "Personalizado" abre o calendário', async () => {

@@ -1987,7 +1987,11 @@
       "range": "{{from}} – {{to}}",
       "invalidPeriod": "Escolha as duas datas do período (a final não pode ser antes da inicial).",
       "selectedProjects_one": "{{count}} projeto selecionado",
-      "selectedProjects_other": "{{count}} projetos selecionados"
+      "selectedProjects_other": "{{count}} projetos selecionados",
+      "statuses": "Status do projeto",
+      "allStatuses": "Todos os status",
+      "selectedStatuses_one": "{{count}} status selecionado",
+      "selectedStatuses_other": "{{count}} status selecionados"
     },
     "periods": {
       "all": "Desde o início",

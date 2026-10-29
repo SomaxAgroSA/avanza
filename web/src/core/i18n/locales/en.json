@@ -1987,7 +1987,11 @@
       "range": "{{from}} – {{to}}",
       "invalidPeriod": "Choose both dates of the period (the end cannot be before the start).",
       "selectedProjects_one": "{{count}} project selected",
-      "selectedProjects_other": "{{count}} projects selected"
+      "selectedProjects_other": "{{count}} projects selected",
+      "statuses": "Project status",
+      "allStatuses": "All statuses",
+      "selectedStatuses_one": "{{count}} status selected",
+      "selectedStatuses_other": "{{count}} statuses selected"
     },
     "periods": {
       "all": "Since the start",

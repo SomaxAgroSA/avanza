@@ -69,16 +69,16 @@ function apiReturning(data: ExecutiveDto) {
 describe('repositório do painel executivo', () => {
   it('manda os filtros como a API espera (project_ids separados por vírgula, dias e fuso)', async () => {
     const { api, get } = apiReturning(dto)
-    await createHttpExecutiveRepository(api).get({ projectIds: ['a', 'b'], from: '2026-01-01', to: '2026-10-29', tzOffset: 180 })
-    expect(get).toHaveBeenCalledWith('/executive', { query: { project_ids: 'a,b', from: '2026-01-01', to: '2026-10-29', tz_offset: '180' } })
+    await createHttpExecutiveRepository(api).get({ projectIds: ['a', 'b'], statuses: ['active', 'paused'], from: '2026-01-01', to: '2026-10-29', tzOffset: 180 })
+    expect(get).toHaveBeenCalledWith('/executive', { query: { project_ids: 'a,b', statuses: 'active,paused', from: '2026-01-01', to: '2026-10-29', tz_offset: '180' } })
 
-    await createHttpExecutiveRepository(api).get({ projectIds: [], from: null, to: null, tzOffset: 180 })
-    expect(get).toHaveBeenLastCalledWith('/executive', { query: { project_ids: undefined, from: undefined, to: undefined, tz_offset: '180' } })
+    await createHttpExecutiveRepository(api).get({ projectIds: [], statuses: [], from: null, to: null, tzOffset: 180 })
+    expect(get).toHaveBeenLastCalledWith('/executive', { query: { project_ids: undefined, statuses: undefined, from: undefined, to: undefined, tz_offset: '180' } })
   })
 
   it('converte a resposta (snake_case → camelCase; nulos e valores desconhecidos com padrões seguros)', async () => {
     const { api } = apiReturning(dto)
-    const data = await createHttpExecutiveRepository(api).get({ projectIds: [], from: null, to: null, tzOffset: 180 })
+    const data = await createHttpExecutiveRepository(api).get({ projectIds: [], statuses: [], from: null, to: null, tzOffset: 180 })
     expect(data.generatedAt).toEqual(new Date('2026-10-29T13:42:00.000Z'))
     expect(data.summary.deliveries).toEqual({ tasks: 120, planItems: 25, milestones: 3 })
     const [crm, ops] = data.portfolio

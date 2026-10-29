@@ -45,6 +45,7 @@ import {
   PROJECT_STATUSES,
   type Project,
   type ProjectMember,
+  type ProjectStatus,
   type UserSummary,
 } from '@/domain/projects'
 
@@ -1007,6 +1008,7 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
       ...projectRef(p),
       cover: toColor(PROJECT_COVERS, p.color, 'violet'),
       icon: toIcon(PROJECT_ICONS, p.icon, 'folder'),
+      status: (PROJECT_STATUSES as readonly string[]).includes(p.status ?? '') ? (p.status as ProjectStatus) : null,
       archived: !!p.archived,
     })),
     summary: {

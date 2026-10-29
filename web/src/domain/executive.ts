@@ -24,6 +24,8 @@ export function isExecutivePeriod(value: string): value is ExecutivePeriod {
 export interface ExecutiveQuery {
   /** Vazio = todos os projetos que a pessoa vê. */
   projectIds: string[]
+  /** Status do projeto (planejamento, em andamento…); vazio = todos. */
+  statuses: ProjectStatus[]
   /** AAAA-MM-DD (dia local); null = desde o início. */
   from: string | null
   /** AAAA-MM-DD (dia local); null = até hoje. */
@@ -79,6 +81,7 @@ export interface ExecutivePerson {
 export interface ExecutiveProjectOption extends ExecutiveProjectRef {
   cover: ProjectCover
   icon: ProjectIcon
+  status: ProjectStatus | null
   archived: boolean
 }
 

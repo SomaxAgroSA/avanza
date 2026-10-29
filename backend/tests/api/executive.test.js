@@ -121,4 +121,16 @@ describe('API painel executivo', { timeout: 180000 }, () => {
     assert.equal(bad.body.error.details.fields.to, 'to_before_from')
     assert.equal((await admin.get('/executive?project_ids=a;b')).body.error.details.fields.project_ids, 'invalid_type')
   })
+
+  it('filtro pelo status do projeto (sozinho ou junto com os projetos escolhidos)', async () => {
+    await gestor.patch(`/projects/${erp.id}`, { status: 'paused' })
+    const paused = (await admin.get('/executive?statuses=paused')).body.data
+    assert.deepEqual(paused.filters.statuses, ['paused'])
+    assert.deepEqual(paused.portfolio.map((r) => r.project.key), ['ERP'])
+    assert.equal(paused.projects.find((p) => p.key === 'ERP').status, 'paused')
+    const none = (await admin.get(`/executive?statuses=paused&project_ids=${crm.id}`)).body.data
+    assert.deepEqual(none.portfolio, [])
+    assert.equal((await admin.get('/executive?statuses=paused,outro')).body.error.details.fields.statuses, 'invalid_option')
+    await gestor.patch(`/projects/${erp.id}`, { status: 'active' })
+  })
 })

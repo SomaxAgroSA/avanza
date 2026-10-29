@@ -1,3 +1,4 @@
+import { PROJECT_STATUSES, type ProjectStatus } from '@/domain/projects'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
@@ -60,7 +61,8 @@ function useExecutiveParams() {
   const raw = params.get('period') ?? ''
   const period = isExecutivePeriod(raw) ? raw : DEFAULT_EXECUTIVE_PERIOD
   const projectIds = (params.get('projects') ?? '').split(',').filter(Boolean)
-  return { period, projectIds, from: params.get('from') ?? '', to: params.get('to') ?? '', set }
+  const statuses = (params.get('status') ?? '').split(',').filter((s): s is ProjectStatus => (PROJECT_STATUSES as readonly string[]).includes(s))
+  return { period, projectIds, statuses, from: params.get('from') ?? '', to: params.get('to') ?? '', set }
 }
 
 /**
@@ -73,10 +75,10 @@ function useExecutiveParams() {
 export function ExecutivePage() {
   const { t, i18n } = useTranslation()
   useDocumentTitle(t('executive.title'))
-  const { period, projectIds, from, to, set } = useExecutiveParams()
+  const { period, projectIds, statuses, from, to, set } = useExecutiveParams()
   const [now] = useState(() => new Date())
   const range = executivePeriodRange(period, now, { from, to })
-  const query: ExecutiveQuery | null = range ? { projectIds, from: range.from, to: range.to, tzOffset: now.getTimezoneOffset() } : null
+  const query: ExecutiveQuery | null = range ? { projectIds, statuses, from: range.from, to: range.to, tzOffset: now.getTimezoneOffset() } : null
   const dashboard = useExecutiveDashboard(query)
   const data = dashboard.data
   const time = new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short' })
@@ -93,7 +95,7 @@ export function ExecutivePage() {
 
   return (
     <>
-      <header className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <header className="mb-6 flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">{t('executive.title')}</h1>
           <p className="mt-1 text-sm text-muted">{t('executive.description')}</p>
@@ -103,10 +105,12 @@ export function ExecutivePage() {
         <Filters
           projects={data?.projects ?? []}
           projectIds={projectIds}
+          statuses={statuses}
           period={period}
           from={from}
           to={to}
           onProjects={(ids) => set({ projects: ids.join(',') })}
+          onStatuses={(list) => set({ status: list.join(',') })}
           onPeriod={(value) => set({ period: value === DEFAULT_EXECUTIVE_PERIOD ? '' : value, ...(value === 'custom' ? {} : { from: '', to: '' }) })}
           onDates={(patch) => set(patch)}
         />
@@ -153,19 +157,23 @@ export function ExecutivePage() {
 function Filters({
   projects,
   projectIds,
+  statuses,
   period,
   from,
   to,
   onProjects,
+  onStatuses,
   onPeriod,
   onDates,
 }: {
   projects: ExecutiveProjectOption[]
   projectIds: string[]
+  statuses: ProjectStatus[]
   period: ExecutivePeriod
   from: string
   to: string
   onProjects: (ids: string[]) => void
+  onStatuses: (statuses: ProjectStatus[]) => void
   onPeriod: (period: ExecutivePeriod) => void
   onDates: (patch: { from: string; to: string }) => void
 }) {
@@ -173,7 +181,10 @@ function Filters({
   const day = useDayText()
   const phone = useMediaQuery('(max-width: 639px)')
   const [rangeOpen, setRangeOpen] = useState(false)
-  const options = projects.map((p) => {
+  // com status escolhidos, a lista de projetos mostra só os desses status (e os já escolhidos)
+  const visible = statuses.length ? projects.filter((p) => (p.status && statuses.includes(p.status)) || projectIds.includes(p.id)) : projects
+  const statusOptions = PROJECT_STATUSES.map((s) => ({ value: s, label: t(`projects.status.${s}`) }))
+  const options = visible.map((p) => {
     const label = `${p.key} · ${p.name}`
     return { value: p.id, label: p.archived ? t('executive.filters.archived', { name: label }) : label }
   })
@@ -185,7 +196,7 @@ function Filters({
   }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:shrink-0 xl:flex-nowrap xl:justify-end print:hidden">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center 2xl:shrink-0 2xl:flex-nowrap 2xl:justify-end print:hidden">
       <AppMultiSelect
         label={<span className="sr-only">{t('executive.filters.projects')}</span>}
         display="summary"
@@ -195,6 +206,16 @@ function Filters({
         onValueChange={onProjects}
         options={options}
         className="w-full gap-0 sm:w-60"
+      />
+      <AppMultiSelect
+        label={<span className="sr-only">{t('executive.filters.statuses')}</span>}
+        display="summary"
+        allOptionLabel={t('executive.filters.allStatuses')}
+        summary={(count) => t('executive.filters.selectedStatuses', { count })}
+        value={statuses}
+        onValueChange={(list) => onStatuses(list.filter((s): s is ProjectStatus => (PROJECT_STATUSES as readonly string[]).includes(s)))}
+        options={statusOptions}
+        className="w-full gap-0 sm:w-48"
       />
       <div className="flex items-center gap-2">
         {phone ? (

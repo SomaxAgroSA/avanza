@@ -4,7 +4,8 @@
  *
  * - Acesso: `executive.view`. Quem tem a permissão vê **todos** os projetos no painel (mesmo sem ser
  *   membro), só para leitura — o detalhe de cada projeto continua com a regra de acesso de sempre.
- * - Filtro: `project_ids` (separados por vírgula; vazio = todos). Período: `from`/`to` (AAAA-MM-DD no
+ * - Filtros: `project_ids` e `statuses` (status do projeto: planning, active…), separados por vírgula;
+ *   vazio = todos; os dois juntos = os projetos escolhidos que estão nesses status. Período: `from`/`to` (AAAA-MM-DD no
  *   fuso de quem consulta, ou ISO); sem `from` = desde o início; sem `to` = agora.
  * - Leitura em lote (sem uma consulta por projeto) e os cálculos em domain/executive.js, com a saúde
  *   de domain/plan-report.js e os indicadores de domain/report.js.
@@ -13,6 +14,7 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
+const projectDomain = require('../domain/project')
 const planDomain = require('../domain/plan')
 const { planReport } = require('../domain/plan-report')
 const report = require('../domain/report')
@@ -33,6 +35,13 @@ const SCHEMA = {
       const ids = value.split(',').map((id) => id.trim()).filter(Boolean)
       if (ids.length > MAX_PROJECT_IDS) return 'too_many'
       return ids.every((id) => ID_PATTERN.test(id)) ? null : 'invalid_type'
+    }),
+  ],
+  statuses: [
+    rules.custom((value) => {
+      if (typeof value !== 'string') return 'invalid_type'
+      const list = value.split(',').map((s) => s.trim()).filter(Boolean)
+      return list.every((s) => projectDomain.PROJECT_STATUS.indexOf(s) >= 0) ? null : 'invalid_option'
     }),
   ],
   from: [rules.isoDate()],
@@ -77,7 +86,11 @@ function createExecutiveService(deps) {
       .split(',')
       .map((id) => id.trim())
       .filter((id, i, all) => id && all.indexOf(id) === i)
-    return { projectIds: ids, from, to, now, tzOffset }
+    const statuses = (data.statuses || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s, i, all) => s && all.indexOf(s) === i)
+    return { projectIds: ids, statuses, from, to, now, tzOffset }
   }
 
   /** Tarefas abertas com algum bloqueador ainda aberto (mesma regra dos relatórios). */
@@ -106,7 +119,7 @@ function createExecutiveService(deps) {
     const today = report.localDay(params.now, params.tzOffset)
 
     const all = await deps.projectRepository.listAll()
-    const projects = params.projectIds.length ? all.filter((p) => params.projectIds.indexOf(p.id) >= 0) : all
+    const projects = all.filter((p) => (!params.projectIds.length || params.projectIds.indexOf(p.id) >= 0) && (!params.statuses.length || params.statuses.indexOf(p.status) >= 0))
     const ids = projects.map((p) => p.id)
     const activeIds = projects.filter((p) => !p.archivedAt).map((p) => p.id)
 
@@ -189,8 +202,8 @@ function createExecutiveService(deps) {
       {
         generated_at: params.now.toISOString(),
         period: { from: params.from ? params.from.toISOString() : null, to: params.to.toISOString() },
-        filters: { project_ids: params.projectIds },
-        projects: all.map((p) => ({ id: p.id, key: p.key, name: p.name, color: p.cover || null, icon: p.icon || null, archived: !!p.archivedAt })),
+        filters: { project_ids: params.projectIds, statuses: params.statuses },
+        projects: all.map((p) => ({ id: p.id, key: p.key, name: p.name, color: p.cover || null, icon: p.icon || null, status: p.status, archived: !!p.archivedAt })),
       },
       dashboard,
     )

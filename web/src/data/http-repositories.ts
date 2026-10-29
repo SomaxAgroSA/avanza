@@ -706,13 +706,14 @@ export function createHttpReportRepository(api: ApiClient): ReportRepository {
   }
 }
 
-/** Painel executivo: sem `project_ids` = todos; sem `from` = desde o início; sem `to` = até hoje. */
+/** Painel executivo: sem `project_ids`/`statuses` = todos; sem `from` = desde o início; sem `to` = até hoje. */
 export function createHttpExecutiveRepository(api: ApiClient): ExecutiveRepository {
   return {
     async get(query) {
       const { data } = await api.get<ExecutiveDto>('/executive', {
         query: {
           project_ids: query.projectIds.length ? query.projectIds.join(',') : undefined,
+          statuses: query.statuses.length ? query.statuses.join(',') : undefined,
           from: query.from ?? undefined,
           to: query.to ?? undefined,
           tz_offset: String(query.tzOffset),
