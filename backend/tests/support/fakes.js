@@ -547,6 +547,7 @@ function createFakeRepositories(store) {
       if (query.assigneeId) items = items.filter((t) => t.assigneeId === query.assigneeId)
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
+      if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
       if (query.search) {
         const q = query.search.text.toLowerCase()
         items = items.filter(

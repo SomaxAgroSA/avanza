@@ -164,6 +164,7 @@ export interface TaskDto {
   attachment_count?: number
   subtask_progress?: { done: number; total: number }
   blocked?: boolean
+  in_report?: boolean
 }
 
 export interface PlanStatusDto {

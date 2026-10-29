@@ -1111,6 +1111,7 @@ const TASK_FILTERS: Record<string, string> = {
   category: 'category',
   tags: 'tag_id',
   sprint: 'sprint_id',
+  in_report: 'in_report',
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {
@@ -1135,6 +1136,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async update(id, data) {
       return toTaskDetail((await api.patch<TaskDetailDto>(path(id), taskBody(data))).data)
+    },
+    async setInReport(id, inReport) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/report`, { in_report: inReport })).data)
     },
     async remove(id) {
       await api.del(path(id))

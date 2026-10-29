@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, FileCheck2, FileX2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { isClosed, type TaskSummary } from '@/domain/tasks'
 import {
   AppConfirmDialog,
   AppDataTable,
+  AppIconButton,
   notify,
   useDataTableState,
   type DataTableColumn,
@@ -27,6 +28,7 @@ import { TagList } from '@/features/tags/tag-visuals'
 const EMPTY: TaskSummary[] = []
 const OPEN = 'backlog,todo,in_progress'
 const CLOSED = 'done,cancelled'
+const REPORT_OPTIONS = ['true', 'false'] as const
 const PROJECT_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 
 export interface TasksTableProps {
@@ -48,7 +50,11 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
   const canEdit = useCan('tasks.edit')
   const canDelete = useCan('tasks.delete')
 
-  const table = useDataTableState(tableId, { sort: { id: 'updated_at', direction: 'desc' }, filters: { category: OPEN }, columnVisibility: { category: false, tags: false } })
+  const table = useDataTableState(tableId, {
+    sort: { id: 'updated_at', direction: 'desc' },
+    filters: { category: OPEN },
+    columnVisibility: { category: false, tags: false, in_report: false },
+  })
   // busca vinda de fora (command palette): aplica uma vez e avisa para limpar o endereço
   const { setSearch } = table
   useEffect(() => {
@@ -62,7 +68,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
   const types = useTaskTypes(true)
   const tags = useTags()
   const projects = useProjects(PROJECT_QUERY, !projectId)
-  const { remove } = useTaskMutations()
+  const { remove, setInReport } = useTaskMutations()
 
   const [viewing, setViewing] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -160,6 +166,20 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
           ],
         },
       },
+      ...(projectId
+        ? [
+            {
+              id: 'in_report',
+              header: t('tasks.fields.inReport'),
+              size: 130,
+              cell: (task: TaskSummary) => <span className="text-muted">{task.inReport ? t('audit.yes') : t('audit.no')}</span>,
+              filter: {
+                label: t('tasks.fields.inReport'),
+                options: REPORT_OPTIONS.map((value) => ({ value, label: value === 'true' ? t('audit.yes') : t('audit.no') })),
+              },
+            } satisfies DataTableColumn<TaskSummary>,
+          ]
+        : []),
       {
         id: 'updated_at',
         header: t('tasks.fields.updatedAt'),
@@ -190,6 +210,28 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         onRetry={() => void tasks.refetch()}
         searchPlaceholder={t('tasks.searchPlaceholder')}
         actions={{
+          // só na aba Tarefas do projeto: escolher o que sai no informe (aba Informe)
+          leading: projectId
+            ? (task) => (
+                <AppIconButton
+                  size="sm"
+                  label={task.inReport ? t('tasks.report.remove') : t('tasks.report.add')}
+                  aria-pressed={task.inReport}
+                  icon={task.inReport ? <FileCheck2 /> : <FileX2 />}
+                  className={task.inReport ? 'text-primary hover:text-primary' : 'text-subtle'}
+                  disabled={!canEdit || (setInReport.isPending && setInReport.variables?.id === task.id)}
+                  onClick={() =>
+                    setInReport.mutate(
+                      { id: task.id, inReport: !task.inReport },
+                      {
+                        onSuccess: (saved) => notify.success(t(saved.inReport ? 'tasks.report.added' : 'tasks.report.removed', { code: saved.code })),
+                        onError: (error) => notify.error(errorMessage(error)),
+                      },
+                    )
+                  }
+                />
+              )
+            : undefined,
           onView: (task) => setViewing(task.id),
           onOpen: (task) => void navigate(`/tasks/${task.id}`),
           onEdit: (task) => setEditing(task.id),

@@ -743,7 +743,8 @@
       "user_id": "Person",
       "url": "Address",
       "events": "Events",
-      "failures": "Failures in a row"
+      "failures": "Failures in a row",
+      "in_report": "In report"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -983,7 +984,8 @@
       "members": "Members ({{count}})",
       "history": "History",
       "settings": "Settings",
-      "tasks": "Tasks"
+      "tasks": "Tasks",
+      "report": "Report"
     },
     "archivedNotice": "This project is archived and read-only. Unarchive it to edit again.",
     "details": "Details",
@@ -1041,6 +1043,99 @@
         "journal": "Journal",
         "milestone": "Milestone",
         "task": "Task"
+      }
+    },
+    "report": {
+      "optionsTitle": "Report content",
+      "description": "Build the project report from the platform data and download it as PDF.",
+      "tasksIncluded_one": "{{count}} of {{total}} tasks is in the report.",
+      "tasksIncluded_other": "{{count}} of {{total}} tasks are in the report.",
+      "chooseTasks": "Choose tasks",
+      "fields": {
+        "title": "Title",
+        "subtitle": "Subtitle",
+        "from": "From",
+        "to": "To",
+        "cutoff": "Cut-off date",
+        "cutoffHint": "The report's \"today\": duration and schedule are counted up to this date.",
+        "phases": "Phases",
+        "phasesHint": "Project management group whose items are the schedule phases.",
+        "noPhases": "No phases",
+        "sections": "Sections",
+        "summary": "Summary",
+        "summaryHint": "Text that opens the report. Optional.",
+        "notes": "Notes and risks",
+        "notesHint": "Shown next to the next steps. Optional."
+      },
+      "download": "Download PDF",
+      "printHint": "In the print window, choose \"Save as PDF\" and uncheck \"Headers and footers\".",
+      "reset": "Reset options",
+      "preview": "Preview",
+      "doc": {
+        "defaultTitle": "Project timeline",
+        "defaultSubtitle": "How the project unfolded, how long it took and what is left: phases, milestones and tasks in chronological order.",
+        "kicker": "Project {{key}} · {{name}}",
+        "start": "Start",
+        "cutoff": "Report cut-off",
+        "team": "Team",
+        "sections": {
+          "summary": "Summary",
+          "phases": "Progress by phase",
+          "milestones": "Milestones",
+          "chronology": "Timeline, day by day",
+          "tasks": "Tasks",
+          "next": "Next steps"
+        },
+        "of": "{{done}} of {{total}}",
+        "kpiDays_one": "{{count}} day",
+        "kpiDays_other": "{{count}} days",
+        "kpiDaysHint_one": "since {{date}} ({{count}} working day)",
+        "kpiDaysHint_other": "since {{date}} ({{count}} working days)",
+        "kpiTasks": "tasks completed",
+        "kpiMilestones": "milestones reached",
+        "kpiPhases": "phases closed",
+        "schedule": "Schedule",
+        "legendDone": "Closed phase",
+        "legendOpen": "Phase in progress",
+        "legendMilestone": "Milestone",
+        "legendCutoff": "Cut-off date",
+        "openSpan": "{{start}} – in progress",
+        "inProgress": "in progress",
+        "daysOpen_one": "{{count}} so far",
+        "daysOpen_other": "{{count}} so far",
+        "noPhases": "No phases: choose in the options the project management group that holds them.",
+        "cols": {
+          "phase": "Phase",
+          "start": "Start",
+          "end": "End",
+          "days": "Days",
+          "status": "Status",
+          "progress": "Progress",
+          "date": "Date",
+          "milestone": "Milestone",
+          "code": "Code",
+          "task": "Task",
+          "due": "Due",
+          "assignee": "Assignee"
+        },
+        "chronologyLead": "Everything that happened in the project, in the order it happened: journal entries, milestones and tasks.",
+        "tasksLead_one": "{{count}} task, grouped by situation and in date order.",
+        "tasksLead_other": "{{count}} tasks, grouped by situation and in date order.",
+        "taskStates": {
+          "in_progress": "In progress",
+          "pending": "Pending",
+          "done": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "nextMilestones": "Upcoming milestones",
+        "nextTasks": "Open tasks",
+        "notes": "Notes and risks",
+        "nothingPending": "Nothing pending.",
+        "more_one": "and {{count}} more task",
+        "more_other": "and {{count}} more tasks",
+        "empty": "No data in this period.",
+        "generated": "Generated in {{platform}} · cut-off {{date}}.",
+        "footer": "{{name}} · {{title}} · cut-off {{date}}"
       }
     }
   },
@@ -1451,7 +1546,8 @@
       "situation": "Situation",
       "tags": "Tags",
       "sprint": "Sprint",
-      "startDate": "Planned start"
+      "startDate": "Planned start",
+      "inReport": "In report"
     },
     "tagsPlaceholder": "Choose tags…",
     "markdownHint": "Supports **bold**, *italic*, `code`, \"-\" lists and links.",
@@ -1462,6 +1558,12 @@
       "done": "{{code}} moved to \"{{status}}\".",
       "message_one": "To move to \"{{status}}\", fill in: {{fields}}.",
       "message_other": "To move to \"{{status}}\", fill in: {{fields}}."
+    },
+    "report": {
+      "add": "Include in the project report",
+      "remove": "Remove from the project report",
+      "added": "{{code}} is in the report",
+      "removed": "{{code}} left the report"
     }
   },
   "tags": {

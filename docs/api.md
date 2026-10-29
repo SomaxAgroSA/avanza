@@ -120,11 +120,12 @@ Leitura de status/prioridades/tags: `settings.manage` ou `tasks.view`. Alteraç�
 | GET · POST | `/statuses` · `/priorities` | lista em ordem (inativos com `include_inactive=1` e `settings.manage`) · cria `{ key, name, color?, description?, is_active?, is_default?, category* }` (*só status: `backlog`, `todo`, `in_progress`, `done`, `cancelled`) |
 | PUT | `/statuses/order` · `/priorities/order` | `{ ids }` com a lista completa |
 | GET · PATCH · DELETE | `/statuses/{id}` · `/priorities/{id}` | chave imutável; `is_default: true` desmarca o anterior; o padrão não pode ser desativado nem excluído (`*_IS_DEFAULT`); em uso não se exclui (`*_IN_USE`) |
-| GET | `/tasks` | paginado; `project_id`, `task_type_id`, `status_id`, `priority_id`, `assignee_id` (ou `me`), `tag_id`, `category` (ex.: `backlog,todo,in_progress`), `search` (título, código e campos personalizados pesquisáveis), `sort` (`code`, `title`, `created_at`, `updated_at`, `due_date`, `priority`, `status`) |
+| GET | `/tasks` | paginado; `project_id`, `task_type_id`, `status_id`, `priority_id`, `assignee_id` (ou `me`), `tag_id`, `category` (ex.: `backlog,todo,in_progress`), `in_report` (`true`/`false`), `search` (título, código e campos personalizados pesquisáveis), `sort` (`code`, `title`, `created_at`, `updated_at`, `due_date`, `priority`, `status`) |
 | POST | `/tasks` | `{ project_id, task_type_id, title, description?, status_id?, priority_id?, assignee_id?, reporter_id?, due_date?, estimated_hours?, actual_hours?, custom_values?, tag_ids?, checklist? }` — número sequencial por projeto (`CRM-12`); padrões de status, prioridade e valores dos campos |
 | GET | `/tasks/{id}` | detalhe com `fields` do tipo, `custom_values` (por nome técnico), `checklist`, `tags` e `capabilities` |
 | PATCH | `/tasks/{id}` | parcial; `null` limpa responsável/relator/prazo/horas; trocar o tipo descarta valores de campos que o novo tipo não tem; `project_id` é imutável |
 | DELETE | `/tasks/{id}` | `tasks.delete` + gestor, `projects.view_all` ou autor |
+| PUT | `/tasks/{id}/report` | `{ in_report: boolean }` — liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `in_report` (padrão `true`) |
 | GET | `/tasks/{id}/history` | histórico legível (nomes em vez de IDs; campos personalizados como `cf:<rótulo>`; comentários e menções) |
 | GET · POST | `/tasks/{id}/comments` | lista (excluídos sem texto) · `{ content }` com menções `@[Nome](idDoUsuario)` — qualquer pessoa com acesso ao projeto, inclusive leitor |
 | GET | `/tasks/{id}/mention-candidates` | pessoas ativas com acesso ao projeto (lista do @) |

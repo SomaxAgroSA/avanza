@@ -77,6 +77,7 @@ const LIST_SCHEMA = {
   tag_id: [idRule],
   // `none` = sem sprint
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   category: [
     rules.custom((value) =>
       typeof value === 'string' && value.split(',').every((c) => workflow.STATUS_CATEGORIES.indexOf(c.trim()) >= 0) ? null : 'invalid_option',
@@ -331,6 +332,7 @@ function createTaskService(deps) {
       attachment_count: refs.attachmentCounts[task.id] || 0,
       subtask_progress: refs.subtasks[task.id] || { done: 0, total: 0 },
       blocked: !!refs.blocked[task.id],
+      in_report: !task.reportExcluded,
     }
   }
 
@@ -481,6 +483,7 @@ function createTaskService(deps) {
         category: pick('category'),
         tag_id: pick('tag_id'),
         sprint_id: pick('sprint_id'),
+        in_report: pick('in_report'),
       },
       LIST_SCHEMA,
     )
@@ -515,6 +518,7 @@ function createTaskService(deps) {
       assigneeId: filters.assignee_id === 'me' ? ctx.principal.userId : filters.assignee_id,
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
+      inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       pagination,
@@ -742,6 +746,24 @@ function createTaskService(deps) {
     return presentDetail(ctx, updated, project, access)
   }
 
+  /**
+   * Liga/desliga a tarefa no informe do projeto (aba Informe). Não passa pela edição completa:
+   * não exige os obrigatórios do status nem renova o "updated" de outros campos.
+   */
+  function setTaskReport(ctx, id, input) {
+    const { task, project, access } = loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const value = (input || {}).in_report
+    if (typeof value !== 'boolean') throw invalid({ in_report: 'invalid_type' })
+    if (value === !task.reportExcluded) return presentDetail(ctx, task, project, access)
+    const updated = deps.unitOfWork.run((repos) => {
+      const result = repos.taskRepository.update(task.id, { reportExcluded: !value })
+      audit(repos, ctx, task, 'task.updated', { in_report: !value }, { in_report: value })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
   function deleteTask(ctx, id) {
     const { task, project, access } = loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'delete', task)
@@ -801,7 +823,7 @@ function createTaskService(deps) {
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, deleteTask, moveTask, summarize }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, deleteTask, moveTask, summarize }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

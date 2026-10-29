@@ -285,6 +285,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     attachmentCount: dto.attachment_count ?? 0,
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
+    inReport: dto.in_report ?? true,
   }
 }
 

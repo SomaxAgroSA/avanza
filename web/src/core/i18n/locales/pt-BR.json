@@ -743,7 +743,8 @@
       "user_id": "Pessoa",
       "url": "Endereço",
       "events": "Eventos",
-      "failures": "Falhas seguidas"
+      "failures": "Falhas seguidas",
+      "in_report": "No informe"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -983,7 +984,8 @@
       "members": "Membros ({{count}})",
       "history": "Histórico",
       "settings": "Configurações",
-      "tasks": "Tarefas"
+      "tasks": "Tarefas",
+      "report": "Informe"
     },
     "archivedNotice": "Este projeto está arquivado e somente leitura. Desarquive para voltar a editá-lo.",
     "details": "Detalhes",
@@ -1041,6 +1043,99 @@
         "journal": "Diário",
         "milestone": "Marco",
         "task": "Tarefa"
+      }
+    },
+    "report": {
+      "optionsTitle": "Conteúdo do informe",
+      "description": "Monte o informe do projeto com os dados da plataforma e baixe em PDF.",
+      "tasksIncluded_one": "{{count}} de {{total}} tarefas entra no informe.",
+      "tasksIncluded_other": "{{count}} de {{total}} tarefas entram no informe.",
+      "chooseTasks": "Escolher tarefas",
+      "fields": {
+        "title": "Título",
+        "subtitle": "Subtítulo",
+        "from": "De",
+        "to": "Até",
+        "cutoff": "Data de corte",
+        "cutoffHint": "A data \"de hoje\" do informe: a duração e o cronograma contam até aqui.",
+        "phases": "Fases",
+        "phasesHint": "Grupo da Gestão de projetos cujos elementos são as fases do cronograma.",
+        "noPhases": "Sem fases",
+        "sections": "Seções",
+        "summary": "Resumo",
+        "summaryHint": "Texto que abre o informe. Opcional.",
+        "notes": "Observações e riscos",
+        "notesHint": "Aparece junto dos próximos passos. Opcional."
+      },
+      "download": "Baixar PDF",
+      "printHint": "Na janela de impressão, escolha \"Salvar como PDF\" e desmarque \"Cabeçalhos e rodapés\".",
+      "reset": "Restaurar opções",
+      "preview": "Prévia",
+      "doc": {
+        "defaultTitle": "Linha do tempo do projeto",
+        "defaultSubtitle": "Como o projeto se desenvolveu, quanto tempo levou e o que falta: fases, marcos e tarefas em ordem cronológica.",
+        "kicker": "Projeto {{key}} · {{name}}",
+        "start": "Início",
+        "cutoff": "Corte do informe",
+        "team": "Equipe",
+        "sections": {
+          "summary": "Resumo",
+          "phases": "Avanço por fase",
+          "milestones": "Marcos",
+          "chronology": "Linha do tempo, dia a dia",
+          "tasks": "Tarefas",
+          "next": "Próximos passos"
+        },
+        "of": "{{done}} de {{total}}",
+        "kpiDays_one": "{{count}} dia",
+        "kpiDays_other": "{{count}} dias",
+        "kpiDaysHint_one": "desde {{date}} ({{count}} útil)",
+        "kpiDaysHint_other": "desde {{date}} ({{count}} úteis)",
+        "kpiTasks": "tarefas concluídas",
+        "kpiMilestones": "marcos alcançados",
+        "kpiPhases": "fases encerradas",
+        "schedule": "Cronograma",
+        "legendDone": "Fase encerrada",
+        "legendOpen": "Fase em andamento",
+        "legendMilestone": "Marco",
+        "legendCutoff": "Data de corte",
+        "openSpan": "{{start}} – em andamento",
+        "inProgress": "em andamento",
+        "daysOpen_one": "{{count}} até agora",
+        "daysOpen_other": "{{count}} até agora",
+        "noPhases": "Sem fases: escolha nas opções o grupo da Gestão de projetos que as contém.",
+        "cols": {
+          "phase": "Fase",
+          "start": "Início",
+          "end": "Fim",
+          "days": "Dias",
+          "status": "Status",
+          "progress": "Avanço",
+          "date": "Data",
+          "milestone": "Marco",
+          "code": "Código",
+          "task": "Tarefa",
+          "due": "Prazo",
+          "assignee": "Responsável"
+        },
+        "chronologyLead": "Tudo o que aconteceu no projeto, na ordem em que aconteceu: registros do diário, marcos e tarefas.",
+        "tasksLead_one": "{{count}} tarefa, agrupada por situação e em ordem de data.",
+        "tasksLead_other": "{{count}} tarefas, agrupadas por situação e em ordem de data.",
+        "taskStates": {
+          "in_progress": "Em andamento",
+          "pending": "Pendentes",
+          "done": "Concluídas",
+          "cancelled": "Canceladas"
+        },
+        "nextMilestones": "Marcos a alcançar",
+        "nextTasks": "Tarefas abertas",
+        "notes": "Observações e riscos",
+        "nothingPending": "Nada pendente.",
+        "more_one": "e mais {{count}} tarefa",
+        "more_other": "e mais {{count}} tarefas",
+        "empty": "Sem dados no período.",
+        "generated": "Gerado em {{platform}} · corte em {{date}}.",
+        "footer": "{{name}} · {{title}} · corte {{date}}"
       }
     }
   },
@@ -1451,7 +1546,8 @@
       "situation": "Situação",
       "tags": "Tags",
       "sprint": "Sprint",
-      "startDate": "Início planejado"
+      "startDate": "Início planejado",
+      "inReport": "No informe"
     },
     "tagsPlaceholder": "Escolher tags…",
     "markdownHint": "Aceita **negrito**, *itálico*, `código`, listas com \"-\" e links.",
@@ -1462,6 +1558,12 @@
       "done": "{{code}} movida para \"{{status}}\".",
       "message_one": "Para ir para \"{{status}}\", preencha: {{fields}}.",
       "message_other": "Para ir para \"{{status}}\", preencha: {{fields}}."
+    },
+    "report": {
+      "add": "Incluir no informe do projeto",
+      "remove": "Tirar do informe do projeto",
+      "added": "{{code}} entra no informe",
+      "removed": "{{code}} saiu do informe"
     }
   },
   "tags": {

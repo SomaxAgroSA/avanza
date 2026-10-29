@@ -311,6 +311,8 @@ export interface TaskRepository {
   get(id: string): Promise<TaskDetail>
   create(data: TaskInput & { projectId: string; taskTypeId: string; title: string }): Promise<TaskDetail>
   update(id: string, data: TaskInput): Promise<TaskDetail>
+  /** Liga/desliga a tarefa no informe do projeto (não exige os obrigatórios do status). */
+  setInReport(id: string, inReport: boolean): Promise<TaskDetail>
   remove(id: string): Promise<void>
   history(id: string): Promise<Page<AuditEntry>>
 }
