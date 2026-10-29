@@ -31,6 +31,7 @@ import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
+import { ProjectChronology } from './ProjectChronology'
 import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
 
 export function ProjectDetailPage() {
@@ -303,6 +304,7 @@ function Overview({ project }: { project: Project }) {
 }
 
 function ProjectHistory({ projectId }: { projectId: string }) {
+  const { t } = useTranslation()
   const history = useProjectHistory(projectId)
   if (history.isPending) {
     return (
@@ -313,10 +315,16 @@ function ProjectHistory({ projectId }: { projectId: string }) {
     )
   }
   if (history.isError) return <AppErrorState onRetry={() => void history.refetch()} />
+  // primeiro os fatos pela data em que aconteceram; depois a auditoria (quando cada coisa foi gravada)
   return (
-    <AppCard>
-      <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
-    </AppCard>
+    <div className="flex flex-col gap-4">
+      <AppCard title={t('projects.chronology.title')} description={t('projects.chronology.description')}>
+        <ProjectChronology projectId={projectId} />
+      </AppCard>
+      <AppCard title={t('projects.chronology.auditTitle')} description={t('projects.chronology.auditDescription')}>
+        <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
+      </AppCard>
+    </div>
   )
 }
 

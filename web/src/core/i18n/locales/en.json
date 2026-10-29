@@ -1027,7 +1027,22 @@
     "add": "Add",
     "memberAdded": "{{name}} added as {{role}}.",
     "switcher": "Project",
-    "chooseProject": "Choose a project"
+    "chooseProject": "Choose a project",
+    "chronology": {
+      "title": "Project timeline",
+      "description": "What happened in the project, ordered by the date it happened: journal, milestones and tasks.",
+      "auditTitle": "Changes recorded in the system",
+      "auditDescription": "Audit trail: who changed what and when it was saved, newest first.",
+      "empty": "No dated events yet",
+      "emptyHint": "Add journal entries, create milestones or set task dates to see them here.",
+      "undated": "Undated tasks ({{count}})",
+      "span": "{{start}} to {{end}}",
+      "kinds": {
+        "journal": "Journal",
+        "milestone": "Milestone",
+        "task": "Task"
+      }
+    }
   },
   "calendar": {
     "open": "Open calendar",

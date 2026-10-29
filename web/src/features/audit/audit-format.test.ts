@@ -50,6 +50,13 @@ describe('audit-format', () => {
     expect(changes.map((c) => c.label)).toEqual(['Código', 'Título', 'Status', 'Responsável', 'Severidade'])
   })
 
+  it('traduz a situação de sprints e de marcos (mesmo campo state)', () => {
+    const states = (value: string) => describeChanges(t, entry({ newValue: { state: value } }))[0]?.after
+    expect(states('active')).toBe(i18n.t('sprints.states.active'))
+    expect(states('done')).toBe(i18n.t('timeline.milestones.states.done'))
+    expect(states('done')).not.toBe('done')
+  })
+
   it('traduz listas de permissões', () => {
     const [change] = describeChanges(t, entry({ newValue: { permissions: ['tasks.view'] } }))
     expect(change).toMatchObject({ label: 'Permissões', before: '', after: 'Ver tarefas' })
