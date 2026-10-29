@@ -385,6 +385,8 @@ const forkTask = configAction('relations', (s, ctx, r) => s.forkTask(ctx, r.id, 
 // ---------------------------------------------------------------- relatórios
 
 const getReport = configAction('reports', (s, ctx, r) => s.getReport(ctx, r.query()))
+const getPreference = (e) => handle(e, async ({ ctx, services, param }) => ({ data: await services.preferences.getPreference(ctx, param('key')) }))
+const savePreference = (e) => handle(e, async ({ ctx, services, param, body }) => ({ data: await services.preferences.savePreference(ctx, param('key'), body()) }))
 const executiveDashboard = configAction('executive', (s, ctx, r) => s.getDashboard(ctx, r.query()))
 
 // ---------------------------------------------------------------- documentação (expansão, Onda 2)
@@ -717,6 +719,8 @@ module.exports = {
   forkTask,
   getReport,
   executiveDashboard,
+  getPreference,
+  savePreference,
   listDocSpaces,
   createDocSpace,
   getDocSpace,

@@ -13,6 +13,9 @@ export const projectKeys = {
   files: (id: string) => ['projects', 'files', id] as const,
 }
 
+/** Lista geral dos filtros de projeto (seletor das visões, Tarefas, Relatórios): ativos, pelo nome. */
+export const PROJECT_OPTIONS_QUERY: ProjectListQuery = { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: {} }
+
 export function useProjects(query: ProjectListQuery, enabled = true) {
   const { projects } = useRepositories()
   return useQuery({ queryKey: projectKeys.list(query), queryFn: () => projects.list(query), placeholderData: keepPreviousData, enabled })

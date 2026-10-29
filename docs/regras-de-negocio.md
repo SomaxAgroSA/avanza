@@ -639,3 +639,12 @@ Tela **Painel executivo** (menu lateral) para a diretoria acompanhar, num lugar 
 - **Sem números por pessoa:** a visão é por projeto (decisão da diretoria).
 - **Imprimir/PDF:** o botão gera uma versão limpa da tela para reuniões.
 - O Claude (MCP) consulta o mesmo painel com `get_executive_dashboard`, com a mesma permissão.
+
+## 27. Configurador do filtro de projetos
+
+Toda tela com filtro ou seletor de projeto (Kanban, Planejamento, Gestão de projetos, Timeline, Tarefas, Relatórios e Painel executivo) tem, ao lado dele, uma **engrenagem** que abre o configurador daquela tela.
+
+- **Opções:** os **status do projeto** que aparecem (Planejamento, Em andamento, Pausado, Concluído, Cancelado; nenhum marcado = todos) e **só projetos de que participo** (dono ou membro — útil para quem vê todos os projetos, como administradores e diretoria).
+- **Guardado por pessoa e por tela:** cada um tem a sua configuração, e cada tela a sua (o Kanban pode mostrar só os em andamento e a Timeline todos). Fica no servidor, então vale em qualquer computador. "Restaurar padrão" volta a mostrar todos.
+- **Efeito:** o filtro/seletor de projetos da tela lista só os projetos que respeitam o configurador; o projeto aberto ou já escolhido continua na lista mesmo que não respeite. Nas telas que juntam vários projetos (Kanban em "Todos os projetos" e Painel executivo), "Todos os projetos" passa a ser todos os do configurador. Em Tarefas e Relatórios, que filtram um projeto por vez, o configurador limita só a lista de escolha.
+- Não muda permissão nenhuma: só esconde da lista o que a pessoa escolheu não ver; não entra no histórico de auditoria.

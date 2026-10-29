@@ -10,9 +10,11 @@ export const boardKeys = {
   detail: (projectId: string) => ['tasks', 'board', projectId] as const,
   /** Quadro de todos os projetos (o tempo real invalida a mesma chave — domain/realtime.ts). */
   all: () => ['tasks', 'board-all'] as const,
+  /** Quadro de todos restrito pelo configurador do filtro de projetos (sob `all`: o tempo real alcança). */
+  scoped: (projectIds: string[] | null) => (projectIds ? (['tasks', 'board-all', projectIds] as const) : boardKeys.all()),
 }
 
-export type BoardKey = ReturnType<typeof boardKeys.detail> | ReturnType<typeof boardKeys.all>
+export type BoardKey = ReturnType<typeof boardKeys.detail> | ReturnType<typeof boardKeys.all> | ReturnType<typeof boardKeys.scoped>
 
 /**
  * Atualização periódica enquanto a aba está visível (pausada durante o arraste) quando o tempo real
@@ -34,14 +36,14 @@ export function useBoard(projectId: string | undefined, paused = false) {
 /**
  * Quadro de todos os projetos. Com mais projetos do que a tela assina no tempo real
  * (`MAX_LIVE_PROJECTS`), a consulta periódica volta ao intervalo curto para os demais não ficarem
- * esperando a rede de segurança.
+ * esperando a rede de segurança. `projectIds` (configurador do filtro de projetos) restringe; null = todos.
  */
-export function useAllBoard(enabled: boolean, paused = false) {
+export function useAllBoard(enabled: boolean, paused = false, projectIds: string[] | null = null) {
   const { board } = useRepositories()
   const refreshMs = useLiveRefetchInterval(BOARD_REFRESH_MS)
   return useQuery({
-    queryKey: boardKeys.all(),
-    queryFn: () => board.getAll(),
+    queryKey: boardKeys.scoped(projectIds),
+    queryFn: () => board.getAll(projectIds ?? undefined),
     enabled,
     refetchInterval: (query) => {
       if (paused) return false

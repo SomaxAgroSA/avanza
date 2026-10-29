@@ -30,6 +30,7 @@ function createRepositories(db, ctx) {
     emailOutboxRepository: platform.createEmailOutboxRepository(db, ctx),
     authTokenRepository: platform.createAuthTokenRepository(db, ctx),
     iconLibraryRepository: platform.createIconLibraryRepository(db, ctx),
+    userPreferenceRepository: platform.createUserPreferenceRepository(db),
 
     webhookRepository: webhooks.createWebhookRepository(db, ctx),
     webhookDeliveryRepository: webhooks.createWebhookDeliveryRepository(db, ctx),

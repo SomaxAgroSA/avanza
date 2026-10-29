@@ -28,6 +28,8 @@ import type { Board } from '@/domain/kanban'
 import type { FieldValue } from '@/domain/task-config'
 import type { LibraryIconDto } from './dtos'
 import type { LibraryIcon } from '@/domain/icons'
+import type { ProjectFilterDto } from './dtos'
+import { normalizeProjectFilter, type ProjectFilterSettings } from '@/domain/project-filter'
 import { toIcon } from '@/domain/icons'
 import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
@@ -1010,6 +1012,7 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
       icon: toIcon(PROJECT_ICONS, p.icon, 'folder'),
       status: (PROJECT_STATUSES as readonly string[]).includes(p.status ?? '') ? (p.status as ProjectStatus) : null,
       archived: !!p.archived,
+      member: p.member === true,
     })),
     summary: {
       activeProjects: s.active_projects,
@@ -1092,4 +1095,14 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
       recent: (a.recent ?? []).map((r) => ({ kind: r.kind === 'plan_item' ? 'plan_item' : 'task', id: r.id, code: r.code ?? null, title: r.title, completedAt: toDate(r.completed_at) })),
     })),
   }
+}
+
+/** Configurador do filtro de projetos: null (nunca salvo) = padrão; valores inválidos são descartados. */
+export function toProjectFilterSettings(dto: ProjectFilterDto | null | undefined): ProjectFilterSettings {
+  if (!dto) return normalizeProjectFilter(null)
+  return normalizeProjectFilter({ statuses: (Array.isArray(dto.statuses) ? dto.statuses : []) as ProjectFilterSettings['statuses'], membersOnly: dto.members_only === true })
+}
+
+export function fromProjectFilterSettings(settings: ProjectFilterSettings | null): ProjectFilterDto | null {
+  return settings ? { statuses: [...settings.statuses], members_only: settings.membersOnly } : null
 }

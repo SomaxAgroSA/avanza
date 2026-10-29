@@ -35,7 +35,7 @@ function ManagementShell({ projectId }: { projectId?: string }) {
     return (
       <>
         <PageHeader title={t('management.title')} description={t('management.description')} />
-        <AppEmptyState icon={<BriefcaseBusiness />} title={t('management.pickTitle')} description={t('management.pickHint')} action={<ProjectSwitcher basePath={MANAGEMENT_PATH} />} />
+        <AppEmptyState icon={<BriefcaseBusiness />} title={t('management.pickTitle')} description={t('management.pickHint')} action={<ProjectSwitcher screen="plan" basePath={MANAGEMENT_PATH} />} />
       </>
     )
   }
@@ -58,7 +58,7 @@ function ProjectManagement({ projectId }: { projectId: string }) {
       <PageHeader
         title={t('management.title')}
         description={plan.data ? plan.data.project.name : t('management.description')}
-        actions={<ProjectSwitcher projectId={projectId} basePath={MANAGEMENT_PATH} />}
+        actions={<ProjectSwitcher screen="plan" projectId={projectId} basePath={MANAGEMENT_PATH} />}
       />
       {notFound ? <AppEmptyState icon={<BriefcaseBusiness />} title={t('management.notFound')} description={t('management.pickHint')} /> : <ProjectBoard projectId={projectId} />}
     </>

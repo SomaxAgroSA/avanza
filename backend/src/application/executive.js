@@ -119,6 +119,9 @@ function createExecutiveService(deps) {
     const today = report.localDay(params.now, params.tzOffset)
 
     const all = await deps.projectRepository.listAll()
+    // de quais a pessoa participa (dona ou membro): o configurador do filtro pode mostrar só esses
+    const roles = all.length ? await deps.projectMemberRepository.rolesForUser(ctx.principal.userId, all.map((p) => p.id)) : {}
+    const isMember = (p) => p.ownerId === ctx.principal.userId || Object.prototype.hasOwnProperty.call(roles, p.id)
     const projects = all.filter((p) => (!params.projectIds.length || params.projectIds.indexOf(p.id) >= 0) && (!params.statuses.length || params.statuses.indexOf(p.status) >= 0))
     const ids = projects.map((p) => p.id)
     const activeIds = projects.filter((p) => !p.archivedAt).map((p) => p.id)
@@ -203,7 +206,7 @@ function createExecutiveService(deps) {
         generated_at: params.now.toISOString(),
         period: { from: params.from ? params.from.toISOString() : null, to: params.to.toISOString() },
         filters: { project_ids: params.projectIds, statuses: params.statuses },
-        projects: all.map((p) => ({ id: p.id, key: p.key, name: p.name, color: p.cover || null, icon: p.icon || null, status: p.status, archived: !!p.archivedAt })),
+        projects: all.map((p) => ({ id: p.id, key: p.key, name: p.name, color: p.cover || null, icon: p.icon || null, status: p.status, member: isMember(p), archived: !!p.archivedAt })),
       },
       dashboard,
     )

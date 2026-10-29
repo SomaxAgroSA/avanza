@@ -1051,7 +1051,22 @@
     "memberAdded": "{{name}} added as {{role}}.",
     "switcher": "Project",
     "chooseProject": "Choose a project",
-    "allProjects": "All projects"
+    "allProjects": "All projects",
+    "filterSettings": {
+      "button": "Configure project filter",
+      "buttonActive": "Configure project filter (active on this screen)",
+      "title": "Project filter for this screen",
+      "hint": "Sets which projects appear in the filter. Saved just for you.",
+      "optionsOnly": "Here it applies to the filter list; “All” still shows every project.",
+      "statuses": "Project status",
+      "allStatuses": "All",
+      "membersOnly": "Only projects I take part in",
+      "membersOnlyHint": "Projects where you are the owner or a member.",
+      "reset": "Restore default",
+      "saveError": "Could not save the project filter. {{reason}}",
+      "emptyTitle": "No project matches this screen's filter",
+      "emptyHint": "Adjust the project filter with the gear next to the selector."
+    }
   },
   "calendar": {
     "open": "Open calendar",

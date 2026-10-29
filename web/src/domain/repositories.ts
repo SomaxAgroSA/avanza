@@ -55,6 +55,7 @@ import type { EmailSettingsPatch, EmailSettingsView, FlushResult, OutboxSummary,
 import type { ApiToken, ApiTokenExpiry, CreatedApiToken } from './api-tokens'
 import type { CreatedWebhook, Webhook, WebhookCatalog, WebhookDelivery, WebhookInput } from './webhooks'
 import type { ThemePreference } from '@/core/theme/theme'
+import type { ProjectFilterScreen, ProjectFilterSettings } from './project-filter'
 
 /**
  * Contratos de acesso a dados. A apresentação depende apenas destas interfaces;
@@ -84,6 +85,14 @@ export interface AuthRepository {
   /** Confere o link de senha/convite (e traz as exigências da senha). */
   checkResetToken(token: string): Promise<ResetTokenCheck>
   confirmPasswordReset(token: string, password: string): Promise<{ purpose: 'reset' | 'invite' }>
+}
+
+/** Preferências da pessoa guardadas no servidor (valem em qualquer navegador). */
+export interface PreferenceRepository {
+  /** Configurador do filtro de projetos da tela; sem nada salvo, o padrão. */
+  getProjectFilter(screen: ProjectFilterScreen): Promise<ProjectFilterSettings>
+  /** Salva (null = volta ao padrão) e devolve o que ficou gravado. */
+  saveProjectFilter(screen: ProjectFilterScreen, settings: ProjectFilterSettings | null): Promise<ProjectFilterSettings>
 }
 
 /** Webhooks (integrations.manage): cadastro, segredo, teste e entregas. */
@@ -375,7 +384,8 @@ export interface CommentRepository {
 export interface BoardRepository {
   get(projectId: string): Promise<Board>
   /** Quadro de todos os projetos que a pessoa vê (cada card traz o projeto e se pode movê-lo). */
-  getAll(): Promise<Board>
+  /** Quadro de todos os projetos; `projectIds` restringe (configurador do filtro de projetos). */
+  getAll(projectIds?: string[]): Promise<Board>
   /** Move o card para o status, entre prevId (acima) e nextId (abaixo). */
   move(taskId: string, target: { statusId: string; prevId?: string; nextId?: string }): Promise<TaskDetail>
 }
@@ -543,4 +553,5 @@ export interface Repositories {
   email: EmailRepository
   apiTokens: ApiTokenRepository
   webhooks: WebhookRepository
+  preferences: PreferenceRepository
 }

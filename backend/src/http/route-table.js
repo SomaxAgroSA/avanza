@@ -224,6 +224,8 @@ const ROUTES = [
   ['GET', '/api/v1/settings/webhooks/:id/deliveries', 'webhookDeliveries'],
   ['POST', '/api/v1/settings/webhook-deliveries/:id/redeliver', 'redeliverWebhook'],
   ['GET', '/api/v1/auth/password-policy', 'passwordPolicy'],
+  ['GET', '/api/v1/auth/preferences/:key', 'getPreference'],
+  ['PUT', '/api/v1/auth/preferences/:key', 'savePreference', JSON_LIMIT],
   ['GET', '/api/v1/icons', 'listIcons'],
   ['POST', '/api/v1/settings/icons', 'importIcons', JSON_LIMIT],
   ['DELETE', '/api/v1/settings/icons/:name', 'removeIcon'],

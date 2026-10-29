@@ -8,6 +8,7 @@ import type { PermissionCode } from '@/domain/permissions'
 import type { Repositories } from '@/domain/repositories'
 import type { ContentLocale, TypeTexts } from '@/domain/task-config'
 import { DEFAULT_PASSWORD_POLICY, DEFAULT_PLATFORM_INFO } from '@/domain/platform'
+import { DEFAULT_PROJECT_FILTER } from '@/domain/project-filter'
 import { RepositoriesContext } from '@/presentation/common/repositories-context'
 import { AppTooltipProvider } from '@/presentation/components'
 
@@ -81,6 +82,7 @@ export function fakeRepositories(overrides: {
   email?: Partial<Repositories['email']>
   apiTokens?: Partial<Repositories['apiTokens']>
   webhooks?: Partial<Repositories['webhooks']>
+  preferences?: Partial<Repositories['preferences']>
 } = {}): Repositories {
   const emptyPage: Page<User> = { items: [], page: 1, perPage: 20, total: 0, totalPages: 0 }
   return {
@@ -382,6 +384,11 @@ export function fakeRepositories(overrides: {
       deliveries: () => Promise.resolve([]),
       redeliver: notImplemented,
       ...overrides.webhooks,
+    },
+    preferences: {
+      getProjectFilter: () => Promise.resolve(DEFAULT_PROJECT_FILTER),
+      saveProjectFilter: (_screen, settings) => Promise.resolve(settings ?? DEFAULT_PROJECT_FILTER),
+      ...overrides.preferences,
     },
   }
 }

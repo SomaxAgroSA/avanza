@@ -5,6 +5,7 @@ import i18n from '@/core/i18n'
 import { localDay, type ExecutiveDashboard } from '@/domain/executive'
 import type { PermissionCode } from '@/domain/permissions'
 import type { ExecutiveRepository } from '@/domain/repositories'
+import { DEFAULT_PROJECT_FILTER, type ProjectFilterSettings } from '@/domain/project-filter'
 import { RequireAuth } from '@/features/auth/guards'
 import { AppShell } from '@/presentation/layouts/AppShell'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
@@ -33,8 +34,8 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     generatedAt: new Date(2026, 9, 29, 10, 42),
     period: { from: null, to: new Date(2026, 9, 29, 23, 59, 59, 999) },
     projects: [
-      { ...crm, cover: 'blue', icon: 'folder', status: 'active', archived: false },
-      { ...erp, cover: 'slate', icon: 'box', status: 'completed', archived: true },
+      { ...crm, cover: 'blue', icon: 'folder', status: 'active', archived: false, member: true },
+      { ...erp, cover: 'slate', icon: 'box', status: 'completed', archived: true, member: false },
     ],
     summary: {
       activeProjects: 12,
@@ -119,9 +120,13 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
   }
 }
 
-function setup(path = '/executive', data: ExecutiveDashboard = dashboard()) {
+function setup(path = '/executive', data: ExecutiveDashboard = dashboard(), projectFilter: ProjectFilterSettings = DEFAULT_PROJECT_FILTER) {
   const get = vi.fn<ExecutiveRepository['get']>(() => Promise.resolve(data))
-  const repositories = fakeRepositories({ auth: { me: async () => makeCurrentUser(['executive.view']) }, executive: { get } })
+  const repositories = fakeRepositories({
+    auth: { me: async () => makeCurrentUser(['executive.view']) },
+    executive: { get },
+    preferences: { getProjectFilter: () => Promise.resolve(projectFilter) },
+  })
   const utils = renderRoutes([{ path: '/executive', element: <ExecutivePage /> }], { repositories, initialPath: path })
   return { ...utils, get }
 }
@@ -391,5 +396,37 @@ describe('Painel executivo — menu', () => {
     shell(['reports.view', 'plan.view'])
     expect(await screen.findByText('Início')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Painel executivo/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('Painel executivo — configurador do filtro de projetos', () => {
+  it('sem projetos escolhidos, o painel junta só os permitidos (participação vem da API, arquivados inclusos)', async () => {
+    const { get } = setup('/executive', dashboard(), { statuses: [], membersOnly: true })
+    await screen.findByText('Atualizado às 10:42')
+    // 1º a lista de projetos (período mais leve), depois o painel já restrito — nunca o painel inteiro
+    const today = localDay(new Date())
+    expect(get).toHaveBeenNthCalledWith(1, expect.objectContaining({ projectIds: [], from: today, to: today }))
+    expect(get).toHaveBeenLastCalledWith(expect.objectContaining({ projectIds: ['p1'], from: null, to: null }))
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('button', { name: 'Configurar filtro de projetos (ativo nesta tela)' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('combobox', { name: /^Projetos/ }))
+    const list = await screen.findByRole('listbox')
+    expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos os projetos', 'CRM · CRM'])
+  })
+
+  it('projetos escolhidos na URL valem como estão (e continuam na lista)', async () => {
+    const { get } = setup('/executive?projects=p2', dashboard(), { statuses: ['active'], membersOnly: false })
+    await screen.findByText('Atualizado às 10:42')
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(get).toHaveBeenCalledWith(expect.objectContaining({ projectIds: ['p2'] }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Projetos/ }))
+    const list = await screen.findByRole('listbox')
+    expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos os projetos', 'CRM · CRM', 'ERP · ERP Antigo (arquivado)'])
+  })
+
+  it('nenhum projeto atende: avisa sem montar o painel', async () => {
+    const { get } = setup('/executive', dashboard(), { statuses: ['cancelled'], membersOnly: false })
+    expect(await screen.findByText('Nenhum projeto atende ao filtro desta tela')).toBeInTheDocument()
+    expect(get).toHaveBeenCalledTimes(1)
   })
 })

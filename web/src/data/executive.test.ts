@@ -7,7 +7,10 @@ const dto: ExecutiveDto = {
   generated_at: '2026-10-29T13:42:00.000Z',
   period: { from: null, to: '2026-10-29T23:59:59.999Z' },
   filters: { project_ids: [] },
-  projects: [{ id: 'p1', key: 'CRM', name: 'CRM', color: 'blue', icon: 'folder', archived: false }],
+  projects: [
+    { id: 'p1', key: 'CRM', name: 'CRM', color: 'blue', icon: 'folder', status: 'active', archived: false, member: true },
+    { id: 'p9', key: 'OLD', name: 'Antigo', color: null, icon: null, archived: true },
+  ],
   summary: {
     active_projects: 12,
     health: { ok: 7, attention: 3, critical: 2, none: 0 },
@@ -80,6 +83,8 @@ describe('repositório do painel executivo', () => {
     const { api } = apiReturning(dto)
     const data = await createHttpExecutiveRepository(api).get({ projectIds: [], statuses: [], from: null, to: null, tzOffset: 180 })
     expect(data.generatedAt).toEqual(new Date('2026-10-29T13:42:00.000Z'))
+    // participação para o configurador do filtro de projetos (ausente = não participa)
+    expect(data.projects.map((p) => [p.id, p.status, p.member])).toEqual([['p1', 'active', true], ['p9', null, false]])
     expect(data.summary.deliveries).toEqual({ tasks: 120, planItems: 25, milestones: 3 })
     const [crm, ops] = data.portfolio
     expect(crm?.health.factors.map((f) => f.key)).toEqual(['schedule'])

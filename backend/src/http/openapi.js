@@ -928,6 +928,13 @@ function build() {
       '/settings/webhook-deliveries/{id}/redeliver': {
         post: op('Reenvia agora, do zero; WEBHOOK_DELIVERY_NOT_FOUND', ['integrations'], { 200: ok('Entrega', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
+      '/auth/preferences/{key}': {
+        get: op('Preferência da própria pessoa → { key, value } (value null = padrão). Chaves: project_filter.<tela> (kanban, planning, plan, timeline, tasks, reports, executive)', ['auth'], { 200: ok('Preferência', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [{ name: 'key', in: 'path', required: true, schema: { type: 'string' } }] }),
+        put: op('Grava a preferência da própria pessoa: { value } — project_filter: { statuses: [planning|active|paused|completed|cancelled], members_only } ; value null volta ao padrão', ['auth'], { 200: ok('Preferência', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {
+          parameters: [{ name: 'key', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['value'], properties: { value: { type: ['object', 'null'] } } }),
+        }),
+      },
       '/auth/password-policy': {
         get: op('Exigências vigentes para senhas (quem está logado): { min_length, max_length, require_letters_numbers, require_mixed_case, require_symbol }', ['auth'], { 200: ok('Política', { type: 'object' }) }),
       },

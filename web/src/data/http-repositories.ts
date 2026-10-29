@@ -43,6 +43,10 @@ import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupD
 import { toBacklog, toBoard, toReport, toReportTask, toSprint, toNotification, toTaskRelations } from './mappers'
 import type { LibraryIconDto } from './dtos'
 import { toLibraryIcon } from './mappers'
+import type { PreferenceDto, ProjectFilterDto } from './dtos'
+import { fromProjectFilterSettings, toProjectFilterSettings } from './mappers'
+import { projectFilterKey } from '@/domain/project-filter'
+import type { PreferenceRepository } from '@/domain/repositories'
 import { toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import type {
   AttachmentRepository,
@@ -147,6 +151,21 @@ export function createHttpAuthRepository(api: ApiClient): AuthRepository {
     async confirmPasswordReset(token, password) {
       const { data } = await api.post<{ purpose: 'reset' | 'invite' }>('/auth/password-reset/confirm', { token, password })
       return { purpose: data.purpose }
+    },
+  }
+}
+
+/** Preferências da pessoa (`/auth/preferences/{key}`); a chave do configurador é `project_filter.<tela>`. */
+export function createHttpPreferenceRepository(api: ApiClient): PreferenceRepository {
+  const path = (key: string) => `/auth/preferences/${encodeURIComponent(key)}`
+  return {
+    async getProjectFilter(screen) {
+      const { data } = await api.get<PreferenceDto<ProjectFilterDto>>(path(projectFilterKey(screen)))
+      return toProjectFilterSettings(data?.value)
+    },
+    async saveProjectFilter(screen, settings) {
+      const { data } = await api.put<PreferenceDto<ProjectFilterDto>>(path(projectFilterKey(screen)), { value: fromProjectFilterSettings(settings) })
+      return toProjectFilterSettings(data?.value)
     },
   }
 }
@@ -574,6 +593,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     email: createHttpEmailRepository(api),
     apiTokens: createHttpApiTokenRepository(api),
     webhooks: createHttpWebhookRepository(api),
+    preferences: createHttpPreferenceRepository(api),
   }
 }
 
@@ -670,8 +690,9 @@ export function createHttpBoardRepository(api: ApiClient): BoardRepository {
     async get(projectId) {
       return toBoard((await api.get<BoardDto>(`/projects/${encodeURIComponent(projectId)}/board`)).data)
     },
-    async getAll() {
-      return toBoard((await api.get<BoardDto>('/board')).data)
+    async getAll(projectIds) {
+      const query = projectIds?.length ? { project_ids: projectIds.join(',') } : undefined
+      return toBoard((await api.get<BoardDto>('/board', query ? { query } : undefined)).data)
     },
     async move(taskId, target) {
       const body = { status_id: target.statusId, prev_id: target.prevId, next_id: target.nextId }

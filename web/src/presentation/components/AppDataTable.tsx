@@ -44,8 +44,8 @@ export interface DataTableColumn<T> {
   /** Fixa a coluna no início da tabela ao rolar horizontalmente. */
   pinned?: boolean
   align?: 'start' | 'end'
-  /** Filtro por coluna exibido na barra de filtros. */
-  filter?: { label: string; options: Array<{ value: string; label: string }> }
+  /** Filtro por coluna exibido na barra de filtros; `addon` fica colado ao filtro (ex.: engrenagem do configurador). */
+  filter?: { label: string; options: Array<{ value: string; label: string }>; addon?: ReactNode }
 }
 
 export interface DataTableRowActions<T> {
@@ -259,20 +259,30 @@ export function AppDataTable<T extends RowData>({
           }
           filters={
             <>
-              {filterColumns.map((column) => (
-                <AppSelect
-                  key={column.id}
-                  size="sm"
-                  aria-label={column.filter!.label}
-                  value={state.filters[column.id] ?? SELECT_ALL}
-                  onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
-                  options={[
-                    { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
-                    ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
-                  ]}
-                  triggerClassName="min-w-40"
-                />
-              ))}
+              {filterColumns.map((column) => {
+                const select = (
+                  <AppSelect
+                    key={column.id}
+                    size="sm"
+                    aria-label={column.filter!.label}
+                    value={state.filters[column.id] ?? SELECT_ALL}
+                    onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
+                    options={[
+                      { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
+                      ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
+                    ]}
+                    triggerClassName="min-w-40"
+                  />
+                )
+                return column.filter!.addon ? (
+                  <div key={column.id} className="flex items-center gap-2">
+                    {select}
+                    {column.filter!.addon}
+                  </div>
+                ) : (
+                  select
+                )
+              })}
               {toolbar}
             </>
           }

@@ -35,13 +35,19 @@ import {
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { scrollToElement } from '@/presentation/common/motion'
-import { useExecutiveDashboard } from './queries'
+import { useExecutiveCatalog, useExecutiveDashboard } from './queries'
+import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
+import { useProjectFilterSettings } from '@/features/projects/use-project-filter'
+import { filterProjectsBySettings, scopedProjectIds, type ProjectFilterSubject } from '@/domain/project-filter'
 import { HeroSection } from './HeroSection'
 import { AttentionSection } from './AttentionSection'
 import { PortfolioSection } from './PortfolioSection'
 import { KanbanSection, PlanSection } from './ModuleSections'
 import { AchievementsSection, TimelineSection } from './DeliverySections'
 import { useDayText } from './use-executive-format'
+
+/** Projeto do painel para o configurador: participação vem da API (`member`), arquivados inclusos. */
+const executiveSubject = (p: ExecutiveProjectOption): ProjectFilterSubject => ({ id: p.id, status: p.status, member: p.member })
 
 /** Âncoras das seções (as métricas do topo rolam até elas). */
 const SECTION = { attention: 'executive-attention', portfolio: 'executive-portfolio', timeline: 'executive-timeline', achievements: 'executive-achievements' }
@@ -78,9 +84,24 @@ export function ExecutivePage() {
   const { period, projectIds, statuses, from, to, set } = useExecutiveParams()
   const [now] = useState(() => new Date())
   const range = executivePeriodRange(period, now, { from, to })
-  const query: ExecutiveQuery | null = range ? { projectIds, statuses, from: range.from, to: range.to, tzOffset: now.getTimezoneOffset() } : null
+  // configurador do filtro de projetos (por pessoa): sem projetos escolhidos, o painel junta só os
+  // permitidos; `undefined` = esperando a configuração ou a lista de projetos
+  const projectFilter = useProjectFilterSettings('executive')
+  const needsScope = projectFilter.ready && projectFilter.active && projectIds.length === 0
+  const catalog = useExecutiveCatalog(needsScope, now.getTimezoneOffset())
+  const scope = !projectFilter.ready
+    ? undefined
+    : needsScope
+      ? catalog.data
+        ? scopedProjectIds(catalog.data.map(executiveSubject), projectFilter.settings)
+        : undefined
+      : null
+  const noScopedProjects = scope?.length === 0
+  const query: ExecutiveQuery | null =
+    range && scope !== undefined && !noScopedProjects ? { projectIds: projectIds.length ? projectIds : (scope ?? []), statuses, from: range.from, to: range.to, tzOffset: now.getTimezoneOffset() } : null
   const dashboard = useExecutiveDashboard(query)
   const data = dashboard.data
+  const projectOptions = data?.projects ?? catalog.data ?? []
   const time = new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short' })
   // filtro de saúde do portfólio (escolhido na rosca/legenda ou em "Ver críticos"): só na tela, não na URL
   const [healthFilter, setHealthFilter] = useState<HealthLevel | null>(null)
@@ -103,7 +124,7 @@ export function ExecutivePage() {
           {data && <ScopeLine data={data} projectIds={projectIds} period={period} />}
         </div>
         <Filters
-          projects={data?.projects ?? []}
+          projects={filterProjectsBySettings(projectOptions, projectFilter.settings, executiveSubject, projectIds)}
           projectIds={projectIds}
           statuses={statuses}
           period={period}
@@ -120,6 +141,8 @@ export function ExecutivePage() {
         <p role="alert" className="text-sm text-danger">
           {t('executive.filters.invalidPeriod')}
         </p>
+      ) : noScopedProjects ? (
+        <AppEmptyState icon={<FolderKanban />} title={t('projects.filterSettings.emptyTitle')} description={t('projects.filterSettings.emptyHint')} />
       ) : dashboard.isPending ? (
         <LoadingSkeleton />
       ) : dashboard.isError || !data ? (
@@ -197,16 +220,19 @@ function Filters({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center 2xl:shrink-0 2xl:flex-nowrap 2xl:justify-end print:hidden">
-      <AppMultiSelect
-        label={<span className="sr-only">{t('executive.filters.projects')}</span>}
-        display="summary"
-        allOptionLabel={t('executive.filters.allProjects')}
-        summary={(count) => t('executive.filters.selectedProjects', { count })}
-        value={projectIds}
-        onValueChange={onProjects}
-        options={options}
-        className="w-full gap-0 sm:w-60"
-      />
+      <div className="flex items-center gap-2">
+        <AppMultiSelect
+          label={<span className="sr-only">{t('executive.filters.projects')}</span>}
+          display="summary"
+          allOptionLabel={t('executive.filters.allProjects')}
+          summary={(count) => t('executive.filters.selectedProjects', { count })}
+          value={projectIds}
+          onValueChange={onProjects}
+          options={options}
+          className="min-w-0 flex-1 gap-0 sm:w-60 sm:flex-none"
+        />
+        <ProjectFilterSettingsButton screen="executive" />
+      </div>
       <AppMultiSelect
         label={<span className="sr-only">{t('executive.filters.statuses')}</span>}
         display="summary"

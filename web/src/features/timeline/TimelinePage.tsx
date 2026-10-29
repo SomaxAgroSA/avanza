@@ -32,7 +32,7 @@ function TimelineShell({ projectId }: { projectId?: string }) {
     return (
       <>
         <PageHeader title={t('timeline.title')} description={t('timeline.description')} />
-        <AppEmptyState icon={<ChartGantt />} title={t('timeline.pickTitle')} description={t('timeline.pickHint')} action={<ProjectSwitcher basePath="/timeline" />} />
+        <AppEmptyState icon={<ChartGantt />} title={t('timeline.pickTitle')} description={t('timeline.pickHint')} action={<ProjectSwitcher screen="timeline" basePath="/timeline" />} />
       </>
     )
   }
@@ -55,7 +55,7 @@ function ProjectTimeline({ projectId }: { projectId: string }) {
       <PageHeader
         title={t('timeline.title')}
         description={timeline.data ? timeline.data.project.name : t('timeline.description')}
-        actions={<ProjectSwitcher projectId={projectId} basePath="/timeline" />}
+        actions={<ProjectSwitcher screen="timeline" projectId={projectId} basePath="/timeline" />}
       />
       {notFound ? <AppEmptyState icon={<ChartGantt />} title={t('timeline.notFound')} description={t('timeline.pickHint')} /> : <TimelineView projectId={projectId} />}
     </>

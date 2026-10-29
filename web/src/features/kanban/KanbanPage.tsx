@@ -34,6 +34,8 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { useProjectMembers } from '@/features/projects/queries'
 import { ALL_PROJECTS, ProjectSwitcher } from '@/features/projects/ProjectSwitcher'
+import { useScreenProjects } from '@/features/projects/use-project-filter'
+import { allowedByProjectFilter, isDefaultProjectFilter, scopedProjectIds, toProjectFilterSubject } from '@/domain/project-filter'
 import { useSprints } from '@/features/backlog/queries'
 import { useTaskTypes } from '@/features/task-config/queries'
 import { usePriorities } from '@/features/workflow/queries'
@@ -72,10 +74,21 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
   const { current } = useSession()
   const all = projectId === null
   const [dragging, setDragging] = useState(false)
+  const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
+  // configurador do filtro de projetos (por pessoa): no quadro de todos, pede só os projetos permitidos
+  // (e os já escolhidos no filtro); `undefined` = esperando a configuração ou a lista de projetos
+  const screenProjects = useScreenProjects('kanban', filters.projects)
+  const { settings: filterSettings, ready: filterReady } = screenProjects.filter
+  const scopeIds = useMemo(() => {
+    if (!all || !filterReady) return undefined
+    if (isDefaultProjectFilter(filterSettings)) return null
+    return screenProjects.all ? scopedProjectIds(screenProjects.all.map(toProjectFilterSubject), filterSettings, filters.projects) : undefined
+  }, [all, filterReady, filterSettings, screenProjects.all, filters.projects])
+  const noScopedProjects = all && scopeIds?.length === 0
   const projectBoard = useBoard(projectId ?? undefined, dragging)
-  const allBoard = useAllBoard(all, dragging)
+  const allBoard = useAllBoard(all && scopeIds !== undefined && !noScopedProjects, dragging, scopeIds ?? null)
   const board = all ? allBoard : projectBoard
-  const move = useMoveCard(projectId === null ? boardKeys.all() : boardKeys.detail(projectId))
+  const move = useMoveCard(projectId === null ? boardKeys.scoped(scopeIds ?? null) : boardKeys.detail(projectId))
   const members = useProjectMembers(projectId ?? undefined)
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
@@ -83,7 +96,6 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
   // sprints são do projeto: no quadro de todos os projetos o filtro não aparece
   const sprints = useSprints(projectId ?? undefined)
 
-  const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
   const [swimlane, setSwimlaneState] = useState<Swimlane>(() => {
     const saved = readJson<string>(SWIMLANE_KEY, 'none')
     return (SWIMLANES as readonly string[]).includes(saved) ? (saved as Swimlane) : 'none'
@@ -138,7 +150,15 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
     () => (all && data ? { people: boardPersonReferences(data), projects: data.projects } : { people }),
     [all, data, people],
   )
-  const projectOptions = useMemo(() => (all && data ? projectFilterOptions(data, filters.projects) : []), [all, data, filters.projects])
+  const projectOptions = useMemo(() => {
+    if (!all || !data) return []
+    // o quadro já vem restrito; a lista geral confirma status e participação (projeto fora dela fica)
+    const known = new Map((screenProjects.all ?? []).map((p) => [p.id, toProjectFilterSubject(p)]))
+    return projectFilterOptions(data, filters.projects).filter((p) => {
+      const subject = known.get(p.id)
+      return !subject || filters.projects.includes(p.id) || allowedByProjectFilter(subject, filterSettings)
+    })
+  }, [all, data, filters.projects, screenProjects.all, filterSettings])
   const projectOfCard = useMemo(() => {
     const map = new Map<string, string>()
     data?.columns.forEach((column) => column.cards.forEach((card) => card.project && map.set(card.id, card.project.id)))
@@ -197,7 +217,7 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
         description={all ? t('kanban.allDescription') : (data?.project?.name ?? t('kanban.description'))}
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <ProjectSwitcher projectId={projectId ?? ALL_PROJECTS} basePath="/kanban" allOption />
+            <ProjectSwitcher screen="kanban" projectId={projectId ?? ALL_PROJECTS} basePath="/kanban" allOption />
             {onCreate && (
               <AppButton leftIcon={<Plus />} onClick={onCreate}>
                 {t('tasks.create')}
@@ -207,7 +227,9 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
         }
       />
 
-      {board.isPending ? (
+      {noScopedProjects ? (
+        <AppEmptyState icon={<KanbanSquare />} title={t('projects.filterSettings.emptyTitle')} description={t('projects.filterSettings.emptyHint')} />
+      ) : board.isPending ? (
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2, 3].map((i) => (
             <AppSkeleton key={i} className="h-96 w-72 shrink-0 rounded-xl" />
@@ -236,6 +258,7 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
                   onChange={(statuses) => setFilters((f) => ({ ...f, statuses }))}
                 />
                 {all && (
+                  // o configurador do filtro (engrenagem) fica ao lado do seletor de projeto, no topo: vale para os dois
                   <CheckFilter
                     label={t('kanban.filters.project')}
                     testId="kanban-project-filter"

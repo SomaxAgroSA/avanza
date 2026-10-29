@@ -14,7 +14,8 @@ import {
 } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
-import { useProjects } from '@/features/projects/queries'
+import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
+import { useScreenProjects } from '@/features/projects/use-project-filter'
 import { useTaskTypes } from '@/features/task-config/queries'
 import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskMutations, useTasksList } from './queries'
@@ -27,7 +28,6 @@ import { TagList } from '@/features/tags/tag-visuals'
 const EMPTY: TaskSummary[] = []
 const OPEN = 'backlog,todo,in_progress'
 const CLOSED = 'done,cancelled'
-const PROJECT_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 
 export interface TasksTableProps {
   /** Chave do estado persistido da tabela. */
@@ -61,7 +61,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
   const priorities = usePriorities(true)
   const types = useTaskTypes(true)
   const tags = useTags()
-  const projects = useProjects(PROJECT_QUERY, !projectId)
+  // configurador do filtro de projetos (por pessoa): restringe as opções; o projeto escolhido não some
+  const chosenProject = table.state.filters.project
+  const projects = useScreenProjects('tasks', chosenProject ? [chosenProject] : [], !projectId)
   const { remove } = useTaskMutations()
 
   const [viewing, setViewing] = useState<string | null>(null)
@@ -129,7 +131,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
               cell: (task: TaskSummary) => <span className="truncate text-muted">{task.project?.name ?? '—'}</span>,
               filter: {
                 label: t('tasks.fields.project'),
-                options: (projects.data?.items ?? []).map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
+                options: projects.items.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
+                addon: <ProjectFilterSettingsButton screen="tasks" size="sm" />,
               },
             } satisfies DataTableColumn<TaskSummary>,
           ]),
@@ -172,7 +175,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.data, projectId],
+    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId],
   )
 
   return (

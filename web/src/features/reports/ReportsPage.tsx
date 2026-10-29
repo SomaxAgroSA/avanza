@@ -19,7 +19,9 @@ import {
 } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
-import { useProjectMembers, useProjects } from '@/features/projects/queries'
+import { useProjectMembers } from '@/features/projects/queries'
+import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
+import { useScreenProjects } from '@/features/projects/use-project-filter'
 import { useTaskTypes } from '@/features/task-config/queries'
 import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
@@ -29,7 +31,6 @@ import { IndicatorTasksDrawer } from './IndicatorTasksDrawer'
 import { BreakdownLabelView, CurrentIndicators, PeriodIndicators, PeriodLine, TrendChart } from './report-visuals'
 import { useDurationText } from './use-duration-text'
 
-const PROJECT_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 const EMPTY_LABEL: Record<ReportDimension, string> = {
   status: 'reports.none',
   priority: 'reports.none',
@@ -60,7 +61,8 @@ export function ReportsPage() {
   const { t } = useTranslation()
   useDocumentTitle(t('reports.title'))
   const { get, set, preset, groupBy } = useReportParams()
-  const projects = useProjects(PROJECT_QUERY)
+  // configurador do filtro de projetos (por pessoa): restringe as opções; o projeto escolhido não some
+  const projects = useScreenProjects('reports', get('project') ? [get('project')] : [])
   const members = useProjectMembers(get('project') || undefined)
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
@@ -85,10 +87,10 @@ export function ReportsPage() {
   const report = useReport(query)
   const data = report.data
 
-  const select = (key: string, label: string, options: Array<{ value: string; label: string }>, extra?: Record<string, string>) => (
+  const select = (key: string, label: string, options: Array<{ value: string; label: string }>, extra?: Record<string, string>, className = 'w-full sm:w-44') => (
     <AppSelect
       size="sm"
-      className="w-full sm:w-44"
+      className={className}
       aria-label={label}
       value={get(key) || SELECT_ALL}
       onValueChange={(value) => set({ [key]: value === SELECT_ALL ? '' : value, ...extra })}
@@ -120,12 +122,16 @@ export function ReportsPage() {
                   <AppDatePicker aria-label={t('reports.to')} value={get('to')} min={get('from') || undefined} onValueChange={(v) => set({ to: v })} fieldClassName="w-full sm:w-44" />
                 </>
               )}
-              {select(
-                'project',
-                t('tasks.fields.project'),
-                (projects.data?.items ?? []).map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
-                { assignee: '' },
-              )}
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                {select(
+                  'project',
+                  t('tasks.fields.project'),
+                  projects.items.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
+                  { assignee: '' },
+                  'min-w-0 flex-1 sm:w-44 sm:flex-none',
+                )}
+                <ProjectFilterSettingsButton screen="reports" size="sm" />
+              </div>
               {select('assignee', t('tasks.fields.assignee'), [
                 { value: 'me', label: t('kanban.filters.me') },
                 { value: 'none', label: t('tasks.unassigned') },

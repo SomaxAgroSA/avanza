@@ -4,7 +4,7 @@
  * e-mails e links de uso único (`auth_tokens`). O envio em si fica em infrastructure/adapters.js.
  */
 
-const { ident, toDbDate, toJson, insertRow, updateRow, findRow } = require('../sql')
+const { newId, ident, toDbDate, toJson, insertRow, updateRow, findRow } = require('../sql')
 const { storedFileName } = require('../storage')
 
 /** Texto para coluna NOT NULL DEFAULT '' (o PocketBase gravava '' para vazio). */
@@ -377,7 +377,30 @@ function createIconLibraryRepository(db) {
   }
 }
 
+/** Preferências por pessoa e chave (uma linha cada; gravar de novo substitui). */
+function createUserPreferenceRepository(db) {
+  const toEntity = (row) => ({ userId: row.user_id, key: row.key, value: row.value, updatedAt: row.updated })
+  return {
+    async find(userId, key) {
+      const row = await db.one('SELECT * FROM user_preferences WHERE user_id = $1 AND key = $2', [userId, key])
+      return row ? toEntity(row) : null
+    },
+    async save(userId, key, value) {
+      const row = await db.one(
+        'INSERT INTO user_preferences (id, user_id, key, value) VALUES ($1, $2, $3, $4::jsonb) ' +
+          'ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value RETURNING *',
+        [newId(), userId, key, toJson(value)],
+      )
+      return toEntity(row)
+    },
+    async remove(userId, key) {
+      await db.exec('DELETE FROM user_preferences WHERE user_id = $1 AND key = $2', [userId, key])
+    },
+  }
+}
+
 module.exports = {
+  createUserPreferenceRepository,
   createIconLibraryRepository,
   createPlatformSettingsRepository,
   createApiTokenRepository,

@@ -83,6 +83,8 @@ export interface ExecutiveProjectOption extends ExecutiveProjectRef {
   icon: ProjectIcon
   status: ProjectStatus | null
   archived: boolean
+  /** Participo (dono ou membro) — usado pelo configurador "Só projetos de que participo". */
+  member: boolean
 }
 
 export interface ExecutiveHealth {

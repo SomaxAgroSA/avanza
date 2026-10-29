@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import { AppError } from '@/core/errors/app-error'
 import type { Board, BoardCard } from '@/domain/kanban'
-import type { ProjectMember } from '@/domain/projects'
+import type { Project, ProjectMember } from '@/domain/projects'
+import { DEFAULT_PROJECT_FILTER, type ProjectFilterSettings } from '@/domain/project-filter'
 import type { BoardRepository, TaskRepository } from '@/domain/repositories'
 import type { CustomField, TaskType, TaskTypeDetail } from '@/domain/task-config'
 import type { TaskDetail } from '@/domain/tasks'
@@ -142,7 +143,19 @@ function setup({
   get = vi.fn<BoardRepository['get']>(() => Promise.resolve(data)),
   getAll = vi.fn<BoardRepository['getAll']>(() => Promise.resolve(allBoard)),
   move = vi.fn<BoardRepository['move']>(() => Promise.resolve(detail)),
-}: { data?: Board; create?: TaskRepository['create']; type?: TaskTypeDetail; path?: string; get?: BoardRepository['get']; getAll?: BoardRepository['getAll']; move?: BoardRepository['move'] } = {}) {
+  projectFilter = DEFAULT_PROJECT_FILTER,
+  projectList = [],
+}: {
+  data?: Board
+  create?: TaskRepository['create']
+  type?: TaskTypeDetail
+  path?: string
+  get?: BoardRepository['get']
+  getAll?: BoardRepository['getAll']
+  move?: BoardRepository['move']
+  projectFilter?: ProjectFilterSettings
+  projectList?: Project[]
+} = {}) {
   const repositories = fakeRepositories({
     auth: { me: async () => makeCurrentUser(['kanban.view', 'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign', 'projects.view'], 'ADMIN') },
     board: { get, getAll, move },
@@ -151,9 +164,10 @@ function setup({
     priorities: { list: () => Promise.resolve([alta]) },
     projects: {
       listMembers: () => Promise.resolve(members),
-      list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
+      list: () => Promise.resolve({ items: projectList, page: 1, perPage: 100, total: projectList.length, totalPages: 1 }),
     },
     tasks: { create, get: () => Promise.resolve(detail) },
+    preferences: { getProjectFilter: () => Promise.resolve(projectFilter) },
   })
   const utils = renderRoutes(
     [
@@ -362,5 +376,36 @@ describe('KanbanPage — todos os projetos', () => {
   it('sem projetos: aviso no lugar do quadro', async () => {
     setup({ path: '/kanban/all', getAll: () => Promise.resolve({ ...allBoard, projects: [], columns: allBoard.columns.map((c) => ({ ...c, cards: [], total: 0 })) }) })
     expect(await screen.findByText('Nenhum projeto para mostrar')).toBeInTheDocument()
+  })
+})
+
+describe('KanbanPage — configurador do filtro de projetos', () => {
+  const listed = (id: string, key: string, status: Project['status'], myRole: Project['myRole']) => ({ id, key, name: key, status, myRole, archivedAt: null }) as Project
+  // CRM: em andamento, participo · ERP: em andamento, não participo · RH: pausado, participo
+  const projectList = [listed('p1', 'CRM', 'active', 'member'), listed('p2', 'ERP', 'active', null), listed('p3', 'RH', 'paused', 'owner')]
+
+  it('"Todos os projetos" pede à API só os projetos permitidos', async () => {
+    const { getAll } = setup({ path: '/kanban/all', projectList, projectFilter: { statuses: ['active'], membersOnly: true } })
+    await screen.findByText('Conciliar notas')
+    expect(getAll).toHaveBeenCalledTimes(1)
+    expect(getAll).toHaveBeenCalledWith(['p1'])
+    // engrenagem ao lado do seletor e do filtro de projetos, marcada como ativa
+    expect(screen.getAllByRole('button', { name: 'Configurar filtro de projetos (ativo nesta tela)' })).toHaveLength(1)
+    // a lista do filtro de projetos também respeita a configuração (ERP está no quadro, mas não participo)
+    await userEvent.click(screen.getByTestId('kanban-project-filter'))
+    expect(await screen.findByRole('menuitemcheckbox', { name: 'CRM · CRM Corporativo' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitemcheckbox', { name: /ERP/ })).not.toBeInTheDocument()
+  })
+
+  it('sem configuração, o quadro de todos não restringe', async () => {
+    const { getAll } = setup({ path: '/kanban/all', projectList })
+    await screen.findByText('Conciliar notas')
+    expect(getAll).toHaveBeenCalledWith(undefined)
+  })
+
+  it('nenhum projeto atende: avisa sem pedir o quadro', async () => {
+    const { getAll } = setup({ path: '/kanban/all', projectList, projectFilter: { statuses: ['cancelled'], membersOnly: false } })
+    expect(await screen.findByText('Nenhum projeto atende ao filtro desta tela')).toBeInTheDocument()
+    expect(getAll).not.toHaveBeenCalled()
   })
 })

@@ -721,7 +721,7 @@ export interface ExecutiveDto {
   generated_at: string
   period: { from: string | null; to: string }
   filters?: { project_ids?: string[]; statuses?: string[] }
-  projects: Array<ExecutiveProjectRefDto & { color: string | null; icon: string | null; status?: string | null; archived: boolean }>
+  projects: Array<ExecutiveProjectRefDto & { color: string | null; icon: string | null; status?: string | null; archived: boolean; member?: boolean }>
   summary: {
     active_projects: number
     health: Partial<Record<string, number>>
@@ -783,4 +783,17 @@ export interface ExecutiveDto {
     milestones_done: Array<{ id: string; name: string; due_date: string | null }>
     recent: Array<{ kind: string; id: string; code: string | null; title: string; completed_at: string | null }>
   }>
+}
+
+// ---------------------------------------------------------------- Preferências (GET/PUT /auth/preferences/{key})
+
+export interface PreferenceDto<T> {
+  key: string
+  /** null = a pessoa nunca salvou (ou voltou ao padrão). */
+  value: T | null
+}
+
+export interface ProjectFilterDto {
+  statuses: string[]
+  members_only: boolean
 }

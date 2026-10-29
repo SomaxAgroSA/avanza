@@ -1051,7 +1051,22 @@
     "memberAdded": "{{name}} agregado como {{role}}.",
     "switcher": "Proyecto",
     "chooseProject": "Elija un proyecto",
-    "allProjects": "Todos los proyectos"
+    "allProjects": "Todos los proyectos",
+    "filterSettings": {
+      "button": "Configurar filtro de proyectos",
+      "buttonActive": "Configurar filtro de proyectos (activo en esta pantalla)",
+      "title": "Filtro de proyectos de esta pantalla",
+      "hint": "Define qué proyectos aparecen en el filtro. Se guarda solo para ti.",
+      "optionsOnly": "Aquí se aplica a la lista del filtro; “Todos” sigue mostrando todos los proyectos.",
+      "statuses": "Estado del proyecto",
+      "allStatuses": "Todos",
+      "membersOnly": "Solo proyectos en los que participo",
+      "membersOnlyHint": "Proyectos de los que eres dueño o miembro.",
+      "reset": "Restaurar predeterminado",
+      "saveError": "No se pudo guardar el filtro de proyectos. {{reason}}",
+      "emptyTitle": "Ningún proyecto cumple el filtro de esta pantalla",
+      "emptyHint": "Ajusta el filtro de proyectos con el engranaje junto al selector."
+    }
   },
   "calendar": {
     "open": "Abrir calendario",

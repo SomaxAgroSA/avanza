@@ -66,7 +66,7 @@ function BacklogShell({ projectId }: { projectId?: string }) {
     return (
       <>
         <PageHeader title={t('backlog.title')} description={t('backlog.description')} />
-        <AppEmptyState icon={<ListTodo />} title={t('backlog.pickTitle')} description={t('backlog.pickHint')} action={<ProjectSwitcher basePath="/planning" />} />
+        <AppEmptyState icon={<ListTodo />} title={t('backlog.pickTitle')} description={t('backlog.pickHint')} action={<ProjectSwitcher screen="planning" basePath="/planning" />} />
       </>
     )
   }
@@ -361,7 +361,7 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
         description={data ? data.project.name : t('backlog.description')}
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <ProjectSwitcher projectId={projectId} basePath="/planning" />
+            <ProjectSwitcher screen="planning" projectId={projectId} basePath="/planning" />
             {caps?.manageSprints && (
               <AppButton variant="secondary" leftIcon={<CalendarRange />} onClick={() => setSprintForm(null)}>
                 {t('sprints.create')}
