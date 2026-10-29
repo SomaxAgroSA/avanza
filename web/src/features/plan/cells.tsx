@@ -202,7 +202,8 @@ export function ResourcesCell({
   const [creating, setCreating] = useState(false)
   const selected = value.map((id) => resources.find((r) => r.id === id)).filter((r): r is PlanResource => !!r)
   const chips = (
-    <span className="flex min-w-0 items-center justify-center gap-1">
+    // não cabe lado a lado: a etiqueta seguinte desce para a linha de baixo (centralizada)
+    <span className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-1 py-1">
       {selected.slice(0, 2).map((r) => (
         <ResourceChip key={r.id} resource={r} />
       ))}
