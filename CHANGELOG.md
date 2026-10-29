@@ -5,6 +5,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Linha do tempo do projeto** (página do projeto → Histórico): os registros do Diário, os marcos e as tarefas pela data em que aconteceram, do mais antigo ao mais recente e agrupados por dia; a auditoria (o que foi gravado e quando) continua logo abaixo, em "Alterações registradas no sistema".
 - **Tempo real:** Kanban, Planejamento, Timeline, quadro da Gestão de projetos, página do projeto, página da tarefa e o sino de notificações se atualizam sozinhos quando alguém muda algo (sem recarregar).
 - **Webhooks** (Configurações → Integrações → Webhooks): avisos assinados (HMAC-SHA256) para outros sistemas a cada evento do catálogo (tarefas, projetos, comentários, quadro, documentação…), com novas tentativas, desligamento automático, teste e reenvio.
 - **Tokens de API** pessoais (Minha conta → Tokens de API): acesso à API com `Authorization: Bearer`, prazo opcional, valor mostrado uma vez, revogação pela pessoa ou pelo Admin (Integrações).
@@ -19,6 +20,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 - **Desempenho:** o servidor sobe com 60 VMs do JavaScript (`KAMBAN_HOOKS_POOL`; o padrão do PocketBase é 15), o quadro do Kanban usa uma consulta mais leve, as consultas periódicas viram rede de segurança (5 min) quando o tempo real está ligado e as atualizações ao vivo fazem no máximo uma busca a cada 2,5 s por tela. No teste de carga a vazão útil triplicou (~200 pessoas simultâneas). **Atenção:** o servidor usa mais memória — reserve 2 GB (ou diminua `KAMBAN_HOOKS_POOL`).
 
 ### Corrigido
+- **Histórico:** a situação dos marcos aparecia sem tradução ("done", "pending"); agora mostra "alcançado"/"pendente" no idioma da pessoa.
 - **Muitas pessoas conectadas deixavam o servidor lento:** cada aba aberta com o tempo real prendia VMs do JavaScript por causa de middlewares globais; com algumas dezenas de abas o pool acabava e as respostas passavam de segundos (500 leitores da documentação: 47 s). Os middlewares agora ficam só nas rotas da API e na rota do frontend, e um sinal de vida a cada 3 min evita que o PocketBase derrube as conexões paradas a cada 5 min. Com 500 leitores e 10 pessoas trabalhando: p95 de 44 ms.
 - **Versão e copyright** no rodapé do menu lateral (a versão vem do `package.json` no build; com o menu recolhido, só a versão).
 - **Kanban:** ao passar o mouse, a borda do cartão acende na cor da marca com um halo suave (animação de 200 ms); o cartão sendo arrastado fica destacado.

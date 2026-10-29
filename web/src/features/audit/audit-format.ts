@@ -160,7 +160,8 @@ function formatValue(t: TFunction, field: string, value: unknown, resolve?: (fie
   if (field === 'role') return t(`projects.roles.${text}`, { defaultValue: text })
   if (field === 'icon') return t(`projects.icons.${text}`, { defaultValue: text })
   if (field === 'cover') return t(`projects.covers.${text}`, { defaultValue: text })
-  if (field === 'state') return t(`sprints.states.${text}`, { defaultValue: text })
+  // sprints (planned/active/closed) e marcos (pending/done) usam o mesmo campo
+  if (field === 'state') return t(`sprints.states.${text}`, { defaultValue: t(`timeline.milestones.states.${text}`, { defaultValue: text }) })
   if (field === 'color') return t(`colors.${text}`, { defaultValue: text })
   if (field === 'link_type') return t(`plan.linkTypes.${text}`, { defaultValue: text })
   if (field === 'dependency_rule') return t(`plan.dependencyRule.${text}`, { defaultValue: text })

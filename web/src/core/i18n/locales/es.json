@@ -1027,7 +1027,22 @@
     "add": "Agregar",
     "memberAdded": "{{name}} agregado como {{role}}.",
     "switcher": "Proyecto",
-    "chooseProject": "Elija un proyecto"
+    "chooseProject": "Elija un proyecto",
+    "chronology": {
+      "title": "Línea de tiempo del proyecto",
+      "description": "Lo que pasó en el proyecto, ordenado por la fecha en que ocurrió: diario, hitos y tareas.",
+      "auditTitle": "Cambios registrados en el sistema",
+      "auditDescription": "Auditoría: quién cambió qué y cuándo se grabó, del más reciente al más antiguo.",
+      "empty": "Todavía no hay hechos con fecha",
+      "emptyHint": "Registre en el diario, cree hitos o ponga fechas a las tareas para verlos aquí.",
+      "undated": "Tareas sin fecha ({{count}})",
+      "span": "{{start}} al {{end}}",
+      "kinds": {
+        "journal": "Diario",
+        "milestone": "Hito",
+        "task": "Tarea"
+      }
+    }
   },
   "calendar": {
     "open": "Abrir calendario",
