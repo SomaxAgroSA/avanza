@@ -1,43 +1,57 @@
 import { useTranslation } from 'react-i18next'
-import { formatDay, formatNumber } from '@/core/utils/format'
-import { executiveDuration, mainHealthFactor, type ExecutiveHealth } from '@/domain/executive'
+import { formatNumber } from '@/core/utils/format'
+import { mainHealthFactor, type ExecutiveHealth } from '@/domain/executive'
 import type { HealthFactor, HealthLevel } from '@/domain/plan-management'
 
-/** Dia "AAAA-MM-DD" no formato do idioma (sem deslocar o dia pelo fuso). */
+const dayDate = (day: string) => new Date(`${day}T00:00:00Z`)
+
+/** Dia "AAAA-MM-DD" curto ("4 de nov."; com o ano quando não é o atual), sem deslocar pelo fuso. */
 export function useDayText() {
   const { i18n } = useTranslation()
-  return (day: string | null | undefined) => (day ? formatDay(new Date(`${day}T00:00:00Z`), i18n.language) : '—')
-}
-
-/** Horas ("1.200 h"), ou "—" sem dados. */
-export function useHoursText() {
-  const { t, i18n } = useTranslation()
-  return (hours: number | null) => (hours === null ? '—' : t('plan.report.hours', { value: formatNumber(Math.round(hours * 10) / 10, i18n.language) }))
-}
-
-/** Tempo médio: horas abaixo de 24 h; depois, dias. */
-export function useAverageTimeText() {
-  const { t, i18n } = useTranslation()
-  return (hours: number | null) => {
-    const parts = executiveDuration(hours)
-    return parts ? t(`reports.units.${parts.unit}`, { value: formatNumber(parts.value, i18n.language) }) : '—'
+  return (day: string | null | undefined) => {
+    if (!day) return '—'
+    const date = dayDate(day)
+    const sameYear = date.getUTCFullYear() === new Date().getFullYear()
+    return new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), timeZone: 'UTC' }).format(date)
   }
 }
 
-/** Nível da saúde: os do relatório do quadro; sem quadro de gestão tem rótulo próprio. */
+/** Horas ("1.200 h"). */
+export function useHoursText() {
+  const { t, i18n } = useTranslation()
+  return (hours: number) => t('plan.report.hours', { value: formatNumber(Math.round(hours * 10) / 10, i18n.language) })
+}
+
+/** "13 tarefas · 7 elementos" — sem as partes zeradas (null quando tudo é zero). */
+export function usePartsText() {
+  const { t } = useTranslation()
+  return (parts: { tasks?: number; items?: number; milestones?: number }): string | null => {
+    const text = (['tasks', 'items', 'milestones'] as const)
+      .filter((key) => (parts[key] ?? 0) > 0)
+      .map((key) => t(`executive.parts.${key}`, { count: parts[key] }))
+      .join(' · ')
+    return text || null
+  }
+}
+
+/** Nível da saúde ("Em dia", "Atenção", "Crítico", "Sem quadro"). */
 export function useHealthLabel() {
   const { t } = useTranslation()
-  return (level: HealthLevel) => (level === 'none' ? t('executive.health.none') : t(`plan.report.health.levels.${level}`))
+  return (level: HealthLevel) => t(`executive.hero.levels.${level}`)
 }
 
 /** "Prazos: 35% atrasado" — o pior fator, em poucas palavras. */
 export function useHealthReason() {
-  const { t } = useTranslation()
+  const factorText = useFactorText()
   return (health: ExecutiveHealth): string | null => {
     const factor = mainHealthFactor(health)
-    if (!factor) return null
-    return `${t(`plan.report.health.factors.${factor.key}`)}: ${shortReason(t, factor)}`
+    return factor ? factorText(factor) : null
   }
+}
+
+export function useFactorText() {
+  const { t } = useTranslation()
+  return (factor: HealthFactor) => `${t(`plan.report.health.factors.${factor.key}`)}: ${shortReason(t, factor)}`
 }
 
 function shortReason(t: ReturnType<typeof useTranslation>['t'], factor: HealthFactor): string {

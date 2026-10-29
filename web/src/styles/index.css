@@ -176,6 +176,9 @@
   --animate-slide-in-right: kb-slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slide-in-left: kb-slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-scale-in: kb-scale-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* gráficos: barras crescem da esquerda; blocos de painel sobem de leve ao aparecer */
+  --animate-grow-x: kb-grow-x 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-rise: kb-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes kb-fade-in {
@@ -193,6 +196,14 @@
 @keyframes kb-progress {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
+}
+@keyframes kb-grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes kb-rise {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 @keyframes kb-scale-in {
   from { transform: scale(0.97); opacity: 0; }

@@ -229,3 +229,71 @@ export function executiveDuration(hours: number | null): { value: number; unit: 
 export function totalDeliveries(deliveries: ExecutiveDashboard['summary']['deliveries']): number {
   return deliveries.tasks + deliveries.planItems + deliveries.milestones
 }
+
+/* ------------------------------------------------------------------ leitura rápida (diretoria) */
+
+/** Exceção do portfólio na lista "Precisa de atenção". */
+export type AttentionItem =
+  | { kind: 'project'; id: string; project: ExecutiveProjectRef; level: 'critical' | 'attention'; factor: HealthFactor | null }
+  | { kind: 'issue'; id: string; project: ExecutiveProjectRef; number: number; description: string; openedOn: string | null }
+  | { kind: 'task'; id: string; project: ExecutiveProjectRef; code: string | null; title: string; dueDate: string }
+  | { kind: 'milestone'; id: string; project: ExecutiveProjectRef; name: string; dueDate: string }
+
+const byDay = <T,>(day: (item: T) => string | null) => (a: T, b: T) => (day(a) ?? '9999').localeCompare(day(b) ?? '9999')
+
+/**
+ * "Precisa de atenção", em ordem de prioridade: os projetos críticos (na ordem do servidor) e depois,
+ * um de cada tipo por vez — projeto em atenção, problema mais antigo, tarefa mais atrasada, marco mais
+ * próximo —, para que nenhum tipo suma da parte visível da lista. Vazio = tudo em dia.
+ */
+export function attentionItems(data: Pick<ExecutiveDashboard, 'portfolio' | 'plan' | 'kanban'>): AttentionItem[] {
+  const project = (row: PortfolioRow): AttentionItem => ({
+    kind: 'project',
+    id: row.project.id,
+    project: { id: row.project.id, key: row.project.key, name: row.project.name },
+    level: row.health.level === 'critical' ? 'critical' : 'attention',
+    factor: mainHealthFactor(row.health),
+  })
+  const critical = data.portfolio.filter((row) => row.health.level === 'critical').map(project)
+  const queues: AttentionItem[][] = [
+    data.portfolio.filter((row) => row.health.level === 'attention').map(project),
+    [...(data.plan?.issues ?? [])]
+      .sort(byDay((issue) => issue.openedOn))
+      .map((issue) => ({ kind: 'issue', id: issue.id, project: issue.project, number: issue.number, description: issue.description, openedOn: issue.openedOn })),
+    [...data.kanban.overdueTasks]
+      .sort(byDay((task) => task.dueDate))
+      .map((task) => ({ kind: 'task', id: task.id, project: task.project, code: task.code, title: task.title, dueDate: task.dueDate })),
+    [...(data.plan?.upcomingMilestones ?? [])]
+      .sort(byDay((milestone) => milestone.dueDate))
+      .map((milestone) => ({ kind: 'milestone', id: milestone.id, project: milestone.project, name: milestone.name, dueDate: milestone.dueDate })),
+  ]
+  const rest: AttentionItem[] = []
+  for (let round = 0; queues.some((queue) => round < queue.length); round++) {
+    queues.forEach((queue) => {
+      const item = queue[round]
+      if (item) rest.push(item)
+    })
+  }
+  return [...critical, ...rest]
+}
+
+/** Etapas do fluxo do Kanban no painel (as canceladas ficam de fora). */
+export const FLOW_CATEGORIES = ['backlog', 'todo', 'in_progress', 'done'] as const satisfies readonly StatusCategory[]
+
+export function kanbanFlow(funnel: ExecutiveKanbanSection['funnel']): Array<{ category: (typeof FLOW_CATEGORIES)[number]; count: number }> {
+  return FLOW_CATEGORIES.map((category) => ({ category, count: funnel[category] }))
+}
+
+/** Tempo médio de entrega para exibir; null sem amostra (o painel esconde em vez de mostrar "0 h"). */
+export function averageDelivery(duration: Duration): ReturnType<typeof executiveDuration> {
+  return duration.count > 0 ? executiveDuration(duration.hours) : null
+}
+
+/** Entregas (tarefas + elementos concluídos) de cada ponto da série. */
+export function deliverySeries(points: ExecutiveTimelinePoint[]): number[] {
+  return points.map((p) => p.tasksCompleted + p.planItemsCompleted)
+}
+
+export function hasDeliveries(points: ExecutiveTimelinePoint[]): boolean {
+  return deliverySeries(points).some((value) => value > 0)
+}

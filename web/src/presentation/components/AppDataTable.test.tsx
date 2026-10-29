@@ -143,3 +143,30 @@ describe('AppDataTable', () => {
     expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true')
   })
 })
+
+describe('AppDataTable — embutida', () => {
+  function Plain() {
+    const api = useDataTableState('plain-table', { sort: null })
+    return (
+      <AppDataTable
+        caption="Embutida"
+        columns={[{ id: 'name', header: 'Nome', hideable: false, cell: (r: Row) => r.name }]}
+        data={rows}
+        total={rows.length}
+        getRowId={(r) => r.id}
+        table={api}
+        searchable={false}
+        paginated={false}
+        bordered={false}
+      />
+    )
+  }
+
+  it('sem busca, filtros nem colunas para escolher: sem barra de ferramentas; sem moldura própria', () => {
+    const { container } = renderWithProviders(<Plain />)
+    expect(screen.getByRole('table', { name: 'Embutida' })).toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(container.querySelector('.shadow-card')).toBeNull()
+    expect(container.firstElementChild?.childElementCount).toBe(1)
+  })
+})

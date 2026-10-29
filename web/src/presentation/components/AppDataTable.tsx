@@ -89,6 +89,11 @@ export interface AppDataTableProps<T extends RowData> {
   /** Desativa busca/paginação (listas pequenas carregadas de uma vez). */
   searchable?: boolean
   paginated?: boolean
+  /**
+   * Moldura própria (borda, cantos e sombra). Desligue quando a tabela fica dentro de um cartão
+   * que já tem a moldura (ex.: blocos de um painel), para não aninhar caixas.
+   */
+  bordered?: boolean
 }
 
 /* ------------------------------------------------------------------ implementação */
@@ -147,6 +152,7 @@ export function AppDataTable<T extends RowData>({
   emptyState,
   searchable = true,
   paginated = true,
+  bordered = true,
 }: AppDataTableProps<T>) {
   const { t } = useTranslation()
   const { state } = tableState
@@ -233,53 +239,58 @@ export function AppDataTable<T extends RowData>({
     })),
   ]
 
+  // sem busca, filtros, colunas para escolher nem extras: nada de barra vazia acima da tabela
+  const hasToolbar = searchable || filterColumns.length > 0 || hideableColumns.length > 0 || !!toolbar || !!toolbarActions
+
   return (
     <div className="flex flex-col gap-3">
-      <AppFilterBar
-        search={
-          searchable ? (
-            <AppSearch value={state.search} onSearch={tableState.setSearch} placeholder={searchPlaceholder} />
-          ) : undefined
-        }
-        filters={
-          <>
-            {filterColumns.map((column) => (
-              <AppSelect
-                key={column.id}
-                size="sm"
-                aria-label={column.filter!.label}
-                value={state.filters[column.id] ?? SELECT_ALL}
-                onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
-                options={[
-                  { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
-                  ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
-                ]}
-                triggerClassName="min-w-40"
-              />
-            ))}
-            {toolbar}
-          </>
-        }
-        hasActiveFilters={tableState.hasActiveFilters}
-        onReset={tableState.resetFilters}
-        actions={
-          <>
-            {hideableColumns.length > 0 && (
-              <AppDropdown
-                items={columnMenu}
-                trigger={
-                  <AppButton variant="secondary" size="sm" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
-                    <span className="hidden sm:inline">{t('table.columns')}</span>
-                  </AppButton>
-                }
-              />
-            )}
-            {toolbarActions}
-          </>
-        }
-      />
+      {hasToolbar && (
+        <AppFilterBar
+          search={
+            searchable ? (
+              <AppSearch value={state.search} onSearch={tableState.setSearch} placeholder={searchPlaceholder} />
+            ) : undefined
+          }
+          filters={
+            <>
+              {filterColumns.map((column) => (
+                <AppSelect
+                  key={column.id}
+                  size="sm"
+                  aria-label={column.filter!.label}
+                  value={state.filters[column.id] ?? SELECT_ALL}
+                  onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
+                  options={[
+                    { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
+                    ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
+                  ]}
+                  triggerClassName="min-w-40"
+                />
+              ))}
+              {toolbar}
+            </>
+          }
+          hasActiveFilters={tableState.hasActiveFilters}
+          onReset={tableState.resetFilters}
+          actions={
+            <>
+              {hideableColumns.length > 0 && (
+                <AppDropdown
+                  items={columnMenu}
+                  trigger={
+                    <AppButton variant="secondary" size="sm" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
+                      <span className="hidden sm:inline">{t('table.columns')}</span>
+                    </AppButton>
+                  }
+                />
+              )}
+              {toolbarActions}
+            </>
+          }
+        />
+      )}
 
-      <div className="relative overflow-hidden rounded-xl border border-border bg-surface shadow-card">
+      <div className={cn('relative overflow-hidden', bordered && 'rounded-xl border border-border bg-surface shadow-card')}>
         {slowFetch && (
           <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden" role="progressbar" aria-label={t('common.loading')}>
             <div className="h-full w-1/3 animate-[kb-progress_1s_ease-in-out_infinite] bg-primary" />
