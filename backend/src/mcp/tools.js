@@ -12,14 +12,15 @@
 const work = require('./catalog/work')
 const timeline = require('./catalog/timeline')
 const plan = require('./catalog/plan')
+const docs = require('./catalog/docs')
 const config = require('./catalog/config')
 const admin = require('./catalog/admin')
 
-const TOOLS = [].concat(work.TOOLS, timeline.TOOLS, plan.TOOLS, config.TOOLS, admin.TOOLS)
+const TOOLS = [].concat(work.TOOLS, timeline.TOOLS, plan.TOOLS, docs.TOOLS, config.TOOLS, admin.TOOLS)
 
 /** Orientação geral entregue ao modelo no `initialize`. */
 const INSTRUCTIONS = [
-  'Avanza is a project management platform: projects, tasks, backlog, sprints, Kanban, timeline and milestones, a separate project management board per project (get_plan: groups, elements, custom columns, dependencies, journal, issues), reports, and administration (workflow statuses, priorities, task types, custom fields, tags, users, roles, audit log, platform, e-mail and webhooks) for users with the permission.',
+  'Avanza is a project management platform: projects, tasks, backlog, sprints, Kanban, timeline and milestones, a separate project management board per project (get_plan: groups, elements, custom columns, dependencies, journal, issues), documentation spaces and pages (content as Markdown), reports, and administration (workflow statuses, priorities, task types, custom fields, tags, users, roles, audit log, platform, e-mail and webhooks) for users with the permission.',
   'You act as the user who owns the API token, with their permissions; every change is recorded in the audit history under their name.',
   'Tools take ids, not names: find them with list_projects, list_tasks (search accepts a task code such as CRM-12), get_task_settings (statuses, priorities, task types, tags) and list_project_members (people).',
   'Statuses are shared by all projects and grouped in categories (backlog, todo, in_progress, done, cancelled). Change a task status with move_task; only transitions in allowed_next are accepted (empty = any).',

@@ -211,6 +211,18 @@ describe('API MCP', { timeout: 180000 }, () => {
     assert.equal(tag.isError, false, JSON.stringify(tag.data))
     const users = await tool('list_users', { search: 'gil' }, asAdmin)
     assert.deepEqual(users.data.items.map((u) => u.email), ['gil@example.com'])
+    // documentação: o Claude escreve e lê em Markdown
+    const space = await tool('create_doc_space', { key: 'MCPDOC', name: 'Manual do Claude', visibility: 'company' }, asAdmin)
+    assert.equal(space.isError, false, JSON.stringify(space.data))
+    const created = await tool('create_doc_page', { space_id: space.data.id, title: 'Primeiros passos' }, asAdmin)
+    assert.equal(created.isError, false, JSON.stringify(created.data))
+    const markdown = '## Como começar\n\n- **Crie** o projeto\n\n- [ ] Convide a equipe\n\n| Passo | Quem |\n| --- | --- |\n| 1 | Gestor |'
+    const published = await tool('publish_doc_page', { page_id: created.data.id, title: 'Primeiros passos', content_markdown: markdown }, asAdmin)
+    assert.equal(published.isError, false, JSON.stringify(published.data))
+    const read = await tool('get_doc_page', { page_id: created.data.id }, asAdmin)
+    assert.equal(read.data.content_markdown.trim(), markdown)
+    const found = await tool('search_docs', { query: 'convide' }, asAdmin)
+    assert.ok(JSON.stringify(found.data).includes('Primeiros passos'), JSON.stringify(found.data))
     const smtp = await tool('update_email_settings', { password: 'x' }, asAdmin)
     assert.equal(smtp.data.error.details.fields.password, 'unknown_field')
   })
