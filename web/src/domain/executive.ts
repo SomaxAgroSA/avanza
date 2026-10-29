@@ -297,3 +297,8 @@ export function deliverySeries(points: ExecutiveTimelinePoint[]): number[] {
 export function hasDeliveries(points: ExecutiveTimelinePoint[]): boolean {
   return deliverySeries(points).some((value) => value > 0)
 }
+
+/** Portfólio filtrado pelo nível de saúde escolhido no painel (null = todos), na ordem do servidor. */
+export function portfolioByHealth(rows: PortfolioRow[], level: HealthLevel | null): PortfolioRow[] {
+  return level ? rows.filter((row) => row.health.level === level) : rows
+}

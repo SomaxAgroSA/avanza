@@ -1103,7 +1103,9 @@
     "placeholder": "Select…",
     "remove": "Remove {{item}}",
     "create": "Add “{{item}}”",
-    "searchOrCreate": "Search or add…"
+    "searchOrCreate": "Search or add…",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected"
   },
   "fields": {
     "title": "Custom fields",
@@ -1983,7 +1985,9 @@
       "period": "Period",
       "pickDates": "Pick dates",
       "range": "{{from}} – {{to}}",
-      "invalidPeriod": "Choose both dates of the period (the end cannot be before the start)."
+      "invalidPeriod": "Choose both dates of the period (the end cannot be before the start).",
+      "selectedProjects_one": "{{count}} project selected",
+      "selectedProjects_other": "{{count}} projects selected"
     },
     "periods": {
       "all": "Since the start",
@@ -2025,7 +2029,11 @@
       "nothingDelivered": "Nothing delivered yet",
       "trend": "Deliveries over the period",
       "overdue": "Overdue",
-      "noOverdue": "Nothing overdue"
+      "noOverdue": "Nothing overdue",
+      "goPortfolio": "See portfolio",
+      "goAttention": "See overdue",
+      "goDeliveries": "See deliveries",
+      "filterHint": "Click a level to filter the portfolio"
     },
     "attention": {
       "title": "Needs attention",
@@ -2037,7 +2045,8 @@
       "task": "Overdue task",
       "milestone": "Upcoming milestone",
       "since": "since {{date}}",
-      "due": "due {{date}}"
+      "due": "due {{date}}",
+      "seeCritical": "See critical in the portfolio"
     },
     "portfolio": {
       "title": "Portfolio",
@@ -2058,7 +2067,11 @@
         "effort": "{{value}}% over estimate",
         "issues_one": "{{count}} open",
         "issues_other": "{{count}} open"
-      }
+      },
+      "filtering": "Filtering: {{level}}",
+      "clearFilter": "Clear the health filter",
+      "emptyFiltered": "No project with this health",
+      "emptyFilteredHint": "Clear the filter to see every project."
     },
     "plan": {
       "title": "Project management",
@@ -2101,7 +2114,8 @@
       "milestone": "Milestone",
       "empty": "Nothing completed in the period",
       "emptyHint": "Widen the period or choose other projects."
-    }
+    },
+    "updating": "Updating the dashboard…"
   },
   "timeline": {
     "title": "Timeline",

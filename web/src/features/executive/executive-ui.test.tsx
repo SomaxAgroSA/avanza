@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
@@ -12,6 +12,17 @@ import { ExecutivePage } from './ExecutivePage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
+})
+
+// sem a contagem animada nos testes (os números aparecem já no valor final; a animação tem teste próprio)
+beforeEach(() => {
+  vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({ matches: query.includes('reduce'), media: query, addEventListener: () => {}, removeEventListener: () => {} }) as unknown as MediaQueryList,
+  )
+})
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 const crm = { id: 'p1', key: 'CRM', name: 'CRM' }
@@ -50,6 +61,15 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
         tasks: { total: 80, open: 30, overdue: 4, done: 48 },
         nextMilestone: { id: 'm1', name: 'Go-live', dueDate: '2026-12-01' },
         openIssues: 2,
+      },
+      {
+        project: { id: 'p3', key: 'FIN', name: 'Financeiro', cover: 'green', icon: 'folder', status: 'active', priority: 'medium', startDate: null, dueDate: '2027-02-01', owner: null },
+        health: { level: 'ok', factors: [] },
+        progress: { value: 40, source: 'tasks' },
+        plan: null,
+        tasks: { total: 10, open: 6, overdue: 0, done: 4 },
+        nextMilestone: null,
+        openIssues: 0,
       },
     ],
     plan: {
@@ -215,16 +235,61 @@ describe('Painel executivo', () => {
     expect(archived).not.toHaveTextContent('0 elementos')
   })
 
+  it('clicar num nível da saúde filtra o portfólio (de novo, ou no ×, tira o filtro)', async () => {
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    setup()
+    const hero = await screen.findByRole('region', { name: 'Resumo' })
+    const portfolio = screen.getByRole('region', { name: /Portfólio/ })
+    expect(within(portfolio).getAllByRole('row')).toHaveLength(3)
+
+    await userEvent.click(within(hero).getByRole('button', { name: /Crítico/ }))
+    expect(within(hero).getByRole('button', { name: /Crítico/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(portfolio).getByText('Filtrando: Crítico')).toBeInTheDocument()
+    expect(within(portfolio).getAllByRole('row')).toHaveLength(2)
+    expect(within(portfolio).queryByText('Financeiro')).not.toBeInTheDocument()
+    expect(scroll.mock.contexts.at(-1)).toHaveAttribute('id', 'executive-portfolio')
+
+    await userEvent.click(within(portfolio).getByRole('button', { name: 'Limpar o filtro de saúde' }))
+    expect(within(portfolio).getAllByRole('row')).toHaveLength(3)
+
+    // "Ver críticos no portfólio" faz o mesmo a partir das exceções
+    await userEvent.click(screen.getByRole('button', { name: 'Ver críticos no portfólio' }))
+    expect(within(portfolio).getByText('Filtrando: Crítico')).toBeInTheDocument()
+    await userEvent.click(within(hero).getByRole('button', { name: /Crítico/ }))
+    expect(within(portfolio).queryByText(/Filtrando/)).not.toBeInTheDocument()
+  })
+
+  it('os números do topo levam ao detalhe; a linha do portfólio abre o projeto', async () => {
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    const { router } = setup()
+    const hero = await screen.findByRole('region', { name: 'Resumo' })
+    await userEvent.click(within(hero).getByRole('button', { name: /Atrasos/ }))
+    expect(scroll.mock.contexts.at(-1)).toHaveAttribute('id', 'executive-attention')
+    await userEvent.click(within(hero).getByRole('button', { name: /Entregas no período/ }))
+    expect(scroll.mock.contexts.at(-1)).toHaveAttribute('id', 'executive-timeline')
+
+    const portfolio = screen.getByRole('region', { name: /Portfólio/ })
+    await userEvent.click(within(portfolio).getByText('Ana'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/projects/p1'))
+  })
+
   it('filtrar por projetos e período manda project_ids e as datas; "Todos os projetos" limpa o filtro', async () => {
     const { get, router } = setup()
     await screen.findByText('Atualizado às 10:42')
 
-    await userEvent.click(screen.getByRole('combobox', { name: 'Projetos' }))
-    const option = await screen.findByRole('option', { name: 'ERP · ERP Antigo (arquivado)' })
-    await userEvent.click(within(option).getByRole('button'))
+    // campo como um select comum: o nome diz o que está escolhido; "Todos os projetos" é o 1º item da lista
+    await userEvent.click(screen.getByRole('combobox', { name: 'Projetos Todos os projetos' }))
+    const list = await screen.findByRole('listbox')
+    expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos os projetos', 'CRM · CRM', 'ERP · ERP Antigo (arquivado)'])
+    await userEvent.click(within(within(list).getByRole('option', { name: 'ERP · ERP Antigo (arquivado)' })).getByRole('button'))
     await waitFor(() => expect(get).toHaveBeenLastCalledWith(expect.objectContaining({ projectIds: ['p2'] })))
     expect(router.state.location.search).toContain('projects=p2')
+    expect(screen.getByRole('combobox', { name: 'Projetos ERP · ERP Antigo (arquivado)' })).toBeInTheDocument()
+    await userEvent.click(within(within(list).getByRole('option', { name: 'CRM · CRM' })).getByRole('button'))
+    expect(screen.getByRole('combobox', { name: 'Projetos 2 projetos selecionados' })).toBeInTheDocument()
+    await userEvent.click(within(within(list).getByRole('option', { name: 'CRM · CRM' })).getByRole('button'))
     await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('button', { name: 'Todos os projetos' })).not.toBeInTheDocument()
 
     const period = screen.getByRole('radiogroup', { name: 'Período' })
     expect(within(period).getByRole('radio', { name: 'Desde o início' })).toHaveAttribute('aria-checked', 'true')
@@ -233,7 +298,8 @@ describe('Painel executivo', () => {
     await waitFor(() => expect(get).toHaveBeenLastCalledWith({ projectIds: ['p2'], from: `${now.getFullYear()}-01-01`, to: localDay(now), tzOffset: now.getTimezoneOffset() }))
     expect(router.state.location.search).toContain('period=year')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Todos os projetos' }))
+    await userEvent.click(screen.getByRole('combobox', { name: /^Projetos/ }))
+    await userEvent.click(within(await screen.findByRole('option', { name: 'Todos os projetos' })).getByRole('button'))
     await waitFor(() => expect(get).toHaveBeenLastCalledWith(expect.objectContaining({ projectIds: [] })))
     expect(router.state.location.search).not.toContain('projects=')
   })

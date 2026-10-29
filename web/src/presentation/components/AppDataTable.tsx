@@ -22,7 +22,7 @@ import { AppDropdown, type AppDropdownItem } from './AppDropdown'
 import { AppIconButton } from './AppIconButton'
 import { AppButton } from './AppButton'
 import { AppPagination } from './AppPagination'
-import { AppEmptyState, AppErrorState, AppSkeleton } from './AppStates'
+import { AppEmptyState, AppErrorState, AppLoadingBar, AppSkeleton } from './AppStates'
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
 import { AppSelect, SELECT_ALL } from './AppSelect'
@@ -94,6 +94,11 @@ export interface AppDataTableProps<T extends RowData> {
    * que já tem a moldura (ex.: blocos de um painel), para não aninhar caixas.
    */
   bordered?: boolean
+  /**
+   * Clique em qualquer ponto da linha (sem coluna de ações), ex.: abrir o registro. Links e botões da
+   * linha continuam com o próprio clique; no teclado, use o link da linha.
+   */
+  onRowClick?: (row: T) => void
 }
 
 /* ------------------------------------------------------------------ implementação */
@@ -153,6 +158,7 @@ export function AppDataTable<T extends RowData>({
   searchable = true,
   paginated = true,
   bordered = true,
+  onRowClick,
 }: AppDataTableProps<T>) {
   const { t } = useTranslation()
   const { state } = tableState
@@ -291,11 +297,7 @@ export function AppDataTable<T extends RowData>({
       )}
 
       <div className={cn('relative overflow-hidden', bordered && 'rounded-xl border border-border bg-surface shadow-card')}>
-        {slowFetch && (
-          <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden" role="progressbar" aria-label={t('common.loading')}>
-            <div className="h-full w-1/3 animate-[kb-progress_1s_ease-in-out_infinite] bg-primary" />
-          </div>
-        )}
+        {slowFetch && <AppLoadingBar />}
         <div className="overflow-x-auto">
           <table
             className="w-full border-separate border-spacing-0 text-sm"
@@ -420,6 +422,7 @@ export function AppDataTable<T extends RowData>({
                   <tr
                     key={row.id}
                     onClick={(event) => {
+                      if (onRowClick && !actions?.onView && !isControl(event.target)) return onRowClick(row.original)
                       if (!actions?.onView || isControl(event.target) || actions.canView?.(row.original) === false) return
                       const view = actions.onView
                       if (!actions.onOpen) return view(row.original)
@@ -432,7 +435,7 @@ export function AppDataTable<T extends RowData>({
                       actions.onOpen(row.original)
                     }}
                     title={actions?.onOpen ? t('table.openHint') : undefined}
-                    className={cn('group/row transition-colors hover:bg-surface-2', actions?.onView && 'cursor-pointer', slowFetch && 'opacity-70')}
+                    className={cn('group/row transition-colors hover:bg-surface-2', (actions?.onView || onRowClick) && 'cursor-pointer', slowFetch && 'opacity-70')}
                   >
                     {row.getVisibleCells().map((cell) => {
                       const def = columns.find((c) => c.id === cell.column.id)

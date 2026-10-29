@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { AppTooltip } from './AppTooltip'
@@ -174,7 +174,11 @@ export function AppTrendChart({ points, seriesA, seriesB, seriesC: thirdSeries, 
           <div key={p.key} className="group relative flex h-full min-w-2 flex-1 items-end justify-center gap-px rounded-sm transition-colors hover:bg-surface-2">
             {stacked ? (
               // B por cima de A, com um respiro de 2px entre as partes; só a ponta de cima é arredondada
-              <span data-stack className="flex w-3/5 max-w-6 flex-col-reverse gap-0.5" style={{ height: `${((p.a + p.b) / max) * 100}%` }}>
+              <span
+                data-stack
+                className="flex w-3/5 max-w-6 origin-bottom animate-grow-y flex-col-reverse gap-0.5 transition-[height] duration-500 ease-out"
+                style={{ height: `${((p.a + p.b) / max) * 100}%`, animationDelay: `${Math.min(i, 24) * 35}ms` }}
+              >
                 {p.a > 0 && <span className={cn('min-h-0.5 bg-primary transition-opacity group-hover:opacity-90', !p.b && 'rounded-t')} style={{ flexGrow: p.a, flexBasis: 0 }} />}
                 {p.b > 0 && <span className="min-h-0.5 rounded-t bg-accent transition-opacity group-hover:opacity-90" style={{ flexGrow: p.b, flexBasis: 0 }} />}
               </span>
@@ -188,18 +192,15 @@ export function AppTrendChart({ points, seriesA, seriesB, seriesC: thirdSeries, 
               <span className={cn(barWidth, 'max-w-3 rounded-t-sm bg-muted transition-opacity group-hover:opacity-90')} style={{ height: `${((p.c ?? 0) / max) * 100}%`, minHeight: p.c ? 2 : 0 }} />
             )}
             {/* valores do ponto ao passar o mouse (a tabela sr-only abaixo cobre leitores de tela) */}
-            <span
-              className={cn(
-                'pointer-events-none absolute top-0 z-10 hidden whitespace-nowrap rounded-md bg-fg px-2 py-1 text-[11px] font-medium text-bg shadow-float group-hover:block',
-                i < points.length / 3 ? 'left-0' : i > (points.length * 2) / 3 ? 'right-0' : 'left-1/2 -translate-x-1/2',
-              )}
-            >
-              <span className="block">{p.label}</span>
-              <span className="block">
-                {seriesA}: {p.a} · {seriesB}: {p.b}
-                {seriesC && ` · ${seriesC}: ${p.c ?? 0}`}
-              </span>
-            </span>
+            <AppChartTooltip
+              className={cn('top-0 hidden group-hover:flex', i < points.length / 3 ? 'left-0' : i > (points.length * 2) / 3 ? 'right-0' : 'left-1/2 -translate-x-1/2')}
+              title={p.label}
+              rows={[
+                { key: 'a', label: seriesA, value: p.a, tone: 'primary' as const },
+                { key: 'b', label: seriesB, value: p.b, tone: 'accent' as const },
+                ...(seriesC ? [{ key: 'c', label: seriesC, value: p.c ?? 0, tone: 'neutral' as const }] : []),
+              ]}
+            />
           </div>
         ))}
       </div>
@@ -263,22 +264,57 @@ function useDrawn() {
   return drawn
 }
 
+/* ------------------------------------------------------------------ dica dos gráficos */
+
+export interface AppChartTooltipRow {
+  key: string
+  label: ReactNode
+  value: ReactNode
+  tone?: AppChartTone
+}
+
+/** Balão com os valores exatos de uma marca do gráfico (ao passar o mouse); não recebe o ponteiro. */
+export function AppChartTooltip({ title, rows, className, style }: { title?: ReactNode; rows: AppChartTooltipRow[]; className?: string; style?: CSSProperties }) {
+  return (
+    <span role="presentation" style={style} className={cn('pointer-events-none absolute z-20 flex min-w-28 flex-col gap-0.5 whitespace-nowrap rounded-lg bg-fg px-2.5 py-1.5 text-[11px] text-bg shadow-float animate-fade-in', className)}>
+      {title && <span className="font-semibold">{title}</span>}
+      {rows.map((row) => (
+        <span key={row.key} className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-1.5">
+            {row.tone && <span aria-hidden className={cn('size-2 rounded-full', CHART_TONES[row.tone].bg)} />}
+            {row.label}
+          </span>
+          <span className="font-semibold tabular-nums">{row.value}</span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 /* ------------------------------------------------------------------ rosca */
 
 export interface AppDonutProps {
   segments: AppChartSegment[]
   /** Nome acessível (o gráfico vira "Nome: parte valor, ..."). */
   label: string
-  /** Conteúdo no centro (ex.: o total). */
+  /** Conteúdo no centro (ex.: o total); ao passar o mouse numa parte, o centro mostra a parte. */
   children?: ReactNode
   /** Espessura do anel (em % do diâmetro). */
   thickness?: number
+  /** Parte em destaque (ex.: filtro ativo): as outras ficam esmaecidas. */
+  activeKey?: string | null
+  /** Clique numa parte (o teclado usa a legenda, que quem chama torna clicável). */
+  onSegmentClick?: (key: string) => void
   className?: string
 }
 
-/** Rosca (anel) com as partes proporcionais, separadas por um respiro, e o centro livre para o total. */
-export function AppDonut({ segments, label, children, thickness = 10, className }: AppDonutProps) {
+/**
+ * Rosca (anel) com as partes proporcionais, separadas por um respiro, e o centro livre para o total.
+ * As partes se desenham ao aparecer e ao mudar; passar o mouse destaca a parte e mostra o valor no centro.
+ */
+export function AppDonut({ segments, label, children, thickness = 10, activeKey, onSegmentClick, className }: AppDonutProps) {
   const drawn = useDrawn()
+  const [hovered, setHovered] = useState<string | null>(null)
   const visible = segments.filter((s) => s.value > 0)
   const total = visible.reduce((sum, s) => sum + s.value, 0)
   const gap = visible.length > 1 ? 1.2 : 0
@@ -289,13 +325,17 @@ export function AppDonut({ segments, label, children, thickness = 10, className 
     length: (segment.value / total) * 100,
     start: visible.slice(0, index).reduce((sum, s) => sum + (s.value / total) * 100, 0),
   }))
+  const focus = hovered ?? activeKey ?? null
+  const shown = hovered ? visible.find((s) => s.key === hovered) : undefined
   return (
     <div className={cn('relative size-40 shrink-0', className)}>
-      <svg viewBox="0 0 100 100" role="img" aria-label={describeChart(label, visible)} className="size-full -rotate-90">
+      <svg viewBox="0 0 100 100" role="img" aria-label={describeChart(label, visible)} className="size-full -rotate-90 overflow-visible" onMouseLeave={() => setHovered(null)}>
         <circle cx="50" cy="50" r={radius} fill="none" strokeWidth={thickness} className="stroke-surface-3" />
         {arcs.map(({ segment, length, start }) => {
           const dash = Math.max(0.4, length - gap)
+          const dimmed = focus !== null && focus !== segment.key
           return (
+            // o clique é atalho de mouse; no teclado, a legenda (de quem chama) faz o mesmo
             <circle
               key={segment.key}
               data-segment={segment.key}
@@ -304,18 +344,32 @@ export function AppDonut({ segments, label, children, thickness = 10, className 
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth={thickness}
+              strokeWidth={hovered === segment.key ? thickness + 3 : thickness}
               pathLength={100}
               strokeDasharray={drawn ? `${dash} ${100 - dash}` : `0 100`}
               strokeDashoffset={-start}
-              className={cn(CHART_TONES[segment.tone].text, 'transition-[stroke-dasharray] duration-700 ease-out')}
-            >
-              <title>{`${segment.label}: ${segment.value}`}</title>
-            </circle>
+              onMouseEnter={() => setHovered(segment.key)}
+              onClick={onSegmentClick ? () => onSegmentClick(segment.key) : undefined}
+              className={cn(
+                CHART_TONES[segment.tone].text,
+                'transition-[stroke-dasharray,stroke-width,opacity] duration-700 ease-out',
+                dimmed && 'opacity-30',
+                onSegmentClick && 'cursor-pointer',
+              )}
+            />
           )
         })}
       </svg>
-      {children && <div className="absolute inset-0 flex flex-col items-center justify-center text-center">{children}</div>}
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+        {shown ? (
+          <>
+            <span className="font-display text-3xl font-semibold leading-none tabular-nums text-fg">{shown.value}</span>
+            <span className="mt-1 max-w-20 text-xs leading-tight text-muted">{shown.label}</span>
+          </>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   )
 }
@@ -333,28 +387,50 @@ export interface AppStackedBarProps {
   className?: string
 }
 
-/** Uma barra com as partes de um todo (ex.: elementos por situação) e a legenda com os valores. */
+/**
+ * Uma barra com as partes de um todo (ex.: elementos por situação) e a legenda com os valores. A barra
+ * cresce ao aparecer e as partes deslizam quando os números mudam; passar o mouse mostra o valor e a %.
+ */
 export function AppStackedBar({ segments, label, formatValue = (v) => v, legend = true, size = 'md', className }: AppStackedBarProps) {
+  const [hovered, setHovered] = useState<string | null>(null)
   const visible = segments.filter((s) => s.value > 0)
+  const total = visible.reduce((sum, s) => sum + s.value, 0)
+  const index = visible.findIndex((s) => s.key === hovered)
+  const active = visible[index]
+  const center = active ? (visible.slice(0, index).reduce((sum, s) => sum + s.value, 0) + active.value / 2) / total : 0
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      <div role="img" aria-label={describeChart(label, segments, formatValue)} className={cn('flex w-full gap-0.5 overflow-hidden rounded-full bg-surface-3', size === 'sm' ? 'h-2' : 'h-3')}>
-        <div className="flex w-full origin-left animate-grow-x gap-0.5">
-          {visible.map((segment) => (
-            <span
-              key={segment.key}
-              data-segment={segment.key}
-              title={`${segment.label}: ${String(formatValue(segment.value))}`}
-              className={cn('h-full min-w-1.5', CHART_TONES[segment.tone].bg)}
-              style={{ flexGrow: segment.value, flexBasis: 0 }}
-            />
-          ))}
+      <div className="relative">
+        {active && (
+          <AppChartTooltip
+            className={cn('bottom-full mb-2', center < 0.2 ? 'left-0' : center > 0.8 ? 'right-0' : '-translate-x-1/2')}
+            style={center >= 0.2 && center <= 0.8 ? { left: `${center * 100}%` } : undefined}
+            rows={[{ key: active.key, label: active.label, value: <>{formatValue(active.value)} · {Math.round((active.value / total) * 100)}%</>, tone: active.tone }]}
+          />
+        )}
+        <div
+          role="img"
+          aria-label={describeChart(label, segments, formatValue)}
+          onMouseLeave={() => setHovered(null)}
+          className={cn('flex w-full gap-0.5 overflow-hidden rounded-full bg-surface-3', size === 'sm' ? 'h-2' : 'h-3')}
+        >
+          <div className="flex w-full origin-left animate-grow-x gap-0.5">
+            {visible.map((segment) => (
+              <span
+                key={segment.key}
+                data-segment={segment.key}
+                onMouseEnter={() => setHovered(segment.key)}
+                className={cn('h-full min-w-1.5 transition-[flex-grow,opacity] duration-500 ease-out', CHART_TONES[segment.tone].bg, hovered && hovered !== segment.key && 'opacity-40')}
+                style={{ flexGrow: segment.value, flexBasis: 0 }}
+              />
+            ))}
+          </div>
         </div>
       </div>
       {legend && (
         <ul aria-label={label} className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs">
           {segments.map((segment) => (
-            <li key={segment.key} className="inline-flex items-center gap-1.5">
+            <li key={segment.key} className={cn('inline-flex items-center gap-1.5 transition-opacity', hovered && hovered !== segment.key && 'opacity-50')}>
               <span aria-hidden className={cn('size-2 shrink-0 rounded-full', CHART_TONES[segment.tone].bg)} />
               <span className="text-muted">{segment.label}</span>
               <span className="font-medium tabular-nums text-fg">{formatValue(segment.value)}</span>
@@ -385,7 +461,7 @@ export function AppSparkline({ values, label, tone = 'primary', className }: App
   const points = values.map((v, i) => `${x(i).toFixed(2)},${y(v).toFixed(2)}`)
   const last = values[values.length - 1] ?? 0
   return (
-    <div className={cn('relative h-8 w-full', CHART_TONES[tone].text, className)}>
+    <div className={cn('relative h-8 w-full animate-reveal-x', CHART_TONES[tone].text, className)}>
       <svg viewBox="0 0 100 32" preserveAspectRatio="none" role="img" aria-label={label} className="size-full overflow-visible">
         <polygon points={`0,32 ${points.join(' ')} 100,32`} fill="currentColor" opacity={0.12} />
         <polyline points={points.join(' ')} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
@@ -408,19 +484,44 @@ export interface AppMetricProps {
   size?: 'md' | 'lg'
   /** Visual sob o número (barra fina, minigráfico). */
   children?: ReactNode
+  /** Torna a métrica um botão (ex.: ir para a seção do detalhe). */
+  onSelect?: () => void
+  /** Texto da ação, mostrado ao passar o mouse ou focar (ex.: "Ver portfólio"); compõe o nome do botão. */
+  actionLabel?: ReactNode
   className?: string
 }
 
 /** Número de destaque sem cartão (dentro de um bloco maior): rótulo, valor grande, apoio e o visual no pé. */
-export function AppMetric({ label, value, hint, tone = 'default', size = 'md', children, className }: AppMetricProps) {
-  return (
-    <div className={cn('flex min-w-0 flex-col', className)}>
+export function AppMetric({ label, value, hint, tone = 'default', size = 'md', children, onSelect, actionLabel, className }: AppMetricProps) {
+  const body = (
+    <>
       <span className="text-sm text-muted">{label}</span>
       <span className={cn('mt-1 font-display font-semibold leading-tight tracking-tight tabular-nums', size === 'lg' ? 'text-4xl' : 'text-2xl', METRIC_TONES[tone])}>{value}</span>
       {hint && <span className="mt-1 text-xs text-muted">{hint}</span>}
       {/* o visual fica no pé: métricas lado a lado alinham os números e os gráficos */}
-      {children && <div className="mt-auto pt-4">{children}</div>}
-    </div>
+      {children && <span className="mt-auto block pt-4">{children}</span>}
+      {onSelect && actionLabel && (
+        // fora do fluxo: aparece no canto ao passar o mouse sem apertar o rótulo
+        <span className="absolute top-2 right-3 inline-flex items-center gap-0.5 text-xs font-medium text-primary-text opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          {actionLabel}
+          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      )}
+    </>
+  )
+  if (!onSelect) return <div className={cn('flex min-w-0 flex-col', className)}>{body}</div>
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'group relative flex min-w-0 cursor-pointer flex-col text-left transition-colors duration-150 hover:bg-surface-2/70',
+        'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+        className,
+      )}
+    >
+      {body}
+    </button>
   )
 }
 
@@ -436,7 +537,7 @@ export interface AppMeterProps {
   className?: string
 }
 
-/** Barra fina de progresso (o número fica com quem usa, ao lado ou acima). */
+/** Barra fina de progresso (o número fica com quem usa, ao lado ou acima); cresce ao aparecer e ao mudar. */
 export function AppMeter({ value, label, tone = 'primary', size = 'sm', className }: AppMeterProps) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)))
   return (
@@ -448,7 +549,7 @@ export function AppMeter({ value, label, tone = 'primary', size = 'sm', classNam
       aria-valuemax={100}
       className={cn('w-full overflow-hidden rounded-full bg-surface-3', size === 'sm' ? 'h-1.5' : 'h-2', className)}
     >
-      <div className={cn('h-full origin-left animate-grow-x rounded-full', CHART_TONES[tone].bg)} style={{ width: `${clamped}%` }} />
+      <div className={cn('h-full origin-left animate-grow-x rounded-full transition-[width] duration-700 ease-out', CHART_TONES[tone].bg)} style={{ width: `${clamped}%` }} />
     </div>
   )
 }

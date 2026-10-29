@@ -1,4 +1,4 @@
-import { useId, type CSSProperties, type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { cn } from '@/core/utils/cn'
 import type { HealthLevel } from '@/domain/plan-management'
 import { chartToneBg } from '@/presentation/components'
@@ -37,7 +37,8 @@ export function ExecutiveSection({
   children,
   className,
   flush,
-  style,
+  id,
+  delay = 0,
 }: {
   title: string
   meta?: ReactNode
@@ -45,22 +46,26 @@ export function ExecutiveSection({
   children: ReactNode
   className?: string
   flush?: boolean
-  style?: CSSProperties
+  /** Âncora da seção (as métricas do topo rolam até ela). */
+  id?: string
+  /** Atraso da entrada (ms): as seções aparecem em cascata. */
+  delay?: number
 }) {
-  const id = useId()
+  const headingId = useId()
   return (
     <section
-      aria-labelledby={id}
-      style={style}
+      id={id}
+      aria-labelledby={headingId}
+      style={delay ? { animationDelay: `${delay}ms` } : undefined}
       className={cn(
-        'flex min-w-0 flex-col rounded-xl border border-border bg-surface shadow-card motion-safe:animate-rise print:break-inside-avoid print:shadow-none',
+        'flex min-w-0 scroll-mt-6 flex-col rounded-xl border border-border bg-surface shadow-card transition-[box-shadow,border-color] duration-200 hover:border-border-strong motion-safe:animate-rise print:break-inside-avoid print:shadow-none',
         flush && 'overflow-hidden',
         className,
       )}
     >
       <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-5 pt-5 sm:px-6">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <h2 id={id} className="text-base font-semibold text-fg">
+          <h2 id={headingId} className="text-base font-semibold text-fg">
             {title}
           </h2>
           {meta && <span className="text-sm text-muted">{meta}</span>}

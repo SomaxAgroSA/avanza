@@ -1103,7 +1103,9 @@
     "placeholder": "Selecionar…",
     "remove": "Remover {{item}}",
     "create": "Adicionar “{{item}}”",
-    "searchOrCreate": "Buscar ou adicionar…"
+    "searchOrCreate": "Buscar ou adicionar…",
+    "selected_one": "{{count}} selecionado",
+    "selected_other": "{{count}} selecionados"
   },
   "fields": {
     "title": "Campos personalizados",
@@ -1983,7 +1985,9 @@
       "period": "Período",
       "pickDates": "Escolher datas",
       "range": "{{from}} – {{to}}",
-      "invalidPeriod": "Escolha as duas datas do período (a final não pode ser antes da inicial)."
+      "invalidPeriod": "Escolha as duas datas do período (a final não pode ser antes da inicial).",
+      "selectedProjects_one": "{{count}} projeto selecionado",
+      "selectedProjects_other": "{{count}} projetos selecionados"
     },
     "periods": {
       "all": "Desde o início",
@@ -2025,7 +2029,11 @@
       "nothingDelivered": "Nada entregue ainda",
       "trend": "Entregas ao longo do período",
       "overdue": "Atrasos",
-      "noOverdue": "Nenhum atraso"
+      "noOverdue": "Nenhum atraso",
+      "goPortfolio": "Ver portfólio",
+      "goAttention": "Ver atrasos",
+      "goDeliveries": "Ver entregas",
+      "filterHint": "Clique num nível para filtrar o portfólio"
     },
     "attention": {
       "title": "Precisa de atenção",
@@ -2037,7 +2045,8 @@
       "task": "Tarefa atrasada",
       "milestone": "Marco próximo",
       "since": "desde {{date}}",
-      "due": "prazo {{date}}"
+      "due": "prazo {{date}}",
+      "seeCritical": "Ver críticos no portfólio"
     },
     "portfolio": {
       "title": "Portfólio",
@@ -2058,7 +2067,11 @@
         "effort": "{{value}}% acima do estimado",
         "issues_one": "{{count}} em aberto",
         "issues_other": "{{count}} em aberto"
-      }
+      },
+      "filtering": "Filtrando: {{level}}",
+      "clearFilter": "Limpar o filtro de saúde",
+      "emptyFiltered": "Nenhum projeto com essa saúde",
+      "emptyFilteredHint": "Limpe o filtro para ver todos os projetos."
     },
     "plan": {
       "title": "Gestão de projetos",
@@ -2101,7 +2114,8 @@
       "milestone": "Marco",
       "empty": "Nada concluído no período",
       "emptyHint": "Amplie o período ou escolha outros projetos."
-    }
+    },
+    "updating": "Atualizando o painel…"
   },
   "timeline": {
     "title": "Timeline",

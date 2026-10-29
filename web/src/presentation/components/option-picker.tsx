@@ -29,6 +29,8 @@ interface OptionPickerProps {
   onCreateOption?: CreateOptionHandler | undefined
   /** Valor recém-criado: quem chama o seleciona. */
   onCreated: (value: string) => void
+  /** Primeiro item "todos" (ex.: "Todos os projetos"): marcado quando nada está escolhido; escolher limpa. */
+  allOption?: { label: string; selected: boolean; onPick: () => void } | undefined
 }
 
 const ITEM = '[data-picker-item]:not(:disabled)'
@@ -39,7 +41,7 @@ const ITEM = '[data-picker-item]:not(:disabled)'
  * busca sem opção igual. Teclado: setas andam entre a busca e os itens; Enter na busca escolhe a
  * opção igual ao texto ou cria a nova.
  */
-export function OptionPicker({ listboxId, options, isSelected, onPick, multiple, searchable, onCreateOption, onCreated }: OptionPickerProps) {
+export function OptionPicker({ listboxId, options, isSelected, onPick, multiple, searchable, onCreateOption, onCreated, allOption }: OptionPickerProps) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
@@ -108,6 +110,20 @@ export function OptionPicker({ listboxId, options, isSelected, onPick, multiple,
         />
       )}
       <ul id={listboxId} role="listbox" aria-multiselectable={multiple || undefined} className="max-h-64 overflow-y-auto">
+        {allOption && !query && (
+          <li role="option" aria-selected={allOption.selected} className="mb-1 border-b border-border pb-1">
+            <button
+              type="button"
+              data-picker-item
+              onKeyDown={navigate}
+              onClick={allOption.onPick}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium outline-none hover:bg-surface-2 focus-visible:bg-surface-2"
+            >
+              <PickerCheck multiple={multiple} checked={allOption.selected} />
+              <span className="truncate">{allOption.label}</span>
+            </button>
+          </li>
+        )}
         {visible.length === 0 && !canCreate && <li className="px-2 py-6 text-center text-sm text-muted">{t('commandPalette.empty')}</li>}
         {visible.map((option) => {
           const checked = isSelected(option.value)
@@ -121,18 +137,7 @@ export function OptionPicker({ listboxId, options, isSelected, onPick, multiple,
                 onClick={() => onPick(option.value)}
                 className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm outline-none hover:bg-surface-2 focus-visible:bg-surface-2 disabled:opacity-50"
               >
-                {multiple ? (
-                  <span
-                    className={cn(
-                      'flex size-4 shrink-0 items-center justify-center rounded-[5px] border',
-                      checked ? 'border-primary bg-primary text-primary-fg' : 'border-border-strong',
-                    )}
-                  >
-                    {checked && <Check className="size-3" strokeWidth={3} />}
-                  </span>
-                ) : (
-                  <span className="flex size-4 shrink-0 items-center justify-center">{checked && <Check className="size-4 text-primary-text" aria-hidden />}</span>
-                )}
+                <PickerCheck multiple={multiple} checked={checked} />
                 {option.prefix}
                 <span className="truncate">{option.label}</span>
               </button>
@@ -158,5 +163,15 @@ export function OptionPicker({ listboxId, options, isSelected, onPick, multiple,
         )}
       </ul>
     </div>
+  )
+}
+
+/** Caixa de marcar (múltipla) ou visto (única) à esquerda do item. */
+function PickerCheck({ multiple, checked }: { multiple: boolean | undefined; checked: boolean }) {
+  if (!multiple) return <span className="flex size-4 shrink-0 items-center justify-center">{checked && <Check className="size-4 text-primary-text" aria-hidden />}</span>
+  return (
+    <span className={cn('flex size-4 shrink-0 items-center justify-center rounded-[5px] border', checked ? 'border-primary bg-primary text-primary-fg' : 'border-border-strong')}>
+      {checked && <Check className="size-3" strokeWidth={3} />}
+    </span>
   )
 }

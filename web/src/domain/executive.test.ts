@@ -7,6 +7,7 @@ import {
   executivePeriodRange,
   hasDeliveries,
   kanbanFlow,
+  portfolioByHealth,
   localDay,
   mainHealthFactor,
   totalDeliveries,
@@ -122,5 +123,11 @@ describe('painel executivo — leitura rápida', () => {
     expect(deliverySeries(points)).toEqual([3, 0])
     expect(hasDeliveries(points)).toBe(true)
     expect(hasDeliveries([{ ...points[1]! }])).toBe(false)
+  })
+
+  it('portfólio filtrado pela saúde (null = todos), na mesma ordem', () => {
+    const rows = [project(crm, 'critical'), project(erp, 'ok'), project({ id: 'p3', key: 'X', name: 'X' }, 'critical')]
+    expect(portfolioByHealth(rows, 'critical').map((r) => r.project.id)).toEqual(['p1', 'p3'])
+    expect(portfolioByHealth(rows, null)).toBe(rows)
   })
 })

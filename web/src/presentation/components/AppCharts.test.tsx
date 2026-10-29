@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { AppBarList, AppDonut, AppMeter, AppMetric, AppSparkline, AppStackedBar, AppTrendChart } from './AppCharts'
 
 describe('AppBarList', () => {
@@ -118,5 +119,45 @@ describe('AppMeter', () => {
     const bar = screen.getByRole('progressbar', { name: 'Progresso do CRM' })
     expect(bar).toHaveAttribute('aria-valuenow', '100')
     expect(bar.firstElementChild).toHaveStyle({ width: '100%' })
+  })
+})
+
+describe('gráficos interativos', () => {
+  const health = [
+    { key: 'ok', label: 'Em dia', value: 3, tone: 'success' as const },
+    { key: 'critical', label: 'Crítico', value: 1, tone: 'danger' as const },
+  ]
+
+  it('rosca: o mouse numa parte mostra o valor no centro; clicar avisa a parte; a ativa esmaece as outras', () => {
+    const onSegmentClick = vi.fn()
+    const { container } = render(
+      <AppDonut label="Saúde" segments={health} onSegmentClick={onSegmentClick} activeKey="critical">
+        <span>Total 4</span>
+      </AppDonut>,
+    )
+    const critical = container.querySelector('[data-segment="critical"]')!
+    const ok = container.querySelector('[data-segment="ok"]')!
+    expect(ok).toHaveClass('opacity-30')
+    expect(critical).not.toHaveClass('opacity-30')
+    fireEvent.mouseEnter(critical)
+    expect(screen.queryByText('Total 4')).not.toBeInTheDocument()
+    expect(screen.getByText('1')).toBeInTheDocument()
+    fireEvent.click(critical)
+    expect(onSegmentClick).toHaveBeenCalledWith('critical')
+    fireEvent.mouseLeave(container.querySelector('svg')!)
+    expect(screen.getByText('Total 4')).toBeInTheDocument()
+  })
+
+  it('barra empilhada: o mouse numa parte mostra o valor exato e a porcentagem', () => {
+    const { container } = render(<AppStackedBar label="Saúde" segments={health} formatValue={(v) => `${v} projetos`} />)
+    fireEvent.mouseEnter(container.querySelector('[data-segment="critical"]')!)
+    expect(screen.getByText('1 projetos · 25%')).toBeInTheDocument()
+  })
+
+  it('métrica clicável vira botão com a ação no nome', async () => {
+    const onSelect = vi.fn()
+    render(<AppMetric label="Atrasos" value={7} onSelect={onSelect} actionLabel="Ver detalhes" />)
+    await userEvent.click(screen.getByRole('button', { name: /Atrasos.*7.*Ver detalhes/ }))
+    expect(onSelect).toHaveBeenCalled()
   })
 })

@@ -68,6 +68,16 @@ export function AppErrorState({ title, description, correlationId, onRetry, clas
 
 /* ------------------------------------------------------------------ AppSkeleton / AppLoading */
 
+/** Fio de carregamento no topo de uma área (recarga com o conteúdo antigo ainda na tela). */
+export function AppLoadingBar({ label, className }: { label?: string; className?: string }) {
+  const { t } = useTranslation()
+  return (
+    <div className={cn('absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden', className)} role="progressbar" aria-label={label ?? t('common.loading')}>
+      <div className="h-full w-1/3 animate-[kb-progress_1s_ease-in-out_infinite] bg-primary" />
+    </div>
+  )
+}
+
 export function AppSkeleton({ className }: { className?: string }) {
   return <div aria-hidden className={cn('animate-pulse rounded-md bg-surface-3', className)} />
 }

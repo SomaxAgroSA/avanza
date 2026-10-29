@@ -7,6 +7,7 @@ import { formatDate } from '@/core/utils/format'
 import { cn } from '@/core/utils/cn'
 import {
   attentionItems,
+  hasDeliveries,
   DEFAULT_EXECUTIVE_PERIOD,
   EXECUTIVE_PERIODS,
   executivePeriodRange,
@@ -16,9 +17,11 @@ import {
   type ExecutiveProjectOption,
   type ExecutiveQuery,
 } from '@/domain/executive'
+import type { HealthLevel } from '@/domain/plan-management'
 import {
   AppButton,
   AppEmptyState,
+  AppLoadingBar,
   AppErrorState,
   AppIconButton,
   AppMultiSelect,
@@ -30,6 +33,7 @@ import {
 } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
+import { scrollToElement } from '@/presentation/common/motion'
 import { useExecutiveDashboard } from './queries'
 import { HeroSection } from './HeroSection'
 import { AttentionSection } from './AttentionSection'
@@ -37,6 +41,9 @@ import { PortfolioSection } from './PortfolioSection'
 import { KanbanSection, PlanSection } from './ModuleSections'
 import { AchievementsSection, TimelineSection } from './DeliverySections'
 import { useDayText } from './use-executive-format'
+
+/** Âncoras das seções (as métricas do topo rolam até elas). */
+const SECTION = { attention: 'executive-attention', portfolio: 'executive-portfolio', timeline: 'executive-timeline', achievements: 'executive-achievements' }
 
 /** Filtros na URL (o link do painel filtrado pode ser compartilhado). */
 function useExecutiveParams() {
@@ -73,6 +80,16 @@ export function ExecutivePage() {
   const dashboard = useExecutiveDashboard(query)
   const data = dashboard.data
   const time = new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short' })
+  // filtro de saúde do portfólio (escolhido na rosca/legenda ou em "Ver críticos"): só na tela, não na URL
+  const [healthFilter, setHealthFilter] = useState<HealthLevel | null>(null)
+  const go = (target: 'portfolio' | 'attention' | 'deliveries') => {
+    const deliveries = data && hasDeliveries(data.timeline.points) ? SECTION.timeline : SECTION.achievements
+    scrollToElement(document.getElementById(target === 'portfolio' ? SECTION.portfolio : target === 'attention' ? SECTION.attention : deliveries))
+  }
+  const filterHealth = (level: HealthLevel) => {
+    setHealthFilter((current) => (current === level ? null : level))
+    if (healthFilter !== level) go('portfolio')
+  }
 
   return (
     <>
@@ -110,18 +127,23 @@ export function ExecutivePage() {
       ) : data.projects.length === 0 ? (
         <AppEmptyState icon={<FolderKanban />} title={t('executive.noProjects')} description={t('executive.noProjectsHint')} />
       ) : (
-        <div className={cn('flex flex-col gap-6 transition-opacity', dashboard.isPlaceholderData && 'opacity-60')} aria-busy={dashboard.isPlaceholderData || undefined}>
-          <HeroSection summary={data.summary} timeline={data.timeline} />
-          <div className="grid gap-6 2xl:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
-            <AttentionSection items={attentionItems(data)} />
-            <PortfolioSection rows={data.portfolio} />
+        // ao trocar o filtro, o painel anterior fica na tela (com o fio de carregamento) e os números
+        // animam até os novos valores quando chegam — sem voltar ao esqueleto
+        <div className="relative">
+          {dashboard.isPlaceholderData && <AppLoadingBar label={t('executive.updating')} className="sticky -top-2 -mt-0.5 rounded-full print:hidden" />}
+          <div className={cn('flex flex-col gap-6 transition-opacity duration-300', dashboard.isPlaceholderData && 'opacity-80')} aria-busy={dashboard.isPlaceholderData || undefined}>
+            <HeroSection summary={data.summary} timeline={data.timeline} healthFilter={healthFilter} onHealthFilter={filterHealth} onGo={go} />
+            <div className="grid gap-6 2xl:grid-cols-[minmax(0,5fr)_minmax(0,8fr)]">
+              <AttentionSection id={SECTION.attention} delay={60} items={attentionItems(data)} onSeeCritical={() => filterHealth('critical')} />
+              <PortfolioSection id={SECTION.portfolio} delay={120} rows={data.portfolio} healthFilter={healthFilter} onClearFilter={() => setHealthFilter(null)} />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2 print:grid-cols-2">
+              <PlanSection plan={data.plan} delay={180} />
+              <KanbanSection kanban={data.kanban} delay={240} />
+            </div>
+            <TimelineSection id={SECTION.timeline} delay={300} timeline={data.timeline} />
+            <AchievementsSection id={SECTION.achievements} delay={360} achievements={data.achievements} projects={data.projects} />
           </div>
-          <div className="grid gap-6 lg:grid-cols-2 print:grid-cols-2">
-            <PlanSection plan={data.plan} />
-            <KanbanSection kanban={data.kanban} />
-          </div>
-          <TimelineSection timeline={data.timeline} />
-          <AchievementsSection achievements={data.achievements} projects={data.projects} />
         </div>
       )}
     </>
@@ -164,21 +186,16 @@ function Filters({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:shrink-0 xl:flex-nowrap xl:justify-end print:hidden">
-      <div className="flex items-center gap-1">
-        <AppMultiSelect
-          label={<span className="sr-only">{t('executive.filters.projects')}</span>}
-          placeholder={t('executive.filters.allProjects')}
-          value={projectIds}
-          onValueChange={onProjects}
-          options={options}
-          className="w-full gap-0 sm:w-56"
-        />
-        {projectIds.length > 0 && (
-          <AppButton variant="ghost" size="sm" className="shrink-0" onClick={() => onProjects([])}>
-            {t('executive.filters.allProjects')}
-          </AppButton>
-        )}
-      </div>
+      <AppMultiSelect
+        label={<span className="sr-only">{t('executive.filters.projects')}</span>}
+        display="summary"
+        allOptionLabel={t('executive.filters.allProjects')}
+        summary={(count) => t('executive.filters.selectedProjects', { count })}
+        value={projectIds}
+        onValueChange={onProjects}
+        options={options}
+        className="w-full gap-0 sm:w-60"
+      />
       <div className="flex items-center gap-2">
         {phone ? (
           <AppSelect aria-label={t('executive.filters.period')} className="flex-1" value={period} onValueChange={choose} options={periods} />

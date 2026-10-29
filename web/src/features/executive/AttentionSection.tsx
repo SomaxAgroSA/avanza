@@ -28,14 +28,28 @@ interface RowView {
 }
 
 /** ② Precisa de atenção: as exceções do portfólio, priorizadas (domain/executive.ts#attentionItems). */
-export function AttentionSection({ items }: { items: AttentionItem[] }) {
+export function AttentionSection({ items, id, delay, onSeeCritical }: { items: AttentionItem[]; id?: string; delay?: number; onSeeCritical: () => void }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const listId = useId()
   const hidden = items.length - VISIBLE
+  const hasCritical = items.some((item) => item.kind === 'project' && item.level === 'critical')
 
   return (
-    <ExecutiveSection title={t('executive.attention.title')} meta={items.length > 0 ? items.length : undefined} className="@container">
+    <ExecutiveSection
+      id={id}
+      delay={delay}
+      title={t('executive.attention.title')}
+      meta={items.length > 0 ? items.length : undefined}
+      className="@container"
+      actions={
+        hasCritical && (
+          <AppButton variant="ghost" size="sm" onClick={onSeeCritical} className="-mr-2 print:hidden">
+            {t('executive.attention.seeCritical')}
+          </AppButton>
+        )
+      }
+    >
       {items.length === 0 ? (
         <div className="flex flex-1 items-center gap-4 rounded-lg bg-success-soft p-4">
           <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-success-soft-fg shadow-card">
@@ -48,9 +62,9 @@ export function AttentionSection({ items }: { items: AttentionItem[] }) {
         </div>
       ) : (
         <>
-          <ul id={listId} aria-label={t('executive.attention.title')} className="-mt-1 grid gap-x-8 @2xl:grid-cols-2">
+          <ul id={listId} aria-label={t('executive.attention.title')} className="-mt-1 grid gap-x-6 gap-y-1 @2xl:grid-cols-2">
             {items.map((item, index) => (
-              <AttentionRow key={`${item.kind}-${item.id}`} item={item} className={cn(!expanded && index >= VISIBLE && 'hidden print:flex', index > 0 && 'border-t border-border', index === 1 && '@2xl:border-t-0')} />
+              <AttentionRow key={`${item.kind}-${item.id}`} item={item} className={cn(index >= VISIBLE && (expanded ? 'motion-safe:animate-rise' : 'hidden print:flex'))} />
             ))}
           </ul>
           {hidden > 0 && (
@@ -67,8 +81,8 @@ export function AttentionSection({ items }: { items: AttentionItem[] }) {
 function AttentionRow({ item, className }: { item: AttentionItem; className?: string }) {
   const view = useRowView()(item)
   return (
-    <li className={cn('flex min-w-0 items-center gap-3 py-3', className)}>
-      <span className={cn('grid size-9 shrink-0 place-items-center rounded-full [&_svg]:size-4', ICON_TONE[view.tone])}>{view.icon}</span>
+    <li className={cn('group/row -mx-2 flex min-w-0 items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-surface-2', className)}>
+      <span className={cn('grid size-9 shrink-0 place-items-center rounded-full transition-transform duration-200 group-hover/row:scale-110 [&_svg]:size-4', ICON_TONE[view.tone])}>{view.icon}</span>
       <div className="min-w-0 flex-1">
         <Link to={view.to} className="block truncate text-sm font-medium text-fg hover:text-primary-text">
           {view.title}

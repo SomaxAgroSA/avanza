@@ -9,7 +9,8 @@ export interface AppFormFieldProps {
   hint?: ReactNode
   required?: boolean
   className?: string
-  children: (props: { id: string; describedBy: string | undefined; invalid: boolean }) => ReactNode
+  /** `labelId`: id do rótulo (quando há), para compor o nome acessível com o valor (ex.: resumo da seleção). */
+  children: (props: { id: string; describedBy: string | undefined; invalid: boolean; labelId: string | undefined }) => ReactNode
 }
 
 /**
@@ -27,7 +28,7 @@ export function AppFormField({ label, error, hint, required, className, children
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-fg">
+        <label id={`${id}-label`} htmlFor={id} className="text-sm font-medium text-fg">
           {label}
           {required && (
             <span className="ml-0.5 text-danger" aria-hidden>
@@ -37,7 +38,7 @@ export function AppFormField({ label, error, hint, required, className, children
           {required && <span className="sr-only"> ({t('common.required')})</span>}
         </label>
       )}
-      {children({ id, describedBy, invalid: !!error })}
+      {children({ id, describedBy, invalid: !!error, labelId: label ? `${id}-label` : undefined })}
       {hint && !error && (
         <p id={hintId} className="text-xs text-muted">
           {hint}

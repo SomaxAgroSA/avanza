@@ -170,3 +170,31 @@ describe('AppDataTable — embutida', () => {
     expect(container.firstElementChild?.childElementCount).toBe(1)
   })
 })
+
+describe('AppDataTable — clique na linha', () => {
+  function Clickable({ onRowClick }: { onRowClick: (row: Row) => void }) {
+    const api = useDataTableState('click-table', { sort: null })
+    return (
+      <AppDataTable
+        caption="Clicável"
+        columns={[{ id: 'name', header: 'Nome', hideable: false, cell: (r: Row) => <a href={`#${r.id}`}>{r.name}</a> }, { id: 'status', header: 'Status', hideable: false, cell: (r: Row) => r.status }]}
+        data={rows}
+        total={rows.length}
+        getRowId={(r) => r.id}
+        table={api}
+        searchable={false}
+        paginated={false}
+        onRowClick={onRowClick}
+      />
+    )
+  }
+
+  it('a linha inteira abre o registro; o link da linha segue com o próprio clique', async () => {
+    const onRowClick = vi.fn()
+    renderWithProviders(<Clickable onRowClick={onRowClick} />)
+    await userEvent.click(screen.getByText('disabled'))
+    expect(onRowClick).toHaveBeenCalledWith(rows[1])
+    await userEvent.click(screen.getByRole('link', { name: 'Alfa' }))
+    expect(onRowClick).toHaveBeenCalledTimes(1)
+  })
+})
