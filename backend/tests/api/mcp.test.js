@@ -46,8 +46,8 @@ describe('API MCP', { timeout: 180000 }, () => {
   const rpc = (method, params, headers) => post({ jsonrpc: '2.0', id: nextId++, method, params }, headers)
 
   /** Chama uma ferramenta e devolve { isError, data } (o texto JSON já lido). */
-  async function tool(name, args) {
-    const res = await rpc('tools/call', { name, arguments: args || {} })
+  async function tool(name, args, headers) {
+    const res = await rpc('tools/call', { name, arguments: args || {} }, headers)
     assert.equal(res.status, 200, JSON.stringify(res.body))
     assert.ok(res.body.result, JSON.stringify(res.body))
     return { isError: !!res.body.result.isError, data: JSON.parse(res.body.result.content[0].text) }
@@ -179,6 +179,40 @@ describe('API MCP', { timeout: 180000 }, () => {
     const denied = await tool('get_project', { project_id: hidden.id })
     assert.equal(denied.isError, true)
     assert.equal(denied.data.error.code, 'PROJECT_NOT_FOUND')
+  })
+
+  it('demais módulos: timeline, Gestão de projetos, Kanban geral e administração conforme o perfil', async () => {
+    const project = (await tool('list_projects', { search: 'Integração' })).data.items[0]
+
+    const milestone = await tool('create_milestone', { project_id: project.id, name: 'Go-live', due_date: '2026-12-15' })
+    assert.equal(milestone.isError, false, JSON.stringify(milestone.data))
+    const timeline = await tool('get_timeline', { project_id: project.id })
+    assert.deepEqual(timeline.data.milestones.map((m) => m.name), ['Go-live'])
+    assert.ok(timeline.data.tasks.every((t) => t.card_fields === undefined))
+
+    const group = await tool('create_plan_group', { project_id: project.id, name: 'Fase 1' })
+    assert.equal(group.isError, false, JSON.stringify(group.data))
+    const item = await tool('create_plan_item', { project_id: project.id, group_id: group.data.id, name: 'Levantamento', start_date: '2026-11-03', end_date: '2026-11-07' })
+    assert.equal(item.isError, false, JSON.stringify(item.data))
+    const plan = await tool('get_plan', { project_id: project.id })
+    assert.equal(plan.isError, false, JSON.stringify(plan.data))
+    assert.ok(JSON.stringify(plan.data).includes('Levantamento'))
+
+    const all = await tool('get_board_all_projects', {})
+    assert.ok(all.data.projects.some((p) => p.id === project.id))
+
+    // o Gil (gestor) não administra a plataforma; o administrador sim
+    const denied = await tool('create_tag', { name: 'via-claude' })
+    assert.equal(denied.isError, true)
+    assert.equal(denied.data.error.code, 'FORBIDDEN')
+    const adminToken = (await root.post('/auth/tokens', { name: 'Claude admin', expires_in_days: 30 })).body.data.token
+    const asAdmin = { Authorization: `Bearer ${adminToken}` }
+    const tag = await tool('create_tag', { name: 'via-claude', color: 'teal' }, asAdmin)
+    assert.equal(tag.isError, false, JSON.stringify(tag.data))
+    const users = await tool('list_users', { search: 'gil' }, asAdmin)
+    assert.deepEqual(users.data.items.map((u) => u.email), ['gil@example.com'])
+    const smtp = await tool('update_email_settings', { password: 'x' }, asAdmin)
+    assert.equal(smtp.data.error.details.fields.password, 'unknown_field')
   })
 
   it('token revogado deixa de valer na hora', async () => {

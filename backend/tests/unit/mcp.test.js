@@ -194,10 +194,11 @@ describe('mcp/tools', () => {
       assert.equal(tool.inputSchema.additionalProperties, false, tool.name)
       ;(tool.inputSchema.required || []).forEach((key) => assert.ok(tool.inputSchema.properties[key], `${tool.name}.${key}`))
       Object.keys(tool.inputSchema.properties).forEach((key) => assert.ok(tool.inputSchema.properties[key].description, `${tool.name}.${key} sem descrição`))
-      const readOnly = /^(get|list|find|whoami)/.test(tool.name)
+      const readOnly = /^(get|list|find|search|whoami)/.test(tool.name)
       assert.equal(tool.annotations.readOnlyHint, readOnly, tool.name)
       assert.equal(tool.annotations.openWorldHint, false, tool.name)
       assert.equal(typeof tool.run, 'function')
+      if (/^(delete|remove)_/.test(tool.name)) assert.match(tool.description, /confirm with the user first\.$/i, tool.name)
     })
     ;['create_project', 'list_projects', 'create_task', 'update_task', 'move_task', 'list_tasks', 'add_task_comment', 'get_board'].forEach((name) => assert.ok(byName(name), name))
   })
@@ -246,5 +247,70 @@ describe('mcp/tools', () => {
     assert.deepEqual(out.columns[0].tasks.map((t) => t.code), ['C-1', 'C-2'])
     assert.equal(out.columns[0].truncated, true)
     assert.equal(out.columns[0].tasks[0].card_fields, undefined)
+  })
+  it('get_board_all_projects: ids separados por vírgula e cards enxutos com o projeto', async () => {
+    const board = {
+      project: null,
+      projects: [{ id: 'p1', key: 'A', name: 'A' }, { id: 'p2', key: 'B', name: 'B' }],
+      capabilities: { move: true, create: true },
+      columns: [{ status: { id: 's1', name: 'A fazer', category: 'todo' }, wip_limit: 0, allowed_next: [], total: 1, tasks: [{ id: 't1', code: 'B-1', title: 'T', project: { id: 'p2', key: 'B' }, tags: [] }] }],
+    }
+    const { calls, services } = spyServices({ 'board.getAllBoard': board })
+    const out = await byName('get_board_all_projects').run({ project_ids: ['p1', 'p2'] }, { services, ctx })
+    assert.deepEqual(calls[0].args, [{ project_ids: 'p1,p2' }])
+    assert.deepEqual(out.projects, board.projects)
+    assert.equal(out.columns[0].tasks[0].project, 'B')
+    await byName('get_board_all_projects').run({}, { services, ctx })
+    assert.deepEqual(calls[1].args, [{}])
+  })
+
+  it('ids no caminho: membros, comentários, relações, sprints, marcos e notificações', async () => {
+    const { calls, services } = spyServices({ 'notifications.listNotifications': { items: [], meta: {} } })
+    await byName('update_project_member').run({ project_id: 'p1', user_id: 'u2', role: 'viewer' }, { services, ctx })
+    await byName('remove_project_member').run({ project_id: 'p1', user_id: 'u2' }, { services, ctx })
+    await byName('transfer_project_ownership').run({ project_id: 'p1', user_id: 'u3' }, { services, ctx })
+    await byName('update_task_comment').run({ comment_id: 'c1', content: 'oi' }, { services, ctx })
+    await byName('unlink_tasks').run({ relation_id: 'r1' }, { services, ctx })
+    await byName('fork_task').run({ task_id: 't1', title: 'Cópia', copy: { attachments: true } }, { services, ctx })
+    await byName('rank_backlog_task').run({ task_id: 't1', prev_id: 't0', sprint_id: null }, { services, ctx })
+    await byName('reorder_sprints').run({ project_id: 'p1', sprint_ids: ['s2', 's1'] }, { services, ctx })
+    await byName('update_milestone').run({ milestone_id: 'm1', state: 'done' }, { services, ctx })
+    await byName('create_milestone').run({ project_id: 'p1', name: 'Go-live', due_date: '2026-12-01' }, { services, ctx })
+    await byName('list_notifications').run({ unread_only: true, per_page: 10 }, { services, ctx })
+    assert.deepEqual(
+      calls.map((c) => [c.service, c.method, c.args]),
+      [
+        ['projects', 'updateMemberRole', ['p1', 'u2', { role: 'viewer' }]],
+        ['projects', 'removeMember', ['p1', 'u2']],
+        ['projects', 'transferOwnership', ['p1', { user_id: 'u3' }]],
+        ['comments', 'updateComment', ['c1', { content: 'oi' }]],
+        ['relations', 'deleteRelation', ['r1']],
+        ['relations', 'forkTask', ['t1', { title: 'Cópia', copy: { attachments: true } }]],
+        ['backlog', 'rankTask', ['t1', { prev_id: 't0', sprint_id: null }]],
+        ['sprints', 'reorderSprints', ['p1', ['s2', 's1']]],
+        ['milestones', 'updateMilestone', ['m1', { state: 'done' }]],
+        ['milestones', 'createMilestone', ['p1', { name: 'Go-live', due_date: '2026-12-01' }]],
+        ['notifications', 'listNotifications', [{ unread: '1', perPage: 10 }]],
+      ],
+    )
+  })
+
+  it('list_report_tasks: indicador e filtros do relatório, cards enxutos com metric_hours', async () => {
+    const { calls, services } = spyServices({
+      'reports.listIndicatorTasks': { items: [{ id: 't1', code: 'C-1', title: 'T', tags: [], metric_hours: 12.5 }], meta: { page: 2, perPage: 5, total: 6, totalPages: 2 } },
+    })
+    const out = await byName('list_report_tasks').run({ metric: 'lead_time', project_id: 'p1', tz_offset: 180, page: 2, per_page: 5 }, { services, ctx })
+    assert.deepEqual(calls[0].args, [{ metric: 'lead_time', project_id: 'p1', tz_offset: '180', page: 2, perPage: 5 }])
+    assert.equal(out.items[0].metric_hours, 12.5)
+    assert.equal(out.items[0].code, 'C-1')
+  })
+
+  it('get_timeline: tarefas enxutas, o resto como veio', async () => {
+    const timeline = { project: { id: 'p1' }, capabilities: { edit: true }, tasks: [{ id: 't1', code: 'C-1', title: 'T', tags: [], card_fields: [] }], dependencies: [], milestones: [], sprints: [], truncated: false }
+    const { services } = spyServices({ 'timeline.getTimeline': timeline })
+    const out = await byName('get_timeline').run({ project_id: 'p1' }, { services, ctx })
+    assert.equal(out.tasks[0].card_fields, undefined)
+    assert.deepEqual(out.milestones, [])
+    assert.equal(out.truncated, false)
   })
 })

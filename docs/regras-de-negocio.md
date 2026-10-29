@@ -575,12 +575,13 @@ Telas abertas se atualizam sozinhas quando alguém muda algo — sem recarregar 
 
 ## 21. Conectar o Claude (MCP)
 
-O Claude (Claude Code e Claude Desktop) pode trabalhar no Avanza em nome de uma pessoa: consultar e criar projetos, criar, editar, mover, comentar e relacionar tarefas, ver o quadro, o backlog, as sprints e os relatórios.
+O Claude (Claude Code e Claude Desktop) pode trabalhar no Avanza em nome de uma pessoa, em todos os módulos: projetos e membros; tarefas (criar, editar, mover, comentar, relacionar, copiar, excluir); Kanban de um projeto ou de todos; backlog e sprints; Timeline e marcos; o quadro da Gestão de projetos inteiro (grupos, elementos, colunas, dependências, atualizações, diário, problemas, linha de base, relatório); relatórios; notificações; e, para quem tem a permissão, configurações (status, prioridades, tipos, campos, tags), usuários e perfis, histórico de auditoria, configurador geral, e-mail e webhooks.
 
 - **Como conectar:** a pessoa cria um **token de API** (§17) e configura o Claude com o endereço `…/api/mcp` e o token. Ao criar o token, a tela mostra o comando pronto do Claude Code. Quem não pode criar tokens não conecta o Claude.
 - **Em nome de quem:** o Claude age **como a pessoa do token**, com as permissões do perfil dela e o papel em cada projeto — o mesmo que ela faria na tela: projeto em que não é membro não existe para ele; leitor só consulta e comenta. Tudo o que muda fica no histórico em nome dela (o registro guarda o programa usado, ex.: Claude Code) e gera as notificações de sempre.
 - **Mesmas regras:** obrigatoriedade por status (§10), transições permitidas, WIP, datas e validações valem do mesmo jeito; quando falta um campo, o Claude recebe a lista do que falta e pode completar.
-- **O que não faz:** nada que exija o navegador (tokens, senha, sessões), nem administração (usuários, perfis, configurações). Excluir só tarefas, e as ferramentas de excluir e arquivar pedem que o Claude confirme com a pessoa antes.
+- **Administração só com a permissão:** as ferramentas de configuração e administração seguem a mesma permissão da tela (`settings.manage`, `users.*`, `permissions.manage`, `audit.view`, `platform.manage`, `integrations.manage`); sem ela, o Claude recebe "sem permissão". Criar usuário prefere o convite por e-mail; definir ou redefinir senha só com a senha que a própria pessoa digitou na conversa.
+- **O que não faz:** enviar arquivos (anexos, arquivos do projeto e da Gestão, foto, logos, ícones — só baixar pelo endereço que as listas trazem); nada que exija o navegador (a própria senha, sessões, criar, ver ou revogar tokens); a senha do SMTP. Excluir, arquivar, desativar usuário, redefinir senha e limpar o histórico pedem que o Claude confirme com a pessoa antes.
 - **Cortar o acesso:** revogar o token (§17) desconecta o Claude na hora; desativar a pessoa também.
 
 ## 22. Arquivos do projeto
