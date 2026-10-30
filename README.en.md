@@ -1,8 +1,11 @@
-<p align="center"><img src="web/public/brand/logo-light.png" width="112" alt="" /></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="web/public/brand/avanza/avanza-logo-oscuro.svg" />
+    <img src="web/public/brand/avanza/avanza-logo-claro.svg" width="260" alt="Avanza" />
+  </picture>
+</p>
 
-<h1 align="center">BLYD Sync</h1>
-
-<p align="center"><strong>Sync projects, tasks and teams.</strong></p>
+<p align="center"><strong>Sync projects, tasks and teams.</strong><br />SomaxAgro's project management platform.</p>
 
 **An open source platform where the team does the work and the project gets managed, in one place.** Tasks, Kanban and sprints for day-to-day work; a Monday-style management board (phases, schedule with baseline, project health) for whoever coordinates; Confluence-style documentation to keep what the team learns. A single binary, no external services, in Portuguese, English and Spanish.
 
@@ -62,6 +65,20 @@ Both live in the same **project** (same members and permissions) but stay separa
     <td><img src="docs/images/documentacao.png" alt="Documentation" /></td>
   </tr>
 </table>
+
+## Visual identity
+
+Avanza uses the Somax identity: green as the main color, the five progress bars symbol, and the Figtree (body) and Plus Jakarta Sans (headings) typefaces.
+
+| Token | Color | Used for |
+|---|---|---|
+| `--av-brand-primary` | `#00843D` Somax green | buttons, links, active menu item |
+| `--av-brand-accent` | `#8DC63F` lime green | highlights; links and active item in dark mode |
+| `--av-brand-ink` | `#1E2B24` near-black green | text and dark backgrounds (login cover) |
+
+- Logos and icons: [web/public/brand/avanza](web/public/brand/avanza) — full logo (light and dark), symbol only, app icon and favicon, as SVG.
+- Color tokens: [web/src/styles/index.css](web/src/styles/index.css); no literal colors in components.
+- Technical identifiers inherited from BLYD Sync (`kamban`, `kb_session`, `KAMBAN_*`, `kb_pat_` tokens) stay the same so sessions, tokens and installs keep working.
 
 ## Try it in 2 minutes (Docker)
 

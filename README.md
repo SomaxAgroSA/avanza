@@ -1,8 +1,11 @@
-<p align="center"><img src="web/public/brand/logo-light.png" width="112" alt="" /></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="web/public/brand/avanza/avanza-logo-oscuro.svg" />
+    <img src="web/public/brand/avanza/avanza-logo-claro.svg" width="260" alt="Avanza" />
+  </picture>
+</p>
 
-<h1 align="center">BLYD</h1>
-
-<p align="center"><strong>Sincronize projetos, tarefas e equipes.</strong></p>
+<p align="center"><strong>Sincronize projetos, tarefas e equipes.</strong><br />Plataforma de gestão de projetos da SomaxAgro.</p>
 
 **Plataforma open source para o time trabalhar e para o projeto ser gerido no mesmo lugar.** Tarefas, Kanban e sprints para o dia a dia; um quadro de gestão no estilo Monday (fases, cronograma com linha de base e saúde do projeto) para quem coordena; documentação no estilo Confluence para registrar o que se aprende. Um único binário, sem serviços externos, em português, inglês e espanhol.
 
@@ -60,6 +63,20 @@ Os dois ficam no mesmo **projeto** (mesmos membros e permissões), mas não se m
     <td><img src="docs/images/documentacao.png" alt="Documentação" /></td>
   </tr>
 </table>
+
+## Identidade visual
+
+O Avanza usa a identidade da Somax: verde como cor principal, o símbolo de cinco barras de progresso e as fontes Figtree (texto) e Plus Jakarta Sans (títulos).
+
+| Token | Cor | Uso |
+|---|---|---|
+| `--av-brand-primary` | `#00843D` verde Somax | botões, links, item ativo do menu |
+| `--av-brand-accent` | `#8DC63F` verde-limão | destaques; links e item ativo no tema escuro |
+| `--av-brand-ink` | `#1E2B24` verde quase preto | texto e fundos escuros (capa do login) |
+
+- Logos e ícones: [web/public/brand/avanza](web/public/brand/avanza) — logo completo (claro e escuro), só o símbolo, ícone do app e favicon, em SVG.
+- Tokens de cor: [web/src/styles/index.css](web/src/styles/index.css); nada de cores literais nos componentes.
+- Os identificadores técnicos herdados do BLYD Sync (`kamban`, `kb_session`, `KAMBAN_*`, tokens `kb_pat_`) continuam iguais para não quebrar sessões, tokens e instalações.
 
 ## Experimente em 2 minutos (Docker)
 
