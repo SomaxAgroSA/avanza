@@ -10,6 +10,7 @@ import type { BacklogView } from './backlog'
 import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relations'
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
+import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectCharter } from './charter'
 import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type {
@@ -375,6 +376,18 @@ export interface MilestoneRepository {
   remove(id: string): Promise<void>
 }
 
+/** Ficha do projeto: objetivo geral, itens com o avanço calculado e medições dos resultados. */
+export interface CharterRepository {
+  get(projectId: string): Promise<ProjectCharter>
+  saveObjective(projectId: string, objective: string): Promise<ProjectCharter>
+  createItem(projectId: string, input: CharterItemInput): Promise<CharterItem>
+  updateItem(id: string, input: CharterItemInput): Promise<CharterItem>
+  removeItem(id: string): Promise<void>
+  reorder(projectId: string, kind: CharterKind, ids: string[]): Promise<ProjectCharter>
+  measurements(itemId: string): Promise<CharterMeasurement[]>
+  addMeasurement(itemId: string, input: MeasurementInput): Promise<CharterItem>
+}
+
 /** Quadro do projeto (Gerenciamento de Projetos): grupos, elementos e etiquetas próprias. */
 export interface PlanRepository {
   get(projectId: string): Promise<Plan>
@@ -503,6 +516,7 @@ export interface Repositories {
   reports: ReportRepository
   timeline: TimelineRepository
   milestones: MilestoneRepository
+  charter: CharterRepository
   plan: PlanRepository
   docs: DocsRepository
   sprints: SprintRepository

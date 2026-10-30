@@ -62,6 +62,9 @@ function createFakeStore() {
     attachments: [],
     notifications: [],
     sprints: [],
+    charters: [],
+    charterItems: [],
+    charterMeasurements: [],
     milestones: [],
     projectGroups: [],
     planStatuses: [],
@@ -614,6 +617,57 @@ function createFakeRepositories(store) {
     update: (id, patch) => Object.assign(milestoneRepository.findById(id), patch, { updatedAt: new Date() }),
     delete: (id) => {
       store.milestones = store.milestones.filter((m) => m.id !== id)
+    },
+  }
+
+  const charterRepository = {
+    findByProject: (projectId) => store.charters.find((c) => c.projectId === projectId) || null,
+    upsert: (projectId, patch) => {
+      let found = charterRepository.findByProject(projectId)
+      if (!found) {
+        found = { id: 'charter_' + (store.charters.length + 1), projectId, objective: '', createdAt: new Date() }
+        store.charters.push(found)
+      }
+      return Object.assign(found, patch, { updatedAt: new Date() })
+    },
+  }
+
+  let charterItemSeq = 0
+  const charterItemRepository = {
+    findById: (id) => store.charterItems.find((i) => i.id === id) || null,
+    /** Pela posição; empate pela criação. */
+    listByProject: (projectId) =>
+      store.charterItems
+        .filter((i) => i.projectId === projectId)
+        .slice()
+        .sort((a, b) => (a.position || 0) - (b.position || 0) || a.createdAt - b.createdAt),
+    create: (data) => {
+      charterItemSeq += 1
+      const item = Object.assign({ id: 'charter_item_' + charterItemSeq, taskIds: [], linkIds: [], current: null, measuredAt: null, createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, charterItemSeq)), updatedAt: new Date() }, data)
+      store.charterItems.push(item)
+      return item
+    },
+    update: (id, patch) => Object.assign(charterItemRepository.findById(id), patch, { updatedAt: new Date() }),
+    delete: (id) => {
+      store.charterItems = store.charterItems.filter((i) => i.id !== id)
+      store.charterMeasurements = store.charterMeasurements.filter((m) => m.itemId !== id)
+    },
+  }
+
+  let measurementSeq = 0
+  const charterMeasurementRepository = {
+    /** Mais recente primeiro (pela data da medição; empate pela criação). */
+    listByItem: (itemId, limit) =>
+      store.charterMeasurements
+        .filter((m) => m.itemId === itemId)
+        .slice()
+        .sort((a, b) => (a.measuredAt < b.measuredAt ? 1 : a.measuredAt > b.measuredAt ? -1 : b.seq - a.seq))
+        .slice(0, limit || undefined),
+    create: (data) => {
+      measurementSeq += 1
+      const m = Object.assign({ id: 'measurement_' + measurementSeq, seq: measurementSeq, createdAt: new Date() }, data)
+      store.charterMeasurements.push(m)
+      return m
     },
   }
 
@@ -1232,6 +1286,9 @@ function createFakeRepositories(store) {
     webhookRepository,
     webhookDeliveryRepository,
     sprintRepository,
+    charterRepository,
+    charterItemRepository,
+    charterMeasurementRepository,
     milestoneRepository,
     projectGroupRepository,
     planStatusRepository,
