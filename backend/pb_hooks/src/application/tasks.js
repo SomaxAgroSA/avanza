@@ -78,6 +78,7 @@ const LIST_SCHEMA = {
   // `none` = sem sprint
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
+  urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
   category: [
     rules.custom((value) =>
       typeof value === 'string' && value.split(',').every((c) => workflow.STATUS_CATEGORIES.indexOf(c.trim()) >= 0) ? null : 'invalid_option',
@@ -333,6 +334,7 @@ function createTaskService(deps) {
       subtask_progress: refs.subtasks[task.id] || { done: 0, total: 0 },
       blocked: !!refs.blocked[task.id],
       in_report: !task.reportExcluded,
+      urgency: task.urgency || null,
     }
   }
 
@@ -484,6 +486,7 @@ function createTaskService(deps) {
         tag_id: pick('tag_id'),
         sprint_id: pick('sprint_id'),
         in_report: pick('in_report'),
+        urgency: pick('urgency'),
       },
       LIST_SCHEMA,
     )
@@ -519,6 +522,7 @@ function createTaskService(deps) {
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
       inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
+      urgency: filters.urgency,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       pagination,
@@ -764,6 +768,22 @@ function createTaskService(deps) {
     return presentDetail(ctx, updated, project, access)
   }
 
+  /** Urgência (semáforo alta/média/baixa ou nenhuma): muda direto da lista, sem exigir os campos do status. */
+  function setTaskUrgency(ctx, id, input) {
+    const { task, project, access } = loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const raw = (input || {}).urgency
+    if (raw !== null && taskDomain.URGENCY_LEVELS.indexOf(raw) < 0) throw invalid({ urgency: 'invalid_option' })
+    const before = task.urgency || null
+    if (raw === before) return presentDetail(ctx, task, project, access)
+    const updated = deps.unitOfWork.run((repos) => {
+      const result = repos.taskRepository.update(task.id, { urgency: raw })
+      audit(repos, ctx, task, 'task.updated', { urgency: before }, { urgency: raw })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
   function deleteTask(ctx, id) {
     const { task, project, access } = loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'delete', task)
@@ -823,7 +843,7 @@ function createTaskService(deps) {
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, deleteTask, moveTask, summarize }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskUrgency, deleteTask, moveTask, summarize }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

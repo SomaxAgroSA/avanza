@@ -144,6 +144,7 @@ apiRoute('POST', '/api/v1/tasks', (e) => require(`${__hooks}/src/http/routes.js`
 apiRoute('GET', '/api/v1/tasks/{id}', (e) => require(`${__hooks}/src/http/routes.js`).getTask(e))
 apiRoute('PATCH', '/api/v1/tasks/{id}', (e) => require(`${__hooks}/src/http/routes.js`).updateTask(e), JSON_BODY_LIMIT)
 apiRoute('PUT', '/api/v1/tasks/{id}/report', (e) => require(`${__hooks}/src/http/routes.js`).setTaskReport(e), JSON_BODY_LIMIT)
+apiRoute('PUT', '/api/v1/tasks/{id}/urgency', (e) => require(`${__hooks}/src/http/routes.js`).setTaskUrgency(e), JSON_BODY_LIMIT)
 apiRoute('DELETE', '/api/v1/tasks/{id}', (e) => require(`${__hooks}/src/http/routes.js`).deleteTask(e))
 apiRoute('GET', '/api/v1/tasks/{id}/history', (e) => require(`${__hooks}/src/http/routes.js`).taskHistory(e))
 apiRoute('GET', '/api/v1/tasks/{id}/comments', (e) => require(`${__hooks}/src/http/routes.js`).listTaskComments(e))

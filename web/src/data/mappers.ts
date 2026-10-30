@@ -27,7 +27,7 @@ import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, typ
 import type { Board } from '@/domain/kanban'
 import type { FieldValue } from '@/domain/task-config'
 import type { AttachmentDto, CommentDto, CustomFieldDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
-import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
+import { isTaskUrgency, type Tag, type TaskComment, type TaskDetail, type TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
 import { STATUS_CATEGORIES, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
@@ -288,6 +288,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
     inReport: dto.in_report ?? true,
+    urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
   }
 }
 

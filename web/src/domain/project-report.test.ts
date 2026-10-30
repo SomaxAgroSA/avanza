@@ -19,6 +19,7 @@ function task(n: number, category: StatusCategory, start: string | null, extra: 
     startDate: start ? day(start) : null,
     dueDate: start ? day(start) : null,
     inReport: true,
+    urgency: null,
     ...extra,
   } as TaskSummary
 }

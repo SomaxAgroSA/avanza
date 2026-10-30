@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ExternalLink, FileCheck2, FileX2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
-import { isClosed, type TaskSummary } from '@/domain/tasks'
+import { TASK_URGENCIES, isClosed, type TaskSummary } from '@/domain/tasks'
 import {
   AppConfirmDialog,
   AppDataTable,
@@ -21,6 +21,7 @@ import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskMutations, useTasksList } from './queries'
 import { TaskEditDialog } from './TaskEditDialog'
 import { TaskPreviewDrawer } from './TaskPreviewDrawer'
+import { UrgencyCell } from './TaskUrgency'
 import { DueDate, PersonCell, TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { useTags } from '@/features/tags/queries'
 import { TagList } from '@/features/tags/tag-visuals'
@@ -125,6 +126,16 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         cell: (task) => <span className="truncate text-muted">{task.type?.name ?? '—'}</span>,
         filter: { label: t('tasks.fields.type'), options: (types.data ?? []).map((x) => ({ value: x.id, label: x.name })) },
       },
+      {
+        id: 'urgency',
+        header: t('tasks.fields.urgency'),
+        size: 170,
+        cell: (task) => <UrgencyCell task={task} canEdit={canEdit} />,
+        filter: {
+          label: t('tasks.fields.urgency'),
+          options: [...TASK_URGENCIES, 'none' as const].map((value) => ({ value, label: t(`tasks.urgency.${value}`) })),
+        },
+      },
       ...(projectId
         ? []
         : [
@@ -192,7 +203,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.data, projectId],
+    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.data, projectId, canEdit],
   )
 
   return (

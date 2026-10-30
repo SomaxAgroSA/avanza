@@ -565,3 +565,11 @@ Página do projeto → aba **Ficha** (logo depois de Resumo): para que o projeto
 - **Objetivo:** vinculado a funcionalidades e resultados. Estado **automático**: algum resultado atrasado → *Em risco*; tudo entregue/cumprido → *Atingido*; algo andando → *Em curso*; senão *Pendente*. Funcionalidades canceladas não contam. Também pode ser fixado à mão.
 - **Resultado esperado:** indicador com partida, meta, unidade, início, prazo, frequência de medição e responsável. Cada **medição** (valor, data — hoje ou antes —, comentário) entra na série; a de data mais recente vira o **valor atual**. **Situação:** *Cumprido* (chegou à meta), *No caminho* (no ritmo de uma reta entre a partida no início e a meta no prazo), *Atrasado* (abaixo da reta, ou passou do prazo) ou *Sem dados* (nenhuma medição). Meta abaixo da partida = quanto menos, melhor. **Sem medir:** com frequência semanal (7 dias), mensal (31) ou trimestral (92), passou do intervalo desde a última medição (ou da criação).
 - **Histórico:** no projeto — `charter.updated` (objetivo geral), `charter_item.created/updated/deleted/reordered` e `charter_item.measured`.
+
+## 22. Urgência da tarefa (semáforo)
+
+Na aba **Tarefas** (do projeto e da lista geral), a coluna **Urgência** mostra um semáforo por tarefa: 🔴 **Alta**, 🟡 **Média**, 🟢 **Baixa** — ou nenhum (tarefa sem urgência, o padrão, inclusive das que já existiam).
+
+- **Quem muda:** quem edita a tarefa, com um clique na célula (menu com as três opções e "Sem urgência"). Não exige os campos obrigatórios do status e fica no histórico da tarefa ("Urgência: — → Alta").
+- **Diferença da prioridade:** a prioridade segue o cadastro de prioridades (ordem de atendimento); a urgência é o sinal rápido de "quanto aperta" para quem olha a lista. As duas convivem.
+- **Filtro:** "Urgência" na barra de filtros (Alta, Média, Baixa, Sem urgência); na API, `urgency=high|medium|low|none`.

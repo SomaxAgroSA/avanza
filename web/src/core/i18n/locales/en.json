@@ -760,7 +760,8 @@
       "current": "Current value",
       "frequency": "Frequency",
       "value": "Value",
-      "measured_at": "Measurement date"
+      "measured_at": "Measurement date",
+      "urgency": "Urgency"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -1570,7 +1571,8 @@
       "tags": "Tags",
       "sprint": "Sprint",
       "startDate": "Planned start",
-      "inReport": "In report"
+      "inReport": "In report",
+      "urgency": "Urgency"
     },
     "tagsPlaceholder": "Choose tags…",
     "markdownHint": "Supports **bold**, *italic*, `code`, \"-\" lists and links.",
@@ -1587,6 +1589,14 @@
       "remove": "Remove from the project report",
       "added": "{{code}} is in the report",
       "removed": "{{code}} left the report"
+    },
+    "urgency": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "none": "No urgency",
+      "change": "Change urgency of {{code}} (now: {{urgency}})",
+      "saved": "{{code}}: urgency {{urgency}}."
     }
   },
   "tags": {

@@ -1169,6 +1169,7 @@ const TASK_FILTERS: Record<string, string> = {
   tags: 'tag_id',
   sprint: 'sprint_id',
   in_report: 'in_report',
+  urgency: 'urgency',
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {
@@ -1196,6 +1197,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setInReport(id, inReport) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/report`, { in_report: inReport })).data)
+    },
+    async setUrgency(id, urgency) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/urgency`, { urgency })).data)
     },
     async remove(id) {
       await api.del(path(id))

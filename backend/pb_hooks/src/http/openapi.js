@@ -382,6 +382,7 @@ function build() {
             { name: 'tag_id', in: 'query', schema: { type: 'string' } },
             { name: 'sprint_id', in: 'query', schema: { type: 'string' }, description: 'id da sprint ou `none` (sem sprint)' },
             { name: 'in_report', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'entra (true) ou não (false) no informe do projeto' },
+            { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência (semáforo); none = sem urgência' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
@@ -409,6 +410,14 @@ function build() {
         }, {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({ type: 'object', required: ['in_report'], properties: { in_report: { type: 'boolean' } } }),
+        }),
+      },
+      '/tasks/{id}/urgency': {
+        put: op('Urgência da tarefa (semáforo alta/média/baixa; null limpa); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['urgency'], properties: { urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true } } }),
         }),
       },
       '/tasks/{id}/history': {
@@ -1108,6 +1117,7 @@ function build() {
             subtask_progress: { type: 'object', properties: { done: { type: 'integer' }, total: { type: 'integer' } } },
             blocked: { type: 'boolean', description: 'algum bloqueador (bloqueia/depende de) ainda aberto' },
             in_report: { type: 'boolean', description: 'entra no informe do projeto (padrão: true)' },
+            urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true, description: 'urgência (semáforo): alta = vermelho, média = amarelo, baixa = verde' },
             start_date: { type: ['string', 'null'], format: 'date-time', description: 'início planejado (timeline)' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
             estimated_hours: { type: ['number', 'null'] },

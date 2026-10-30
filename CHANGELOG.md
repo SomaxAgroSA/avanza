@@ -5,6 +5,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Urgência da tarefa** (aba Tarefas): coluna com semáforo 🔴 alta, 🟡 média, 🟢 baixa (ou sem urgência), trocada com um clique por quem edita a tarefa, com filtro e histórico (`PUT /tasks/{id}/urgency`, filtro `urgency`).
 - **Ficha do projeto** (página do projeto → aba Ficha): objetivo geral e objetivos, funcionalidades, escopo (inclui / não inclui) e resultados esperados, com completude e resumo. Funcionalidades avançam sozinhas pelas tarefas vinculadas; objetivos, pelos vínculos; resultados têm partida, meta, prazo, frequência e série de medições (registradas por quem edita ou pelo responsável), com situação "no caminho / atrasado / cumprido" e aviso de "sem medição". API `/projects/{id}/charter` e `/charter-items/{id}`.
 - **Informe do projeto** (página do projeto → aba Informe): capa, indicadores, cronograma com fases e marcos, avanço por fase, linha do tempo dia a dia, tarefas e próximos passos, com prévia na tela e "Baixar PDF"; período, data de corte, fases (grupo da Gestão de projetos) e seções escolhidos por quem monta. Na aba Tarefas, um botão por linha escolhe o que sai no informe (`PUT /tasks/{id}/report`, filtro `in_report`).
 - **Linha do tempo do projeto** (página do projeto → Histórico): os registros do Diário, os marcos e as tarefas pela data em que aconteceram, do mais antigo ao mais recente e agrupados por dia; a auditoria (o que foi gravado e quando) continua logo abaixo, em "Alterações registradas no sistema".

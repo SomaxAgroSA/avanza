@@ -178,6 +178,7 @@ export function fakeRepositories(overrides: {
       create: notImplemented,
       update: notImplemented,
       setInReport: notImplemented,
+      setUrgency: notImplemented,
       remove: notImplemented,
       history: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
       ...overrides.tasks,
