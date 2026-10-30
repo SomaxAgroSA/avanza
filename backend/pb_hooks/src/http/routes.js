@@ -417,6 +417,15 @@ const listMilestones = configAction('milestones', (s, ctx, r) => s.listMilestone
 const createMilestone = configAction('milestones', (s, ctx, r) => s.createMilestone(ctx, r.id, r.body()), 201)
 const updateMilestone = configAction('milestones', (s, ctx, r) => s.updateMilestone(ctx, r.id, r.body()))
 const deleteMilestone = configAction('milestones', (s, ctx, r) => s.deleteMilestone(ctx, r.id))
+// ficha do projeto (objetivos, funcionalidades, escopo e resultados esperados)
+const getCharter = configAction('charter', (s, ctx, r) => s.getCharter(ctx, r.id))
+const updateCharter = configAction('charter', (s, ctx, r) => s.updateCharter(ctx, r.id, r.body()))
+const createCharterItem = configAction('charter', (s, ctx, r) => s.createItem(ctx, r.id, r.body()), 201)
+const reorderCharterItems = configAction('charter', (s, ctx, r) => s.reorderItems(ctx, r.id, r.body()))
+const updateCharterItem = configAction('charter', (s, ctx, r) => s.updateItem(ctx, r.id, r.body()))
+const deleteCharterItem = configAction('charter', (s, ctx, r) => s.deleteItem(ctx, r.id))
+const listCharterMeasurements = configAction('charter', (s, ctx, r) => s.listMeasurements(ctx, r.id))
+const addCharterMeasurement = configAction('charter', (s, ctx, r) => s.addMeasurement(ctx, r.id, r.body()), 201)
 // plano do projeto (Gerenciamento de Projetos, GP-1)
 const projectPlan = configAction('plan', (s, ctx, r) => s.getPlan(ctx, r.id))
 const listProjectGroups = configAction('plan', (s, ctx, r) => s.listGroups(ctx, r.id))
@@ -852,6 +861,14 @@ module.exports = {
   createMilestone,
   updateMilestone,
   deleteMilestone,
+  getCharter,
+  updateCharter,
+  createCharterItem,
+  reorderCharterItems,
+  updateCharterItem,
+  deleteCharterItem,
+  listCharterMeasurements,
+  addCharterMeasurement,
   listReportTasks,
   rankTask,
   listSprints,

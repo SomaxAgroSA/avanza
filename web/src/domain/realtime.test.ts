@@ -22,11 +22,19 @@ describe('domain/realtime — o que atualizar na tela', () => {
       ['tasks', 'board', 'p1'],
       ['tasks', 'backlog', 'p1'],
       ['tasks', 'timeline', 'p1'],
+      ['tasks', 'charter', 'p1'],
       ['tasks', 'list'],
       ['tasks', 'reports'],
       ['tasks', 'detail', 't1'],
       ['tasks', 'history', 't1'],
       ['tasks', 'relations', 't1'],
+    ])
+  })
+
+  it('ficha do projeto: a ficha e as medições', () => {
+    expect(invalidationKeys(event('charter_items', {}))).toEqual([
+      ['tasks', 'charter', 'p1'],
+      ['tasks', 'charter-measurements'],
     ])
   })
 

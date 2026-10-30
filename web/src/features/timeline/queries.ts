@@ -8,9 +8,9 @@ export const timelineKeys = {
   detail: (projectId: string) => ['tasks', 'timeline', projectId] as const,
 }
 
-export function useTimeline(projectId: string) {
+export function useTimeline(projectId: string, enabled = true) {
   const { timeline } = useRepositories()
-  return useQuery({ queryKey: timelineKeys.detail(projectId), queryFn: () => timeline.get(projectId) })
+  return useQuery({ queryKey: timelineKeys.detail(projectId), queryFn: () => timeline.get(projectId), enabled })
 }
 
 const utcDay = (day: string) => new Date(`${day}T00:00:00.000Z`)

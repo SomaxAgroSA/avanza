@@ -116,7 +116,10 @@
     "unsafe_svg": "No se acepta SVG con contenido activo (scripts, eventos o enlaces externos)",
     "invalid_slot": "Lugar de imagen no válido",
     "insecure_url": "Usa una dirección https://",
-    "blocked_host": "Esta dirección no está permitida (metadatos de la nube o la propia máquina)"
+    "blocked_host": "Esta dirección no está permitida (metadatos de la nube o la propia máquina)",
+    "not_in_project": "La tarea debe ser de este proyecto",
+    "invalid_link": "Vincule solo funcionalidades o resultados de este proyecto",
+    "in_future": "La fecha no puede ser futura"
   },
   "errors": {
     "VALIDATION_ERROR": "Revise los campos destacados.",
@@ -210,7 +213,8 @@
     "API_TOKEN_LIMIT": "Ya tienes 20 tokens activos. Revoca alguno antes de crear otro.",
     "TOKEN_NOT_ALLOWED": "Esta acción solo se puede hacer en el navegador, no con un token de API.",
     "WEBHOOK_NOT_FOUND": "Webhook no encontrado.",
-    "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega no encontrada."
+    "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega no encontrada.",
+    "CHARTER_ITEM_NOT_FOUND": "Ítem de la ficha no encontrado."
   },
   "nav": {
     "main": "Navegación principal",
@@ -744,7 +748,19 @@
       "url": "Dirección",
       "events": "Eventos",
       "failures": "Fallas seguidas",
-      "in_report": "En el informe"
+      "in_report": "En el informe",
+      "objective": "Objetivo general",
+      "kind": "Tipo",
+      "owner_id": "Responsable",
+      "task_ids": "Tareas vinculadas",
+      "link_ids": "Vínculos",
+      "unit": "Unidad",
+      "baseline": "Partida",
+      "target": "Meta",
+      "current": "Valor actual",
+      "frequency": "Frecuencia",
+      "value": "Valor",
+      "measured_at": "Fecha de la medición"
     },
     "actions": {
       "auth.login": "Inició sesión",
@@ -874,7 +890,13 @@
       "webhook.updated": "Webhook editado",
       "webhook.deleted": "Webhook eliminado",
       "webhook.secret_rotated": "Secreto del webhook cambiado",
-      "webhook.disabled": "Webhook desactivado por fallas seguidas"
+      "webhook.disabled": "Webhook desactivado por fallas seguidas",
+      "charter.updated": "Objetivo general de la ficha modificado",
+      "charter_item.created": "Ítem agregado a la ficha",
+      "charter_item.updated": "Ítem de la ficha modificado",
+      "charter_item.deleted": "Ítem eliminado de la ficha",
+      "charter_item.reordered": "Ítems de la ficha reordenados",
+      "charter_item.measured": "Medición registrada"
     }
   },
   "projects": {
@@ -985,7 +1007,8 @@
       "history": "Historial",
       "settings": "Configuración",
       "tasks": "Tareas",
-      "report": "Informe"
+      "report": "Informe",
+      "charter": "Ficha"
     },
     "archivedNotice": "Este proyecto está archivado y es de solo lectura. Desarchívelo para volver a editarlo.",
     "details": "Detalles",
@@ -3317,5 +3340,187 @@
   "realtime": {
     "reconnecting": "Reconectando…",
     "reconnectingHint": "Las actualizaciones en tiempo real se cayeron y están volviendo. La pantalla sigue funcionando."
+  },
+  "charter": {
+    "created": "“{{title}}” agregado a la ficha.",
+    "updated": "“{{title}}” actualizado.",
+    "deleted": "“{{title}}” eliminado de la ficha.",
+    "objectiveSaved": "Objetivo general guardado.",
+    "deleteTitle": "¿Eliminar “{{title}}”?",
+    "deleteDescription": "Sale de la ficha y de los objetivos que lo tengan vinculado. Queda registrado en el historial del proyecto.",
+    "deleteResultDescription": "Se eliminan también todas sus mediciones. Queda registrado en el historial del proyecto.",
+    "editItem": "Editar “{{title}}”",
+    "deleteItem": "Eliminar “{{title}}”",
+    "linkedCount_one": "{{count}} funcionalidad o resultado vinculado",
+    "linkedCount_other": "{{count}} funcionalidades o resultados vinculados",
+    "tasksDone": "{{done}} de {{total}} hechas",
+    "noTasks": "Sin tareas vinculadas",
+    "stale": "Sin medir",
+    "percentOfTarget": "{{percent}} % de la meta",
+    "kinds": {
+      "objective": "Objetivo",
+      "feature": "Funcionalidad",
+      "scope_in": "Incluye",
+      "scope_out": "No incluye",
+      "result": "Resultado"
+    },
+    "sections": {
+      "objectives": "Objetivos",
+      "features": "Funcionalidades",
+      "scope": "Alcance",
+      "results": "Resultados esperados"
+    },
+    "hints": {
+      "objectives": "Para qué existe el proyecto y qué tiene que lograr.",
+      "features": "Qué va a hacer el producto. Cada una se vincula a tareas y su avance se calcula solo.",
+      "scope": "Lo que entra y lo que queda afuera, para evitar pedidos fuera de lo acordado.",
+      "results": "Cómo se mide el éxito: indicador, punto de partida, meta y fecha. El valor actual se actualiza con cada medición."
+    },
+    "empty": {
+      "objectives": "Todavía no hay objetivos",
+      "features": "Todavía no hay funcionalidades",
+      "scope": "Todavía no hay alcance definido",
+      "results": "Todavía no hay resultados esperados",
+      "scopeList": "Nada cargado."
+    },
+    "emptyHint": {
+      "objectives": "Escriban el objetivo general en una o dos frases y después los objetivos específicos.",
+      "features": "Listen lo que el producto va a hacer. Al vincular cada funcionalidad con sus tareas, Avanza muestra cuántas están hechas sin que nadie lo actualice.",
+      "scope": "Dos listas cortas: qué incluye el proyecto y qué no incluye. La segunda es la que más ayuda cuando aparecen pedidos nuevos.",
+      "results": "Elijan de dos a cinco indicadores: de dónde parte, a dónde tiene que llegar y para cuándo. La situación se calcula sola."
+    },
+    "add": {
+      "objective": "Objetivo específico",
+      "feature": "Agregar funcionalidad",
+      "scope": "Agregar al alcance",
+      "result": "Agregar resultado"
+    },
+    "general": {
+      "title": "Objetivo general",
+      "hint": "En una o dos frases: para qué existe el proyecto y a quién beneficia.",
+      "write": "Escribir objetivo general",
+      "edit": "Editar objetivo general",
+      "missing": "Sin objetivo general."
+    },
+    "state": {
+      "auto": "Automático",
+      "autoTitle": "Calculado automáticamente",
+      "manualTitle": "Elegido a mano",
+      "autoHint": {
+        "objective": "Automático: se calcula con las funcionalidades y los resultados vinculados.",
+        "feature": "Automático: se calcula con las tareas vinculadas."
+      }
+    },
+    "objectiveState": {
+      "pending": "Pendiente",
+      "in_progress": "En curso",
+      "achieved": "Logrado",
+      "at_risk": "En riesgo"
+    },
+    "featureState": {
+      "planned": "Planificada",
+      "in_progress": "En desarrollo",
+      "delivered": "Entregada",
+      "cancelled": "Cancelada"
+    },
+    "situation": {
+      "achieved": "Cumplido",
+      "on_track": "En camino",
+      "late": "Atrasado",
+      "no_data": "Sin datos"
+    },
+    "frequency": {
+      "none": "Sin frecuencia",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral"
+    },
+    "columns": {
+      "feature": "Funcionalidad",
+      "state": "Estado",
+      "tasks": "Tareas vinculadas",
+      "owner": "Responsable",
+      "indicator": "Indicador",
+      "situation": "Situación"
+    },
+    "fields": {
+      "title": "Título",
+      "indicator": "Indicador",
+      "description": "Descripción",
+      "state": "Estado",
+      "owner": "Responsable",
+      "noOwner": "Sin responsable",
+      "ownerHint": "El responsable también puede registrar las mediciones.",
+      "links": "Vinculado a",
+      "linksHint": "Funcionalidades y resultados que cumplen este objetivo.",
+      "linksPlaceholder": "Elegir funcionalidades o resultados",
+      "tasks": "Tareas vinculadas",
+      "tasksHint": "El avance se calcula con estas tareas (las canceladas no cuentan).",
+      "tasksPlaceholder": "Buscar tarea por código o título",
+      "baseline": "Partida",
+      "target": "Meta",
+      "current": "Actual",
+      "unit": "Unidad",
+      "unitPlaceholder": "%, personas, días…",
+      "startDate": "Inicio",
+      "dueDate": "Fecha meta",
+      "frequency": "Frecuencia de medición",
+      "frequencyHint": "Si pasa el intervalo sin una medición nueva, el indicador queda “Sin medir”.",
+      "scopeKind": "Tipo"
+    },
+    "dialog": {
+      "create": {
+        "objective": "Nuevo objetivo específico",
+        "feature": "Nueva funcionalidad",
+        "scope": "Nuevo ítem de alcance",
+        "result": "Nuevo resultado esperado"
+      },
+      "edit": {
+        "objective": "Editar objetivo",
+        "feature": "Editar funcionalidad",
+        "scope": "Editar ítem de alcance",
+        "result": "Editar resultado esperado"
+      },
+      "hint": {
+        "objective": "Un logro concreto que el proyecto tiene que alcanzar.",
+        "feature": "Algo que el producto va a hacer. Vincúlela a las tareas que la construyen.",
+        "scope": "Algo que el proyecto incluye o que deja afuera.",
+        "result": "Un indicador medible con punto de partida, meta y fecha."
+      }
+    },
+    "measure": {
+      "title": "Registrar medición",
+      "hint": "{{title}} · meta {{target}} · actual {{current}}",
+      "value": "Valor ({{unit}})",
+      "date": "Fecha de la medición",
+      "note": "Comentario",
+      "notePlaceholder": "Ej.: medición de octubre, fuente: reporte del CRM",
+      "saved": "Medición de “{{title}}” registrada.",
+      "action": "Registrar medición",
+      "actionFor": "Registrar medición de “{{title}}”",
+      "series": "Mediciones",
+      "empty": "Todavía no hay mediciones",
+      "emptyHint": "La primera medición pasa a ser el valor actual del indicador."
+    },
+    "summary": {
+      "title": "Resumen de la ficha",
+      "completeness": "Completitud de la ficha",
+      "sections": "{{done}} de {{total}} secciones",
+      "filled": "completa",
+      "missing": "pendiente",
+      "features": "Funcionalidades entregadas",
+      "ofTotal": "de {{total}}",
+      "tasks": "{{done}} de {{total}} tareas vinculadas hechas",
+      "noFeatures": "Sin funcionalidades cargadas",
+      "results": "Resultados en camino",
+      "late_one": "{{count}} atrasado",
+      "late_other": "{{count}} atrasados",
+      "stale_one": "{{count}} sin medir",
+      "stale_other": "{{count}} sin medir",
+      "noResults": "Sin indicadores cargados",
+      "updated": "Última actualización",
+      "by": "por {{name}}",
+      "neverUpdated": "La ficha todavía no se completó"
+    }
   }
 }

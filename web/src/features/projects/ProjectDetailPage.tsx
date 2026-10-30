@@ -27,6 +27,7 @@ import { AuditTimeline } from '@/features/audit/AuditTimeline'
 import { useCan } from '@/features/auth/session'
 import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
 import { ProjectReportPanel } from './report/ProjectReportPanel'
+import { ProjectCharterPanel } from './charter/ProjectCharterPanel'
 import { managementLink } from '@/features/plan/paths'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
@@ -104,6 +105,8 @@ function ProjectDetail({ project }: { project: Project }) {
 
   const tabs = [
     { value: 'overview', label: t('projects.tabs.overview'), content: <Overview project={project} /> },
+    // para que o projeto existe, o que entrega e como se mede (objetivos, funcionalidades, alcance e resultados)
+    { value: 'charter', label: t('projects.tabs.charter'), content: <ProjectCharterPanel project={project} /> },
     ...(canViewTasks ? [{ value: 'tasks', label: t('projects.tabs.tasks'), content: <ProjectTasksPanel project={project} /> }] : []),
     // quadro de gestão do projeto (Gerenciamento de Projetos — módulo à parte das tarefas)
     { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },

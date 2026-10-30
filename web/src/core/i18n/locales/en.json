@@ -116,7 +116,10 @@
     "unsafe_svg": "SVG with active content (scripts, events or external links) is not allowed",
     "invalid_slot": "Invalid image slot",
     "insecure_url": "Use an https:// address",
-    "blocked_host": "This address is not allowed (cloud metadata or the machine itself)"
+    "blocked_host": "This address is not allowed (cloud metadata or the machine itself)",
+    "not_in_project": "The task must belong to this project",
+    "invalid_link": "Link only features or results from this project",
+    "in_future": "The date can’t be in the future"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -210,7 +213,8 @@
     "API_TOKEN_LIMIT": "You already have 20 active tokens. Revoke one before creating another.",
     "TOKEN_NOT_ALLOWED": "This action can only be done in the browser, not with an API token.",
     "WEBHOOK_NOT_FOUND": "Webhook not found.",
-    "WEBHOOK_DELIVERY_NOT_FOUND": "Delivery not found."
+    "WEBHOOK_DELIVERY_NOT_FOUND": "Delivery not found.",
+    "CHARTER_ITEM_NOT_FOUND": "Charter item not found."
   },
   "nav": {
     "main": "Main navigation",
@@ -744,7 +748,19 @@
       "url": "Address",
       "events": "Events",
       "failures": "Failures in a row",
-      "in_report": "In report"
+      "in_report": "In report",
+      "objective": "Main goal",
+      "kind": "Type",
+      "owner_id": "Owner",
+      "task_ids": "Linked tasks",
+      "link_ids": "Links",
+      "unit": "Unit",
+      "baseline": "Baseline",
+      "target": "Target",
+      "current": "Current value",
+      "frequency": "Frequency",
+      "value": "Value",
+      "measured_at": "Measurement date"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -874,7 +890,13 @@
       "webhook.updated": "Webhook edited",
       "webhook.deleted": "Webhook deleted",
       "webhook.secret_rotated": "Webhook secret changed",
-      "webhook.disabled": "Webhook turned off after repeated failures"
+      "webhook.disabled": "Webhook turned off after repeated failures",
+      "charter.updated": "Charter main goal changed",
+      "charter_item.created": "Item added to the charter",
+      "charter_item.updated": "Charter item changed",
+      "charter_item.deleted": "Item removed from the charter",
+      "charter_item.reordered": "Charter items reordered",
+      "charter_item.measured": "Measurement recorded"
     }
   },
   "projects": {
@@ -985,7 +1007,8 @@
       "history": "History",
       "settings": "Settings",
       "tasks": "Tasks",
-      "report": "Report"
+      "report": "Report",
+      "charter": "Charter"
     },
     "archivedNotice": "This project is archived and read-only. Unarchive it to edit again.",
     "details": "Details",
@@ -3317,5 +3340,187 @@
   "realtime": {
     "reconnecting": "Reconnecting…",
     "reconnectingHint": "Realtime updates dropped and are coming back. The screen keeps working."
+  },
+  "charter": {
+    "created": "“{{title}}” added to the charter.",
+    "updated": "“{{title}}” updated.",
+    "deleted": "“{{title}}” removed from the charter.",
+    "objectiveSaved": "Main goal saved.",
+    "deleteTitle": "Delete “{{title}}”?",
+    "deleteDescription": "It leaves the charter and any objective linked to it. The project history keeps a record.",
+    "deleteResultDescription": "All its measurements are deleted too. The project history keeps a record.",
+    "editItem": "Edit “{{title}}”",
+    "deleteItem": "Delete “{{title}}”",
+    "linkedCount_one": "{{count}} linked feature or result",
+    "linkedCount_other": "{{count}} linked features or results",
+    "tasksDone": "{{done}} of {{total}} done",
+    "noTasks": "No linked tasks",
+    "stale": "Not measured",
+    "percentOfTarget": "{{percent}}% of target",
+    "kinds": {
+      "objective": "Objective",
+      "feature": "Feature",
+      "scope_in": "In scope",
+      "scope_out": "Out of scope",
+      "result": "Result"
+    },
+    "sections": {
+      "objectives": "Objectives",
+      "features": "Features",
+      "scope": "Scope",
+      "results": "Expected results"
+    },
+    "hints": {
+      "objectives": "Why the project exists and what it has to achieve.",
+      "features": "What the product will do. Each one links to tasks and its progress is calculated automatically.",
+      "scope": "What is in and what is out, to avoid requests beyond what was agreed.",
+      "results": "How success is measured: indicator, starting point, target and date. The current value updates with each measurement."
+    },
+    "empty": {
+      "objectives": "No objectives yet",
+      "features": "No features yet",
+      "scope": "No scope defined yet",
+      "results": "No expected results yet",
+      "scopeList": "Nothing added."
+    },
+    "emptyHint": {
+      "objectives": "Write the main goal in one or two sentences, then the specific objectives.",
+      "features": "List what the product will do. Link each feature to its tasks and Avanza shows how many are done without anyone updating it.",
+      "scope": "Two short lists: what the project includes and what it leaves out. The second one helps most when new requests come in.",
+      "results": "Pick two to five indicators: where it starts, where it must get to and by when. The status is calculated automatically."
+    },
+    "add": {
+      "objective": "Specific objective",
+      "feature": "Add feature",
+      "scope": "Add to scope",
+      "result": "Add result"
+    },
+    "general": {
+      "title": "Main goal",
+      "hint": "In one or two sentences: why the project exists and who benefits.",
+      "write": "Write main goal",
+      "edit": "Edit main goal",
+      "missing": "No main goal."
+    },
+    "state": {
+      "auto": "Automatic",
+      "autoTitle": "Calculated automatically",
+      "manualTitle": "Set by hand",
+      "autoHint": {
+        "objective": "Automatic: calculated from the linked features and results.",
+        "feature": "Automatic: calculated from the linked tasks."
+      }
+    },
+    "objectiveState": {
+      "pending": "Pending",
+      "in_progress": "In progress",
+      "achieved": "Achieved",
+      "at_risk": "At risk"
+    },
+    "featureState": {
+      "planned": "Planned",
+      "in_progress": "In development",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "situation": {
+      "achieved": "Achieved",
+      "on_track": "On track",
+      "late": "Behind",
+      "no_data": "No data"
+    },
+    "frequency": {
+      "none": "No frequency",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly"
+    },
+    "columns": {
+      "feature": "Feature",
+      "state": "Status",
+      "tasks": "Linked tasks",
+      "owner": "Owner",
+      "indicator": "Indicator",
+      "situation": "Status"
+    },
+    "fields": {
+      "title": "Title",
+      "indicator": "Indicator",
+      "description": "Description",
+      "state": "Status",
+      "owner": "Owner",
+      "noOwner": "No owner",
+      "ownerHint": "The owner can also record measurements.",
+      "links": "Linked to",
+      "linksHint": "Features and results that fulfil this objective.",
+      "linksPlaceholder": "Choose features or results",
+      "tasks": "Linked tasks",
+      "tasksHint": "Progress is calculated from these tasks (cancelled ones don’t count).",
+      "tasksPlaceholder": "Search a task by code or title",
+      "baseline": "Baseline",
+      "target": "Target",
+      "current": "Current",
+      "unit": "Unit",
+      "unitPlaceholder": "%, people, days…",
+      "startDate": "Start",
+      "dueDate": "Target date",
+      "frequency": "Measurement frequency",
+      "frequencyHint": "If the interval passes without a new measurement, the indicator shows “Not measured”.",
+      "scopeKind": "Type"
+    },
+    "dialog": {
+      "create": {
+        "objective": "New specific objective",
+        "feature": "New feature",
+        "scope": "New scope item",
+        "result": "New expected result"
+      },
+      "edit": {
+        "objective": "Edit objective",
+        "feature": "Edit feature",
+        "scope": "Edit scope item",
+        "result": "Edit expected result"
+      },
+      "hint": {
+        "objective": "A concrete achievement the project has to reach.",
+        "feature": "Something the product will do. Link it to the tasks that build it.",
+        "scope": "Something the project includes or leaves out.",
+        "result": "A measurable indicator with a starting point, target and date."
+      }
+    },
+    "measure": {
+      "title": "Record measurement",
+      "hint": "{{title}} · target {{target}} · current {{current}}",
+      "value": "Value ({{unit}})",
+      "date": "Measurement date",
+      "note": "Comment",
+      "notePlaceholder": "E.g. October measurement, source: CRM report",
+      "saved": "Measurement for “{{title}}” recorded.",
+      "action": "Record measurement",
+      "actionFor": "Record measurement for “{{title}}”",
+      "series": "Measurements",
+      "empty": "No measurements yet",
+      "emptyHint": "The first measurement becomes the indicator’s current value."
+    },
+    "summary": {
+      "title": "Charter summary",
+      "completeness": "Charter completeness",
+      "sections": "{{done}} of {{total}} sections",
+      "filled": "complete",
+      "missing": "missing",
+      "features": "Features delivered",
+      "ofTotal": "of {{total}}",
+      "tasks": "{{done}} of {{total}} linked tasks done",
+      "noFeatures": "No features added",
+      "results": "Results on track",
+      "late_one": "{{count}} behind",
+      "late_other": "{{count}} behind",
+      "stale_one": "{{count}} not measured",
+      "stale_other": "{{count}} not measured",
+      "noResults": "No indicators added",
+      "updated": "Last update",
+      "by": "by {{name}}",
+      "neverUpdated": "The charter hasn’t been filled in yet"
+    }
   }
 }
