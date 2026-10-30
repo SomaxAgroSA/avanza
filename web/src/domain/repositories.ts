@@ -36,7 +36,7 @@ import type {
 import type { PlanFile, PlanUpdate, PlanUpdateInput, PlanUpdates } from './plan-updates'
 import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, PlanJournal, PlanReport } from './plan-management'
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
-import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
+import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary, TaskUrgency } from './tasks'
 import type {
   MemberRole,
   Project,
@@ -314,6 +314,7 @@ export interface TaskRepository {
   update(id: string, data: TaskInput): Promise<TaskDetail>
   /** Liga/desliga a tarefa no informe do projeto (não exige os obrigatórios do status). */
   setInReport(id: string, inReport: boolean): Promise<TaskDetail>
+  setUrgency(id: string, urgency: TaskUrgency | null): Promise<TaskDetail>
   remove(id: string): Promise<void>
   history(id: string): Promise<Page<AuditEntry>>
 }

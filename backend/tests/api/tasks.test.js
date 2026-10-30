@@ -148,6 +148,22 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal((await member.client.put(`/tasks/${task.id}/report`, { in_report: true })).body.data.in_report, true)
   })
 
+  it('urgência: semáforo alta/média/baixa, com histórico e filtro', async () => {
+    const task = (await member.client.get('/tasks?search=CRM-2')).body.data[0]
+    assert.equal(task.urgency, null)
+    const high = await member.client.put(`/tasks/${task.id}/urgency`, { urgency: 'high' })
+    assert.equal(high.status, 200, JSON.stringify(high.body))
+    assert.equal(high.body.data.urgency, 'high')
+    assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&urgency=high`)).body.data.map((t) => t.code), ['CRM-2'])
+    assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&urgency=none`)).body.data.map((t) => t.code), ['CRM-1'])
+    const history = (await member.client.get(`/tasks/${task.id}/history`)).body.data
+    assert.deepEqual([history[0].old_value, history[0].new_value], [{ urgency: null }, { urgency: 'high' }])
+    assert.equal((await member.client.put(`/tasks/${task.id}/urgency`, { urgency: 'roja' })).body.error.details.fields.urgency, 'invalid_option')
+    assert.equal((await viewer.client.put(`/tasks/${task.id}/urgency`, { urgency: 'low' })).status, 403)
+    assert.equal((await member.client.put(`/tasks/${task.id}/urgency`, { urgency: 'low' }, { csrf: false })).status, 403)
+    assert.equal((await member.client.put(`/tasks/${task.id}/urgency`, { urgency: null })).body.data.urgency, null)
+  })
+
   it('protege acesso: leitor não edita, estranho não vê, CSRF exigido, exclusão por gestor', async () => {
     const task = (await member.client.get('/tasks?search=CRM-2')).body.data[0]
     assert.equal((await viewer.client.patch(`/tasks/${task.id}`, { title: 'x' })).status, 403)

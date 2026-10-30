@@ -760,7 +760,8 @@
       "current": "Valor atual",
       "frequency": "Frequência",
       "value": "Valor",
-      "measured_at": "Data da medição"
+      "measured_at": "Data da medição",
+      "urgency": "Urgência"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -1570,7 +1571,8 @@
       "tags": "Tags",
       "sprint": "Sprint",
       "startDate": "Início planejado",
-      "inReport": "No informe"
+      "inReport": "No informe",
+      "urgency": "Urgência"
     },
     "tagsPlaceholder": "Escolher tags…",
     "markdownHint": "Aceita **negrito**, *itálico*, `código`, listas com \"-\" e links.",
@@ -1587,6 +1589,14 @@
       "remove": "Tirar do informe do projeto",
       "added": "{{code}} entra no informe",
       "removed": "{{code}} saiu do informe"
+    },
+    "urgency": {
+      "high": "Alta",
+      "medium": "Média",
+      "low": "Baixa",
+      "none": "Sem urgência",
+      "change": "Mudar urgência de {{code}} (agora: {{urgency}})",
+      "saved": "{{code}}: urgência {{urgency}}."
     }
   },
   "tags": {

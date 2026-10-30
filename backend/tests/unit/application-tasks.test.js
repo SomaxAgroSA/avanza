@@ -366,3 +366,41 @@ describe('application/tasks — informe do projeto', () => {
     assert.equal(codeOf(() => codes('talvez')), 'VALIDATION_ERROR:{"in_report":"invalid_option"}')
   })
 })
+
+describe('application/tasks — urgência (semáforo)', () => {
+  it('nasce sem urgência; quem edita escolhe alta/média/baixa ou limpa, com histórico', () => {
+    const s = setup()
+    const task = s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(task.urgency, null)
+    assert.equal(s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'high' }).urgency, 'high')
+    const audit = s.deps.store.audit.at(-1)
+    assert.equal(audit.action, 'task.updated')
+    assert.deepEqual([audit.oldValue, audit.newValue], [{ urgency: null }, { urgency: 'high' }])
+    const before = s.deps.store.audit.length
+    s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'high' })
+    assert.equal(s.deps.store.audit.length, before)
+    assert.equal(s.tasks.setTaskUrgency(s.ctx.gabi, task.id, { urgency: null }).urgency, null)
+  })
+
+  it('valida o valor e o acesso; não exige os campos do status', () => {
+    const s = setup()
+    const task = s.tasks.createTask(s.ctx.mario, newBug(s))
+    s.deps.taskValueRepository.replace(task.id, {}, {})
+    assert.equal(s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'low' }).urgency, 'low')
+    assert.equal(codeOf(() => s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'urgente' })), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+    assert.equal(codeOf(() => s.tasks.setTaskUrgency(s.ctx.mario, task.id, {})), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+    assert.equal(codeOf(() => s.tasks.setTaskUrgency(s.ctx.lia, task.id, { urgency: 'high' })), 'FORBIDDEN')
+    assert.equal(codeOf(() => s.tasks.setTaskUrgency(s.ctx.outsider, task.id, { urgency: 'high' })), 'TASK_NOT_FOUND')
+  })
+
+  it('a listagem filtra por urgência (none = sem urgência)', () => {
+    const s = setup()
+    const a = s.tasks.createTask(s.ctx.mario, newBug(s))
+    const b = s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Outra' }))
+    s.tasks.setTaskUrgency(s.ctx.mario, b.id, { urgency: 'medium' })
+    const codes = (value) => s.tasks.listTasks(s.ctx.mario, { project_id: s.project.id, urgency: value }).items.map((t) => t.code)
+    assert.deepEqual(codes('medium'), [b.code])
+    assert.deepEqual(codes('none'), [a.code])
+    assert.equal(codeOf(() => codes('roja')), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+  })
+})
