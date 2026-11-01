@@ -8,6 +8,7 @@ const { parsePagination, parseSort, buildPageMeta } = require('../core/paginatio
 const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
 const { USER_STATUS } = require('../domain/user')
+const { URGENCY_LEVELS } = require('../domain/task')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 
@@ -20,6 +21,7 @@ const FIELD_RULES = {
   cover: [rules.oneOf(projectDomain.PROJECT_COVERS)],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
+  urgency: [rules.oneOf(URGENCY_LEVELS)],
   start_date: [rules.isoDate()],
   due_date: [rules.isoDate()],
 }
@@ -31,6 +33,7 @@ const LIST_SCHEMA = {
   search: [rules.maxLength(100)],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
+  urgency: [rules.oneOf(URGENCY_LEVELS.concat(['none']))],
   owner_id: [rules.maxLength(40)],
 }
 
@@ -50,6 +53,7 @@ function auditView(project) {
     cover: project.cover,
     status: project.status,
     priority: project.priority,
+    urgency: project.urgency || null,
     start_date: iso(project.startDate),
     due_date: iso(project.dueDate),
   }
@@ -82,6 +86,7 @@ function createProjectService(deps) {
       cover: project.cover || 'green',
       status: project.status,
       priority: project.priority,
+      urgency: project.urgency || null,
       owner: owner ? toUserSummary(owner) : null,
       start_date: iso(project.startDate),
       due_date: iso(project.dueDate),
@@ -107,7 +112,7 @@ function createProjectService(deps) {
     const q = query || {}
     const pick = (key) => (q[key] === undefined || q[key] === '' ? undefined : q[key])
     const filters = assertValid(
-      { view: pick('view'), search: pick('search'), status: pick('status'), priority: pick('priority'), owner_id: pick('owner_id') },
+      { view: pick('view'), search: pick('search'), status: pick('status'), priority: pick('priority'), urgency: pick('urgency'), owner_id: pick('owner_id') },
       LIST_SCHEMA,
     )
     const pagination = parsePagination(q)
@@ -117,6 +122,7 @@ function createProjectService(deps) {
       search: filters.search,
       status: filters.status,
       priority: filters.priority,
+      urgency: filters.urgency,
       ownerId: filters.owner_id,
       sort: parseSort(q.sort, SORTABLE, 'name'),
       pagination,
@@ -160,6 +166,7 @@ function createProjectService(deps) {
         cover: data.cover || 'green',
         status: data.status || 'planning',
         priority: data.priority || 'medium',
+        urgency: data.urgency || null,
         ownerId: ctx.principal.userId,
         createdBy: ctx.principal.userId,
         startDate: data.start_date || null,
@@ -200,6 +207,7 @@ function createProjectService(deps) {
       cover: data.cover || project.cover,
       status: data.status || project.status,
       priority: data.priority || project.priority,
+      urgency: source.urgency === null ? null : data.urgency !== undefined ? data.urgency : project.urgency || null,
       startDate,
       dueDate,
     })
@@ -214,6 +222,7 @@ function createProjectService(deps) {
         cover: next.cover,
         status: next.status,
         priority: next.priority,
+        urgency: next.urgency,
         startDate: next.startDate,
         dueDate: next.dueDate,
       })

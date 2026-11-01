@@ -405,6 +405,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           search: query.search.trim() || undefined,
           status: query.filters.status,
           priority: query.filters.priority,
+          urgency: query.filters.urgency,
           owner_id: query.filters.owner_id,
         },
       })

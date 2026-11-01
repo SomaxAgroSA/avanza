@@ -9,6 +9,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
 import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, suggestKey, type Project } from '@/domain/projects'
 import { projectSchema, type ProjectInput } from '@/domain/validation'
+import { TASK_URGENCIES } from '@/domain/tasks'
 import { AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
@@ -26,6 +27,7 @@ function defaults(project?: Project | null): ProjectInput {
     cover: project?.cover ?? 'green',
     status: project?.status ?? 'planning',
     priority: project?.priority ?? 'medium',
+    urgency: project?.urgency ?? 'none',
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -67,6 +69,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
       cover: values.cover,
       status: values.status,
       priority: values.priority,
+      urgency: values.urgency === 'none' ? null : values.urgency,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -175,6 +178,18 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                   value={field.value}
                   onValueChange={field.onChange}
                   options={PROJECT_PRIORITIES.map((p) => ({ value: p, label: t(`projects.priority.${p}`) }))}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="urgency"
+              render={({ field }) => (
+                <AppSelect
+                  label={t('tasks.fields.urgency')}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  options={[...TASK_URGENCIES, 'none' as const].map((u) => ({ value: u, label: t(`tasks.urgency.${u}`) }))}
                 />
               )}
             />

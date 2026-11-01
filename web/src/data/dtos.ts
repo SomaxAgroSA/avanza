@@ -78,6 +78,7 @@ export interface ProjectDto {
   cover: string
   status: string
   priority: string
+  urgency?: string | null
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null

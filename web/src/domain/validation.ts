@@ -3,6 +3,7 @@ import { SUPPORTED_LANGUAGES } from '@/core/i18n'
 import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES } from './projects'
 import { SPACE_ICONS, SPACE_VISIBILITIES } from './docs'
 import { OPTION_COLORS } from './task-config'
+import { TASK_URGENCIES } from './tasks'
 import { DEFAULT_PASSWORD_POLICY, type PasswordPolicy } from './platform'
 
 /**
@@ -105,6 +106,8 @@ export const projectSchema = z
     cover: z.enum(PROJECT_COVERS),
     status: z.enum(PROJECT_STATUSES),
     priority: z.enum(PROJECT_PRIORITIES),
+    /** 'none' = sem urgência */
+    urgency: z.enum([...TASK_URGENCIES, 'none']),
     /** AAAA-MM-DD ou '' */
     startDate: z.string(),
     dueDate: z.string(),

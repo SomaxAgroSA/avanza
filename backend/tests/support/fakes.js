@@ -394,6 +394,7 @@ function createFakeRepositories(store) {
       }
       if (query.status) items = items.filter((p) => p.status === query.status)
       if (query.priority) items = items.filter((p) => p.priority === query.priority)
+      if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
       if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
       const sort = query.sort[0]
       if (sort) {
