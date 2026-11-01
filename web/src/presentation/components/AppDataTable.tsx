@@ -25,7 +25,7 @@ import { AppPagination } from './AppPagination'
 import { AppEmptyState, AppErrorState, AppSkeleton } from './AppStates'
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
-import { AppSelect, SELECT_ALL } from './AppSelect'
+import { FilterChips, FilterSelect, MoreFilters } from './data-table/TableFilters'
 import type { DataTableStateApi } from './data-table/use-data-table-state'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { useDelayedFlag } from '@/presentation/common/use-delayed-flag'
@@ -45,7 +45,12 @@ export interface DataTableColumn<T> {
   pinned?: boolean
   align?: 'start' | 'end'
   /** Filtro por coluna exibido na barra de filtros. */
-  filter?: { label: string; options: Array<{ value: string; label: string }> }
+  filter?: {
+    label: string
+    options: Array<{ value: string; label: string }>
+    /** Sempre visível na barra; os demais vão para "Mais filtros". Sem nenhum marcado, valem os primeiros. */
+    primary?: boolean
+  }
 }
 
 export interface DataTableRowActions<T> {
@@ -85,6 +90,8 @@ export interface AppDataTableProps<T extends RowData> {
   /** Filtros/controles extras na barra (além dos filtros por coluna). */
   toolbar?: ReactNode
   toolbarActions?: ReactNode
+  /** Quantos filtros ficam na barra quando nenhuma coluna marca `primary` (padrão 3). */
+  maxVisibleFilters?: number
   emptyState?: ReactNode
   /** Desativa busca/paginação (listas pequenas carregadas de uma vez). */
   searchable?: boolean
@@ -144,6 +151,7 @@ export function AppDataTable<T extends RowData>({
   searchPlaceholder,
   toolbar,
   toolbarActions,
+  maxVisibleFilters = 3,
   emptyState,
   searchable = true,
   paginated = true,
@@ -214,6 +222,10 @@ export function AppDataTable<T extends RowData>({
   })
 
   const filterColumns = columns.filter((c) => c.filter)
+  const filterDefs = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
+  const anyPrimary = filterDefs.some((f) => f.primary)
+  const visibleFilters = anyPrimary ? filterDefs.filter((f) => f.primary) : filterDefs.slice(0, maxVisibleFilters)
+  const hiddenFilters = filterDefs.filter((f) => !visibleFilters.includes(f))
   const hideableColumns = table.getAllLeafColumns().filter((c) => c.getCanHide())
   const visibleColumnCount = table.getVisibleLeafColumns().length
   const showSkeleton = loading && data.length === 0
@@ -243,23 +255,14 @@ export function AppDataTable<T extends RowData>({
         }
         filters={
           <>
-            {filterColumns.map((column) => (
-              <AppSelect
-                key={column.id}
-                size="sm"
-                aria-label={column.filter!.label}
-                value={state.filters[column.id] ?? SELECT_ALL}
-                onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
-                options={[
-                  { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
-                  ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
-                ]}
-                triggerClassName="min-w-40"
-              />
+            {visibleFilters.map((filter) => (
+              <FilterSelect key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
             ))}
+            <MoreFilters filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />
             {toolbar}
           </>
         }
+        below={<FilterChips filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />}
         hasActiveFilters={tableState.hasActiveFilters}
         onReset={tableState.resetFilters}
         actions={
@@ -268,7 +271,7 @@ export function AppDataTable<T extends RowData>({
               <AppDropdown
                 items={columnMenu}
                 trigger={
-                  <AppButton variant="secondary" size="sm" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
+                  <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
                     <span className="hidden sm:inline">{t('table.columns')}</span>
                   </AppButton>
                 }

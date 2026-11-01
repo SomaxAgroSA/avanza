@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, FileCheck2, FileX2 } from 'lucide-react'
@@ -40,10 +40,12 @@ export interface TasksTableProps {
   /** Busca aplicada de fora (ex.: /tasks?search=… da command palette). */
   search?: string | null
   onSearchApplied?: () => void
+  /** Ação principal à direita da barra (ex.: "Nova tarefa" na aba do projeto). */
+  primaryAction?: ReactNode
 }
 
 /** Listagem padrão de tarefas (página Tarefas e aba do projeto). */
-export function TasksTable({ tableId, projectId, search, onSearchApplied }: TasksTableProps) {
+export function TasksTable({ tableId, projectId, search, onSearchApplied, primaryAction }: TasksTableProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const navigate = useNavigate()
@@ -102,7 +104,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         sortable: true,
         size: 170,
         cell: (task) => <TaskStatusBadge status={task.status} />,
-        filter: { label: t('tasks.fields.status'), options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
+        filter: { label: t('tasks.fields.status'), primary: true, options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
       },
       {
         id: 'priority',
@@ -110,14 +112,14 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         sortable: true,
         size: 140,
         cell: (task) => <TaskPriorityBadge priority={task.priority} />,
-        filter: { label: t('tasks.fields.priority'), options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
+        filter: { label: t('tasks.fields.priority'), primary: true, options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
       },
       {
         id: 'assignee',
         header: t('tasks.fields.assignee'),
         size: 180,
         cell: (task) => <PersonCell person={task.assignee} />,
-        filter: { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
+        filter: { label: t('tasks.fields.assignee'), primary: true, options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
       },
       {
         id: 'type',
@@ -171,6 +173,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         cell: (task) => <span className="text-muted">{isClosed(task) ? t('tasks.closed') : t('tasks.open')}</span>,
         filter: {
           label: t('tasks.fields.situation'),
+          primary: true,
           options: [
             { value: OPEN, label: t('tasks.open') },
             { value: CLOSED, label: t('tasks.closed') },
@@ -220,6 +223,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         error={tasks.isError ? { correlationId: isAppError(tasks.error) ? tasks.error.correlationId : undefined } : null}
         onRetry={() => void tasks.refetch()}
         searchPlaceholder={t('tasks.searchPlaceholder')}
+        toolbarActions={primaryAction}
         actions={{
           // só na aba Tarefas do projeto: escolher o que sai no informe (aba Informe)
           leading: projectId
