@@ -41,6 +41,9 @@ import { CharterItemDialog, ObjectiveDialog, type CharterDialogState } from './C
 import { ProgressBar } from './ProgressBar'
 import { MeasurementDialog, ResultDrawer } from './ResultTracking'
 import { useCharter, useCharterMutations } from './queries'
+import { PrintCharterButton } from './PrintCharterButton'
+import { useTabActionsSlot } from '@/presentation/common/tab-actions-slot'
+import { createPortal } from 'react-dom'
 
 const utcDay = (day: string) => new Date(`${day}T00:00:00.000Z`)
 
@@ -73,6 +76,8 @@ function CharterView({ project, charter }: { project: Project; charter: ProjectC
   const [deleting, setDeleting] = useState<CharterItem | null>(null)
   const [viewing, setViewing] = useState<ResultItem | null>(null)
   const [measuring, setMeasuring] = useState<ResultItem | null>(null)
+  const actionsSlot = useTabActionsSlot()
+  const printButton = <PrintCharterButton project={project} charter={charter} />
 
   const archived = !!project.archivedAt
   // quem edita mede sempre; a sessão só importa para o responsável (assim as linhas não mudam quando ela carrega)
@@ -85,6 +90,8 @@ function CharterView({ project, charter }: { project: Project; charter: ProjectC
 
   return (
     <div className="flex flex-col gap-4">
+      {/* na linha das abas (como Colunas/Nova tarefa nas Tarefas); sem ela, acima do resumo */}
+      {actionsSlot ? createPortal(printButton, actionsSlot) : <div className="flex justify-end">{printButton}</div>}
       <CharterSummary charter={charter} />
       <ObjectivesSection charter={charter} canEdit={canEdit} onGeneral={() => setEditingObjective(true)} onCreate={() => create('objective')} onEdit={edit} onDelete={setDeleting} />
       <FeaturesSection charter={charter} canEdit={canEdit} onCreate={() => create('feature')} onEdit={edit} onDelete={setDeleting} />

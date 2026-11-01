@@ -3537,6 +3537,12 @@
       "updated": "Last update",
       "by": "by {{name}}",
       "neverUpdated": "The charter hasn’t been filled in yet"
+    },
+    "print": "Print charter",
+    "doc": {
+      "title": "Project charter",
+      "issued": "issued on {{date}}",
+      "empty": "Nothing filled in yet."
     }
   }
 }

@@ -5,6 +5,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Imprimir ficha** (aba Ficha): documento A4 com objetivos, funcionalidades, escopo e resultados, pronto para imprimir ou salvar em PDF. Na página do projeto, as ações da aba (Colunas, Nova tarefa, Imprimir ficha) ficam na linha das abas.
 - **Urgência também nos projetos e no Kanban:** coluna e filtro de urgência na lista de Projetos (troca com um clique), campo no formulário do projeto, filtro de urgência no Kanban e semáforo nos cartões.
 - **Urgência da tarefa** (aba Tarefas): coluna com semáforo 🔴 alta, 🟡 média, 🟢 baixa (ou sem urgência), trocada com um clique por quem edita a tarefa, com filtro e histórico (`PUT /tasks/{id}/urgency`, filtro `urgency`).
 - **Ficha do projeto** (página do projeto → aba Ficha): objetivo geral e objetivos, funcionalidades, escopo (inclui / não inclui) e resultados esperados, com completude e resumo. Funcionalidades avançam sozinhas pelas tarefas vinculadas; objetivos, pelos vínculos; resultados têm partida, meta, prazo, frequência e série de medições (registradas por quem edita ou pelo responsável), com situação "no caminho / atrasado / cumprido" e aviso de "sem medição". API `/projects/{id}/charter` e `/charter-items/{id}`.

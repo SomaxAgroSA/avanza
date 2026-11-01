@@ -194,6 +194,7 @@ function ProjectDetail({ project }: { project: Project }) {
       )}
 
       <AppTabs
+        actionsSlot
         tabs={tabs}
         aria-label={project.name}
         value={tabs.some((tab) => tab.value === params.get('tab')) ? (params.get('tab') as string) : 'overview'}

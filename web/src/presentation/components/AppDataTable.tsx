@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   columnPinningFeature,
   columnResizingFeature,
@@ -92,6 +93,8 @@ export interface AppDataTableProps<T extends RowData> {
   toolbarActions?: ReactNode
   /** Quantos filtros ficam na barra quando nenhuma coluna marca `primary` (padrão 3). */
   maxVisibleFilters?: number
+  /** Põe "Colunas" e as ações noutro lugar da tela (ex.: a linha de abas do projeto). */
+  actionsSlot?: HTMLElement | null
   emptyState?: ReactNode
   /** Desativa busca/paginação (listas pequenas carregadas de uma vez). */
   searchable?: boolean
@@ -152,6 +155,7 @@ export function AppDataTable<T extends RowData>({
   toolbar,
   toolbarActions,
   maxVisibleFilters = 3,
+  actionsSlot,
   emptyState,
   searchable = true,
   paginated = true,
@@ -245,8 +249,25 @@ export function AppDataTable<T extends RowData>({
     })),
   ]
 
+  const toolbarButtons = (
+      <>
+        {hideableColumns.length > 0 && (
+          <AppDropdown
+            items={columnMenu}
+            trigger={
+              <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
+                <span className="hidden sm:inline">{t('table.columns')}</span>
+              </AppButton>
+            }
+          />
+        )}
+        {toolbarActions}
+      </>
+  )
+
   return (
     <div className="flex flex-col gap-3">
+      {actionsSlot && createPortal(toolbarButtons, actionsSlot)}
       <AppFilterBar
         search={
           searchable ? (
@@ -265,21 +286,7 @@ export function AppDataTable<T extends RowData>({
         below={<FilterChips filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />}
         hasActiveFilters={tableState.hasActiveFilters}
         onReset={tableState.resetFilters}
-        actions={
-          <>
-            {hideableColumns.length > 0 && (
-              <AppDropdown
-                items={columnMenu}
-                trigger={
-                  <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
-                    <span className="hidden sm:inline">{t('table.columns')}</span>
-                  </AppButton>
-                }
-              />
-            )}
-            {toolbarActions}
-          </>
-        }
+        actions={actionsSlot ? undefined : toolbarButtons}
       />
 
       <div className="relative overflow-hidden rounded-xl border border-border bg-surface shadow-card">
