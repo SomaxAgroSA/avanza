@@ -7,25 +7,31 @@ export interface AppFilterBarProps {
   search?: ReactNode
   filters?: ReactNode
   actions?: ReactNode
+  /** Linha de baixo (ex.: fichas dos filtros ativos); some quando vazia. */
+  below?: ReactNode
   hasActiveFilters?: boolean
   onReset?: () => void
 }
 
-/** Barra padrão de busca + filtros + ações de uma listagem. */
-export function AppFilterBar({ search, filters, actions, hasActiveFilters, onReset }: AppFilterBarProps) {
+/**
+ * Barra padrão de uma listagem numa linha só: busca e filtros à esquerda, ações (colunas e a ação
+ * principal) à direita. Em telas estreitas a linha quebra, com as ações sempre juntas.
+ */
+export function AppFilterBar({ search, filters, actions, below, hasActiveFilters, onReset }: AppFilterBarProps) {
   const { t } = useTranslation()
   return (
-    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {search && <div className="w-full sm:w-72">{search}</div>}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {search && <div className="w-full sm:w-64">{search}</div>}
         {filters}
         {hasActiveFilters && onReset && (
-          <AppButton variant="ghost" size="sm" leftIcon={<FilterX />} onClick={onReset}>
+          <AppButton variant="ghost" leftIcon={<FilterX />} onClick={onReset}>
             {t('table.clearFilters')}
           </AppButton>
         )}
+        {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {below}
     </div>
   )
 }

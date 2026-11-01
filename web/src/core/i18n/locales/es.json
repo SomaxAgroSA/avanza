@@ -47,7 +47,11 @@
     "clearFilters": "Limpiar filtros",
     "noMoreActions": "No hay otras acciones",
     "resetColumns": "Restaurar columnas",
-    "openHint": "Clic para ver · doble clic para abrir"
+    "openHint": "Clic para ver · doble clic para abrir",
+    "moreFilters": "Más filtros",
+    "moreFiltersActive": "Más filtros ({{count}} activos)",
+    "activeFilters": "Filtros activos",
+    "removeFilter": "Quitar filtro {{filter}}"
   },
   "validation": {
     "required": "Campo obligatorio",

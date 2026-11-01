@@ -14,14 +14,17 @@ export function ProjectTasksPanel({ project }: { project: Project }) {
   const [creating, setCreating] = useState(false)
   return (
     <div className="flex flex-col gap-3">
-      {canCreate && (
-        <div className="flex justify-end">
-          <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
-            {t('tasks.create')}
-          </AppButton>
-        </div>
-      )}
-      <TasksTable tableId="project-tasks" projectId={project.id} />
+      <TasksTable
+        tableId="project-tasks"
+        projectId={project.id}
+        primaryAction={
+          canCreate ? (
+            <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
+              {t('tasks.create')}
+            </AppButton>
+          ) : undefined
+        }
+      />
       <TaskFormDialog open={creating} onOpenChange={setCreating} projectId={project.id} />
     </div>
   )

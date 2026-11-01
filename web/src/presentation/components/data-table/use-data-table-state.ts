@@ -44,6 +44,11 @@ export interface DataTableStateApi {
 
 const storageKey = (id: string) => `kamban.table.${id}`
 
+function sameFilters(a: Record<string, string>, b: Record<string, string>): boolean {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
+}
+
 function initialState(id: string, defaults: DataTableStateDefaults): DataTableState {
   const base: Persisted = {
     perPage: defaults.perPage ?? 20,
@@ -67,6 +72,9 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
 
 export function useDataTableState(id: string, defaults: DataTableStateDefaults = {}): DataTableStateApi {
   const [state, setState] = useState<DataTableState>(() => initialState(id, defaults))
+  // filtros iniciais da tabela, estáveis enquanto o valor não muda
+  const defaultsKey = JSON.stringify(defaults.filters ?? {})
+  const defaultFilters = useMemo<Record<string, string>>(() => JSON.parse(defaultsKey) as Record<string, string>, [defaultsKey])
 
   const update = useCallback(
     (patch: Partial<DataTableState>) => {
@@ -103,13 +111,13 @@ export function useDataTableState(id: string, defaults: DataTableStateDefaults =
   return {
     state,
     query,
-    hasActiveFilters: state.search.trim() !== '' || Object.keys(state.filters).length > 0,
+    hasActiveFilters: state.search.trim() !== '' || !sameFilters(state.filters, defaultFilters),
     setPage: useCallback((page) => update({ page }), [update]),
     setPerPage: useCallback((perPage) => update({ perPage, page: 1 }), [update]),
     setSort: useCallback((sort) => update({ sort, page: 1 }), [update]),
     setSearch: useCallback((search) => update({ search, page: 1 }), [update]),
     setFilter,
-    resetFilters: useCallback(() => update({ search: '', filters: {}, page: 1 }), [update]),
+    resetFilters: useCallback(() => update({ search: '', filters: defaultFilters, page: 1 }), [update, defaultFilters]),
     setColumnVisibility: useCallback((columnVisibility) => update({ columnVisibility }), [update]),
     setColumnSizing: useCallback((columnSizing) => update({ columnSizing }), [update]),
   }
