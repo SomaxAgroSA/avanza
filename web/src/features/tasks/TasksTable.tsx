@@ -42,10 +42,12 @@ export interface TasksTableProps {
   onSearchApplied?: () => void
   /** Ação principal à direita da barra (ex.: "Nova tarefa" na aba do projeto). */
   primaryAction?: ReactNode
+  /** Lugar das ações fora da barra (ex.: linha de abas do projeto). */
+  actionsSlot?: HTMLElement | null
 }
 
 /** Listagem padrão de tarefas (página Tarefas e aba do projeto). */
-export function TasksTable({ tableId, projectId, search, onSearchApplied, primaryAction }: TasksTableProps) {
+export function TasksTable({ tableId, projectId, search, onSearchApplied, primaryAction, actionsSlot }: TasksTableProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const navigate = useNavigate()
@@ -225,6 +227,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
         onRetry={() => void tasks.refetch()}
         searchPlaceholder={t('tasks.searchPlaceholder')}
         toolbarActions={primaryAction}
+        actionsSlot={actionsSlot}
         actions={{
           // só na aba Tarefas do projeto: escolher o que sai no informe (aba Informe)
           leading: projectId

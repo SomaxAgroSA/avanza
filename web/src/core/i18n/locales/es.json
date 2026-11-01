@@ -3537,6 +3537,12 @@
       "updated": "Última actualización",
       "by": "por {{name}}",
       "neverUpdated": "La ficha todavía no se completó"
+    },
+    "print": "Imprimir ficha",
+    "doc": {
+      "title": "Ficha del proyecto",
+      "issued": "emitida el {{date}}",
+      "empty": "Sin información cargada."
     }
   }
 }
