@@ -115,6 +115,17 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
         filter: { label: t('tasks.fields.priority'), primary: true, options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
       },
       {
+        id: 'urgency',
+        header: t('tasks.fields.urgency'),
+        size: 170,
+        cell: (task) => <UrgencyCell task={task} canEdit={canEdit} />,
+        filter: {
+          label: t('tasks.fields.urgency'),
+          primary: true,
+          options: [...TASK_URGENCIES, 'none' as const].map((value) => ({ value, label: t(`tasks.urgency.${value}`) })),
+        },
+      },
+      {
         id: 'assignee',
         header: t('tasks.fields.assignee'),
         size: 180,
@@ -127,16 +138,6 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
         size: 160,
         cell: (task) => <span className="truncate text-muted">{task.type?.name ?? '—'}</span>,
         filter: { label: t('tasks.fields.type'), options: (types.data ?? []).map((x) => ({ value: x.id, label: x.name })) },
-      },
-      {
-        id: 'urgency',
-        header: t('tasks.fields.urgency'),
-        size: 170,
-        cell: (task) => <UrgencyCell task={task} canEdit={canEdit} />,
-        filter: {
-          label: t('tasks.fields.urgency'),
-          options: [...TASK_URGENCIES, 'none' as const].map((value) => ({ value, label: t(`tasks.urgency.${value}`) })),
-        },
       },
       ...(projectId
         ? []

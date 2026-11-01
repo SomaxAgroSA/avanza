@@ -135,6 +135,7 @@ export function toProject(dto: ProjectDto): Project {
     cover: oneOf(PROJECT_COVERS, dto.cover, 'violet'),
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
+    urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),

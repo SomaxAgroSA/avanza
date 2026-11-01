@@ -199,6 +199,7 @@ export interface ProjectData {
   cover: ProjectCover
   status: ProjectStatus
   priority: ProjectPriority
+  urgency: TaskUrgency | null
   startDate: string | null
   dueDate: string | null
 }

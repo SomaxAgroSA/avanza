@@ -416,6 +416,7 @@ function createProjectRepository(app) {
       cover: record.getString('cover'),
       status: record.getString('status'),
       priority: record.getString('priority'),
+      urgency: record.getString('urgency') || null,
       ownerId: record.getString('owner_id'),
       createdBy: record.getString('created_by'),
       startDate: toDate(record.getDateTime('start_date')),
@@ -434,6 +435,7 @@ function createProjectRepository(app) {
       if (FIELDS[key]) record.set(FIELDS[key], data[key])
       else if (DATES[key]) record.set(DATES[key], toPbDate(data[key]))
       else if (key === 'key') record.set('key', data.key)
+      else if (key === 'urgency') record.set('urgency', data.urgency || '')
     })
   }
 
@@ -457,6 +459,7 @@ function createProjectRepository(app) {
       if (query.search) exprs.push($dbx.or($dbx.like('name', query.search), $dbx.like('key', query.search)))
       if (query.status) exprs.push($dbx.hashExp({ status: query.status }))
       if (query.priority) exprs.push($dbx.hashExp({ priority: query.priority }))
+      if (query.urgency) exprs.push($dbx.hashExp({ urgency: query.urgency === 'none' ? '' : query.urgency }))
       if (query.ownerId) exprs.push($dbx.hashExp({ owner_id: query.ownerId }))
 
       const select = app.recordQuery(COLLECTION)

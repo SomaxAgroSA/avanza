@@ -65,6 +65,7 @@ describe('ProjectFormDialog', () => {
         cover: 'violet',
         status: 'planning',
         priority: 'medium',
+        urgency: null,
         startDate: null,
         dueDate: null,
       }),

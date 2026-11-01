@@ -1165,7 +1165,9 @@
         "generated": "Generado en {{platform}} · corte al {{date}}.",
         "footer": "{{name}} · {{title}} · corte {{date}}"
       }
-    }
+    },
+    "urgencyChange": "Cambiar urgencia de {{name}} (ahora: {{urgency}})",
+    "urgencySaved": "{{name}}: urgencia {{urgency}}."
   },
   "calendar": {
     "open": "Abrir calendario",

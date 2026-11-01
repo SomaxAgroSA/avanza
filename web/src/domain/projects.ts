@@ -1,3 +1,4 @@
+import type { TaskUrgency } from './tasks'
 /**
  * Projetos — tipos e regras de apresentação (espelham backend/pb_hooks/src/domain/project.js).
  */
@@ -47,6 +48,8 @@ export interface Project {
   cover: ProjectCover
   status: ProjectStatus
   priority: ProjectPriority
+  /** Urgência (semáforo); null = sem urgência. */
+  urgency: TaskUrgency | null
   owner: UserSummary | null
   startDate: Date | null
   dueDate: Date | null

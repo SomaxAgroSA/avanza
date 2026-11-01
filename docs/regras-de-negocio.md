@@ -573,3 +573,5 @@ Na aba **Tarefas** (do projeto e da lista geral), a coluna **Urgência** mostra 
 - **Quem muda:** quem edita a tarefa, com um clique na célula (menu com as três opções e "Sem urgência"). Não exige os campos obrigatórios do status e fica no histórico da tarefa ("Urgência: — → Alta").
 - **Diferença da prioridade:** a prioridade segue o cadastro de prioridades (ordem de atendimento); a urgência é o sinal rápido de "quanto aperta" para quem olha a lista. As duas convivem.
 - **Filtro:** "Urgência" na barra de filtros (Alta, Média, Baixa, Sem urgência); na API, `urgency=high|medium|low|none`.
+- **Projetos também têm urgência** (mesmo semáforo): coluna e filtro "Urgência" na lista de Projetos (quem edita o projeto troca com um clique), campo no formulário do projeto, histórico em `project.updated`; na API, `urgency` em `POST/PATCH /projects` (`null` limpa) e filtro `GET /projects?urgency=high|medium|low|none`.
+- **Kanban:** filtro "Urgência" na barra e o semáforo no canto de cada cartão com urgência.
