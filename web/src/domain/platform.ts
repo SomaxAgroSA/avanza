@@ -25,13 +25,13 @@ export interface PlatformInfo {
   passwordReset: boolean
 }
 
-export const DEFAULT_PLATFORM_INFO: PlatformInfo = { name: 'BLYD Sync', logoLightUrl: null, logoDarkUrl: null, faviconUrl: null, passwordReset: false }
+export const DEFAULT_PLATFORM_INFO: PlatformInfo = { name: 'Avanza', logoLightUrl: null, logoDarkUrl: null, faviconUrl: null, passwordReset: false }
 
 /** Marca padrão (pasta web/public/brand), usada enquanto ninguém envia outra no Configurador geral. */
 export const DEFAULT_BRANDING: Record<BrandingSlot, string> = {
-  logo_light: '/brand/logo-light.png',
-  logo_dark: '/brand/logo-dark.png',
-  favicon: '/brand/favicon-64.png',
+  logo_light: '/brand/avanza/avanza-simbolo-claro.svg',
+  logo_dark: '/brand/avanza/avanza-simbolo-oscuro.svg',
+  favicon: '/brand/avanza/favicon.svg',
 }
 
 export interface PlatformSettingsValues {

@@ -109,10 +109,11 @@
 
 /*
  * Identidade Avanza (SomaxAgro) — origem: identidad_visual/avanza-identidad/avanza-tokens.css.
- * Por enquanto vale só nas telas sem sessão (AuthLayout aplica .kb-avanza): redefine os tokens
- * --kb-* dentro do escopo, então AppButton, AppTextField e AppCheckbox ficam verdes sem mudar nada.
+ * Vale em toda a plataforma: :root e .dark redefinem os tokens --kb-* acima (AppButton, abas,
+ * menu e destaques ficam verdes sem mudar os componentes); .kb-avanza segue nas telas sem sessão.
  * Verdes provisórios: ao receber os hex oficiais da Somax, trocar só as três --av-brand-*.
  */
+:root,
 .kb-avanza {
   --av-brand-primary: #00843d;
   --av-brand-accent: #8dc63f;
@@ -138,6 +139,7 @@
   --kb-on-cover-muted: color-mix(in srgb, #ffffff 86%, var(--av-brand-accent));
 
   --kb-ring: color-mix(in srgb, var(--av-brand-primary) 45%, transparent);
+  --kb-gradient-brand: linear-gradient(135deg, var(--av-brand-primary), color-mix(in srgb, var(--av-brand-primary) 60%, var(--av-brand-accent)));
   --kb-gradient-subtle: linear-gradient(180deg, color-mix(in srgb, var(--av-brand-accent) 14%, transparent), transparent);
   --av-login-gradient: linear-gradient(
     140deg,
@@ -151,6 +153,7 @@
   font-family: var(--font-brand);
 }
 
+.dark,
 .dark .kb-avanza {
   --kb-bg: #0d1410;
   --kb-surface: #141e18;
@@ -168,6 +171,7 @@
   --kb-primary-soft-fg: var(--av-brand-accent);
 
   --kb-ring: color-mix(in srgb, var(--av-brand-accent) 50%, transparent);
+  --kb-gradient-brand: linear-gradient(135deg, color-mix(in srgb, var(--av-brand-primary) 85%, #000000), color-mix(in srgb, var(--av-brand-primary) 70%, var(--av-brand-accent)));
   --kb-gradient-subtle: linear-gradient(180deg, color-mix(in srgb, var(--av-brand-primary) 18%, transparent), transparent);
   --av-login-gradient: linear-gradient(
     140deg,
@@ -178,7 +182,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Figtree Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --font-brand: 'Figtree Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Plus Jakarta Sans', 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
 

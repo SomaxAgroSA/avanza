@@ -11,11 +11,11 @@ describe('domain/platform-settings — valores e limites seguros', () => {
     assert.equal(settings.DEFAULTS.audit_retention_months, 3)
     assert.equal(settings.DEFAULTS.lockout_threshold, 5)
     assert.equal(settings.DEFAULTS.password_min_length, 10)
-    assert.equal(settings.DEFAULTS.platform_name, 'BLYD Sync')
+    assert.equal(settings.DEFAULTS.platform_name, 'Avanza')
     const loaded = settings.normalizeSettings({ lockout_threshold: 8, password_min_length: 2, platform_name: '  ', extra: 1 })
     assert.equal(loaded.lockout_threshold, 8)
     assert.equal(loaded.password_min_length, 10)
-    assert.equal(loaded.platform_name, 'BLYD Sync')
+    assert.equal(loaded.platform_name, 'Avanza')
     assert.equal('extra' in loaded, false)
   })
 
@@ -63,7 +63,7 @@ describe('domain/platform-settings — valores e limites seguros', () => {
     const before = settings.DEFAULTS
     const after = Object.assign({}, before, { lockout_threshold: 8, platform_name: 'Obra' })
     assert.deepEqual(settings.diffSettings(before, after), {
-      old: { lockout_threshold: 5, platform_name: 'BLYD Sync' },
+      old: { lockout_threshold: 5, platform_name: 'Avanza' },
       new: { lockout_threshold: 8, platform_name: 'Obra' },
     })
     assert.equal(settings.diffSettings(before, before), null)

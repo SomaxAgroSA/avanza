@@ -62,7 +62,7 @@ describe('ProjectFormDialog', () => {
         key: 'CRM',
         description: '',
         icon: 'rocket',
-        cover: 'violet',
+        cover: 'green',
         status: 'planning',
         priority: 'medium',
         startDate: null,

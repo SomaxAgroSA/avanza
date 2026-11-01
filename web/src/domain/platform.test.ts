@@ -72,8 +72,8 @@ describe('domain/platform', () => {
     expect(logoFor(info, 'dark')).toBe('/d.png')
     expect(logoFor(info, 'light')).toBe('/l.png')
     expect(logoFor({ ...info, logoDarkUrl: null }, 'dark')).toBe('/l.png')
-    expect(logoFor(DEFAULT_PLATFORM_INFO, 'light')).toBe('/brand/logo-light.png')
-    expect(logoFor(DEFAULT_PLATFORM_INFO, 'dark')).toBe('/brand/logo-dark.png')
+    expect(logoFor(DEFAULT_PLATFORM_INFO, 'light')).toBe('/brand/avanza/avanza-simbolo-claro.svg')
+    expect(logoFor(DEFAULT_PLATFORM_INFO, 'dark')).toBe('/brand/avanza/avanza-simbolo-oscuro.svg')
   })
 
   it('arquivo de identidade: tipos aceitos por lugar e até 1 MB', () => {

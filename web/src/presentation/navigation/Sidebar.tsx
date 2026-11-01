@@ -17,8 +17,10 @@ export function BrandMark({ collapsed }: { collapsed?: boolean }) {
   const logo = logoFor(info, useResolvedTheme())
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <img src={logo} alt="" className="size-8 shrink-0 object-contain" />
-      {!collapsed && <span className="truncate text-[15px] font-semibold tracking-tight text-fg">{info.name}</span>}
+      <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] border border-border bg-surface">
+        <img src={logo} alt="" className="size-6 object-contain" />
+      </span>
+      {!collapsed && <span className="truncate font-display text-[17px] font-extrabold tracking-tight text-fg">{info.name}</span>}
     </div>
   )
 }

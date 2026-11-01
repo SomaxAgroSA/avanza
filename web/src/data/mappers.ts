@@ -132,7 +132,7 @@ export function toProject(dto: ProjectDto): Project {
     key: dto.key,
     description: dto.description ?? '',
     icon: oneOf(PROJECT_ICONS, dto.icon, 'folder'),
-    cover: oneOf(PROJECT_COVERS, dto.cover, 'violet'),
+    cover: oneOf(PROJECT_COVERS, dto.cover, 'green'),
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     owner: dto.owner ? toUserSummary(dto.owner) : null,
@@ -864,7 +864,7 @@ export function toPlanColumn(dto: PlanColumnDto): PlanColumn {
 
 export function toPlatformInfo(dto: PlatformInfoDto): PlatformInfo {
   return {
-    name: dto.name || 'BLYD Sync',
+    name: dto.name || 'Avanza',
     logoLightUrl: dto.logo_light_url ?? null,
     logoDarkUrl: dto.logo_dark_url ?? null,
     faviconUrl: dto.favicon_url ?? null,

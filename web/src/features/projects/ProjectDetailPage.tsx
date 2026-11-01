@@ -109,23 +109,24 @@ function ProjectDetail({ project }: { project: Project }) {
     { value: 'charter', label: t('projects.tabs.charter'), content: <ProjectCharterPanel project={project} /> },
     ...(canViewTasks ? [{ value: 'tasks', label: t('projects.tabs.tasks'), content: <ProjectTasksPanel project={project} /> }] : []),
     // quadro de gestão do projeto (Gerenciamento de Projetos — módulo à parte das tarefas)
-    { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },
     { value: 'history', label: t('projects.tabs.history'), content: <ProjectHistory projectId={project.id} /> },
+    { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },
   ]
-  if (caps.transfer || caps.archive || caps.delete) {
-    tabs.push({
-      value: 'settings',
-      label: t('projects.tabs.settings'),
-      content: <ProjectSettings project={project} onArchive={setArchived} onDelete={() => setDeleting(true)} />,
-    })
-  }
-
-  // por último, onde o informe é montado e baixado (escolha das tarefas na aba Tarefas)
+  // onde o informe é montado e baixado (escolha das tarefas na aba Tarefas)
   if (canViewTasks) {
     tabs.push({
       value: 'report',
       label: t('projects.tabs.report'),
       content: <ProjectReportPanel project={project} onChooseTasks={() => setParams({ tab: 'tasks' }, { replace: true })} />,
+    })
+  }
+
+  // por último, a configuração do projeto
+  if (caps.transfer || caps.archive || caps.delete) {
+    tabs.push({
+      value: 'settings',
+      label: t('projects.tabs.settings'),
+      content: <ProjectSettings project={project} onArchive={setArchived} onDelete={() => setDeleting(true)} />,
     })
   }
 

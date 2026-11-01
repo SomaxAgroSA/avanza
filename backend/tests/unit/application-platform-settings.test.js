@@ -48,7 +48,7 @@ describe('application/platform-settings — configurações', () => {
     assert.equal(codeOf(() => service.updateSettings(ctxOf(manager), { lockout_threshold: 8 })), 'FORBIDDEN')
     const view = service.getSettings(ctxOf(admin))
     assert.equal(view.values.audit_retention_months, 3)
-    assert.equal(view.values.platform_name, 'BLYD Sync')
+    assert.equal(view.values.platform_name, 'Avanza')
     assert.deepEqual(view.retention_options, [1, 3, 6, 12, 24, 0])
     assert.deepEqual(view.limits.lockout_threshold, { min: 3, max: 20 })
     assert.deepEqual(view.branding, { logo_light: null, logo_dark: null, favicon: null })
@@ -62,7 +62,7 @@ describe('application/platform-settings — configurações', () => {
     const entry = deps.store.audit.at(-1)
     assert.equal(entry.action, 'platform_settings.update')
     assert.equal(entry.entityType, 'platform_settings')
-    assert.deepEqual(entry.oldValue, { lockout_threshold: 5, platform_name: 'BLYD Sync' })
+    assert.deepEqual(entry.oldValue, { lockout_threshold: 5, platform_name: 'Avanza' })
     assert.deepEqual(entry.newValue, { lockout_threshold: 8, platform_name: 'Portal da Obra' })
     const count = deps.store.audit.length
     service.updateSettings(ctxOf(admin), { lockout_threshold: 8 })
@@ -162,7 +162,7 @@ describe('application/platform-settings — políticas aplicadas', () => {
 describe('application/platform-settings — identidade', () => {
   it('logo e ícone: tipo conferido, histórico, informação pública com endereço versionado; remover', () => {
     const { deps, service, admin, manager, ctxOf } = setup()
-    assert.deepEqual(service.publicInfo(), { name: 'BLYD Sync', logo_light_url: null, logo_dark_url: null, favicon_url: null, password_reset: false })
+    assert.deepEqual(service.publicInfo(), { name: 'Avanza', logo_light_url: null, logo_dark_url: null, favicon_url: null, password_reset: false })
     assert.equal(codeOf(() => service.uploadBranding(ctxOf(manager), 'logo_light', { name: 'm.png', size: 12, bytes: PNG })), 'FORBIDDEN')
 
     const view = service.uploadBranding(ctxOf(admin), 'logo_light', { name: 'marca.png', size: 12, bytes: PNG, handle: {} })

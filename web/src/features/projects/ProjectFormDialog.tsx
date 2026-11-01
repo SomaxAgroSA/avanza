@@ -23,7 +23,7 @@ function defaults(project?: Project | null): ProjectInput {
     key: project?.key ?? '',
     description: project?.description ?? '',
     icon: project?.icon ?? 'folder',
-    cover: project?.cover ?? 'violet',
+    cover: project?.cover ?? 'green',
     status: project?.status ?? 'planning',
     priority: project?.priority ?? 'medium',
     startDate: toDayInput(project?.startDate),

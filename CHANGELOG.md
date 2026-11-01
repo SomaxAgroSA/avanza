@@ -17,6 +17,8 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 - Pacote de publicação open source: licença Apache-2.0, NOTICE, guia de contribuição, código de conduta, política de segurança, integração contínua (GitHub Actions), imagem Docker com docker-compose e dados de demonstração (`npm run demo`).
 
 ### Alterado
+- **Identidade Avanza em toda a plataforma:** verde Somax nos botões, abas, menu e destaques (claro e escuro), fonte Figtree, nome e símbolo Avanza no menu, na aba do navegador e como marca padrão; projetos novos nascem com capa verde.
+- **Abas do projeto** na ordem: Resumo, Ficha, Tarefas, Histórico, Membros, Informe e Configurações.
 - **A plataforma agora se chama BLYD Sync** — "Sincronize projetos, tarefas e equipes." — com logos novos (tema claro, tema escuro e ícone do navegador). Identificadores técnicos (`kb_session`, `KAMBAN_*`, `X-Kamban-*`, tokens `kb_pat_`) foram mantidos para não quebrar instalações e integrações.
 - A Gestão de projetos virou item próprio do menu lateral (`/project-management`), fora da página do projeto; links antigos (`?tab=plan`) redirecionam.
 - **Tela de login remodelada:** painel com a proposta do produto e uma prévia do quadro; "Esqueci minha senha" sempre visível — sem e-mail configurado, orienta a falar com o administrador.
