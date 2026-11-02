@@ -251,7 +251,8 @@
     "docs": "Documentation",
     "management": "Project management",
     "general": "General",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "access": "Access control"
   },
   "commandPalette": {
     "title": "Command palette",
@@ -3543,6 +3544,58 @@
       "title": "Project charter",
       "issued": "issued on {{date}}",
       "empty": "Nothing filled in yet."
+    }
+  },
+  "access": {
+    "title": "Access control",
+    "description": "Pick a person and set in one place which modules they see, what they can do and which projects they join.",
+    "noUsers": "No users.",
+    "user": "User",
+    "role": "Role",
+    "roleUsers_one": "Role of {{count}} person",
+    "roleUsers_other": "Role shared by {{count}} people",
+    "ownRoleHint": "Your own access is changed by another administrator.",
+    "roleChanged": "{{name}} now has the {{role}} role.",
+    "roleUpdated": "Role {{role}} updated ({{change}}).",
+    "on": "yes",
+    "off": "no",
+    "sees": "Sees it",
+    "doesNotSee": "Hidden",
+    "toggleView": "See {{module}}",
+    "personalRoleName": "{{name}} (custom)",
+    "personalRoleDescription": "Based on {{role}}, created in Access control",
+    "personalRoleCreated": "{{name}} now has a personal role with the change.",
+    "summary": {
+      "modules": "Modules they see",
+      "projects": "Projects they join",
+      "allProjects": "Sees every project through their role",
+      "role": "Role"
+    },
+    "modules": {
+      "title": "Modules and actions",
+      "hint": "The switch sets whether they see the module; the tags, what they can do in it (green = allowed).",
+      "superLocked": "The Super Admin role has full access and cannot be reduced.",
+      "ownLocked": "You are viewing your own access: another administrator changes it."
+    },
+    "shared": {
+      "title": "The {{role}} role is shared",
+      "description_one": "Change: {{change}}. The {{role}} role is used by {{count}} person.",
+      "description_other": "Change: {{change}}. The {{role}} role is used by {{count}} people.",
+      "hint": "You can create a personal role for this person (the others stay the same) or apply the change to everyone with this role.",
+      "everyone_one": "Change for {{count}} person",
+      "everyone_other": "Change for all {{count}} people",
+      "personal": "Create a personal role for {{name}}"
+    },
+    "projects": {
+      "title": "Projects",
+      "hint": "They only see projects they are a member of. Pick their access in each one.",
+      "seesAll": "Their role lets them see every project; here you set which ones they also take part in.",
+      "project": "Project",
+      "access": "Access",
+      "accessFor": "Access to {{project}}",
+      "none": "No access",
+      "search": "Search project",
+      "changed": "{{name}} · {{project}}: {{access}}."
     }
   }
 }

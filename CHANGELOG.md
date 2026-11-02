@@ -5,6 +5,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Controle de acesso** (Administração → Controle de acesso, permissão `permissions.manage`): escolhe-se uma pessoa e se vê num só lugar o perfil, os módulos que ela vê e o que pode fazer em cada um, e em quais projetos entra, com interruptores para mudar ali. Se o perfil é compartilhado, a mudança pode virar um perfil próprio da pessoa (as demais não mudam) ou valer para todos com aquele perfil.
 - **Imprimir ficha** (aba Ficha): documento A4 com objetivos, funcionalidades, escopo e resultados, pronto para imprimir ou salvar em PDF. Na página do projeto, as ações da aba (Colunas, Nova tarefa, Imprimir ficha) ficam na linha das abas.
 - **Urgência também nos projetos e no Kanban:** coluna e filtro de urgência na lista de Projetos (troca com um clique), campo no formulário do projeto, filtro de urgência no Kanban e semáforo nos cartões.
 - **Urgência da tarefa** (aba Tarefas): coluna com semáforo 🔴 alta, 🟡 média, 🟢 baixa (ou sem urgência), trocada com um clique por quem edita a tarefa, com filtro e histórico (`PUT /tasks/{id}/urgency`, filtro `urgency`).

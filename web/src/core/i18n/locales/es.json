@@ -251,7 +251,8 @@
     "docs": "Documentación",
     "management": "Gestión de proyectos",
     "general": "General",
-    "integrations": "Integraciones"
+    "integrations": "Integraciones",
+    "access": "Control de acceso"
   },
   "commandPalette": {
     "title": "Paleta de comandos",
@@ -3543,6 +3544,58 @@
       "title": "Ficha del proyecto",
       "issued": "emitida el {{date}}",
       "empty": "Sin información cargada."
+    }
+  },
+  "access": {
+    "title": "Control de acceso",
+    "description": "Elige una persona y define en un solo lugar qué módulos ve, qué puede hacer y en qué proyectos entra.",
+    "noUsers": "No hay usuarios.",
+    "user": "Usuario",
+    "role": "Perfil",
+    "roleUsers_one": "Perfil de {{count}} persona",
+    "roleUsers_other": "Perfil compartido por {{count}} personas",
+    "ownRoleHint": "Tu propio acceso lo cambia otro administrador.",
+    "roleChanged": "{{name}} ahora tiene el perfil {{role}}.",
+    "roleUpdated": "Perfil {{role}} actualizado ({{change}}).",
+    "on": "sí",
+    "off": "no",
+    "sees": "Lo ve",
+    "doesNotSee": "No lo ve",
+    "toggleView": "Ver {{module}}",
+    "personalRoleName": "{{name}} (personalizado)",
+    "personalRoleDescription": "Basado en {{role}}, creado desde Control de acceso",
+    "personalRoleCreated": "{{name}} ahora tiene un perfil propio con el cambio.",
+    "summary": {
+      "modules": "Módulos que ve",
+      "projects": "Proyectos en los que entra",
+      "allProjects": "Ve todos los proyectos por su perfil",
+      "role": "Perfil"
+    },
+    "modules": {
+      "title": "Módulos y acciones",
+      "hint": "El interruptor define si ve el módulo; las etiquetas, qué puede hacer dentro (verde = puede).",
+      "superLocked": "El perfil Super Admin tiene acceso total y no se puede recortar.",
+      "ownLocked": "Estás viendo tu propio acceso: lo cambia otro administrador."
+    },
+    "shared": {
+      "title": "El perfil {{role}} es compartido",
+      "description_one": "Cambio: {{change}}. El perfil {{role}} lo usa {{count}} persona.",
+      "description_other": "Cambio: {{change}}. El perfil {{role}} lo usan {{count}} personas.",
+      "hint": "Puedes crear un perfil propio para esta persona (las demás no cambian) o aplicar el cambio a todas las que tienen este perfil.",
+      "everyone_one": "Cambiar para {{count}} persona",
+      "everyone_other": "Cambiar para las {{count}} personas",
+      "personal": "Crear perfil propio para {{name}}"
+    },
+    "projects": {
+      "title": "Proyectos",
+      "hint": "Solo ve los proyectos en los que es miembro. Elige su acceso en cada uno.",
+      "seesAll": "Su perfil le deja ver todos los proyectos; aquí defines en cuáles además participa.",
+      "project": "Proyecto",
+      "access": "Acceso",
+      "accessFor": "Acceso a {{project}}",
+      "none": "Sin acceso",
+      "search": "Buscar proyecto",
+      "changed": "{{name}} · {{project}}: {{access}}."
     }
   }
 }
