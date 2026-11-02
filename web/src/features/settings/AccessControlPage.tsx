@@ -6,7 +6,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { ACCESS_MODULES, accessSummary, moduleVisible, personalRoleCode, projectAccessOf, togglePermission, type ProjectAccess } from '@/domain/access'
 import type { Role, User } from '@/domain/entities'
-import { SUPER_ADMIN_ROLE, type PermissionCode } from '@/domain/permissions'
+import { PERMISSION_CODES, SUPER_ADMIN_ROLE, type PermissionCode } from '@/domain/permissions'
 import { MEMBER_ROLES, type MemberRole, type Project } from '@/domain/projects'
 import {
   AppAvatar,
@@ -126,7 +126,8 @@ function UserAccess({ user, roles }: { user: User; roles: Role[] }) {
     queries: projectList.map((p) => ({ queryKey: projectKeys.members(p.id), queryFn: () => repo.listMembers(p.id), staleTime: 30_000 })),
   })
   const role = roles.find((r) => r.id === user.roleId)
-  const perms = role?.permissions ?? []
+  // Super Admin tem acesso total sem listar as permissões uma a uma
+  const perms: PermissionCode[] = role?.code === SUPER_ADMIN_ROLE ? [...PERMISSION_CODES] : (role?.permissions ?? [])
   const access: ProjectAccess[] = projectList.map((_, i) => projectAccessOf(membersQueries[i]?.data ?? [], user.id))
   const summary = accessSummary(perms, access)
   const rows = projectList.map((project, i) => ({ project, access: access[i] ?? 'none' }))
