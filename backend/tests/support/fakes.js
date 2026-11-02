@@ -580,6 +580,17 @@ function createFakeRepositories(store) {
       return map
     },
     listBySprint: (sprintId) => store.tasks.filter((t) => t.sprintId === sprintId),
+    planItemStats: (itemIds) => {
+      const out = {}
+      store.tasks
+        .filter((t) => t.planItemId && itemIds.includes(t.planItemId))
+        .forEach((t) => {
+          const key = `${t.planItemId}|${t.statusId}`
+          out[key] = out[key] || { planItemId: t.planItemId, statusId: t.statusId, total: 0 }
+          out[key].total += 1
+        })
+      return Object.values(out)
+    },
     listForReminders: (query) =>
       store.tasks.filter((t) => t.dueDate && t.dueDate < query.before && t.assigneeId && query.statusIds.includes(t.statusId)),
     list: (query) => {
@@ -728,6 +739,8 @@ function createFakeRepositories(store) {
     findById: (id) => store.planItems.find((i) => i.id === id) || null,
     listByProject: (projectId, limit) => store.planItems.filter((i) => i.projectId === projectId).slice().sort(byPos).slice(0, limit || undefined),
     listByGroups: (groupIds) => store.planItems.filter((i) => groupIds.includes(i.groupId)).slice().sort(byPos),
+    listByIds: (ids) => store.planItems.filter((i) => ids.includes(i.id)),
+    listByProjects: (projectIds) => store.planItems.filter((i) => projectIds.includes(i.projectId)).slice().sort(byPos),
     listChildren: (parentId) => store.planItems.filter((i) => i.parentId === parentId).slice().sort(byPos),
     maxPosition: (groupId, parentId) => {
       const list = store.planItems.filter((i) => i.groupId === groupId && (i.parentId || null) === (parentId || null))

@@ -194,7 +194,9 @@ function createPlanSupport(deps) {
       // duração efetiva (cronograma ou informada) e a informada (editável quando não há cronograma)
       duration_days: planDomain.durationOf(item),
       duration_manual: metric(item, 'duration_days'),
-      progress: progress[item.id] || { value: 0, source: 'none' },
+      progress: progress[item.id] ? { value: progress[item.id].value, source: progress[item.id].source } : { value: 0, source: 'none' },
+      // tarefas ligadas ao elemento (ADR-050): canceladas fora do total
+      tasks: progress[item.id] && progress[item.id].tasks ? progress[item.id].tasks : { total: 0, done: 0 },
       progress_manual: item.progressSet ? item.progress || 0 : null,
       subitems: childCount || 0,
       custom: item.parentId ? {} : columnsDomain.presentValues(item.custom, columns || []),
@@ -216,9 +218,21 @@ function createPlanSupport(deps) {
     }
   }
 
-  /** Progresso de todos os elementos (subelementos contam para o pai). */
+  /** Tarefas ligadas por elemento: { itemId: { total (sem canceladas), done } }. */
+  async function taskCountsOf(itemIds) {
+    const stats = await deps.taskRepository.planItemStats(itemIds)
+    if (stats.length === 0) return {}
+    const category = {}
+    ;(await deps.statusRepository.list({ includeInactive: true })).forEach((s) => {
+      category[s.id] = s.category
+    })
+    return planDomain.taskCountsFrom(stats, (statusId) => category[statusId] || null)
+  }
+
+  /** Progresso de todos os elementos (subelementos contam para o pai; tarefas ligadas mandam no elemento). */
   async function progressOf(list, statusById) {
-    return planDomain.computeProgress(list, (i) => (i.statusId && statusById[i.statusId] ? statusById[i.statusId].category : null))
+    const counts = await taskCountsOf(list.map((i) => i.id))
+    return planDomain.computeProgress(list, (i) => (i.statusId && statusById[i.statusId] ? statusById[i.statusId].category : null), counts)
   }
 
   async function loadGroup(ctx, id) {

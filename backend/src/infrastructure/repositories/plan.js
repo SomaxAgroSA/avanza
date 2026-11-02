@@ -260,6 +260,10 @@ function createPlanItemRepository(db) {
       const rows = await db.query('SELECT * FROM plan_items WHERE project_id = $1 ORDER BY position, created, id LIMIT $2', [projectId, limit || null])
       return rows.map(toEntity)
     },
+    async listByIds(ids) {
+      if (!ids || ids.length === 0) return []
+      return (await db.query('SELECT * FROM plan_items WHERE id = ANY($1::text[])', [ids])).map(toEntity)
+    },
     /** Elementos de vários projetos (painel executivo). */
     async listByProjects(projectIds) {
       if (!projectIds || projectIds.length === 0) return []

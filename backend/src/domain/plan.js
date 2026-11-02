@@ -277,16 +277,41 @@ function weighted(list) {
 /**
  * Progresso (`{ value, source }`):
  * - status "feito" → 100 (`done`);
+ * - com tarefas ligadas (sem as canceladas) → concluídas ÷ total (`tasks`) — ADR-050;
  * - com subelementos não cancelados → Σ(trabalho × progresso) / Σ(trabalho), ou a média (`subitems`);
  * - senão o informado (`manual`) ou 0 (`none`).
+ * `taskCounts` (opcional): { itemId: { total, done } } das tarefas ligadas; quando há, vai junto em `tasks`.
  */
-function computeProgress(items, categoryOf) {
+/**
+ * Contagem das tarefas ligadas por elemento a partir de linhas { planItemId, statusId, total }:
+ * canceladas ficam fora do total; concluídas = categoria "done".
+ */
+function taskCountsFrom(stats, taskCategoryOf) {
+  const out = {}
+  stats.forEach((row) => {
+    const category = taskCategoryOf(row.statusId)
+    if (category === 'cancelled') return
+    const entry = (out[row.planItemId] = out[row.planItemId] || { total: 0, done: 0 })
+    entry.total += row.total
+    if (category === 'done') entry.done += row.total
+  })
+  return out
+}
+
+function computeProgress(items, categoryOf, taskCounts) {
+  const counts = taskCounts || {}
+  const fromTasks = (item) => {
+    const c = counts[item.id]
+    return c && c.total > 0 ? { value: Math.round((c.done / c.total) * 100), source: 'tasks' } : null
+  }
   const children = {}
   items.forEach((item) => {
     if (item.parentId) (children[item.parentId] = children[item.parentId] || []).push(item)
   })
   const own = (item) => {
     if (categoryOf(item) === 'done') return { value: 100, source: 'done' }
+    const linked = fromTasks(item)
+    if (linked) return linked
     if (item.progressSet) return { value: Math.max(0, Math.min(100, Math.round(item.progress || 0))), source: 'manual' }
     return { value: 0, source: 'none' }
   }
@@ -300,8 +325,16 @@ function computeProgress(items, categoryOf) {
       out[item.id] = { value: 100, source: 'done' }
       return
     }
+    const linked = fromTasks(item)
+    if (linked) {
+      out[item.id] = linked
+      return
+    }
     const kids = (children[item.id] || []).filter((k) => categoryOf(k) !== 'canceled')
     out[item.id] = kids.length ? { value: weighted(kids.map((k) => ({ value: own(k).value, weight: metric(k, 'estimated_hours') }))), source: 'subitems' } : own(item)
+  })
+  Object.keys(out).forEach((id) => {
+    if (counts[id]) out[id].tasks = { total: counts[id].total, done: counts[id].done }
   })
   return out
 }
@@ -469,6 +502,7 @@ module.exports = {
   durationOf,
   weighted,
   computeProgress,
+  taskCountsFrom,
   groupSummary,
   placeAmong,
 }

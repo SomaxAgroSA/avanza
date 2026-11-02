@@ -133,6 +133,13 @@ function createExecutiveService(deps) {
     const issues = await deps.planIssueRepository.listByProjects(ids)
     const planCategoryOf = (item) => (item.statusId && planStatuses[item.statusId] ? planStatuses[item.statusId].category : null)
 
+    // tarefas ligadas aos elementos (ADR-050): mandam no progresso deles
+    const taskCategory = {}
+    ;(await deps.statusRepository.list({ includeInactive: true })).forEach((s) => {
+      taskCategory[s.id] = s.category
+    })
+    const taskCounts = planDomain.taskCountsFrom(await deps.taskRepository.planItemStats(planItems.map((i) => i.id)), (statusId) => taskCategory[statusId] || null)
+
     const itemsByProject = {}
     planItems.forEach((item) => {
       ;(itemsByProject[item.projectId] = itemsByProject[item.projectId] || []).push(item)
@@ -149,7 +156,7 @@ function createExecutiveService(deps) {
       plans[projectId] = planReport({
         items,
         categoryOf: planCategoryOf,
-        progress: planDomain.computeProgress(items, planCategoryOf),
+        progress: planDomain.computeProgress(items, planCategoryOf, taskCounts),
         groups: [],
         resources: [],
         issues: issues.filter((i) => i.projectId === projectId),

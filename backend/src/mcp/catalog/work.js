@@ -49,6 +49,7 @@ const TASK_CREATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   actual_hours: hours('Hours spent (> 0).'),
   sprint_id: id('Sprint id (from list_sprints).'),
   parent_task_id: id('Parent task id, to create a subtask (same project).'),
+  plan_item_id: id('Project management element (or subelement) this task executes, from get_plan (same project). Linked tasks drive the element progress.'),
 })
 
 const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
@@ -61,6 +62,7 @@ const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   actual_hours: nullableHours('Hours spent (> 0).'),
   sprint_id: nullableId('Sprint id (from list_sprints).'),
   parent_task_id: nullableId('Parent task id (same project).'),
+  plan_item_id: nullableId('Project management element (or subelement) this task executes, from get_plan (same project).'),
 })
 
 const REPORT_FILTERS = {
@@ -98,6 +100,7 @@ function compactTask(task) {
     priority: nameOf(task.priority),
     assignee: task.assignee ? { id: task.assignee.id, name: task.assignee.name } : null,
     sprint: nameOf(task.sprint),
+    plan_item: task.plan_item ? { id: task.plan_item.id, name: task.plan_item.name } : null,
     start_date: task.start_date || null,
     due_date: task.due_date || null,
     tags: (task.tags || []).map(nameOf),
@@ -340,6 +343,7 @@ const TOOLS = [
           task_type_id: id('Only tasks of this type.'),
           tag_id: id('Only tasks with this tag.'),
           sprint_id: text(64, 'Sprint id, or "none" for tasks without a sprint.'),
+          plan_item_id: id('Only tasks linked to this project management element (from get_plan).'),
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: code, title, created_at, updated_at, due_date, priority, status. Default: code.'),
         },
         PAGE,
@@ -347,7 +351,7 @@ const TOOLS = [
     ),
     annotations: READ,
     run: async (args, { services, ctx }) => {
-      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'sort']), pageQuery(args))
+      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'sort']), pageQuery(args))
       if (args.categories && args.categories.length > 0) query.category = args.categories.join(',')
       const result = await services.tasks.listTasks(ctx, query)
       return { items: result.items.map(compactTask), meta: result.meta }

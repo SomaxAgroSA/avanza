@@ -52,10 +52,11 @@ const BASE_RULES = {
   actual_hours: [hoursRule],
   sprint_id: [idRule],
   parent_task_id: [idRule],
+  plan_item_id: [idRule],
 }
 
 /** Campos que aceitam `null` para limpar. */
-const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id']
+const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id']
 
 const SORTABLE = {
   code: 'code',
@@ -76,6 +77,7 @@ const LIST_SCHEMA = {
   search: [rules.maxLength(100)],
   tag_id: [idRule],
   // `none` = sem sprint
+  plan_item_id: [idRule],
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   category: [
     rules.custom((value) =>
@@ -177,6 +179,13 @@ function createTaskService(deps) {
     return sprint
   }
 
+  /** Elemento da Gestão de projetos (ADR-050): elemento ou subelemento do mesmo projeto. */
+  async function assertPlanItem(project, planItemId) {
+    const item = await deps.planItemRepository.findById(planItemId)
+    if (!item || item.projectId !== project.id) throw invalid({ plan_item_id: 'invalid_option' })
+    return item
+  }
+
   /** Pai da subtarefa: existe, mesmo projeto, sem ciclo e profundidade limitada. */
   async function assertParent(project, taskId, parentId) {
     const parent = await tasks.findById(parentId)
@@ -255,6 +264,7 @@ function createTaskService(deps) {
     })
     const taskIds = list.map((t) => t.id).filter((id, i, all) => id && all.indexOf(id) === i)
     const sprintIds = list.map((t) => t.sprintId).filter((id, i, all) => id && all.indexOf(id) === i)
+    const planItemIds = list.map((t) => t.planItemId).filter((id, i, all) => id && all.indexOf(id) === i)
     const taskTags = taskIds.length ? await deps.taskTagRepository.listByTasks(taskIds) : {}
     const tagIds = []
     list.forEach((t) => {
@@ -289,6 +299,7 @@ function createTaskService(deps) {
       commentCounts: taskIds.length ? await deps.commentRepository.countByTasks(taskIds) : {},
       attachmentCounts: taskIds.length ? await deps.attachmentRepository.countByTasks(taskIds) : {},
       sprints: byId(sprintIds.length ? await deps.sprintRepository.findManyByIds(sprintIds) : []),
+      planItems: byId(planItemIds.length ? await deps.planItemRepository.listByIds(planItemIds) : []),
     })
   }
 
@@ -318,6 +329,7 @@ function createTaskService(deps) {
       status: status ? { id: status.id, key: status.key, name: status.name, color: status.color, category: status.category } : null,
       priority: priority ? { id: priority.id, key: priority.key, name: priority.name, color: priority.color } : null,
       sprint: sprint ? { id: sprint.id, name: sprint.name, state: sprint.state } : null,
+      plan_item: task.planItemId && refs.planItems[task.planItemId] ? { id: task.planItemId, name: refs.planItems[task.planItemId].name } : null,
       creator: user(task.creatorId),
       assignee: user(task.assigneeId),
       reporter: user(task.reporterId),
@@ -397,6 +409,7 @@ function createTaskService(deps) {
       task_status: name(refs.statuses, task.statusId),
       task_priority: name(refs.priorities, task.priorityId),
       sprint: name(refs.sprints, task.sprintId),
+      plan_item: name(refs.planItems, task.planItemId),
       parent: task.parentTaskId ? taskLabel(refs.related[task.parentTaskId]) || task.parentTaskId : null,
       assignee: name(refs.users, task.assigneeId),
       reporter: name(refs.users, task.reporterId),
@@ -486,6 +499,7 @@ function createTaskService(deps) {
         category: pick('category'),
         tag_id: pick('tag_id'),
         sprint_id: pick('sprint_id'),
+        plan_item_id: pick('plan_item_id'),
       },
       LIST_SCHEMA,
     )
@@ -518,6 +532,7 @@ function createTaskService(deps) {
       assigneeId: filters.assignee_id === 'me' ? ctx.principal.userId : filters.assignee_id,
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
+      planItemId: filters.plan_item_id,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       pagination,
@@ -566,6 +581,7 @@ function createTaskService(deps) {
     if (data.reporter_id) await assertParticipant(project, data.reporter_id, 'reporter_id', true)
     if (data.sprint_id) await assertSprint(project, data.sprint_id)
     if (data.parent_task_id) await assertParent(project, null, data.parent_task_id)
+    if (data.plan_item_id) await assertPlanItem(project, data.plan_item_id)
 
     // valores padrão dos campos visíveis que não vieram no corpo
     const links = await typeLinks(type.id)
@@ -599,6 +615,7 @@ function createTaskService(deps) {
         parentTaskId: data.parent_task_id || null,
         forkedFromTaskId: forkedFrom ? forkedFrom.id : null,
         sprintId: data.sprint_id || null,
+        planItemId: data.plan_item_id || null,
         startDate: data.start_date || null,
         dueDate: data.due_date || null,
         estimatedHours: data.estimated_hours === undefined ? null : data.estimated_hours,
@@ -661,6 +678,11 @@ function createTaskService(deps) {
     if (parentChange !== undefined && parentChange !== (task.parentTaskId || null)) {
       if (parentChange) await assertParent(project, task.id, parentChange)
       patch.parentTaskId = parentChange
+    }
+    const planItemChange = cleared.indexOf('plan_item_id') >= 0 ? null : data.plan_item_id
+    if (planItemChange !== undefined && planItemChange !== (task.planItemId || null)) {
+      if (planItemChange) await assertPlanItem(project, planItemChange)
+      patch.planItemId = planItemChange
     }
     if (cleared.indexOf('start_date') >= 0) patch.startDate = null
     else if (data.start_date !== undefined) patch.startDate = data.start_date

@@ -648,3 +648,12 @@ Toda tela com filtro ou seletor de projeto (Kanban, Planejamento, Gestão de pro
 - **Guardado por pessoa e por tela:** cada um tem a sua configuração, e cada tela a sua (o Kanban pode mostrar só os em andamento e a Timeline todos). Fica no servidor, então vale em qualquer computador. "Restaurar padrão" volta a mostrar todos.
 - **Efeito:** o filtro/seletor de projetos da tela lista só os projetos que respeitam o configurador; o projeto aberto ou já escolhido continua na lista mesmo que não respeite. Nas telas que juntam vários projetos (Kanban em "Todos os projetos" e Painel executivo), "Todos os projetos" passa a ser todos os do configurador. Em Tarefas e Relatórios, que filtram um projeto por vez, o configurador limita só a lista de escolha.
 - Não muda permissão nenhuma: só esconde da lista o que a pessoa escolheu não ver; não entra no histórico de auditoria.
+
+## 28. Tarefas ligadas aos elementos da Gestão de projetos
+
+A Gestão de projetos é o **plano macro** do projeto (fases, entregas, cronograma); as tarefas são a **execução** do dia a dia. Uma tarefa pode ser ligada a um elemento (ou subelemento) da Gestão do mesmo projeto.
+
+- **Onde ligar:** no painel do elemento (seção Tarefas: vincular uma tarefa existente, criar uma nova já ligada, desvincular) ou no formulário/página da tarefa (campo **Elemento da Gestão**). Ligar exige poder editar a tarefa; elemento de outro projeto é recusado.
+- **Progresso pelas tarefas:** elemento que não está "feito" e tem tarefas ligadas tem o progresso = tarefas concluídas ÷ tarefas ligadas (canceladas não contam). Isso vale antes do progresso dos subelementos e do informado à mão; o elemento "feito" continua 100%. O quadro mostra "pelas tarefas · 3/5". A saúde do projeto e o Painel executivo usam esse mesmo progresso.
+- **Excluir o elemento** desliga as tarefas (elas continuam existindo, sem elemento). Ligar, trocar e desligar ficam no histórico da tarefa ("Elemento da Gestão").
+- O Claude (MCP) liga com `plan_item_id` em `create_task`/`update_task` e filtra com `list_tasks`.

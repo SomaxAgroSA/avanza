@@ -88,6 +88,7 @@ function createTaskRepository(db) {
       parentTaskId: row.parent_task_id || null,
       forkedFromTaskId: row.forked_from_task_id || null,
       sprintId: row.sprint_id || null,
+      planItemId: row.plan_item_id || null,
       startDate: row.start_date,
       dueDate: row.due_date,
       startedAt: row.started_at,
@@ -104,7 +105,7 @@ function createTaskRepository(db) {
   /** Colunas do cartão (quadro e backlog): tudo menos a descrição. */
   const CARD_COLUMNS = [
     'id', 'project_id', 'number', 'code', 'title', 'task_type_id', 'status_id', 'priority_id', 'creator_id', 'assignee_id',
-    'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'start_date', 'due_date', 'started_at', 'completed_at',
+    'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'start_date', 'due_date', 'started_at', 'completed_at',
     'estimated_hours', 'actual_hours', 'checklist', 'position', 'created', 'updated',
   ]
     .map(ident)
@@ -125,6 +126,7 @@ function createTaskRepository(db) {
     parentTaskId: 'parent_task_id',
     forkedFromTaskId: 'forked_from_task_id',
     sprintId: 'sprint_id',
+    planItemId: 'plan_item_id',
   }
   const DATES = { startDate: 'start_date', dueDate: 'due_date', startedAt: 'started_at', completedAt: 'completed_at' }
   const NUMBERS = { estimatedHours: 'estimated_hours', actualHours: 'actual_hours' }
@@ -172,6 +174,7 @@ function createTaskRepository(db) {
     if (query.assigneeId) where.push(`tasks.assignee_id = ${param(query.assigneeId)}`)
     if (query.tagId) where.push(`tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = ${param(query.tagId)})`)
     if (query.sprintId) where.push(query.sprintId === 'none' ? 'tasks.sprint_id IS NULL' : `tasks.sprint_id = ${param(query.sprintId)}`)
+    if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
     if (query.search) {
       const q = param(likePattern(query.search.text))
@@ -345,6 +348,13 @@ function createTaskRepository(db) {
         map[row.parent_task_id] = { done: row.done, total: row.total }
       })
       return map
+    },
+
+    /** Tarefas ligadas a elementos da Gestão, contadas por elemento e status (progresso pelas tarefas). */
+    async planItemStats(itemIds) {
+      if (!itemIds || itemIds.length === 0) return []
+      const rows = await db.query('SELECT plan_item_id, status_id, count(*)::int AS total FROM tasks WHERE plan_item_id = ANY($1::text[]) GROUP BY plan_item_id, status_id', [itemIds])
+      return rows.map((row) => ({ planItemId: row.plan_item_id, statusId: row.status_id, total: row.total }))
     },
 
     async listBySprint(sprintId) {

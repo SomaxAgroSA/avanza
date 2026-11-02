@@ -217,7 +217,7 @@ describe('mcp/tools', () => {
     assert.deepEqual(out.meta, { page: 1, perPage: 5, total: 1, totalPages: 1 })
     assert.deepEqual(out.items[0], {
       id: 't1', code: 'CRM-1', title: 'Tarefa', project: 'CRM', type: 'Bug', status: { id: 's1', name: 'A fazer', category: 'todo' },
-      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
+      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
       tags: ['api'], blocked: false, parent_task_id: null, updated_at: null,
     })
   })

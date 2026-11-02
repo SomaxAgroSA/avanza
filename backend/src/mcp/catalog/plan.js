@@ -122,6 +122,8 @@ function compactItem(item, statusById, resourceById) {
     end_date: day(item.end_date),
     due_date: day(item.due_date),
     progress: item.progress ? item.progress.value : 0,
+    // tarefas ligadas (ADR-050): com elas, o progresso vem das tarefas
+    tasks: item.tasks && item.tasks.total ? item.tasks : null,
     estimated_hours: item.estimated_hours,
     actual_hours: item.actual_hours,
     resources: (item.resource_ids || []).map((rid) => nameOf(resourceById[rid]) || rid),

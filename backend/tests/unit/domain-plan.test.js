@@ -116,6 +116,37 @@ describe('domain/plan — progresso e totais', () => {
     assert.deepEqual(p.e5, { value: 50, source: 'subitems' })
   })
 
+  it('tarefas ligadas mandam no progresso (antes dos subelementos e do manual); feito continua 100; contagens vão junto', () => {
+    const items = [
+      { id: 'e1', statusId: 'work', progressSet: true, progress: 10 },
+      { id: 's1', parentId: 'e1', statusId: 'done' },
+      { id: 'e2', statusId: 'done' },
+      { id: 'e3', statusId: 'plan', progressSet: true, progress: 70 },
+      { id: 's2', parentId: 'e3', statusId: 'plan' },
+    ]
+    const counts = { e1: { total: 4, done: 1 }, e2: { total: 2, done: 0 }, s2: { total: 3, done: 3 }, e3: { total: 0, done: 0 } }
+    const p = plan.computeProgress(items, categoryOf, counts)
+    assert.deepEqual(p.e1, { value: 25, source: 'tasks', tasks: { total: 4, done: 1 } })
+    assert.deepEqual(p.e2, { value: 100, source: 'done', tasks: { total: 2, done: 0 } })
+    assert.deepEqual(p.s2, { value: 100, source: 'tasks', tasks: { total: 3, done: 3 } })
+    // sem tarefas (total 0): segue as regras de antes — subelementos
+    assert.deepEqual(p.e3, { value: 100, source: 'subitems', tasks: { total: 0, done: 0 } })
+  })
+
+  it('contagem das tarefas por elemento: canceladas fora do total, concluídas pela categoria', () => {
+    const cat = { a: 'todo', b: 'done', c: 'cancelled' }
+    const counts = plan.taskCountsFrom(
+      [
+        { planItemId: 'e1', statusId: 'a', total: 2 },
+        { planItemId: 'e1', statusId: 'b', total: 3 },
+        { planItemId: 'e1', statusId: 'c', total: 5 },
+        { planItemId: 'e2', statusId: 'c', total: 1 },
+      ],
+      (id) => cat[id],
+    )
+    assert.deepEqual(counts, { e1: { total: 5, done: 3 } })
+  })
+
   it('rodapé do grupo: distribuição de status, período, somas de esforço e duração, progresso ponderado', () => {
     const items = [
       { id: 'a', statusId: 'done', startDate: null, endDate: null, metrics: { estimated_hours: 1.5, duration_days: 1 } },

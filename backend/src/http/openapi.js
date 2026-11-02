@@ -1511,6 +1511,7 @@ function build() {
             task_type_id: { type: 'string', description: 'Trocar o tipo descarta valores de campos que o novo tipo não tem' },
             parent_task_id: { type: ['string', 'null'], description: 'Subtarefa: pai do mesmo projeto, sem ciclo; null solta' },
             sprint_id: { type: ['string', 'null'], description: 'Sprint aberto do mesmo projeto; null tira da sprint' },
+            plan_item_id: { type: ['string', 'null'], description: 'Elemento (ou subelemento) da Gestão de projetos do mesmo projeto que a tarefa executa (ADR-050); null desliga' },
             title: { type: 'string', maxLength: 200 },
             description: { type: 'string', maxLength: 50000 },
             status_id: { type: 'string', description: 'padrão: status marcado como padrão' },
