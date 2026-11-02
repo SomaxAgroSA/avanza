@@ -1,3 +1,4 @@
+import { UrgencyLight } from '@/features/tasks/TaskUrgency'
 import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
@@ -23,7 +24,15 @@ export function KanbanCardContent({ card, references }: { card: BoardCard; refer
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <TaskCode task={card} />
+        <span className="flex min-w-0 items-center gap-1.5">
+          <TaskCode task={card} />
+          {card.urgency && (
+            <span title={`${t('tasks.fields.urgency')}: ${t(`tasks.urgency.${card.urgency}`)}`} className="flex">
+              <UrgencyLight urgency={card.urgency} />
+              <span className="sr-only">{`${t('tasks.fields.urgency')}: ${t(`tasks.urgency.${card.urgency}`)}`}</span>
+            </span>
+          )}
+        </span>
         {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" />}
       </div>
       <p className="line-clamp-3 text-sm font-medium break-words text-fg">{card.title}</p>

@@ -416,6 +416,7 @@ function createProjectRepository(app) {
       cover: record.getString('cover'),
       status: record.getString('status'),
       priority: record.getString('priority'),
+      urgency: record.getString('urgency') || null,
       ownerId: record.getString('owner_id'),
       createdBy: record.getString('created_by'),
       startDate: toDate(record.getDateTime('start_date')),
@@ -434,6 +435,7 @@ function createProjectRepository(app) {
       if (FIELDS[key]) record.set(FIELDS[key], data[key])
       else if (DATES[key]) record.set(DATES[key], toPbDate(data[key]))
       else if (key === 'key') record.set('key', data.key)
+      else if (key === 'urgency') record.set('urgency', data.urgency || '')
     })
   }
 
@@ -457,6 +459,7 @@ function createProjectRepository(app) {
       if (query.search) exprs.push($dbx.or($dbx.like('name', query.search), $dbx.like('key', query.search)))
       if (query.status) exprs.push($dbx.hashExp({ status: query.status }))
       if (query.priority) exprs.push($dbx.hashExp({ priority: query.priority }))
+      if (query.urgency) exprs.push($dbx.hashExp({ urgency: query.urgency === 'none' ? '' : query.urgency }))
       if (query.ownerId) exprs.push($dbx.hashExp({ owner_id: query.ownerId }))
 
       const select = app.recordQuery(COLLECTION)
@@ -873,6 +876,8 @@ function createTaskRepository(app) {
       estimatedHours: number('estimated_hours'),
       actualHours: number('actual_hours'),
       checklist: parseJsonField(record, 'checklist') || [],
+      reportExcluded: record.getBool('report_excluded'),
+      urgency: record.getString('urgency') || null,
       position: record.getFloat('position'),
       createdAt: toDate(record.getDateTime('created')),
       updatedAt: toDate(record.getDateTime('updated')),
@@ -902,6 +907,8 @@ function createTaskRepository(app) {
     estimated_hours: -0,
     actual_hours: -0,
     checklist: '',
+    report_excluded: false,
+    urgency: '',
     position: -0,
     created: '',
     updated: '',
@@ -942,6 +949,8 @@ function createTaskRepository(app) {
       estimatedHours: hours(row.estimated_hours),
       actualHours: hours(row.actual_hours),
       checklist,
+      reportExcluded: !!row.report_excluded,
+      urgency: row.urgency || null,
       position: row.position,
       createdAt: toDate(row.created),
       updatedAt: toDate(row.updated),
@@ -974,6 +983,8 @@ function createTaskRepository(app) {
       else if (DATES[key]) record.set(DATES[key], toPbDate(value))
       else if (NUMBERS[key]) record.set(NUMBERS[key], value === null ? 0 : value)
       else if (key === 'checklist') record.set('checklist', value || [])
+      else if (key === 'reportExcluded') record.set('report_excluded', !!value)
+      else if (key === 'urgency') record.set('urgency', value || '')
       else if (key === 'position') record.set('position', value)
     })
   }
@@ -1177,6 +1188,8 @@ function createTaskRepository(app) {
       if (query.assigneeId) exprs.push($dbx.hashExp({ 'tasks.assignee_id': query.assigneeId }))
       if (query.tagId) exprs.push($dbx.exp('tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = {:tag})', { tag: query.tagId }))
       if (query.sprintId) exprs.push($dbx.hashExp({ 'tasks.sprint_id': query.sprintId === 'none' ? '' : query.sprintId }))
+      if (query.inReport !== undefined) exprs.push($dbx.exp('tasks.report_excluded = {:excluded}', { excluded: query.inReport ? 0 : 1 }))
+      if (query.urgency) exprs.push($dbx.hashExp({ 'tasks.urgency': query.urgency === 'none' ? '' : query.urgency }))
       if (query.statusIds) {
         exprs.push(query.statusIds.length ? $dbx.in.apply(null, ['tasks.status_id'].concat(query.statusIds)) : $dbx.exp('1 = 0'))
       }
@@ -2204,6 +2217,172 @@ function createMilestoneRepository(app) {
   }
 }
 
+const dayOfDateTime = (dateTime) => {
+  const date = toDate(dateTime)
+  return date ? date.toISOString().slice(0, 10) : null
+}
+
+function createCharterRepository(app) {
+  const COLLECTION = 'project_charters'
+
+  function toEntity(record) {
+    return {
+      id: record.id,
+      projectId: record.getString('project_id'),
+      objective: record.getString('objective'),
+      updatedBy: record.getString('updated_by') || null,
+      createdAt: toDate(record.getDateTime('created')),
+      updatedAt: toDate(record.getDateTime('updated')),
+    }
+  }
+
+  function find(projectId) {
+    return findOrNull(() => app.findFirstRecordByFilter(COLLECTION, 'project_id = {:p}', { p: projectId }))
+  }
+
+  return {
+    findByProject(projectId) {
+      const record = find(projectId)
+      return record ? toEntity(record) : null
+    },
+    upsert(projectId, patch) {
+      let record = find(projectId)
+      if (!record) {
+        record = new Record(app.findCollectionByNameOrId(COLLECTION))
+        record.set('project_id', projectId)
+      }
+      if (patch.objective !== undefined) record.set('objective', patch.objective)
+      if (patch.updatedBy !== undefined) record.set('updated_by', patch.updatedBy || '')
+      app.save(record)
+      return toEntity(record)
+    },
+  }
+}
+
+function createCharterItemRepository(app) {
+  const COLLECTION = 'charter_items'
+  const ids = (record, field) => {
+    const value = parseJsonField(record, field)
+    return Array.isArray(value) ? value.filter((v) => typeof v === 'string') : []
+  }
+
+  function toEntity(record) {
+    return {
+      id: record.id,
+      projectId: record.getString('project_id'),
+      kind: record.getString('kind'),
+      title: record.getString('title'),
+      description: record.getString('description'),
+      position: record.getInt('position'),
+      state: record.getString('state'),
+      ownerId: record.getString('owner_id') || null,
+      taskIds: ids(record, 'task_ids'),
+      linkIds: ids(record, 'link_ids'),
+      unit: record.getString('unit'),
+      baseline: record.getFloat('baseline'),
+      target: record.getFloat('target'),
+      current: record.getBool('has_current') ? record.getFloat('current') : null,
+      startDate: dayOfDateTime(record.getDateTime('start_date')),
+      dueDate: dayOfDateTime(record.getDateTime('due_date')),
+      frequency: record.getString('frequency'),
+      measuredAt: dayOfDateTime(record.getDateTime('measured_at')),
+      createdBy: record.getString('created_by') || null,
+      createdAt: toDate(record.getDateTime('created')),
+      updatedAt: toDate(record.getDateTime('updated')),
+    }
+  }
+
+  const FIELDS = {
+    projectId: 'project_id',
+    kind: 'kind',
+    title: 'title',
+    description: 'description',
+    position: 'position',
+    state: 'state',
+    ownerId: 'owner_id',
+    unit: 'unit',
+    baseline: 'baseline',
+    target: 'target',
+    frequency: 'frequency',
+    createdBy: 'created_by',
+  }
+  const DATES = { startDate: 'start_date', dueDate: 'due_date', measuredAt: 'measured_at' }
+  function apply(record, data) {
+    Object.keys(data).forEach((key) => {
+      const value = data[key]
+      if (FIELDS[key]) record.set(FIELDS[key], value === null || value === undefined ? '' : value)
+      else if (DATES[key]) record.set(DATES[key], value ? value + ' 00:00:00.000Z' : '')
+      else if (key === 'taskIds') record.set('task_ids', value || [])
+      else if (key === 'linkIds') record.set('link_ids', value || [])
+      else if (key === 'current') {
+        record.set('has_current', typeof value === 'number')
+        record.set('current', typeof value === 'number' ? value : 0)
+      }
+    })
+  }
+
+  return {
+    findById(id) {
+      const record = findOrNull(() => app.findRecordById(COLLECTION, id))
+      return record ? toEntity(record) : null
+    },
+    /** Pela posição; empate pela criação. */
+    listByProject(projectId) {
+      return app.findRecordsByFilter(COLLECTION, 'project_id = {:p}', 'position,created', 0, 0, { p: projectId }).map(toEntity)
+    },
+    create(data) {
+      const record = new Record(app.findCollectionByNameOrId(COLLECTION))
+      apply(record, Object.assign({ taskIds: [], linkIds: [] }, data))
+      app.save(record)
+      return toEntity(record)
+    },
+    update(id, patch) {
+      const record = app.findRecordById(COLLECTION, id)
+      apply(record, patch)
+      app.save(record)
+      return toEntity(record)
+    },
+    delete(id) {
+      app.delete(app.findRecordById(COLLECTION, id))
+    },
+  }
+}
+
+function createCharterMeasurementRepository(app) {
+  const COLLECTION = 'charter_measurements'
+
+  function toEntity(record) {
+    return {
+      id: record.id,
+      projectId: record.getString('project_id'),
+      itemId: record.getString('item_id'),
+      value: record.getFloat('value'),
+      note: record.getString('note'),
+      measuredAt: dayOfDateTime(record.getDateTime('measured_at')),
+      createdBy: record.getString('created_by') || null,
+      createdAt: toDate(record.getDateTime('created')),
+    }
+  }
+
+  return {
+    /** Mais recente primeiro (pela data da medição; empate pela criação). */
+    listByItem(itemId, limit) {
+      return app.findRecordsByFilter(COLLECTION, 'item_id = {:i}', '-measured_at,-created', limit || 0, 0, { i: itemId }).map(toEntity)
+    },
+    create(data) {
+      const record = new Record(app.findCollectionByNameOrId(COLLECTION))
+      record.set('project_id', data.projectId)
+      record.set('item_id', data.itemId)
+      record.set('value', data.value)
+      record.set('note', data.note || '')
+      record.set('measured_at', data.measuredAt + ' 00:00:00.000Z')
+      record.set('created_by', data.createdBy || '')
+      app.save(record)
+      return toEntity(record)
+    },
+  }
+}
+
 function createRelationRepository(app) {
   const COLLECTION = 'task_relations'
 
@@ -2317,6 +2496,9 @@ function createRepositories(app) {
     relationRepository: createRelationRepository(app),
     loginAttemptRepository: createLoginAttemptRepository(app),
     sprintRepository: createSprintRepository(app),
+    charterRepository: createCharterRepository(app),
+    charterItemRepository: createCharterItemRepository(app),
+    charterMeasurementRepository: createCharterMeasurementRepository(app),
     milestoneRepository: createMilestoneRepository(app),
     projectGroupRepository: createProjectGroupRepository(app),
     planStatusRepository: createPlanStatusRepository(app),

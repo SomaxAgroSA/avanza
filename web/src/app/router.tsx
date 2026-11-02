@@ -128,6 +128,7 @@ export const routes: RouteObject[] = [
           {
             element: <PermissionGate permission="permissions.manage" />,
             children: [
+              { path: 'access', ...page(() => import('@/features/settings/AccessControlPage').then((m) => ({ default: m.AccessControlPage }))) },
               { path: 'roles', ...page(() => import('@/features/settings/RolesPage').then((m) => ({ default: m.RolesPage }))) },
               { path: 'permissions', ...page(() => import('@/features/settings/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))) },
             ],

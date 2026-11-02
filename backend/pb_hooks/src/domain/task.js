@@ -15,6 +15,9 @@ const rbac = require('./rbac')
 const cf = require('./custom-field')
 const workflow = require('./workflow')
 
+/** Urgência da tarefa (semáforo): alta = vermelho, média = amarelo, baixa = verde; sem valor = não definida. */
+const URGENCY_LEVELS = Object.freeze(['high', 'medium', 'low'])
+
 const ACTION_PERMISSION = {
   view: 'tasks.view',
   create: 'tasks.create',
@@ -233,6 +236,7 @@ function tagNameIssue(name) {
 }
 
 module.exports = {
+  URGENCY_LEVELS,
   normalizeChecklist,
   checklistSummary,
   assertCommentAccess,

@@ -11,6 +11,7 @@ import type { TaskPriority, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/test/utils'
 import { TaskFormDialog } from './TaskFormDialog'
 import { TaskDetailPage } from './TaskDetailPage'
+import { TasksTable } from './TasksTable'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -101,6 +102,8 @@ const detail: TaskDetail = {
   attachmentCount: 0,
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
+  inReport: true,
+    urgency: null,
   sprint: null,
   fields: bugDetail.fields,
   parent: null, forkedFrom: null, capabilities: { edit: true, delete: false, assign: true, comment: true, link: true, fork: true },
@@ -287,5 +290,37 @@ describe('Status: só as transições permitidas', () => {
     await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
     await waitFor(() => expect(screen.getByRole('combobox', { name: /^Status/ })).toHaveTextContent('Backlog'))
     expect(await optionNames(/^Status/)).toEqual(['Backlog', 'Desenvolvimento', 'Redesenvolver', 'Homologação'])
+  })
+})
+
+describe('TasksTable: escolher o que sai no informe do projeto', () => {
+  it('o botão liga/desliga a tarefa no informe e só aparece na aba do projeto', async () => {
+    const setInReport = vi.fn<TaskRepository['setInReport']>(() => Promise.resolve({ ...detail, inReport: false }))
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test" projectId="p1" /> }], {
+      repositories: repositories({ list, setInReport }),
+      initialPath: '/',
+    })
+    await userEvent.click(await screen.findByRole('button', { name: i18n.t('tasks.report.remove') }))
+    await waitFor(() => expect(setInReport).toHaveBeenCalledWith(detail.id, false))
+  })
+
+  it('fora do projeto (página Tarefas), não há o botão', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test-2" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByText(detail.title)
+    expect(screen.queryByRole('button', { name: i18n.t('tasks.report.remove') })).not.toBeInTheDocument()
+  })
+})
+
+describe('TasksTable: urgencia (semáforo)', () => {
+  it('la celda muestra la urgencia y quien edita la cambia con un clic', async () => {
+    const setUrgency = vi.fn<TaskRepository['setUrgency']>(() => Promise.resolve({ ...detail, urgency: 'high' }))
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="urgency-test" projectId="p1" /> }], { repositories: repositories({ list, setUrgency }), initialPath: '/' })
+    const trigger = await screen.findByRole('button', { name: i18n.t('tasks.urgency.change', { code: detail.code, urgency: i18n.t('tasks.urgency.none') }) })
+    await userEvent.click(trigger)
+    await userEvent.click(await screen.findByRole('menuitem', { name: i18n.t('tasks.urgency.high') }))
+    await waitFor(() => expect(setUrgency).toHaveBeenCalledWith(detail.id, 'high'))
   })
 })

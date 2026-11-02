@@ -19,13 +19,15 @@ import type { Attachment } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
+import type { CharterDto, CharterItemDto, CharterMeasurementDto } from './dtos'
+import { CHARTER_SECTIONS, FEATURE_STATES, MEASURE_FREQUENCIES, OBJECTIVE_STATES, RESULT_SITUATIONS, type CharterItem, type CharterMeasurement, type ProjectCharter } from '@/domain/charter'
 import { SPACE_ICONS, SPACE_VISIBILITIES, type DocPage, type DocSpace, type DocTreePage, type RichContent } from '@/domain/docs'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
 import type { FieldValue } from '@/domain/task-config'
 import type { AttachmentDto, CommentDto, CustomFieldDto, LookupDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
-import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
+import { isTaskUrgency, type Tag, type TaskComment, type TaskDetail, type TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
 import { STATUS_CATEGORIES, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
@@ -133,6 +135,7 @@ export function toProject(dto: ProjectDto): Project {
     cover: oneOf(PROJECT_COVERS, dto.cover, 'violet'),
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
+    urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
@@ -285,6 +288,8 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     attachmentCount: dto.attachment_count ?? 0,
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
+    inReport: dto.in_report ?? true,
+    urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
   }
 }
 
@@ -401,6 +406,93 @@ export function toMilestone(dto: MilestoneDto): Milestone {
     state: oneOf(MILESTONE_STATES, dto.state, 'pending'),
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
+  }
+}
+
+export function toCharterItem(dto: CharterItemDto): CharterItem {
+  const base = {
+    id: dto.id,
+    projectId: dto.project_id,
+    title: dto.title,
+    description: dto.description ?? '',
+    position: dto.position ?? 0,
+    owner: dto.owner ? toUserSummary(dto.owner) : null,
+    createdAt: toDate(dto.created_at),
+    updatedAt: toDate(dto.updated_at),
+  }
+  if (dto.kind === 'objective') {
+    return {
+      ...base,
+      kind: 'objective',
+      state: dto.state === 'auto' ? 'auto' : oneOf(OBJECTIVE_STATES, dto.state ?? '', 'pending'),
+      effectiveState: oneOf(OBJECTIVE_STATES, dto.effective_state ?? '', 'pending'),
+      linkIds: dto.link_ids ?? [],
+    }
+  }
+  if (dto.kind === 'feature') {
+    return {
+      ...base,
+      kind: 'feature',
+      state: dto.state === 'auto' ? 'auto' : oneOf(FEATURE_STATES, dto.state ?? '', 'planned'),
+      effectiveState: oneOf(FEATURE_STATES, dto.effective_state ?? '', 'planned'),
+      taskIds: dto.task_ids ?? [],
+      tasks: (dto.tasks ?? []).map(toTaskSummary),
+      progress: { done: dto.progress?.done ?? 0, total: dto.progress?.total ?? 0 },
+    }
+  }
+  if (dto.kind === 'result') {
+    return {
+      ...base,
+      kind: 'result',
+      unit: dto.unit ?? '',
+      baseline: dto.baseline ?? 0,
+      target: dto.target ?? 0,
+      current: dto.current ?? null,
+      startDate: dto.start_date ? dto.start_date.slice(0, 10) : null,
+      dueDate: dto.due_date ? dto.due_date.slice(0, 10) : null,
+      frequency: oneOf(MEASURE_FREQUENCIES, dto.frequency ?? '', 'none'),
+      measuredAt: dto.measured_at ? dto.measured_at.slice(0, 10) : null,
+      situation: oneOf(RESULT_SITUATIONS, dto.situation ?? '', 'no_data'),
+      percent: dto.percent ?? 0,
+      stale: !!dto.stale,
+    }
+  }
+  return { ...base, kind: dto.kind === 'scope_out' ? 'scope_out' : 'scope_in' }
+}
+
+export function toProjectCharter(dto: CharterDto): ProjectCharter {
+  const sections = Object.fromEntries(CHARTER_SECTIONS.map((key) => [key, !!dto.completeness?.sections?.[key]])) as ProjectCharter['completeness']['sections']
+  const sum = dto.summary
+  return {
+    projectId: dto.project_id,
+    objective: dto.objective ?? '',
+    updatedAt: toDate(dto.updated_at),
+    updatedBy: dto.updated_by ? toUserSummary(dto.updated_by) : null,
+    capabilities: { edit: !!dto.capabilities?.edit },
+    completeness: { sections, done: dto.completeness?.done ?? 0, total: dto.completeness?.total ?? CHARTER_SECTIONS.length, percent: dto.completeness?.percent ?? 0 },
+    summary: {
+      featuresTotal: sum?.features_total ?? 0,
+      featuresDelivered: sum?.features_delivered ?? 0,
+      tasksTotal: sum?.tasks_total ?? 0,
+      tasksDone: sum?.tasks_done ?? 0,
+      resultsTotal: sum?.results_total ?? 0,
+      resultsOnTrack: sum?.results_on_track ?? 0,
+      resultsLate: sum?.results_late ?? 0,
+      resultsStale: sum?.results_stale ?? 0,
+    },
+    items: (dto.items ?? []).map(toCharterItem),
+  }
+}
+
+export function toCharterMeasurement(dto: CharterMeasurementDto): CharterMeasurement {
+  return {
+    id: dto.id,
+    itemId: dto.item_id,
+    value: dto.value,
+    note: dto.note ?? '',
+    measuredAt: dto.measured_at.slice(0, 10),
+    createdBy: dto.created_by ? toUserSummary(dto.created_by) : null,
+    createdAt: toDate(dto.created_at),
   }
 }
 

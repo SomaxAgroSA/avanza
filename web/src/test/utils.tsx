@@ -72,6 +72,7 @@ export function fakeRepositories(overrides: {
   sprints?: Partial<Repositories['sprints']>
   timeline?: Partial<Repositories['timeline']>
   milestones?: Partial<Repositories['milestones']>
+  charter?: Partial<Repositories['charter']>
   plan?: Partial<Repositories['plan']>
   docs?: Partial<Repositories['docs']>
   platform?: Partial<Repositories['platform']>
@@ -176,6 +177,8 @@ export function fakeRepositories(overrides: {
       get: notImplemented,
       create: notImplemented,
       update: notImplemented,
+      setInReport: notImplemented,
+      setUrgency: notImplemented,
       remove: notImplemented,
       history: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
       ...overrides.tasks,
@@ -223,6 +226,17 @@ export function fakeRepositories(overrides: {
       update: notImplemented,
       remove: notImplemented,
       ...overrides.milestones,
+    },
+    charter: {
+      get: notImplemented,
+      saveObjective: notImplemented,
+      createItem: notImplemented,
+      updateItem: notImplemented,
+      removeItem: notImplemented,
+      reorder: notImplemented,
+      measurements: () => Promise.resolve([]),
+      addMeasurement: notImplemented,
+      ...overrides.charter,
     },
     plan: {
       get: notImplemented,

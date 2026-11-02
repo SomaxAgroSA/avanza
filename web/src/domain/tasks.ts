@@ -83,7 +83,17 @@ export interface TaskSummary {
   subtaskProgress: { done: number; total: number }
   /** Algum bloqueio (bloqueado por / depende de) ainda aberto. */
   blocked: boolean
+  /** Entra no informe do projeto (aba Informe); padrão: sim. */
+  inReport: boolean
+  /** Urgência (semáforo); null = sem urgência. */
+  urgency: TaskUrgency | null
 }
+
+/** Urgência da tarefa (semáforo): alta = vermelho, média = amarelo, baixa = verde. */
+export const TASK_URGENCIES = ['high', 'medium', 'low'] as const
+export type TaskUrgency = (typeof TASK_URGENCIES)[number]
+
+export const isTaskUrgency = (value: unknown): value is TaskUrgency => typeof value === 'string' && (TASK_URGENCIES as readonly string[]).includes(value)
 
 export interface TaskCapabilities {
   edit: boolean

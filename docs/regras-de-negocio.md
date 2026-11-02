@@ -544,3 +544,34 @@ Telas abertas se atualizam sozinhas quando alguém muda algo — sem recarregar 
 - **Quando:** logo depois que a mudança é gravada (de qualquer origem: tela, API com token, importação, rotinas). Vários avisos juntos (ex.: mover um grupo inteiro) viram uma única atualização; com muita gente mexendo ao mesmo tempo, cada tela se atualiza **no máximo uma vez a cada 2,5 s** (a primeira mudança depois de um tempo quieto aparece na hora). Se a própria pessoa estiver salvando algo naquele momento (ex.: soltando um cartão), a atualização espera o salvamento terminar — assim nada "volta" para o estado de antes.
 - **Conexão:** uma por aba, aberta quando alguma tela precisa e fechada pouco depois de não precisar. Se cair, a tela continua funcionando e o cabeçalho mostra "Reconectando…" até voltar; ao voltar, as assinaturas são refeitas e a tela busca de novo o que está aberta (os avisos do intervalo se perderam).
 - **Consulta periódica:** com o tempo real ligado, o Kanban e o sino só conferem a cada 5 minutos (rede de segurança); sem ele, voltam a conferir a cada 15 s (Kanban) e 30 s (sino).
+
+## 20. Informe do projeto
+
+Página do projeto → aba **Informe**: monta o informe do projeto com os dados da plataforma e baixa em PDF.
+
+- **Quais tarefas entram:** toda tarefa entra por padrão (também as que já existiam). Na aba **Tarefas** do projeto, o botão de informe de cada linha (antes do "Visualizar") tira ou devolve a tarefa; a coluna/filtro **No informe** mostra quais estão fora. Pode mudar quem edita a tarefa; não exige os campos obrigatórios do status e fica no histórico da tarefa ("No informe: Sim → Não").
+- **O que o informe mostra:** capa (projeto, início, data de corte e equipe = responsáveis das tarefas do informe), resumo com indicadores (dias corridos e úteis, tarefas concluídas, marcos alcançados, fases encerradas) e cronograma, avanço por fase, marcos, linha do tempo dia a dia (Diário, marcos e tarefas pela data do fato — mesma regra do Histórico), tarefas por situação e próximos passos (marcos pendentes e tarefas abertas pelo prazo). Cada seção pode ser desligada; a numeração acompanha.
+- **Fases:** elementos de primeiro nível de um grupo da Gestão de projetos (e dos subgrupos dele), com a etiqueta de status e o progresso do quadro; sem escolha, o primeiro grupo do quadro. Só aparece para quem tem `plan.view`.
+- **Período e corte:** "De/Até" recortam tarefas (pela data de início, ou o prazo), marcos e Diário; tarefa sem data só entra sem período. A **data de corte** é o "hoje" do documento: dias, fases em andamento e a linha tracejada do cronograma vão até ela. Tarefas canceladas aparecem na lista, mas não contam no total de tarefas.
+- **PDF:** a prévia é o próprio documento A4; "Baixar PDF" abre a impressão do navegador ("Salvar como PDF"), com rodapé e número de página. Título, subtítulo, resumo, observações e opções ficam guardados no navegador de cada pessoa, por projeto.
+
+## 21. Ficha do projeto
+
+Página do projeto → aba **Ficha** (logo depois de Resumo): para que o projeto existe, o que vai entregar, até onde vai e como se mede o sucesso — com o avanço calculado pelo que já está na plataforma.
+
+- **Seções:** **Objetivos** (objetivo geral + objetivos específicos), **Funcionalidades**, **Alcance** (inclui / não inclui) e **Resultados esperados**. A **completude** conta quatro seções: objetivos (objetivo geral ou ao menos um específico), funcionalidades, alcance incluído e resultados.
+- **Quem faz o quê:** quem vê o projeto vê a ficha (os dados das tarefas vinculadas só com `tasks.view`). Montar e editar: gestor ou dono do projeto (`projects.edit`, projeto não arquivado), como os marcos. Registrar a **medição** de um resultado: quem edita ou o **responsável** pelo resultado. Responsável = dono ou membro do projeto.
+- **Funcionalidade:** vinculada a tarefas do projeto. Avanço = tarefas concluídas / tarefas vinculadas (canceladas não contam). Estado **automático**: nenhuma começou → *Planejada*; alguma em andamento ou concluída → *Em desenvolvimento*; todas concluídas → *Entregue*. Quem edita pode fixar o estado à mão (inclusive *Cancelada*); "Automático" volta ao cálculo. Tarefa excluída sai do vínculo.
+- **Objetivo:** vinculado a funcionalidades e resultados. Estado **automático**: algum resultado atrasado → *Em risco*; tudo entregue/cumprido → *Atingido*; algo andando → *Em curso*; senão *Pendente*. Funcionalidades canceladas não contam. Também pode ser fixado à mão.
+- **Resultado esperado:** indicador com partida, meta, unidade, início, prazo, frequência de medição e responsável. Cada **medição** (valor, data — hoje ou antes —, comentário) entra na série; a de data mais recente vira o **valor atual**. **Situação:** *Cumprido* (chegou à meta), *No caminho* (no ritmo de uma reta entre a partida no início e a meta no prazo), *Atrasado* (abaixo da reta, ou passou do prazo) ou *Sem dados* (nenhuma medição). Meta abaixo da partida = quanto menos, melhor. **Sem medir:** com frequência semanal (7 dias), mensal (31) ou trimestral (92), passou do intervalo desde a última medição (ou da criação).
+- **Histórico:** no projeto — `charter.updated` (objetivo geral), `charter_item.created/updated/deleted/reordered` e `charter_item.measured`.
+
+## 22. Urgência da tarefa (semáforo)
+
+Na aba **Tarefas** (do projeto e da lista geral), a coluna **Urgência** mostra um semáforo por tarefa: 🔴 **Alta**, 🟡 **Média**, 🟢 **Baixa** — ou nenhum (tarefa sem urgência, o padrão, inclusive das que já existiam).
+
+- **Quem muda:** quem edita a tarefa, com um clique na célula (menu com as três opções e "Sem urgência"). Não exige os campos obrigatórios do status e fica no histórico da tarefa ("Urgência: — → Alta").
+- **Diferença da prioridade:** a prioridade segue o cadastro de prioridades (ordem de atendimento); a urgência é o sinal rápido de "quanto aperta" para quem olha a lista. As duas convivem.
+- **Filtro:** "Urgência" na barra de filtros (Alta, Média, Baixa, Sem urgência); na API, `urgency=high|medium|low|none`.
+- **Projetos também têm urgência** (mesmo semáforo): coluna e filtro "Urgência" na lista de Projetos (quem edita o projeto troca com um clique), campo no formulário do projeto, histórico em `project.updated`; na API, `urgency` em `POST/PATCH /projects` (`null` limpa) e filtro `GET /projects?urgency=high|medium|low|none`.
+- **Kanban:** filtro "Urgência" na barra e o semáforo no canto de cada cartão com urgência.

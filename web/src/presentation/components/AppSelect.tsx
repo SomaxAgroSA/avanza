@@ -25,6 +25,8 @@ export interface AppSelectProps {
   /** Nome acessível quando não há label visível. */
   'aria-label'?: string
   size?: 'sm' | 'md'
+  /** Conteúdo do gatilho no lugar do texto da opção escolhida (ex.: filtro "Estado: Alta"). */
+  renderValue?: ReactNode
 }
 
 /** Valor sentinela para "todos" (Radix Select não aceita string vazia como item). */
@@ -43,6 +45,7 @@ export function AppSelect({
   className,
   triggerClassName,
   size = 'md',
+  renderValue,
   ...rest
 }: AppSelectProps) {
   return (
@@ -63,7 +66,7 @@ export function AppSelect({
             )}
           >
             <span className="truncate">
-              <Select.Value placeholder={placeholder} />
+              <Select.Value placeholder={placeholder}>{renderValue}</Select.Value>
             </span>
             <Select.Icon>
               <ChevronDown className="size-4 text-subtle" aria-hidden />

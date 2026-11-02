@@ -69,6 +69,12 @@ export const AUDIT_ACTIONS = [
   'milestone.created',
   'milestone.updated',
   'milestone.deleted',
+  'charter.updated',
+  'charter_item.created',
+  'charter_item.updated',
+  'charter_item.deleted',
+  'charter_item.reordered',
+  'charter_item.measured',
   'sprint.created',
   'sprint.updated',
   'sprint.deleted',
@@ -160,7 +166,14 @@ function formatValue(t: TFunction, field: string, value: unknown, resolve?: (fie
   if (field === 'role') return t(`projects.roles.${text}`, { defaultValue: text })
   if (field === 'icon') return t(`projects.icons.${text}`, { defaultValue: text })
   if (field === 'cover') return t(`projects.covers.${text}`, { defaultValue: text })
-  if (field === 'state') return t(`sprints.states.${text}`, { defaultValue: text })
+  // sprints (planned/active/closed), marcos (pending/done) e itens da ficha usam o mesmo campo
+  if (field === 'state') {
+    const charter = text === 'auto' ? t('charter.state.auto') : t(`charter.objectiveState.${text}`, { defaultValue: t(`charter.featureState.${text}`, { defaultValue: text }) })
+    return t(`sprints.states.${text}`, { defaultValue: t(`timeline.milestones.states.${text}`, { defaultValue: charter }) })
+  }
+  if (field === 'urgency') return t(`tasks.urgency.${text}`, { defaultValue: text })
+  if (field === 'kind') return t(`charter.kinds.${text}`, { defaultValue: text })
+  if (field === 'frequency') return t(`charter.frequency.${text}`, { defaultValue: text })
   if (field === 'color') return t(`colors.${text}`, { defaultValue: text })
   if (field === 'link_type') return t(`plan.linkTypes.${text}`, { defaultValue: text })
   if (field === 'dependency_rule') return t(`plan.dependencyRule.${text}`, { defaultValue: text })
@@ -168,7 +181,7 @@ function formatValue(t: TFunction, field: string, value: unknown, resolve?: (fie
   if (field === 'column_type') return t(`plan.customColumns.types.${text}`, { defaultValue: text })
   if (field === 'category') return t(`workflow.categories.${text}`, { defaultValue: t(`plan.categories.${text}`, { defaultValue: text }) })
   if (field === 'visibility') return t(`docs.visibility.${text}`, { defaultValue: text })
-  if ((field === 'start_date' || field === 'due_date' || field === 'end_date' || field === 'entry_date' || field === 'opened_on') && /^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10).split('-').reverse().join('/')
+  if ((field === 'start_date' || field === 'due_date' || field === 'end_date' || field === 'entry_date' || field === 'opened_on' || field === 'measured_at') && /^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10).split('-').reverse().join('/')
   if (field === 'locale') return t(`language.${String(value)}`, { defaultValue: String(value) })
   if (field === 'theme') return t(`theme.${String(value)}`, { defaultValue: String(value) })
   return resolve?.(field, String(value)) ?? String(value)

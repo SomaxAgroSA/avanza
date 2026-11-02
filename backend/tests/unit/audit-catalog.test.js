@@ -11,7 +11,7 @@ const path = require('node:path')
 
 const SRC = path.join(__dirname, '..', '..', 'pb_hooks', 'src')
 const WEB = path.join(__dirname, '..', '..', '..', 'web', 'src')
-const ENTITIES = ['auth', 'user', 'role', 'project', 'task', 'task_type', 'custom_field', 'comment', 'attachment', 'tag', 'sprint', 'milestone', 'doc_space', 'doc_page', 'project_group', 'plan_item', 'plan_status', 'plan_resource', 'plan_settings', 'plan_journal', 'plan_issue', 'plan_column', 'platform_settings', 'audit_log', 'email_settings', 'api_token', 'webhook']
+const ENTITIES = ['auth', 'user', 'role', 'project', 'task', 'task_type', 'custom_field', 'comment', 'attachment', 'tag', 'sprint', 'milestone', 'charter', 'charter_item', 'doc_space', 'doc_page', 'project_group', 'plan_item', 'plan_status', 'plan_resource', 'plan_settings', 'plan_journal', 'plan_issue', 'plan_column', 'platform_settings', 'audit_log', 'email_settings', 'api_token', 'webhook']
 
 function sourceFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

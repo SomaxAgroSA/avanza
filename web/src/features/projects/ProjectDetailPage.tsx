@@ -26,11 +26,14 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { AuditTimeline } from '@/features/audit/AuditTimeline'
 import { useCan } from '@/features/auth/session'
 import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
+import { ProjectReportPanel } from './report/ProjectReportPanel'
+import { ProjectCharterPanel } from './charter/ProjectCharterPanel'
 import { managementLink } from '@/features/plan/paths'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
+import { ProjectChronology } from './ProjectChronology'
 import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
 
 export function ProjectDetailPage() {
@@ -102,6 +105,8 @@ function ProjectDetail({ project }: { project: Project }) {
 
   const tabs = [
     { value: 'overview', label: t('projects.tabs.overview'), content: <Overview project={project} /> },
+    // para que o projeto existe, o que entrega e como se mede (objetivos, funcionalidades, alcance e resultados)
+    { value: 'charter', label: t('projects.tabs.charter'), content: <ProjectCharterPanel project={project} /> },
     ...(canViewTasks ? [{ value: 'tasks', label: t('projects.tabs.tasks'), content: <ProjectTasksPanel project={project} /> }] : []),
     // quadro de gestão do projeto (Gerenciamento de Projetos — módulo à parte das tarefas)
     { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },
@@ -112,6 +117,15 @@ function ProjectDetail({ project }: { project: Project }) {
       value: 'settings',
       label: t('projects.tabs.settings'),
       content: <ProjectSettings project={project} onArchive={setArchived} onDelete={() => setDeleting(true)} />,
+    })
+  }
+
+  // por último, onde o informe é montado e baixado (escolha das tarefas na aba Tarefas)
+  if (canViewTasks) {
+    tabs.push({
+      value: 'report',
+      label: t('projects.tabs.report'),
+      content: <ProjectReportPanel project={project} onChooseTasks={() => setParams({ tab: 'tasks' }, { replace: true })} />,
     })
   }
 
@@ -180,6 +194,7 @@ function ProjectDetail({ project }: { project: Project }) {
       )}
 
       <AppTabs
+        actionsSlot
         tabs={tabs}
         aria-label={project.name}
         value={tabs.some((tab) => tab.value === params.get('tab')) ? (params.get('tab') as string) : 'overview'}
@@ -303,6 +318,7 @@ function Overview({ project }: { project: Project }) {
 }
 
 function ProjectHistory({ projectId }: { projectId: string }) {
+  const { t } = useTranslation()
   const history = useProjectHistory(projectId)
   if (history.isPending) {
     return (
@@ -313,10 +329,16 @@ function ProjectHistory({ projectId }: { projectId: string }) {
     )
   }
   if (history.isError) return <AppErrorState onRetry={() => void history.refetch()} />
+  // primeiro os fatos pela data em que aconteceram; depois a auditoria (quando cada coisa foi gravada)
   return (
-    <AppCard>
-      <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
-    </AppCard>
+    <div className="flex flex-col gap-4">
+      <AppCard title={t('projects.chronology.title')} description={t('projects.chronology.description')}>
+        <ProjectChronology projectId={projectId} />
+      </AppCard>
+      <AppCard title={t('projects.chronology.auditTitle')} description={t('projects.chronology.auditDescription')}>
+        <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
+      </AppCard>
+    </div>
   )
 }
 

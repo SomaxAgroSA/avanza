@@ -1,9 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ListQuery } from '@/domain/pagination'
 import type { TaskListOptions } from '@/domain/repositories'
-import type { TaskInput } from '@/domain/tasks'
+import type { TaskInput, TaskUrgency } from '@/domain/tasks'
 import type { ForkInput, LinkOption } from '@/domain/relations'
 import { useRepositories } from '@/presentation/common/repositories-context'
+import { timelineKeys } from '@/features/timeline/queries'
 
 export const taskKeys = {
   all: ['tasks'] as const,
@@ -127,5 +128,21 @@ export function useTaskMutations() {
       },
     }),
     remove: useMutation({ mutationFn: (id: string) => tasks.remove(id), onSuccess: invalidate }),
+    setInReport: useMutation({
+      mutationFn: ({ id, inReport }: { id: string; inReport: boolean }) => tasks.setInReport(id, inReport),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+        // a aba Informe lê as tarefas pela timeline do projeto
+        if (task.project) void queryClient.invalidateQueries({ queryKey: timelineKeys.detail(task.project.id) })
+      },
+    }),
+    setUrgency: useMutation({
+      mutationFn: ({ id, urgency }: { id: string; urgency: TaskUrgency | null }) => tasks.setUrgency(id, urgency),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
   }
 }

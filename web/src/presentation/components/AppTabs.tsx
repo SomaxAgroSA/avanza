@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
 import { Tabs } from 'radix-ui'
 import { cn } from '@/core/utils/cn'
 
@@ -16,9 +17,12 @@ export interface AppTabsProps {
   onValueChange?: (value: string) => void
   className?: string
   'aria-label'?: string
+  /** Reserva um lugar à direita da linha de abas para as ações da aba aberta (ver useTabActionsSlot). */
+  actionsSlot?: boolean
 }
 
-export function AppTabs({ tabs, value, defaultValue, onValueChange, className, ...rest }: AppTabsProps) {
+export function AppTabs({ tabs, value, defaultValue, onValueChange, className, actionsSlot, ...rest }: AppTabsProps) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
   return (
     <Tabs.Root
       value={value}
@@ -26,7 +30,8 @@ export function AppTabs({ tabs, value, defaultValue, onValueChange, className, .
       onValueChange={onValueChange}
       className={cn('flex flex-col gap-4', className)}
     >
-      <Tabs.List aria-label={rest['aria-label']} className="flex gap-1 overflow-x-auto border-b border-border">
+      <div className="flex items-end gap-3 border-b border-border">
+      <Tabs.List aria-label={rest['aria-label']} className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <Tabs.Trigger
             key={tab.value}
@@ -41,11 +46,15 @@ export function AppTabs({ tabs, value, defaultValue, onValueChange, className, .
           </Tabs.Trigger>
         ))}
       </Tabs.List>
-      {tabs.map((tab) => (
-        <Tabs.Content key={tab.value} value={tab.value} className="focus:outline-none">
-          {tab.content}
-        </Tabs.Content>
-      ))}
+      {actionsSlot && <div ref={setSlot} className="mb-1.5 flex shrink-0 items-center gap-2 empty:hidden" />}
+      </div>
+      <TabActionsSlotContext.Provider value={actionsSlot ? slot : null}>
+        {tabs.map((tab) => (
+          <Tabs.Content key={tab.value} value={tab.value} className="focus:outline-none">
+            {tab.content}
+          </Tabs.Content>
+        ))}
+      </TabActionsSlotContext.Provider>
     </Tabs.Root>
   )
 }

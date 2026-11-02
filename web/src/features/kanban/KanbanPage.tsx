@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Archive, KanbanSquare, Plus } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { readJson, safeStorage, writeJson } from '@/core/storage/safe-storage'
 import { buildLanes, EMPTY_FILTERS, matchesFilters, SWIMLANES, wipState, type BoardCard, type BoardFilters, type Swimlane } from '@/domain/kanban'
-import { AppBadge, AppButton, AppEmptyState, AppErrorState, AppFilterBar, AppSearch, AppSelect, AppSkeleton, notify, SELECT_ALL } from '@/presentation/components'
+import { AppBadge, AppButton, AppEmptyState, AppErrorState, AppFilterBar, AppSearch, AppSelect, AppSkeleton, notify } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useLiveProject } from '@/presentation/common/use-live'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
@@ -13,6 +13,8 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { useProjectMembers } from '@/features/projects/queries'
 import { ProjectSwitcher } from '@/features/projects/ProjectSwitcher'
+import { FilterSelect } from '@/presentation/components/data-table/TableFilters'
+import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useSprints } from '@/features/backlog/queries'
 import { useTaskTypes } from '@/features/task-config/queries'
 import { usePriorities } from '@/features/workflow/queries'
@@ -68,6 +70,7 @@ function ProjectBoard({ projectId }: { projectId: string }) {
   const sprints = useSprints(projectId)
 
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
+  const urgencyOptions = useUrgencyFilterOptions()
   const [swimlane, setSwimlaneState] = useState<Swimlane>(() => {
     const saved = readJson<string>(SWIMLANE_KEY, 'none')
     return (SWIMLANES as readonly string[]).includes(saved) ? (saved as Swimlane) : 'none'
@@ -126,15 +129,9 @@ function ProjectBoard({ projectId }: { projectId: string }) {
     })
   }
 
-  const filterSelect = (key: keyof Omit<BoardFilters, 'search'>, label: string, options: Array<{ value: string; label: ReactNode }>) => (
-    <AppSelect
-      size="sm"
-      className="w-full sm:w-44"
-      aria-label={label}
-      value={filters[key] || SELECT_ALL}
-      onValueChange={(value) => setFilters((f) => ({ ...f, [key]: value === SELECT_ALL ? '' : value }))}
-      options={[{ value: SELECT_ALL, label: t('kanban.filters.all', { name: label }) }, ...options]}
-    />
+  // mesmo filtro das listagens: parado mostra só o nome; ativo fica verde com "Nome: valor"
+  const filterSelect = (key: keyof Omit<BoardFilters, 'search'>, label: string, options: Array<{ value: string; label: string }>) => (
+    <FilterSelect key={key} filter={{ id: key, label, options }} value={filters[key] || undefined} onChange={(value) => setFilters((f) => ({ ...f, [key]: value ?? '' }))} />
   )
 
   const defaultStatus = data?.columns.find((c) => c.status.isDefault) ?? data?.columns[0]
@@ -189,6 +186,7 @@ function ProjectBoard({ projectId }: { projectId: string }) {
                   t('tasks.fields.priority'),
                   (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
+                {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
                 {(sprints.data?.length ?? 0) > 0 &&
                   filterSelect('sprint', t('tasks.fields.sprint'), [
                     { value: 'none', label: t('sprints.none') },

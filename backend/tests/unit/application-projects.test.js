@@ -199,3 +199,23 @@ describe('application/projects — membros', () => {
     assert.equal(projects.getProject(ctx.manager, project.id).capabilities.transfer, false)
   })
 })
+
+describe('application/projects — urgência (semáforo)', () => {
+  it('nasce sem urgência; edita, limpa com null, registra no histórico e filtra a listagem', () => {
+    const { deps, projects, ctx } = setup()
+    const a = projects.createProject(ctx.manager, input())
+    const b = projects.createProject(ctx.manager, input({ name: 'Outro', key: 'OUT', urgency: 'low' }))
+    assert.equal(a.urgency, null)
+    assert.equal(b.urgency, 'low')
+    assert.equal(projects.updateProject(ctx.manager, a.id, { urgency: 'high' }).urgency, 'high')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue.urgency, entry.newValue.urgency], ['project.updated', null, 'high'])
+    const keys = (urgency) => projects.listProjects(ctx.manager, { urgency }).items.map((p) => p.key)
+    assert.deepEqual(keys('high'), ['CRM'])
+    assert.deepEqual(keys('low'), ['OUT'])
+    assert.equal(projects.updateProject(ctx.manager, b.id, { urgency: null }).urgency, null)
+    assert.deepEqual(keys('none'), ['OUT'])
+    assert.throws(() => projects.updateProject(ctx.manager, a.id, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
+    assert.throws(() => projects.listProjects(ctx.manager, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
+  })
+})

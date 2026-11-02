@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   columnPinningFeature,
   columnResizingFeature,
@@ -25,7 +26,7 @@ import { AppPagination } from './AppPagination'
 import { AppEmptyState, AppErrorState, AppSkeleton } from './AppStates'
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
-import { AppSelect, SELECT_ALL } from './AppSelect'
+import { FilterChips, FilterSelect, MoreFilters } from './data-table/TableFilters'
 import type { DataTableStateApi } from './data-table/use-data-table-state'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { useDelayedFlag } from '@/presentation/common/use-delayed-flag'
@@ -45,10 +46,17 @@ export interface DataTableColumn<T> {
   pinned?: boolean
   align?: 'start' | 'end'
   /** Filtro por coluna exibido na barra de filtros. */
-  filter?: { label: string; options: Array<{ value: string; label: string }> }
+  filter?: {
+    label: string
+    options: Array<{ value: string; label: string }>
+    /** Sempre visível na barra; os demais vão para "Mais filtros". Sem nenhum marcado, valem os primeiros. */
+    primary?: boolean
+  }
 }
 
 export interface DataTableRowActions<T> {
+  /** Ação própria da tela, antes do "Visualizar" (ex.: incluir a tarefa no informe). */
+  leading?: (row: T) => ReactNode
   /** Clique na linha (e o botão "Visualizar"): abre a visualização rápida. */
   onView?: (row: T) => void
   /** Duplo clique na linha: abre a página completa (no teclado, use o "Abrir" do menu da linha). */
@@ -83,6 +91,10 @@ export interface AppDataTableProps<T extends RowData> {
   /** Filtros/controles extras na barra (além dos filtros por coluna). */
   toolbar?: ReactNode
   toolbarActions?: ReactNode
+  /** Quantos filtros ficam na barra quando nenhuma coluna marca `primary` (padrão 3). */
+  maxVisibleFilters?: number
+  /** Põe "Colunas" e as ações noutro lugar da tela (ex.: a linha de abas do projeto). */
+  actionsSlot?: HTMLElement | null
   emptyState?: ReactNode
   /** Desativa busca/paginação (listas pequenas carregadas de uma vez). */
   searchable?: boolean
@@ -142,6 +154,8 @@ export function AppDataTable<T extends RowData>({
   searchPlaceholder,
   toolbar,
   toolbarActions,
+  maxVisibleFilters = 3,
+  actionsSlot,
   emptyState,
   searchable = true,
   paginated = true,
@@ -212,6 +226,10 @@ export function AppDataTable<T extends RowData>({
   })
 
   const filterColumns = columns.filter((c) => c.filter)
+  const filterDefs = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
+  const anyPrimary = filterDefs.some((f) => f.primary)
+  const visibleFilters = anyPrimary ? filterDefs.filter((f) => f.primary) : filterDefs.slice(0, maxVisibleFilters)
+  const hiddenFilters = filterDefs.filter((f) => !visibleFilters.includes(f))
   const hideableColumns = table.getAllLeafColumns().filter((c) => c.getCanHide())
   const visibleColumnCount = table.getVisibleLeafColumns().length
   const showSkeleton = loading && data.length === 0
@@ -231,8 +249,25 @@ export function AppDataTable<T extends RowData>({
     })),
   ]
 
+  const toolbarButtons = (
+      <>
+        {hideableColumns.length > 0 && (
+          <AppDropdown
+            items={columnMenu}
+            trigger={
+              <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
+                <span className="hidden sm:inline">{t('table.columns')}</span>
+              </AppButton>
+            }
+          />
+        )}
+        {toolbarActions}
+      </>
+  )
+
   return (
     <div className="flex flex-col gap-3">
+      {actionsSlot && createPortal(toolbarButtons, actionsSlot)}
       <AppFilterBar
         search={
           searchable ? (
@@ -241,40 +276,17 @@ export function AppDataTable<T extends RowData>({
         }
         filters={
           <>
-            {filterColumns.map((column) => (
-              <AppSelect
-                key={column.id}
-                size="sm"
-                aria-label={column.filter!.label}
-                value={state.filters[column.id] ?? SELECT_ALL}
-                onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
-                options={[
-                  { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
-                  ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
-                ]}
-                triggerClassName="min-w-40"
-              />
+            {visibleFilters.map((filter) => (
+              <FilterSelect key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
             ))}
+            <MoreFilters filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />
             {toolbar}
           </>
         }
+        below={<FilterChips filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />}
         hasActiveFilters={tableState.hasActiveFilters}
         onReset={tableState.resetFilters}
-        actions={
-          <>
-            {hideableColumns.length > 0 && (
-              <AppDropdown
-                items={columnMenu}
-                trigger={
-                  <AppButton variant="secondary" size="sm" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
-                    <span className="hidden sm:inline">{t('table.columns')}</span>
-                  </AppButton>
-                }
-              />
-            )}
-            {toolbarActions}
-          </>
-        }
+        actions={actionsSlot ? undefined : toolbarButtons}
       />
 
       <div className="relative overflow-hidden rounded-xl border border-border bg-surface shadow-card">
@@ -466,6 +478,7 @@ function RowActions<T extends RowData>({ row, actions }: { row: T; actions: Data
 
   return (
     <div className="flex items-center justify-end gap-0.5">
+      {actions.leading?.(row)}
       {actions.onView && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} onClick={() => actions.onView?.(row)} />}
       {actions.onEdit && (
         <AppIconButton size="sm" label={t('common.edit')} icon={<Pencil />} disabled={!canEdit} onClick={() => actions.onEdit?.(row)} />
