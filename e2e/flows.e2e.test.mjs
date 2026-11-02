@@ -128,15 +128,16 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     await page.waitForURL(/\/projects\/[a-z0-9]+$/)
     await page.getByText(/Projeto .* criado/).waitFor()
 
-    await page.getByRole('tab', { name: /Membros/ }).click()
+    // abas do projeto são endereços (/projects/:id/members)
+    await page.getByRole('link', { name: /^Membros/ }).click()
     await page.getByRole('button', { name: 'Adicionar membro' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByPlaceholder('Buscar por nome ou e-mail').fill('Lia')
     await dialog.getByRole('listitem').filter({ hasText: 'Lia Leitora' }).getByRole('button', { name: 'Adicionar' }).click()
     await page.getByText(/Lia Leitora adicionado como/).waitFor()
 
-    // a aba fica no endereço (?tab=members): o id vem só do caminho
-    const projectId = new URL(page.url()).pathname.split('/projects/')[1]
+    // a aba fica no endereço (/projects/:id/members): o id é o trecho depois de /projects/
+    const projectId = new URL(page.url()).pathname.split('/')[2]
     const members = (await api(page, 'GET', `/projects/${projectId}/members`)).json.data
     assert.ok(members.some((m) => m.user.email === 'lia@kamban.test'))
     assert.deepEqual(errors, [])
@@ -144,7 +145,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
 
   it('Kanban: criação rápida e arrastar entre colunas', async () => {
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD, { viewport: { width: 1600, height: 900 } })
-    await page.goto(`${app.baseUrl}/kanban/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/kanban`)
     await page.waitForSelector('[data-testid=kanban-board]')
 
     await page.getByRole('button', { name: 'Criar tarefa em Backlog' }).click()
@@ -178,7 +179,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     const task = (await app.admin.post('/tasks', { project_id: seed.project.id, task_type_id: type.id, title: 'Avaliar integração fiscal' })).body.data
 
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD, { viewport: { width: 1600, height: 900 } })
-    await page.goto(`${app.baseUrl}/kanban/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/kanban`)
     const card = page.getByTestId(`kanban-card-${task.id}`)
     await card.waitFor()
     const target = page.getByTestId(`kanban-cell-all::${statusId('TRIAGEM')}`)
@@ -200,7 +201,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     const task = await seed.task('Cronograma de implantação', { start_date: '2026-11-02', due_date: '2026-11-06' })
     await app.admin.post(`/projects/${seed.project.id}/milestones`, { name: 'Go-live', due_date: '2026-11-30' })
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD, { viewport: { width: 1600, height: 900 } })
-    await page.goto(`${app.baseUrl}/timeline/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/timeline`)
     const bar = page.getByTestId(`timeline-bar-${task.id}`)
     await bar.waitFor()
     await bar.scrollIntoViewIfNeeded()
@@ -236,7 +237,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     assert.deepEqual(errors, [])
 
     const viewer = await signIn('lia@kamban.test', PASSWORD, { viewport: { width: 1600, height: 900 } })
-    await viewer.page.goto(`${app.baseUrl}/timeline/${seed.project.id}`)
+    await viewer.page.goto(`${app.baseUrl}/projects/${seed.project.id}/timeline`)
     await viewer.page.getByTestId(`timeline-bar-${task.id}`).waitFor()
     await viewer.page.getByText('Somente leitura').first().waitFor()
     assert.equal(await viewer.page.getByRole('button', { name: 'Novo marco' }).count(), 0)
@@ -246,7 +247,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
   it('planejamento: gestor cria a sprint; membro arrasta a tarefa para ela', async () => {
     const task = await seed.task('Especificar integração', { status_id: statusId('ANALISE') })
     const manager = await signIn(ADMIN.email, ADMIN.password)
-    await manager.page.goto(`${app.baseUrl}/planning/${seed.project.id}`)
+    await manager.page.goto(`${app.baseUrl}/projects/${seed.project.id}/planning`)
     await manager.page.waitForSelector('[data-testid=backlog-list]')
     await manager.page.getByRole('button', { name: 'Nova sprint' }).first().click()
     const dialog = manager.page.getByRole('dialog')
@@ -257,7 +258,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     assert.deepEqual(manager.errors, [])
 
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD)
-    await page.goto(`${app.baseUrl}/planning/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/planning`)
     await page.waitForSelector('[data-testid=backlog-list]')
     assert.equal(await page.getByRole('button', { name: 'Nova sprint' }).count(), 0, 'membro não gerencia sprints')
 
@@ -314,12 +315,12 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
 
   it('leitor: consulta sem editar; área administrativa restrita', async () => {
     const { page, errors } = await signIn('lia@kamban.test', PASSWORD)
-    await page.goto(`${app.baseUrl}/kanban/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/kanban`)
     await page.waitForSelector('[data-testid=kanban-board]')
     await page.getByText('Somente leitura').first().waitFor()
     assert.equal(await page.getByRole('button', { name: /^Criar tarefa em/ }).count(), 0)
 
-    await page.goto(`${app.baseUrl}/planning/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/planning`)
     await page.waitForSelector('[data-testid=backlog-list]')
     assert.equal(await page.getByRole('button', { name: /^Arrastar/ }).count(), 0)
     assert.equal(await page.getByRole('button', { name: 'Nova sprint' }).count(), 0)

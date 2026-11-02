@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import type { Plan, PlanGroup, PlanItem } from '@/domain/plan'
 import type { PlanFile, PlanUpdate } from '@/domain/plan-updates'
-import type { JournalEntry, PlanIssue, PlanReport } from '@/domain/plan-management'
+import type { JournalEntry, PlanIssue } from '@/domain/plan-management'
 import type { PlanColumn } from '@/domain/plan-columns'
 import type { Project, ProjectMember } from '@/domain/projects'
 import type { PlanRepository } from '@/domain/repositories'
@@ -573,19 +573,6 @@ describe('Quadro do projeto — GP-4 (visões e gestão)', () => {
     expect(screen.queryByTestId('timeline-baseline-i1')).not.toBeInTheDocument()
   })
 
-  it('Kanban: colunas por status com contagem e "Em branco"; "Mover para…" do card muda o status; o card abre o painel', async () => {
-    const updateItem = vi.fn<PlanRepository['updateItem']>((id) => Promise.resolve(makePlan().items.find((i) => i.id === id) as PlanItem))
-    const { router } = setup({ updateItem }, makePlan(), '/?view=kanban')
-    const done = await screen.findByRole('region', { name: 'Feito: 1' })
-    expect(within(done).getByText('Elaborar pré-cronograma')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Em branco: 2' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Ações de Apresentar pré-cronograma' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Mover para "Em progresso"' }))
-    await waitFor(() => expect(updateItem).toHaveBeenCalledWith('i2', { statusId: 'st-prog' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Abrir Elaborar pré-cronograma' }))
-    await waitFor(() => expect(router.state.location.search).toContain('item=i1'))
-  })
-
   it('Gestão: registra no diário, muda a situação do problema na lista e abre um problema novo', async () => {
     const entry = (input: { entryDate?: string; content?: string }): JournalEntry => ({ id: 'j1', entryDate: input.entryDate ?? '', content: input.content ?? '', author: null, createdAt: null, updatedAt: null, capabilities: { edit: true, delete: true } })
     const issue: PlanIssue = { id: 'pb1', number: 1, openedOn: '2026-02-05', description: 'Cliente sem VPN', state: 'pending', owner: null, resolvedOn: null, createdBy: null, createdAt: null, updatedAt: null, capabilities: { edit: true, delete: true } }
@@ -611,36 +598,6 @@ describe('Quadro do projeto — GP-4 (visões e gestão)', () => {
     await userEvent.type(within(form).getByRole('textbox', { name: /^Descrição/ }), 'Servidor atrasado')
     await userEvent.click(within(form).getByRole('button', { name: 'Novo problema' }))
     await waitFor(() => expect(createIssue).toHaveBeenCalledWith('p1', expect.objectContaining({ description: 'Servidor atrasado', state: 'pending', ownerId: null })))
-  })
-
-  it('Relatórios: saúde do projeto com cada fator e o valor; resumo, esforço e grupos; "hoje" no fuso de quem vê', async () => {
-    const data: PlanReport = {
-      today: '2026-02-10',
-      summary: { total: 3, done: 1, open: 2, overdue: 1, stuck: 0, canceled: 0, progress: 50 },
-      schedule: { onTime: 0, overdue: 1, unscheduled: 1, done: 1 },
-      effort: { estimated: 5.5, actual: 3, remaining: 2.5, deviation: { hours: 1, percent: 25 } },
-      resources: [{ resourceId: 'r-gp', name: 'Gerente de Projetos', color: 'indigo', items: 1, open: 0, estimated: 1 }],
-      groups: [{ groupId: 'g-ini', number: '1.0', name: 'Iniciação', color: 'blue', items: 2, done: 1, overdue: 1, progress: 50, estimated: 5.5, actual: 3 }],
-      health: {
-        level: 'critical',
-        factors: [
-          { key: 'schedule', level: 'critical', value: 100, count: 1, of: 1 },
-          { key: 'progress', level: 'ok', value: 0, planned: 50, actual: 50 },
-          { key: 'stuck', level: 'ok', value: 0, count: 0, of: 2 },
-          { key: 'effort', level: 'attention', value: 25, hours: 1 },
-          { key: 'issues', level: 'ok', value: 0 },
-        ],
-      },
-    }
-    const report = vi.fn<PlanRepository['report']>(() => Promise.resolve(data))
-    setup({ report }, makePlan(), '/?view=reports')
-    const health = await screen.findByRole('region', { name: 'Saúde do projeto' })
-    expect(within(health).getAllByText('Crítico').length).toBeGreaterThan(0)
-    expect(within(health).getByText('100% dos abertos com data estão atrasados (1 de 1).')).toBeInTheDocument()
-    expect(within(health).getByText('Realizado 25% acima do estimado nos feitos (1 h).')).toBeInTheDocument()
-    expect(report).toHaveBeenCalledWith('p1', new Date().getTimezoneOffset())
-    expect(screen.getByRole('region', { name: 'Esforço' })).toHaveTextContent('+25%')
-    expect(screen.getByRole('table', { name: 'Grupos' })).toHaveTextContent('1.0 Iniciação')
   })
 })
 

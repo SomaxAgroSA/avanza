@@ -323,6 +323,8 @@ export interface LookupRepository<T extends LookupItem = LookupItem> {
 /** Filtros extras da listagem de tarefas (além de busca, ordenação e `filters` da tabela). */
 export interface TaskListOptions {
   projectId?: string
+  /** Só as tarefas vinculadas a este elemento da Gestão. */
+  planItemId?: string
 }
 
 export interface TaskRepository {

@@ -74,14 +74,14 @@ describe('NotificationBell', () => {
     const { router } = renderRoutes(
       [
         { path: '/', element: <NotificationBell /> },
-        { path: '/project-management/:projectId', element: <p>gestão</p> },
+        { path: '/projects/:projectId/management', element: <p>gestão</p> },
       ],
       { repositories, initialPath: '/' },
     )
     await userEvent.click(await screen.findByRole('button', { name: /Notificações/ }))
     expect(await screen.findByText('Quadro de Clover 6')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Carla Mendes mencionou você em “Reunião de kickoff”'))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/project-management/p1'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/projects/p1/management'))
     expect(router.state.location.search).toBe('?item=i9')
   })
 

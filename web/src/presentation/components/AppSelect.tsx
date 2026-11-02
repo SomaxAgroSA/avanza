@@ -10,9 +10,11 @@ export interface AppSelectOption {
   label: ReactNode
   /** Elemento à esquerda do rótulo (ex.: bolinha de cor). */
   prefix?: ReactNode
-  /** Texto do rótulo para a busca quando `label` não é texto (usado com `onCreateOption`). */
+  /** Texto do rótulo para a busca quando `label` não é texto (usado com `searchable`/`onCreateOption`). */
   textValue?: string
   disabled?: boolean
+  /** Título da seção na lista com busca (`searchable`/`onCreateOption`): opções seguidas do mesmo grupo ficam sob ele. */
+  group?: string
 }
 
 export interface AppSelectProps {
@@ -36,6 +38,8 @@ export interface AppSelectProps {
    * nova opção, que fica escolhida (null/undefined = não criou; ela mesma avisa o erro).
    */
   onCreateOption?: CreateOptionHandler | undefined
+  /** Lista com busca (sem acentos/maiúsculas) e cabeçalhos de grupo (`group` das opções) — para listas longas. */
+  searchable?: boolean
 }
 
 /** Valor sentinela para "todos" (Radix Select não aceita string vazia como item). */
@@ -74,11 +78,12 @@ export function AppSelect({
   triggerClassName,
   size = 'md',
   onCreateOption,
+  searchable,
   ...rest
 }: AppSelectProps) {
-  if (onCreateOption) {
+  if (onCreateOption || searchable) {
     return (
-      <CreatableSelect
+      <SearchableSelect
         {...{ value, onValueChange, options, placeholder, label, error, hint, required, disabled, className, triggerClassName, size, onCreateOption }}
         aria-label={rest['aria-label']}
       />
@@ -137,10 +142,10 @@ export function AppSelect({
 }
 
 /**
- * Variante com criação (`onCreateOption`): popover com busca no lugar do Select nativo do Radix,
- * que não aceita campo de texto dentro da lista.
+ * Variante com busca (`searchable`) ou criação (`onCreateOption`): popover com busca no lugar do Select
+ * do Radix, que não aceita campo de texto dentro da lista.
  */
-function CreatableSelect({
+function SearchableSelect({
   value,
   onValueChange,
   options,
@@ -155,7 +160,7 @@ function CreatableSelect({
   size = 'md',
   onCreateOption,
   ...rest
-}: AppSelectProps & { onCreateOption: CreateOptionHandler }) {
+}: AppSelectProps) {
   const [open, setOpen] = useState(false)
   const current = options.find((o) => o.value === value)
   const choose = (next: string) => {
@@ -199,9 +204,11 @@ function CreatableSelect({
                   label: o.textValue ?? (typeof o.label === 'string' ? o.label : o.value),
                   prefix: o.prefix,
                   disabled: o.disabled,
+                  group: o.group,
                 }))}
                 isSelected={(optionValue) => optionValue === value}
                 onPick={choose}
+                searchable
                 onCreateOption={onCreateOption}
                 onCreated={choose}
               />

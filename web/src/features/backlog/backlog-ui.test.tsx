@@ -9,7 +9,7 @@ import type { TaskDetail, TaskSummary } from '@/domain/tasks'
 import type { TaskPriority, TaskStatus } from '@/domain/workflow'
 import { notify } from '@/presentation/components'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
-import { BacklogPage } from './BacklogPage'
+import { ProjectPlanningPage } from './BacklogPage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -99,7 +99,7 @@ const moved = (id: string) => ({ ...item(id, 'x'), description: '', customValues
 
 function setup({
   data = view,
-  path = '/planning/p1',
+  path = '/projects/p1/planning',
   move = vi.fn<BoardRepository['move']>((id) => Promise.resolve(moved(id))),
   rank = vi.fn<BacklogRepository['rank']>((id) => Promise.resolve(moved(id))),
   sprints = {},
@@ -116,13 +116,7 @@ function setup({
       list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
     },
   })
-  const utils = renderRoutes(
-    [
-      { path: '/planning', element: <BacklogPage /> },
-      { path: '/planning/:projectId', element: <BacklogPage /> },
-    ],
-    { repositories, initialPath: path },
-  )
+  const utils = renderRoutes([{ path: '/projects/:projectId/planning', element: <ProjectPlanningPage /> }], { repositories, initialPath: path })
   return { ...utils, move, rank }
 }
 
@@ -131,7 +125,7 @@ async function openItemMenu(code: string) {
   return screen.findByRole('menu')
 }
 
-describe('BacklogPage', () => {
+describe('Planejamento (aba Tarefas do projeto)', () => {
   it('agrupa por sprint (com período, situação e estimativa) e deixa "sem sprint" por último', async () => {
     setup()
     const sprintGroup = await screen.findByTestId('backlog-group-c1')
@@ -149,7 +143,6 @@ describe('BacklogPage', () => {
     ])
     expect(within(rest).getByText(/2 sem estimativa/)).toBeInTheDocument()
     expect(screen.getByText('4 tarefas · 5,5 h estimadas')).toBeInTheDocument()
-    await waitFor(() => expect(window.localStorage.getItem('kamban.backlog.project')).toBe('p1'))
   })
 
   it('ativar pelo menu do item leva ao status escolhido (mesma regra do Kanban)', async () => {
@@ -230,9 +223,16 @@ describe('BacklogPage', () => {
     expect(within(screen.getByTestId('backlog-group-c1')).getByText('Nenhuma tarefa corresponde aos filtros.')).toBeInTheDocument()
   })
 
-  it('/planning sem projeto lembrado pede a escolha', async () => {
-    setup({ path: '/planning' })
-    expect(await screen.findByText('Escolha um projeto para ver o planejamento')).toBeInTheDocument()
+  it('dentro do projeto: sem título nem seletor de projeto; visões da aba Tarefas e as ações ao lado', async () => {
+    setup()
+    expect(await screen.findByRole('button', { name: 'Nova sprint' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Projeto' })).not.toBeInTheDocument()
+    const views = screen.getByRole('navigation', { name: 'Visões das tarefas' })
+    expect(within(views).getByRole('link', { name: 'Planejamento' })).toHaveAttribute('aria-current', 'page')
+    expect(within(views).getByRole('link', { name: 'Lista' })).toHaveAttribute('href', '/projects/p1/tasks')
+    // sem kanban.view, a visão Kanban não aparece
+    expect(within(views).queryByRole('link', { name: 'Kanban' })).not.toBeInTheDocument()
   })
 
   it('tarefa já analisada aparece com o status, pode voltar ao backlog e o status filtra a lista', async () => {

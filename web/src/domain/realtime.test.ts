@@ -17,7 +17,7 @@ describe('domain/realtime — o que atualizar na tela', () => {
     expect(userTopic('u1')).toBe('user:u1')
   })
 
-  it('tarefa: quadro, planejamento, timeline, listas, relatórios e a própria tarefa', () => {
+  it('tarefa: quadro, planejamento, timeline, listas, relatórios, a própria tarefa e a Gestão (progresso pelas tarefas)', () => {
     expect(invalidationKeys(event('tasks', { id: 't1', taskId: 't1' }))).toEqual([
       ['tasks', 'board', 'p1'],
       ['tasks', 'board-all'],
@@ -28,6 +28,7 @@ describe('domain/realtime — o que atualizar na tela', () => {
       ['tasks', 'detail', 't1'],
       ['tasks', 'history', 't1'],
       ['tasks', 'relations', 't1'],
+      ['plan', 'p1'],
     ])
   })
 

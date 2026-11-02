@@ -164,6 +164,7 @@ export interface TaskDto {
   attachment_count?: number
   subtask_progress?: { done: number; total: number }
   blocked?: boolean
+  plan_item?: { id: string; name: string } | null
 }
 
 export interface PlanStatusDto {
@@ -226,6 +227,7 @@ export interface PlanItemDto {
   baseline_start?: string | null
   baseline_end?: string | null
   custom?: Record<string, string | number | boolean>
+  tasks?: { total: number; done: number }
 }
 
 export interface PlanColumnDto {

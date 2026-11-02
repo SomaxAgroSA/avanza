@@ -1,11 +1,17 @@
-import { Navigate, useParams } from 'react-router'
+import { Navigate, useLocation, useParams } from 'react-router'
+import { projectPath, type ProjectSection } from '@/domain/project-routes'
 import { useSession } from '@/features/auth/session'
 import { visibleNavItems } from '@/presentation/navigation/nav-items'
 
-/** /backlog/:id → /planning/:id (a tela se chamava Backlog). */
-export function LegacyBacklogRedirect() {
-  const { projectId } = useParams()
-  return <Navigate to={`/planning/${encodeURIComponent(projectId ?? '')}`} replace />
+/**
+ * Endereço antigo de uma visão por projeto (`/project-management/:id`, `/planning/:id`, `/backlog/:id`,
+ * `/timeline/:id`, `/kanban/:id`) → a aba do projeto. Mantém a query e o fragmento (`?item=`, `?view=`):
+ * links de notificações, e-mails e favoritos continuam abrindo no mesmo lugar.
+ */
+export function LegacyProjectRedirect({ section }: { section: ProjectSection }) {
+  const { projectId = '' } = useParams()
+  const { search, hash } = useLocation()
+  return <Navigate to={`${projectPath(projectId, section, search)}${hash}`} replace />
 }
 
 /** /settings → a primeira tela de Configurações que a pessoa pode abrir (na ordem do menu). */

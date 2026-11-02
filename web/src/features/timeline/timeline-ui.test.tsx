@@ -5,7 +5,7 @@ import i18n from '@/core/i18n'
 import type { TaskSummary } from '@/domain/tasks'
 import type { Timeline } from '@/domain/timeline'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
-import { TimelinePage } from './TimelinePage'
+import { ProjectTimelinePage } from './TimelinePage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -69,7 +69,7 @@ function setup(data: Timeline = timeline()) {
     milestones: { update: updateMilestone },
     projects: { listMembers: () => Promise.resolve([]), list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }) },
   })
-  renderRoutes([{ path: '/timeline/:projectId', element: <TimelinePage /> }], { repositories, initialPath: '/timeline/p1' })
+  renderRoutes([{ path: '/projects/:projectId/timeline', element: <ProjectTimelinePage /> }], { repositories, initialPath: '/projects/p1/timeline' })
   return { update, updateMilestone }
 }
 

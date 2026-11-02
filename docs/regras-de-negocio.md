@@ -333,7 +333,7 @@ Cada tipo de tarefa define, campo a campo, **quando** ele precisa estar preenchi
 
 ## 14. Quadro de gerenciamento do projeto (Gerenciamento de Projetos — fase GP-1)
 
-> Diretriz própria: [diretriz_feature_gerenciamento_projetos.md](diretriz_feature_gerenciamento_projetos.md). O quadro fica em **Gestão de projetos**, item próprio do menu lateral (`/project-management/:projeto`, com o seletor de projeto e lembrando o último aberto), no estilo Monday — à parte das tarefas, para ficar clara a diferença (desde 2026-10-01; antes era a aba "Gerenciamento" do projeto, e os links antigos `?tab=plan` levam para lá). A visão geral do projeto tem o atalho "Abrir a gestão do projeto".
+> Diretriz própria: [diretriz_feature_gerenciamento_projetos.md](diretriz_feature_gerenciamento_projetos.md). O quadro fica na aba **Gestão** da página do projeto (`/projects/:id/management`), no estilo Monday, com as visões Quadro principal, Cronograma e Diário e problemas; a saúde do projeto aparece na **Visão geral** (desde 2026-11-02, ADR-050 — antes era um item do menu lateral com seletor de projeto, e tinha Kanban e Relatórios próprios). Os links antigos (`/project-management/:id`, `?tab=plan`) redirecionam. Os elementos podem ter tarefas ligadas (§28).
 
 ### Módulo à parte das tarefas
 - O quadro organiza a **gestão do projeto** — fases e atividades como reuniões, alinhamentos, entregas e aprovações — com **status, recursos, cronograma, esforço, duração e progresso próprios**.

@@ -11,7 +11,6 @@ import { ReportsPage } from '@/features/reports/ReportsPage'
 import { TasksTable } from '@/features/tasks/TasksTable'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ProjectFilterSettingsButton } from './ProjectFilterSettings'
-import { ProjectSwitcher } from './ProjectSwitcher'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -57,13 +56,7 @@ function setup(element: React.ReactNode, saved: ProjectFilterSettings = DEFAULT_
     preferences: { getProjectFilter, saveProjectFilter, ...overrides },
     reports: { get: vi.fn<ReportRepository['get']>(() => new Promise(() => {})) },
   })
-  const utils = renderRoutes(
-    [
-      { path: '/', element },
-      { path: '/planning/:projectId', element },
-    ],
-    { repositories, initialPath: path },
-  )
+  const utils = renderRoutes([{ path: '/', element }], { repositories, initialPath: path })
   return { ...utils, getProjectFilter, saveProjectFilter }
 }
 
@@ -71,30 +64,30 @@ const gear = (active = false) => screen.findByRole('button', { name: active ? 'C
 
 describe('Configurador do filtro de projetos', () => {
   it('marca status e "só projetos de que participo", salvando a cada mudança na chave da tela', async () => {
-    const { saveProjectFilter, getProjectFilter } = setup(<ProjectFilterSettingsButton screen="timeline" />)
+    const { saveProjectFilter, getProjectFilter } = setup(<ProjectFilterSettingsButton screen="kanban" />)
     await userEvent.click(await gear())
     const dialog = await screen.findByRole('dialog', { name: 'Filtro de projetos desta tela' })
-    expect(getProjectFilter).toHaveBeenCalledWith('timeline')
+    expect(getProjectFilter).toHaveBeenCalledWith('kanban')
     expect(within(dialog).getByRole('checkbox', { name: 'Todos' })).toBeChecked()
     // a observação "só a lista" é das telas de um projeto por vez (Tarefas, Relatórios)
     expect(within(dialog).queryByText(/“Todos” continua mostrando/)).not.toBeInTheDocument()
 
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Em andamento' }))
-    expect(saveProjectFilter).toHaveBeenLastCalledWith('timeline', { statuses: ['active'], membersOnly: false })
+    expect(saveProjectFilter).toHaveBeenLastCalledWith('kanban', { statuses: ['active'], membersOnly: false })
     expect(within(dialog).getByRole('checkbox', { name: 'Todos' })).not.toBeChecked()
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Planejamento' }))
-    expect(saveProjectFilter).toHaveBeenLastCalledWith('timeline', { statuses: ['planning', 'active'], membersOnly: false })
+    expect(saveProjectFilter).toHaveBeenLastCalledWith('kanban', { statuses: ['planning', 'active'], membersOnly: false })
     await userEvent.click(within(dialog).getByRole('switch', { name: /Só projetos de que participo/ }))
-    expect(saveProjectFilter).toHaveBeenLastCalledWith('timeline', { statuses: ['planning', 'active'], membersOnly: true })
+    expect(saveProjectFilter).toHaveBeenLastCalledWith('kanban', { statuses: ['planning', 'active'], membersOnly: true })
 
     // configuração ativa: a engrenagem avisa (nome e marcador)
     expect(await gear(true)).toHaveAttribute('data-active', 'true')
 
     // "Todos" limpa os status; "Restaurar padrão" volta tudo (null na API)
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Todos' }))
-    expect(saveProjectFilter).toHaveBeenLastCalledWith('timeline', { statuses: [], membersOnly: true })
+    expect(saveProjectFilter).toHaveBeenLastCalledWith('kanban', { statuses: [], membersOnly: true })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Restaurar padrão' }))
-    expect(saveProjectFilter).toHaveBeenLastCalledWith('timeline', null)
+    expect(saveProjectFilter).toHaveBeenLastCalledWith('kanban', null)
     expect(within(dialog).getByRole('button', { name: 'Restaurar padrão' })).toBeDisabled()
 
     // Esc fecha e devolve o foco à engrenagem
@@ -114,13 +107,6 @@ describe('Configurador do filtro de projetos', () => {
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Pausado' }))
     await waitFor(() => expect(within(dialog).getByRole('checkbox', { name: 'Pausado' })).not.toBeChecked())
     expect(error).toHaveBeenCalledWith(expect.stringContaining('Não foi possível salvar o filtro de projetos.'))
-  })
-
-  it('seletor de projeto: lista só os permitidos e mantém o projeto aberto', async () => {
-    setup(<ProjectSwitcher screen="planning" projectId="p3" basePath="/planning" />, { statuses: ['active', 'planning'], membersOnly: true }, {}, '/planning/p3')
-    expect(await gear(true)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('combobox', { name: 'Projeto' }))
-    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['CRM · Projeto CRM', 'OLD · Projeto OLD']))
   })
 
   it('Relatórios: a lista do filtro de projeto respeita a configuração da tela', async () => {

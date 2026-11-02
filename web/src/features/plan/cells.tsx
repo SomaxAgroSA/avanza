@@ -12,6 +12,7 @@ import {
   rangeDays,
   type PlanResource,
   type PlanStatus,
+  type PlanTaskCount,
   type ProgressSource,
   type StatusSegment,
 } from '@/domain/plan'
@@ -373,15 +374,24 @@ export function ProgressBar({ value, className, label }: { value: number; classN
   )
 }
 
+/** "pelas tarefas · 3/5": o progresso vem das tarefas vinculadas (concluídas/total). */
+export function TasksProgressNote({ tasks, className }: { tasks: PlanTaskCount; className?: string }) {
+  const { t } = useTranslation()
+  return <span className={cn('text-[11px] leading-tight text-muted tabular-nums', className)}>{t('plan.itemTasks.fromTasks', { done: tasks.done, total: tasks.total })}</span>
+}
+
 export function ProgressCell({
   value,
   source,
+  tasks,
   itemName,
   editable,
   onChange,
 }: {
   value: number
   source: ProgressSource
+  /** Tarefas vinculadas (quando o progresso vem delas, aparece "pelas tarefas · 3/5"). */
+  tasks?: PlanTaskCount
   itemName: string
   /** Pode digitar (tem permissão e o progresso não é automático). */
   editable: boolean
@@ -390,10 +400,12 @@ export function ProgressCell({
   const { t } = useTranslation()
   const label = t('plan.progressOf', { name: itemName })
   const bar = <ProgressBar value={value} label={label} />
+  const fromTasks = source === 'tasks' && tasks
   if (!editable)
     return (
-      <span title={t(`plan.progressSource.${source}`)} className="flex h-full items-center px-1">
+      <span title={t(`plan.progressSource.${source}`)} className={cn('flex h-full px-1', fromTasks ? 'flex-col justify-center gap-0.5' : 'items-center')}>
         {bar}
+        {fromTasks && <TasksProgressNote tasks={tasks} />}
       </span>
     )
   return (

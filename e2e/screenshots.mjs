@@ -20,13 +20,14 @@ try {
   fs.mkdirSync(OUT, { recursive: true })
 
   const shots = [
-    ['gestao-quadro', `/project-management/${p}`, 'light'],
-    ['gestao-cronograma', `/project-management/${p}?view=timeline`, 'light'],
-    ['gestao-relatorios', `/project-management/${p}?view=reports`, 'light'],
-    ['kanban', `/kanban/${p}`, 'light'],
+    ['gestao-quadro', `/projects/${p}/management`, 'light'],
+    ['gestao-cronograma', `/projects/${p}/management?view=timeline`, 'light'],
+    // a visão Relatórios saiu do quadro: a saúde do projeto fica na visão geral do projeto
+    ['gestao-relatorios', `/projects/${p}`, 'light'],
+    ['kanban', `/projects/${p}/kanban`, 'light'],
     ['tarefa', `/tasks/${demo.task.id}`, 'light'],
     ['documentacao', `/docs/DEMO/${demo.page.id}`, 'light'],
-    ['gestao-quadro-escuro', `/project-management/${p}`, 'dark'],
+    ['gestao-quadro-escuro', `/projects/${p}/management`, 'dark'],
   ]
   for (const [name, url, colorScheme] of shots) {
     const { page, context } = await login(browser, app.baseUrl, ADMIN.email, ADMIN.password, { viewport: { width: 1600, height: 940 }, colorScheme })

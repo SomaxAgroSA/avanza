@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '@/presentation/layouts/AppShell'
-import { LegacyBacklogRedirect, SettingsIndexRedirect } from './legacy-redirects'
+import { LegacyProjectRedirect, SettingsIndexRedirect } from './legacy-redirects'
 import { GuestOnly, PermissionGate, RequireAuth } from '@/features/auth/guards'
 import { NotFoundPage, RouteErrorPage } from '@/features/errors/ErrorPages'
 import { isChunkLoadError, reloadForNewVersion } from './chunk-reload'
@@ -20,6 +20,19 @@ const page = (loader: () => Promise<{ default: React.ComponentType }>): Pick<Rou
     }
   },
 })
+
+/** Visões por projeto que eram itens do menu lateral (e o antigo "Backlog"): agora são abas do projeto. */
+const LEGACY_ROUTES: RouteObject[] = [
+  { path: 'project-management', element: <Navigate to="/projects" replace /> },
+  { path: 'project-management/:projectId', element: <LegacyProjectRedirect section="management" /> },
+  { path: 'planning', element: <Navigate to="/projects" replace /> },
+  { path: 'planning/:projectId', element: <LegacyProjectRedirect section="planning" /> },
+  { path: 'backlog', element: <Navigate to="/projects" replace /> },
+  { path: 'backlog/:projectId', element: <LegacyProjectRedirect section="planning" /> },
+  { path: 'timeline', element: <Navigate to="/projects" replace /> },
+  { path: 'timeline/:projectId', element: <LegacyProjectRedirect section="timeline" /> },
+  { path: 'kanban/:projectId', element: <LegacyProjectRedirect section="kanban" /> },
+]
 
 export const routes: RouteObject[] = [
   {
@@ -57,38 +70,54 @@ export const routes: RouteObject[] = [
           { path: 'projects', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.AllProjectsPage }))) },
           { path: 'projects/mine', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.MyProjectsPage }))) },
           { path: 'projects/archived', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.ArchivedProjectsPage }))) },
-          { path: 'projects/:projectId', ...page(() => import('@/features/projects/ProjectDetailPage').then((m) => ({ default: m.ProjectDetailPage }))) },
+          {
+            // o projeto é o centro do trabalho: cada aba (e cada visão das tarefas) tem o seu endereço
+            path: 'projects/:projectId',
+            ...page(() => import('@/features/projects/ProjectDetailPage').then((m) => ({ default: m.ProjectDetailPage }))),
+            children: [
+              { index: true, ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectOverviewTab }))) },
+              {
+                // quadro de gestão do projeto (à parte das tarefas)
+                element: <PermissionGate permission="plan.view" />,
+                children: [{ path: 'management', ...page(() => import('@/features/plan/ProjectManagementPage').then((m) => ({ default: m.ProjectManagementPage }))) }],
+              },
+              {
+                element: <PermissionGate permission="tasks.view" />,
+                children: [
+                  { path: 'tasks', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectTasksTab }))) },
+                  { path: 'planning', ...page(() => import('@/features/backlog/BacklogPage').then((m) => ({ default: m.ProjectPlanningPage }))) },
+                  { path: 'timeline', ...page(() => import('@/features/timeline/TimelinePage').then((m) => ({ default: m.ProjectTimelinePage }))) },
+                ],
+              },
+              {
+                element: <PermissionGate permission="kanban.view" />,
+                children: [{ path: 'kanban', ...page(() => import('@/features/kanban/KanbanPage').then((m) => ({ default: m.ProjectKanbanPage }))) }],
+              },
+              { path: 'files', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectFilesTab }))) },
+              { path: 'members', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectMembersTab }))) },
+              { path: 'history', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectHistoryTab }))) },
+              { path: 'settings', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectSettingsTab }))) },
+            ],
+          },
         ],
       },
       {
         element: <PermissionGate permission="tasks.view" />,
         children: [
-          { path: 'planning', ...page(() => import('@/features/backlog/BacklogPage').then((m) => ({ default: m.BacklogPage }))) },
-          { path: 'planning/:projectId', ...page(() => import('@/features/backlog/BacklogPage').then((m) => ({ default: m.BacklogPage }))) },
-          { path: 'timeline', ...page(() => import('@/features/timeline/TimelinePage').then((m) => ({ default: m.TimelinePage }))) },
-          { path: 'timeline/:projectId', ...page(() => import('@/features/timeline/TimelinePage').then((m) => ({ default: m.TimelinePage }))) },
-          // endereços antigos (a tela se chamava Backlog)
-          { path: 'backlog', element: <Navigate to="/planning" replace /> },
-          { path: 'backlog/:projectId', element: <LegacyBacklogRedirect /> },
           { path: 'tasks', ...page(() => import('@/features/tasks/TasksPage').then((m) => ({ default: m.TasksPage }))) },
           { path: 'tasks/:taskId', ...page(() => import('@/features/tasks/TaskDetailPage').then((m) => ({ default: m.TaskDetailPage }))) },
         ],
       },
       {
-        // Gestão de projetos: item próprio do menu (à parte das tarefas)
-        element: <PermissionGate permission="plan.view" />,
-        children: [
-          { path: 'project-management', ...page(() => import('@/features/plan/ProjectManagementPage').then((m) => ({ default: m.ProjectManagementPage }))) },
-          { path: 'project-management/:projectId', ...page(() => import('@/features/plan/ProjectManagementPage').then((m) => ({ default: m.ProjectManagementPage }))) },
-        ],
-      },
-      {
+        // Kanban de todos os projetos (o de um projeto fica na aba Tarefas do projeto)
         element: <PermissionGate permission="kanban.view" />,
         children: [
           { path: 'kanban', ...page(() => import('@/features/kanban/KanbanPage').then((m) => ({ default: m.KanbanPage }))) },
-          { path: 'kanban/:projectId', ...page(() => import('@/features/kanban/KanbanPage').then((m) => ({ default: m.KanbanPage }))) },
+          { path: 'kanban/all', ...page(() => import('@/features/kanban/KanbanPage').then((m) => ({ default: m.KanbanPage }))) },
         ],
       },
+      // endereços antigos das visões por projeto (itens do menu que viraram abas do projeto): a query vai junto
+      ...LEGACY_ROUTES,
       {
         element: <PermissionGate permission="reports.view" />,
         children: [{ path: 'reports', ...page(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))) }],

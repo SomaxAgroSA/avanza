@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Navigate, useParams } from 'react-router'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Archive, ChevronDown, KanbanSquare, Minimize2, Plus } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
-import { readJson, safeStorage, writeJson } from '@/core/storage/safe-storage'
+import { cn } from '@/core/utils/cn'
+import { readJson, writeJson } from '@/core/storage/safe-storage'
 import {
   boardPeople,
   boardPersonReferences,
@@ -28,12 +29,13 @@ import {
 import { MAX_LIVE_PROJECTS } from '@/domain/realtime'
 import { AppBadge, AppButton, AppDropdown, AppEmptyState, AppErrorState, AppFilterBar, AppSearch, AppSelect, AppSkeleton, notify, SELECT_ALL } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
-import { useLiveProject, useLiveProjects } from '@/presentation/common/use-live'
-import { useDocumentTitle } from '@/presentation/common/use-document-title'
+import { SectionHeader } from '@/presentation/layouts/SectionHeader'
+import { useLiveProjects } from '@/presentation/common/use-live'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { useProjectMembers } from '@/features/projects/queries'
-import { ALL_PROJECTS, ProjectSwitcher } from '@/features/projects/ProjectSwitcher'
+import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
+import { ProjectTaskViewsNav } from '@/features/projects/ProjectTaskViewsNav'
 import { useScreenProjects } from '@/features/projects/use-project-filter'
 import { allowedByProjectFilter, isDefaultProjectFilter, scopedProjectIds, toProjectFilterSubject } from '@/domain/project-filter'
 import { useSprints } from '@/features/backlog/queries'
@@ -50,25 +52,25 @@ import { boardKeys, useAllBoard, useBoard, useMoveCard } from './queries'
 import { RequiredFieldsDialog, type RequiredFieldsRequest } from '@/features/tasks/RequiredFieldsDialog'
 import { missingForStatus } from '@/features/tasks/required-fields'
 
-const LAST_PROJECT_KEY = 'kamban.kanban.project'
 const SWIMLANE_KEY = 'kamban.kanban.swimlane'
 const VIEW_KEY = 'kamban.kanban.view'
 
 /**
- * `/kanban` abre a última escolha (um projeto ou "Todos os projetos"); sem escolha, todos os projetos.
- * `/kanban/all` = quadro de todos os projetos; `/kanban/:projectId` = quadro do projeto.
+ * Kanban de todos os projetos (`/kanban`, `/kanban/all`): item do menu lateral, com o filtro de projetos
+ * e o configurador dele. O quadro de um projeto fica na aba Tarefas do projeto (ProjectKanbanPage).
  */
 export function KanbanPage() {
-  const { projectId } = useParams()
-  if (!projectId) {
-    const last = safeStorage.get(LAST_PROJECT_KEY) || ALL_PROJECTS
-    return <Navigate to={`/kanban/${encodeURIComponent(last)}`} replace />
-  }
-  return <BoardScreen key={projectId} projectId={projectId === ALL_PROJECTS ? null : projectId} />
+  return <BoardScreen projectId={null} />
 }
 
-/** Quadro de um projeto ou, com `projectId` nulo, de todos os projetos que a pessoa vê. */
-function BoardScreen({ projectId }: { projectId: string | null }) {
+/** Visão Kanban da aba Tarefas do projeto (`/projects/:projectId/kanban`): o cabeçalho do projeto é o contexto. */
+export function ProjectKanbanPage() {
+  const { projectId = '' } = useParams()
+  return <BoardScreen key={projectId} projectId={projectId} nav={<ProjectTaskViewsNav projectId={projectId} current="kanban" />} />
+}
+
+/** Quadro de um projeto (com a sub-navegação da aba) ou, com `projectId` nulo, de todos os projetos que a pessoa vê. */
+function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: ReactNode }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const { current } = useSession()
@@ -121,19 +123,10 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
   const data = useMemo(() => (board.data ? { ...board.data, columns: visibleColumns(board.data.columns, filters.statuses) } : undefined), [board.data, filters.statuses])
   // tempo real: o projeto do quadro ou, no de todos, os projetos que cabem nas assinaturas da aba
   const liveIds = useMemo(() => (all && data ? liveProjectIds(data, MAX_LIVE_PROJECTS).ids : []), [all, data])
-  useLiveProject(projectId)
+  // o quadro do projeto atualiza pela página do projeto (que assina o projeto)
   useLiveProjects(liveIds)
 
-  const scopeName = all ? t('projects.allProjects') : data?.project?.name
-  useDocumentTitle(scopeName ? `${t('kanban.title')} · ${scopeName}` : t('kanban.title'))
-  // lembra a última escolha aberta com sucesso
-  useEffect(() => {
-    if (data) safeStorage.set(LAST_PROJECT_KEY, data.project?.id ?? ALL_PROJECTS)
-  }, [data])
   const notFound = board.isError && isAppError(board.error) && (board.error.code === 'PROJECT_NOT_FOUND' || board.error.code === 'FORBIDDEN')
-  useEffect(() => {
-    if (notFound && projectId && safeStorage.get(LAST_PROJECT_KEY) === projectId) safeStorage.remove(LAST_PROJECT_KEY)
-  }, [notFound, projectId])
 
   const userId = current?.user.id
   const visible = useCallback((card: BoardCard) => matchesFilters(card, filters, userId), [filters, userId])
@@ -210,25 +203,19 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
   // (a pessoa escolhe o projeto lá)
   const onCreate = data?.capabilities.create ? (all ? () => setFullForm({}) : defaultStatus ? () => setQuickAdd(defaultStatus.status.id) : null) : null
 
+  const createButton = onCreate && (
+    <AppButton leftIcon={<Plus />} onClick={onCreate}>
+      {t('tasks.create')}
+    </AppButton>
+  )
+
   return (
     <>
-      <PageHeader
-        title={t('kanban.title')}
-        description={all ? t('kanban.allDescription') : (data?.project?.name ?? t('kanban.description'))}
-        actions={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <ProjectSwitcher screen="kanban" projectId={projectId ?? ALL_PROJECTS} basePath="/kanban" allOption />
-            {onCreate && (
-              <AppButton leftIcon={<Plus />} onClick={onCreate}>
-                {t('tasks.create')}
-              </AppButton>
-            )}
-          </div>
-        }
-      />
+      {all ? <PageHeader title={t('kanban.title')} description={t('kanban.allDescription')} actions={createButton} /> : <SectionHeader nav={nav} actions={createButton} />}
 
       {noScopedProjects ? (
-        <AppEmptyState icon={<KanbanSquare />} title={t('projects.filterSettings.emptyTitle')} description={t('projects.filterSettings.emptyHint')} />
+        // a barra de filtros não aparece: a engrenagem fica no aviso para desfazer a configuração
+        <AppEmptyState icon={<KanbanSquare />} title={t('projects.filterSettings.emptyTitle')} description={t('projects.filterSettings.emptyHint')} action={<ProjectFilterSettingsButton screen="kanban" />} />
       ) : board.isPending ? (
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2, 3].map((i) => (
@@ -258,15 +245,19 @@ function BoardScreen({ projectId }: { projectId: string | null }) {
                   onChange={(statuses) => setFilters((f) => ({ ...f, statuses }))}
                 />
                 {all && (
-                  // o configurador do filtro (engrenagem) fica ao lado do seletor de projeto, no topo: vale para os dois
-                  <CheckFilter
-                    label={t('kanban.filters.project')}
-                    testId="kanban-project-filter"
-                    options={projectOptions.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}`, short: p.key }))}
-                    value={filters.projects}
-                    countLabel={(count) => t('kanban.filters.projectCount', { count })}
-                    onChange={(projects) => setFilters((f) => ({ ...f, projects }))}
-                  />
+                  // o configurador do filtro de projetos (engrenagem) fica ao lado dele
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                    <CheckFilter
+                      label={t('kanban.filters.project')}
+                      testId="kanban-project-filter"
+                      className="min-w-0 flex-1 sm:w-44 sm:flex-none"
+                      options={projectOptions.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}`, short: p.key }))}
+                      value={filters.projects}
+                      countLabel={(count) => t('kanban.filters.projectCount', { count })}
+                      onChange={(projects) => setFilters((f) => ({ ...f, projects }))}
+                    />
+                    <ProjectFilterSettingsButton screen="kanban" size="sm" />
+                  </div>
                 )}
                 {filterSelect('assignee', t('tasks.fields.assignee'), [
                   { value: 'me', label: t('kanban.filters.me') },
@@ -382,6 +373,7 @@ function CheckFilter({
   countLabel,
   onChange,
   testId,
+  className = 'w-full sm:w-44',
 }: {
   label: string
   options: Array<{ value: string; label: string; short: string }>
@@ -389,6 +381,7 @@ function CheckFilter({
   countLabel: (count: number) => string
   onChange: (value: string[]) => void
   testId?: string
+  className?: string
 }) {
   const { t } = useTranslation()
   const chosen = options.filter((o) => value.includes(o.value))
@@ -399,7 +392,7 @@ function CheckFilter({
       align="start"
       className="max-h-80 overflow-auto"
       trigger={
-        <AppButton variant="secondary" size="sm" className="w-full justify-between sm:w-44" rightIcon={<ChevronDown />} data-testid={testId}>
+        <AppButton variant="secondary" size="sm" className={cn('justify-between', className)} rightIcon={<ChevronDown />} data-testid={testId}>
           <span className="truncate">{summary}</span>
         </AppButton>
       }

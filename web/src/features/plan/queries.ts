@@ -11,9 +11,9 @@ export const planKeys = {
   detail: (projectId: string) => ['plan', projectId] as const,
 }
 
-export function usePlan(projectId: string) {
+export function usePlan(projectId: string, enabled = true) {
   const { plan } = useRepositories()
-  return useQuery({ queryKey: planKeys.detail(projectId), queryFn: () => plan.get(projectId) })
+  return useQuery({ queryKey: planKeys.detail(projectId), queryFn: () => plan.get(projectId), enabled: enabled && !!projectId })
 }
 
 /** Campos diretos do elemento (os calculados voltam do servidor ao recarregar o quadro). */

@@ -299,6 +299,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     attachmentCount: dto.attachment_count ?? 0,
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
+    planItem: dto.plan_item ? { id: dto.plan_item.id, name: dto.plan_item.name } : null,
   }
 }
 
@@ -686,6 +687,7 @@ export function toPlanItem(dto: PlanItemDto): PlanItem {
     baselineStart: dto.baseline_start ?? null,
     baselineEnd: dto.baseline_end ?? null,
     custom: dto.custom ?? {},
+    tasks: { total: dto.tasks?.total ?? 0, done: dto.tasks?.done ?? 0 },
   }
 }
 

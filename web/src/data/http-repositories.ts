@@ -615,6 +615,7 @@ function taskBody(data: TaskInput) {
     tag_ids: data.tagIds,
     sprint_id: data.sprintId,
     parent_task_id: data.parentTaskId,
+    plan_item_id: data.planItemId,
     checklist: data.checklist?.map((item) => ({ id: item.id, text: item.text, done: item.done })),
   }
 }
@@ -1221,6 +1222,7 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
         filters[param] = query.filters[column] || undefined
       })
       if (options?.projectId) filters.project_id = options.projectId
+      if (options?.planItemId) filters.plan_item_id = options.planItemId
       const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/tasks', {
         query: { page: query.page, perPage: query.perPage, sort: toSortParam(query.sort), search: query.search.trim() || undefined, ...filters },
       })

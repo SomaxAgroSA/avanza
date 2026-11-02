@@ -166,6 +166,8 @@ describe('domain/plan — rodapé e edição', () => {
     expect(isProgressEditable(item('a', 'g', 1, { progress: { value: 40, source: 'manual' } }))).toBe(true)
     expect(isProgressEditable(item('a', 'g', 1, { progress: { value: 40, source: 'subitems' } }))).toBe(false)
     expect(isProgressEditable(item('a', 'g', 1, { progress: { value: 100, source: 'done' } }))).toBe(false)
+    // vem das tarefas vinculadas: não se digita
+    expect(isProgressEditable(item('a', 'g', 1, { progress: { value: 60, source: 'tasks' } }))).toBe(false)
   })
 
   it('número digitado: vírgula ou ponto, vazio = null, inteiro e limites', () => {

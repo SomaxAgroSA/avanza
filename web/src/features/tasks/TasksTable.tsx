@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
@@ -14,6 +14,7 @@ import {
 } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
+import { managementLink } from '@/features/plan/paths'
 import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
 import { useScreenProjects } from '@/features/projects/use-project-filter'
 import { useTaskTypes } from '@/features/task-config/queries'
@@ -47,8 +48,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
   const errorMessage = useErrorMessage()
   const canEdit = useCan('tasks.edit')
   const canDelete = useCan('tasks.delete')
+  const canViewPlan = useCan('plan.view')
 
-  const table = useDataTableState(tableId, { sort: { id: 'updated_at', direction: 'desc' }, filters: { category: OPEN }, columnVisibility: { category: false, tags: false } })
+  const table = useDataTableState(tableId, { sort: { id: 'updated_at', direction: 'desc' }, filters: { category: OPEN }, columnVisibility: { category: false, tags: false, plan_item: false } })
   // busca vinda de fora (command palette): aplica uma vez e avisa para limpar o endereço
   const { setSearch } = table
   useEffect(() => {
@@ -143,6 +145,24 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         size: 130,
         cell: (task) => <DueDate task={task} />,
       },
+      // elemento da Gestão que a tarefa executa (quem vê a Gestão); oculta por padrão
+      ...(canViewPlan
+        ? [
+            {
+              id: 'plan_item',
+              header: t('tasks.planLink.short'),
+              size: 200,
+              cell: (task: TaskSummary) =>
+                task.planItem && task.project ? (
+                  <Link to={managementLink(task.project.id, { item: task.planItem.id })} title={t('tasks.planLink.open', { name: task.planItem.name })} className="block truncate text-muted hover:text-primary-text">
+                    {task.planItem.name}
+                  </Link>
+                ) : (
+                  <span className="text-subtle">—</span>
+                ),
+            } satisfies DataTableColumn<TaskSummary>,
+          ]
+        : []),
       {
         id: 'tags',
         header: t('tasks.fields.tags'),
@@ -175,7 +195,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId],
+    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId, canViewPlan],
   )
 
   return (

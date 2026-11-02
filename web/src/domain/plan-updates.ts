@@ -43,7 +43,8 @@ export interface PlanUpdateInput {
   files?: File[]
 }
 
-export const PANEL_TABS = ['updates', 'history', 'details'] as const
+/** Abas do painel do elemento; `tasks` = tarefas vinculadas (execução do elemento). */
+export const PANEL_TABS = ['updates', 'tasks', 'history', 'details'] as const
 export type PanelTab = (typeof PANEL_TABS)[number]
 
 /** Limites do envio junto com a atualização (iguais aos do servidor; cada arquivo também passa por fileIssue). */

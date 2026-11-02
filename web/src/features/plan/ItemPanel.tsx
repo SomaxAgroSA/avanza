@@ -7,6 +7,7 @@ import { acceptAttribute } from '@/domain/attachments'
 import { formatNumber, formatSchedule, type Plan, type PlanItem } from '@/domain/plan'
 import { PANEL_TABS, updateUploadIssue, type PanelTab, type PlanFile, type PlanUpdate } from '@/domain/plan-updates'
 import { dependenciesOf, groupTitle } from '@/domain/plan-view'
+import { isProgressFromTasks, linkedTasks } from '@/domain/plan-tasks'
 import { mentionsToDisplay, mentionsToStorage, type MentionPerson } from '@/domain/tasks'
 import { AppAvatar, AppButton, AppConfirmDialog, AppDrawer, AppEmptyState, AppIconButton, AppMarkdown, AppMentionTextarea, AppSkeleton, AppTabs, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
@@ -15,7 +16,8 @@ import { AttachmentGallery, FilesToSend } from '@/features/tasks/AttachmentViews
 import { DeleteAttachmentDialog } from '@/features/tasks/TaskAttachments'
 import { compressImage } from '@/features/tasks/image-compress'
 import { usePendingFiles } from '@/features/tasks/use-pending-files'
-import { ProgressBar, ResourceChip, SchedulePill, StatusBlock } from './cells'
+import { ProgressBar, ResourceChip, SchedulePill, StatusBlock, TasksProgressNote } from './cells'
+import { ItemTasks } from './ItemTasks'
 import { useItemHistory, useItemMentionPeople, useItemPanelMutations, useItemUpdates } from './queries'
 
 /**
@@ -43,6 +45,7 @@ function Panel({ plan, item, tab, onTab, onClose }: { plan: Plan; item: PlanItem
         onValueChange={(value) => onTab(PANEL_TABS.find((x) => x === value) ?? 'updates')}
         tabs={[
           { value: 'updates', label: label('updates', item.updates), content: <UpdatesTab projectId={plan.project.id} item={item} /> },
+          { value: 'tasks', label: label('tasks', linkedTasks(item).total), content: <ItemTasks plan={plan} item={item} /> },
           { value: 'history', label: label('history'), content: <HistoryTab projectId={plan.project.id} item={item} active={tab === 'history'} /> },
           { value: 'details', label: label('details'), content: <DetailsTab plan={plan} item={item} /> },
         ]}
@@ -362,7 +365,14 @@ function DetailsTab({ plan, item }: { plan: Plan; item: PlanItem }) {
     [item.parentId ? t('plan.columns.work') : t('plan.columns.estimated'), hours(item.estimatedHours)],
     ...(item.parentId ? ([[t('plan.columns.actual'), hours(item.actualHours)]] as Array<[string, ReactNode]>) : []),
     [t('plan.columns.duration'), item.durationDays === null ? dash : t('plan.daysCount', { count: item.durationDays })],
-    [t('plan.columns.progress'), <ProgressBar key="p" value={item.progress.value} label={t('plan.progressOf', { name: item.name })} className="max-w-60" />],
+    [
+      t('plan.columns.progress'),
+      // vindo das tarefas vinculadas: só leitura, com "pelas tarefas · 3/5"
+      <span key="p" className="flex max-w-60 flex-col gap-1" title={t(`plan.progressSource.${item.progress.source}`)}>
+        <ProgressBar value={item.progress.value} label={t('plan.progressOf', { name: item.name })} />
+        {isProgressFromTasks(item) && <TasksProgressNote tasks={linkedTasks(item)} />}
+      </span>,
+    ],
     ...(!item.parentId
       ? ([
           [t('plan.panel.subitems'), String(item.subitems)],

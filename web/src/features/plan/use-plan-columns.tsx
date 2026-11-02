@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, ChevronRight, Copy, FolderInput, MessageSquare, MoreHorizontal, Pencil, Plus, Shapes, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, Copy, FolderInput, ListChecks, MessageSquare, MoreHorizontal, Pencil, Plus, Shapes, Trash2 } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import type { ProjectMember } from '@/domain/projects'
 import { PLAN_LIMITS, isDurationEditable, isProgressEditable, type Plan, type PlanGroup, type PlanItem, type PlanItemInput, type PlanLinkKind, type PlanResource } from '@/domain/plan'
+import { linkedTasks } from '@/domain/plan-tasks'
+import type { PanelTab } from '@/domain/plan-updates'
 import { AppCheckbox, AppDropdown, AppInlineEdit, type AppBoardColumn, type AppDropdownItem, type BoardColumnDef } from '@/presentation/components'
 import { customColumnId, isSortableType, type ColumnType, type PlanColumn } from '@/domain/plan-columns'
 import { DateCell, NumberCell, OwnerCell, ProgressCell, ResourcesCell, ScheduleCell, StatusCell } from './cells'
@@ -71,8 +73,8 @@ export interface BoardCtx {
   openFilter: (focus: FilterFocus) => void
   openRule: () => void
   askMove: (item: PlanItem) => void
-  /** Abre o painel do elemento (atualizações, arquivos, histórico). */
-  openPanel: (item: PlanItem) => void
+  /** Abre o painel do elemento (atualizações, tarefas, histórico, detalhes); padrão: atualizações. */
+  openPanel: (item: PlanItem, tab?: PanelTab) => void
   askDelete: (item: PlanItem) => void
   duplicate: (item: PlanItem) => void
   shift: (item: PlanItem, step: -1 | 1) => void
@@ -96,6 +98,7 @@ export function usePlanColumns(ctx: BoardCtx): { main: AppBoardColumn<PlanItem>[
 
   const nameCell = (item: PlanItem, nested: boolean, dragHandle: ReactNode) => {
     const open = ctx.isOpen(item.id)
+    const tasks = linkedTasks(item)
     const menu: AppDropdownItem[] = [
       ...(!nested ? [{ key: 'sub', label: t('plan.addSubitem'), icon: <Plus />, onSelect: () => ctx.toggleItem(item.id, true) }] : []),
       { key: 'up', label: t('plan.moveUp'), icon: <ArrowUp />, disabled: !ctx.canShift(item, -1), onSelect: () => ctx.shift(item, -1) },
@@ -161,6 +164,22 @@ export function usePlanColumns(ctx: BoardCtx): { main: AppBoardColumn<PlanItem>[
             }}
           />
         </div>
+        {/* tarefas vinculadas (execução do elemento): concluídas/total; abre a aba Tarefas do painel */}
+        {tasks.total > 0 && (
+          <button
+            type="button"
+            onClick={() => ctx.openPanel(item, 'tasks')}
+            aria-label={t('plan.itemTasks.indicator', { name: item.name, done: tasks.done, total: tasks.total })}
+            title={t('plan.itemTasks.indicator', { name: item.name, done: tasks.done, total: tasks.total })}
+            className={cn(
+              'flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs tabular-nums hover:bg-surface-3 hover:text-fg focus-visible:outline-2 focus-visible:outline-ring [&_svg]:size-3.5',
+              tasks.done === tasks.total ? 'text-success' : 'text-muted',
+            )}
+          >
+            <ListChecks aria-hidden />
+            {tasks.done}/{tasks.total}
+          </button>
+        )}
         {/* atualizações do elemento (contador), como no Monday */}
         <button
           type="button"
@@ -203,7 +222,14 @@ export function usePlanColumns(ctx: BoardCtx): { main: AppBoardColumn<PlanItem>[
   )
 
   const progressCell = (item: PlanItem) => (
-    <ProgressCell value={item.progress.value} source={item.progress.source} itemName={item.name} editable={canEdit && isProgressEditable(item)} onChange={(progress) => save(item, { progress })} />
+    <ProgressCell
+      value={item.progress.value}
+      source={item.progress.source}
+      tasks={linkedTasks(item)}
+      itemName={item.name}
+      editable={canEdit && isProgressEditable(item)}
+      onChange={(progress) => save(item, { progress })}
+    />
   )
 
   const main: AppBoardColumn<PlanItem>[] = [

@@ -1,4 +1,5 @@
 import type { Attachment } from './attachments'
+import type { PlanItemRef } from './plan'
 import type { SprintRef } from './sprints'
 import type { UserSummary } from './projects'
 import { isRequiredIn, valueIssue, type FieldValue, type OptionColor, type TaskTypeField, type TaskTypeIcon } from './task-config'
@@ -83,6 +84,8 @@ export interface TaskSummary {
   subtaskProgress: { done: number; total: number }
   /** Algum bloqueio (bloqueado por / depende de) ainda aberto. */
   blocked: boolean
+  /** Elemento da Gestão de projetos que a tarefa executa (ver plan-tasks.ts); null/ausente = sem vínculo. */
+  planItem?: PlanItemRef | null
 }
 
 export interface TaskCapabilities {
@@ -139,6 +142,8 @@ export interface TaskInput {
   sprintId?: string | null
   /** Subtarefa: tarefa pai (null solta). */
   parentTaskId?: string | null
+  /** Elemento ou subelemento da Gestão do mesmo projeto (null desvincula). */
+  planItemId?: string | null
 }
 
 // ---------------------------------------------------------------- menções (@)

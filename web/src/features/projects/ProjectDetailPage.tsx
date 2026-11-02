@@ -1,46 +1,41 @@
-import { type ReactNode, useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useState } from 'react'
+import { Link, Navigate, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArchiveRestore, ArrowLeft, BriefcaseBusiness, Copy, FolderSearch, KanbanSquare, ListTodo, Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, Copy, FolderSearch, Pencil, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
-import { cn } from '@/core/utils/cn'
-import { formatDateTime, formatDay } from '@/core/utils/format'
-import { isOverdue, type Project } from '@/domain/projects'
 import {
-  AppAvatar,
-  AppBadge,
-  AppButton,
-  AppCard,
-  AppConfirmDialog,
-  AppEmptyState,
-  AppErrorState,
-  AppIcon,
-  AppIconButton,
-  AppSelect,
-  AppSkeleton,
-  AppTabs,
-  notify,
-} from '@/presentation/components'
+  canOpenSection,
+  legacyProjectTab,
+  projectPath,
+  sectionFromPath,
+  tabOfSection,
+  visibleProjectTabs,
+  visibleTaskViews,
+  type ProjectSection,
+  type ProjectTab,
+} from '@/domain/project-routes'
+import type { Project } from '@/domain/projects'
+import { AppBadge, AppButton, AppConfirmDialog, AppEmptyState, AppErrorState, AppIcon, AppIconButton, AppNavTabs, AppSkeleton, notify } from '@/presentation/components'
 import { useLiveProject } from '@/presentation/common/use-live'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCopy } from '@/presentation/common/use-copy'
-import { AuditTimeline } from '@/features/audit/AuditTimeline'
-import { useCan } from '@/features/auth/session'
-import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
-import { managementLink } from '@/features/plan/paths'
+import { useSession } from '@/features/auth/session'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
-import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
+import { ProjectAvatar, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
-import { ProjectFilesPanel } from './ProjectFilesPanel'
-import { ProjectMembersPanel } from './ProjectMembersPanel'
-import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
+import type { ProjectOutletContext } from './project-context'
+import { useProject, useProjectLifecycle } from './queries'
 
+/**
+ * Página do projeto — o centro do trabalho: cabeçalho do projeto e as abas Visão geral, Gestão,
+ * Tarefas (Lista, Kanban, Planejamento e Cronograma), Arquivos, Membros, Histórico e Configurações,
+ * cada uma com o seu endereço (`/projects/:projectId/<seção>`; as abas são rotas filhas).
+ */
 export function ProjectDetailPage() {
   const { projectId } = useParams()
   const { t } = useTranslation()
   const project = useProject(projectId)
-  useDocumentTitle(project.data?.name ?? t('nav.projects'))
   useLiveProject(project.data?.id)
 
   if (project.isPending) {
@@ -74,24 +69,21 @@ export function ProjectDetailPage() {
 function ProjectDetail({ project }: { project: Project }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [params] = useSearchParams()
   const errorMessage = useErrorMessage()
   const copy = useCopy()
   const lifecycle = useProjectLifecycle()
+  const { current } = useSession()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [params, setParams] = useSearchParams()
   const archived = !!project.archivedAt
   const caps = project.capabilities
-  const canViewTasks = useCan('tasks.view')
-  const canViewPlan = useCan('plan.view')
-  // a gestão do projeto virou item próprio do menu: links antigos (?tab=plan, ?tab=timeline) vão para lá
-  const legacyTab = params.get('tab')
-  const legacyPlan = canViewPlan && (legacyTab === 'plan' || legacyTab === 'timeline')
-  useEffect(() => {
-    if (legacyTab === 'plan' || legacyTab === 'timeline') {
-      if (!canViewPlan) setParams({}, { replace: true })
-    }
-  }, [legacyTab, canViewPlan, setParams])
+  const permissions = current?.permissions ?? []
+  const access = { manage: caps.transfer || caps.archive || caps.delete }
+  const section = sectionFromPath(pathname, project.id) ?? 'overview'
+  const label = sectionLabel(section, project, t)
+  useDocumentTitle(label ? `${label} · ${project.name}` : project.name)
 
   function setArchived(value: boolean) {
     const mutation = value ? lifecycle.archive : lifecycle.unarchive
@@ -104,29 +96,30 @@ function ProjectDetail({ project }: { project: Project }) {
     })
   }
 
-  const tabs = [
-    { value: 'overview', label: t('projects.tabs.overview'), content: <Overview project={project} /> },
-    ...(canViewTasks ? [{ value: 'tasks', label: t('projects.tabs.tasks'), content: <ProjectTasksPanel project={project} /> }] : []),
-    // documentos do projeto fora das tarefas (contratos, atas, cronogramas)
-    { value: 'files', label: t('projects.tabs.files'), content: <ProjectFilesPanel project={project} /> },
-    // quadro de gestão do projeto (Gerenciamento de Projetos — módulo à parte das tarefas)
-    { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },
-    { value: 'history', label: t('projects.tabs.history'), content: <ProjectHistory projectId={project.id} /> },
-  ]
-  if (caps.transfer || caps.archive || caps.delete) {
-    tabs.push({
-      value: 'settings',
-      label: t('projects.tabs.settings'),
-      content: <ProjectSettings project={project} onArchive={setArchived} onDelete={() => setDeleting(true)} />,
-    })
-  }
-
-  if (legacyPlan) {
+  // endereços antigos com a aba na query (?tab=plan, ?tab=members…): vão para a aba nova, com o resto da query
+  if (params.has('tab')) {
+    const legacy = legacyProjectTab(params.get('tab'))
+    const target = legacy && canOpenSection(legacy.section, permissions, access) ? legacy : { section: 'overview' as const, params: {} }
     const next = new URLSearchParams(params)
     next.delete('tab')
-    if (legacyTab === 'timeline') next.set('view', 'timeline')
-    return <Navigate to={managementLink(project.id, next)} replace />
+    Object.entries(target.params).forEach(([key, value]) => next.set(key, value))
+    return <Navigate to={projectPath(project.id, target.section, next)} replace />
   }
+  // aba que a pessoa não pode abrir (link antigo, permissão retirada): fica na visão geral
+  if (!canOpenSection(section, permissions, access)) return <Navigate to={projectPath(project.id)} replace />
+
+  const taskViews = visibleTaskViews(permissions)
+  const tabPath: Record<ProjectTab, string> = {
+    overview: projectPath(project.id),
+    management: projectPath(project.id, 'management'),
+    tasks: projectPath(project.id, taskViews[0] ?? 'list'),
+    files: projectPath(project.id, 'files'),
+    members: projectPath(project.id, 'members'),
+    history: projectPath(project.id, 'history'),
+    settings: projectPath(project.id, 'settings'),
+  }
+  const activeTab = tabOfSection(section)
+  const outlet: ProjectOutletContext = { project, onArchive: setArchived, onDelete: () => setDeleting(true) }
 
   return (
     <>
@@ -185,13 +178,12 @@ function ProjectDetail({ project }: { project: Project }) {
         </div>
       )}
 
-      <AppTabs
-        tabs={tabs}
+      <AppNavTabs
         aria-label={project.name}
-        value={tabs.some((tab) => tab.value === params.get('tab')) ? (params.get('tab') as string) : 'overview'}
-        // `?tab=tasks` abre direto no plano (links, notificações)
-        onValueChange={(value) => setParams(value === 'overview' ? {} : { tab: value }, { replace: true })}
+        className="mb-4"
+        items={visibleProjectTabs(permissions, access).map((tab) => ({ key: tab, to: tabPath[tab], label: tabLabel(tab, project, t), active: tab === activeTab }))}
       />
+      <Outlet context={outlet} />
 
       <ProjectFormDialog open={editing} onOpenChange={setEditing} project={project} />
       <AppConfirmDialog
@@ -215,203 +207,18 @@ function ProjectDetail({ project }: { project: Project }) {
   )
 }
 
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
-      <dt className="text-sm text-muted">{label}</dt>
-      <dd className="text-right text-sm font-medium text-fg">{children}</dd>
-    </div>
-  )
+type Translate = ReturnType<typeof useTranslation>['t']
+
+function tabLabel(tab: ProjectTab, project: Project, t: Translate): string {
+  return tab === 'members' ? t('projects.tabs.members', { count: project.memberCount }) : t(`projects.tabs.${tab}`)
 }
 
-function Overview({ project }: { project: Project }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language
-  const overdue = isOverdue(project)
-  const canViewBoard = useCan('kanban.view')
-  const canViewTasks = useCan('tasks.view')
-  const canViewPlan = useCan('plan.view')
-  const modules: Array<{ icon: ReactNode; label: string; phase?: number; to?: string; cta?: string }> = [
-    ...(canViewTasks ? [{ icon: <ListTodo />, label: t('nav.planning'), to: `/planning/${project.id}`, cta: t('backlog.openBacklog') }] : []),
-    ...(canViewBoard ? [{ icon: <KanbanSquare />, label: t('nav.kanban'), to: `/kanban/${project.id}`, cta: t('kanban.openBoard') }] : []),
-    ...(canViewPlan ? [{ icon: <BriefcaseBusiness />, label: t('nav.management'), to: managementLink(project.id), cta: t('management.open') }] : []),
-  ]
-  return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <div className="flex flex-col gap-4 lg:col-span-2">
-        <AppCard title={t('projects.fields.description')}>
-          {project.description ? (
-            <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{project.description}</p>
-          ) : (
-            <p className="text-sm text-subtle">{t('projects.noDescription')}</p>
-          )}
-        </AppCard>
-        <AppCard title={t('projects.workTitle')} description={t('projects.workDescription')}>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {modules.map((item) => {
-              const body = (
-                <>
-                  <span className={cn('flex size-9 items-center justify-center rounded-lg [&_svg]:size-4', item.to ? 'bg-primary-soft text-primary-soft-fg' : 'bg-surface-2 text-muted')}>
-                    {item.icon}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-fg">{item.label}</span>
-                    <span className="block text-xs text-subtle">{item.cta ?? t('pages.comingSoon.badge', { phase: item.phase })}</span>
-                  </span>
-                </>
-              )
-              return (
-                <li key={item.label}>
-                  {item.to ? (
-                    <Link to={item.to} className="flex items-center gap-3 rounded-lg border border-border px-3 py-3 transition-colors hover:border-primary hover:bg-surface-2">
-                      {body}
-                    </Link>
-                  ) : (
-                    <div className="flex items-center gap-3 rounded-lg border border-dashed border-border px-3 py-3">{body}</div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </AppCard>
-      </div>
-      <AppCard title={t('projects.details')}>
-        <dl className="divide-y divide-border">
-          <Detail label={t('projects.fields.status')}>
-            <ProjectStatusBadge status={project.status} />
-          </Detail>
-          <Detail label={t('projects.fields.priority')}>
-            <ProjectPriorityLabel priority={project.priority} />
-          </Detail>
-          <Detail label={t('projects.fields.owner')}>
-            {project.owner ? (
-              <span className="inline-flex items-center gap-2">
-                <AppAvatar name={project.owner.name} size="xs" />
-                {project.owner.name}
-              </span>
-            ) : (
-              '—'
-            )}
-          </Detail>
-          <Detail label={t('projects.fields.startDate')}>{formatDay(project.startDate, locale)}</Detail>
-          <Detail label={t('projects.fields.dueDate')}>
-            <span className={cn(overdue && 'text-danger')}>
-              {formatDay(project.dueDate, locale)}
-              {overdue && <span className="ml-1 text-xs">({t('projects.overdue')})</span>}
-            </span>
-          </Detail>
-          <Detail label={t('users.fields.createdAt')}>{formatDateTime(project.createdAt, locale)}</Detail>
-          <Detail label={t('users.fields.updatedAt')}>{formatDateTime(project.updatedAt, locale)}</Detail>
-        </dl>
-      </AppCard>
-    </div>
-  )
-}
-
-function ProjectHistory({ projectId }: { projectId: string }) {
-  const history = useProjectHistory(projectId)
-  if (history.isPending) {
-    return (
-      <div className="flex flex-col gap-3">
-        <AppSkeleton className="h-12" />
-        <AppSkeleton className="h-12" />
-      </div>
-    )
-  }
-  if (history.isError) return <AppErrorState onRetry={() => void history.refetch()} />
-  return (
-    <AppCard>
-      <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
-    </AppCard>
-  )
-}
-
-function ProjectSettings({ project, onArchive, onDelete }: { project: Project; onArchive: (value: boolean) => void; onDelete: () => void }) {
-  const { t } = useTranslation()
-  const errorMessage = useErrorMessage()
-  const members = useProjectMembers(project.id)
-  const { transfer } = useProjectLifecycle()
-  const [newOwner, setNewOwner] = useState<string | undefined>(undefined)
-  const [confirmTransfer, setConfirmTransfer] = useState(false)
-  const archived = !!project.archivedAt
-  const candidates = (members.data ?? []).filter((m) => !m.isOwner && m.user.status === 'active')
-  const target = candidates.find((m) => m.user.id === newOwner)
-
-  return (
-    <div className="flex flex-col gap-4">
-      {project.capabilities.transfer && (
-        <AppCard title={t('projects.transferTitle')} description={t('projects.transferDescription')}>
-          {candidates.length === 0 ? (
-            <p className="text-sm text-subtle">{t('projects.transferNoCandidates')}</p>
-          ) : (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <AppSelect
-                label={t('projects.newOwner')}
-                value={newOwner}
-                onValueChange={setNewOwner}
-                placeholder={t('projects.selectMember')}
-                options={candidates.map((m) => ({ value: m.user.id, label: `${m.user.name} (${m.user.email})` }))}
-                className="sm:w-96"
-              />
-              <AppButton variant="secondary" disabled={!newOwner} onClick={() => setConfirmTransfer(true)}>
-                {t('projects.transfer')}
-              </AppButton>
-            </div>
-          )}
-        </AppCard>
-      )}
-
-      <section className="rounded-xl border border-danger/40 bg-surface p-5">
-        <h2 className="text-sm font-semibold text-danger">{t('projects.dangerZone')}</h2>
-        <div className="mt-4 flex flex-col divide-y divide-border">
-          {project.capabilities.archive && (
-            <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-fg">{archived ? t('projects.unarchive') : t('projects.archive')}</p>
-                <p className="text-sm text-muted">{archived ? t('projects.unarchiveHint') : t('projects.archiveHint')}</p>
-              </div>
-              <AppButton variant="secondary" leftIcon={archived ? <ArchiveRestore /> : <Archive />} onClick={() => onArchive(!archived)}>
-                {archived ? t('projects.unarchive') : t('projects.archive')}
-              </AppButton>
-            </div>
-          )}
-          <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-fg">{t('projects.deleteProject')}</p>
-              <p className="text-sm text-muted">{archived ? t('projects.deleteHint') : t('projects.deleteNeedsArchive')}</p>
-            </div>
-            <AppButton variant="danger" leftIcon={<Trash2 />} disabled={!project.capabilities.delete} onClick={onDelete}>
-              {t('common.delete')}
-            </AppButton>
-          </div>
-        </div>
-      </section>
-
-      <AppConfirmDialog
-        open={confirmTransfer}
-        onOpenChange={setConfirmTransfer}
-        tone="primary"
-        title={t('projects.transferConfirmTitle', { name: target?.user.name ?? '' })}
-        description={t('projects.transferConfirmDescription')}
-        confirmLabel={t('projects.transfer')}
-        loading={transfer.isPending}
-        onConfirm={() =>
-          newOwner &&
-          transfer.mutate(
-            { id: project.id, userId: newOwner },
-            {
-              onSuccess: () => {
-                notify.success(t('projects.transferred', { name: target?.user.name ?? '' }))
-                setConfirmTransfer(false)
-                setNewOwner(undefined)
-              },
-              onError: (error) => notify.error(errorMessage(error)),
-            },
-          )
-        }
-      />
-    </div>
-  )
+/** Nome da seção no título da aba do navegador ("Kanban · Projeto"); a visão geral é só o projeto. */
+function sectionLabel(section: ProjectSection, project: Project, t: Translate): string {
+  if (section === 'overview') return ''
+  if (section === 'list') return t('projects.tabs.tasks')
+  if (section === 'kanban' || section === 'planning' || section === 'timeline') return t(`projects.taskViews.${section}`)
+  return tabLabel(section, project, t)
 }
 
 /** Ícone do projeto grande e translúcido no canto do cabeçalho (decorativo). */

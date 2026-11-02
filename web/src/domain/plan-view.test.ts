@@ -8,7 +8,6 @@ import {
   expandedByNarrowing,
   groupedSections,
   isOverdue,
-  kanbanColumns,
   linkCandidates,
   summarize,
   type PlanFilters,
@@ -218,16 +217,5 @@ describe('plan-view — totais e dependências', () => {
     expect(linkCandidates('b', p, '').map((i) => i.id)).toEqual([])
     expect(linkCandidates('a', p, '').map((i) => i.id)).toEqual(['c', 'd'])
     expect(linkCandidates('a', p, 'D').map((i) => i.id)).toEqual(['d'])
-  })
-})
-
-describe('plan-view — Kanban (GP-4)', () => {
-  it('uma coluna por status na ordem do quadro e "Em branco" por último; só elementos, na ordem dos grupos; busca sem acento', () => {
-    const p = plan([item('c', 'pp', { statusId: 'doing' }), item('a', 'ini', { statusId: 'doing' }), item('s', 'ini', { parentId: 'a', statusId: 'doing' }), item('b', 'ini'), item('x', 'ini', { statusId: 'apagado', name: 'Reunião' })])
-    const columns = kanbanColumns(p)
-    expect(columns.map((c) => c.status?.id ?? null)).toEqual([...p.statuses.map((s) => s.id), null])
-    expect(columns.find((c) => c.status?.id === 'doing')?.items.map((i) => i.id)).toEqual(['a', 'c'])
-    expect(columns.at(-1)?.items.map((i) => i.id)).toEqual(['b', 'x'])
-    expect(kanbanColumns(p, 'reuniao').flatMap((c) => c.items.map((i) => i.id))).toEqual(['x'])
   })
 })

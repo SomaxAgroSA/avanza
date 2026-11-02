@@ -1,14 +1,11 @@
 import {
   BarChart3,
   BookOpen,
-  BriefcaseBusiness,
-  ChartGantt,
   CheckSquare,
   FolderKanban,
   Gauge,
   KanbanSquare,
   LayoutDashboard,
-  ListTodo,
   Settings,
   Users,
   type LucideIcon,
@@ -47,11 +44,9 @@ export const NAV_ITEMS: NavItem[] = [
       { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived' },
     ],
   },
-  // gestão do projeto (quadro de fases e elementos, à parte das tarefas)
-  { id: 'management', labelKey: 'nav.management', to: '/project-management', icon: BriefcaseBusiness, anyOf: ['plan.view'] },
-  { id: 'planning', labelKey: 'nav.planning', to: '/planning', icon: ListTodo, anyOf: ['tasks.view'] },
+  // só visões de todos os projetos: as de um projeto (Gestão, Planejamento, Kanban do projeto, Cronograma)
+  // ficam nas abas da página do projeto
   { id: 'kanban', labelKey: 'nav.kanban', to: '/kanban', icon: KanbanSquare, anyOf: ['kanban.view'] },
-  { id: 'timeline', labelKey: 'nav.timeline', to: '/timeline', icon: ChartGantt, anyOf: ['tasks.view'] },
   { id: 'tasks', labelKey: 'nav.tasks', to: '/tasks', icon: CheckSquare, anyOf: ['tasks.view'] },
   { id: 'reports', labelKey: 'nav.reports', to: '/reports', icon: BarChart3, anyOf: ['reports.view'] },
   { id: 'docs', labelKey: 'nav.docs', to: '/docs', icon: BookOpen, anyOf: ['docs.view'] },

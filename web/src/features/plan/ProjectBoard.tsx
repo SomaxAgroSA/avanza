@@ -38,14 +38,11 @@ import { PANEL_TABS, type PanelTab } from '@/domain/plan-updates'
 import { usePlan, usePlanMutations, type PlanMutations } from './queries'
 import { PlanViewNav } from './PlanViews'
 import { PlanTimeline } from './PlanTimeline'
-import { PlanKanban } from './PlanKanban'
 import { PlanManagement } from './PlanManagement'
-import { PlanReports } from './PlanReports'
 import { usePlanError } from './use-plan-error'
 import { MAIN_COLUMNS, SUB_COLUMNS, customColumnDefs, sortableColumnIds, usePlanColumns, type BoardCtx, type FilterFocus } from './use-plan-columns'
 import { ColumnDialog, ColumnTypeDialog, DeleteColumnConfirm, type ColumnDialogState } from './column-dialogs'
 import { customColumnId, type PlanColumn } from '@/domain/plan-columns'
-import { useLiveProject } from '@/presentation/common/use-live'
 
 /** Hoje no fuso de quem usa (AAAA-MM-DD). */
 function localToday(): string {
@@ -54,8 +51,8 @@ function localToday(): string {
 }
 
 /**
- * Gestão de projetos (menu lateral, à parte das tarefas): visões do mesmo quadro (Quadro principal,
- * Cronograma, Kanban, Gestão e Relatórios). A visão e o painel do elemento ficam no endereço
+ * Gestão do projeto (aba Gestão da página do projeto, à parte das tarefas): visões do mesmo quadro
+ * (Quadro principal, Cronograma e Gestão). A visão e o painel do elemento ficam no endereço
  * (`?view=&item=&panel=`): dá para compartilhar o link, e as notificações abrem direto no painel.
  */
 export function ProjectBoard({ projectId }: { projectId: string }) {
@@ -93,25 +90,22 @@ function PlanWorkspace({ plan }: { plan: Plan }) {
       },
       { replace: true },
     )
-  const open = (itemId: string) => setPanel(itemId)
+  const open = (itemId: string, tab?: PanelTab) => setPanel(itemId, tab)
   return (
     <div className="flex flex-col gap-4">
       <PlanViewNav value={view} />
       {view === 'board' && <Board plan={plan} onOpenPanel={open} />}
       {view === 'timeline' && <PlanTimeline plan={plan} onOpen={open} />}
-      {view === 'kanban' && <PlanKanban plan={plan} onOpen={open} />}
       {view === 'management' && <PlanManagement plan={plan} />}
-      {view === 'reports' && <PlanReports plan={plan} />}
       <ItemPanel plan={plan} itemId={panelItem} tab={panelTab} onTab={(tab) => panelItem && setPanel(panelItem, tab)} onClose={() => setPanel(null)} />
     </div>
   )
 }
 
 /** Quadro principal: grupos, elementos e subelementos editáveis nas células. */
-function Board({ plan, onOpenPanel }: { plan: Plan; onOpenPanel: (itemId: string) => void }) {
+function Board({ plan, onOpenPanel }: { plan: Plan; onOpenPanel: (itemId: string, tab?: PanelTab) => void }) {
   const { t, i18n } = useTranslation()
   const projectId = plan.project.id
-  useLiveProject(projectId)
   const mutations = usePlanMutations(projectId)
   const members = useProjectMembers(projectId)
   const canEdit = plan.capabilities.edit
@@ -273,7 +267,7 @@ function Board({ plan, onOpenPanel }: { plan: Plan; onOpenPanel: (itemId: string
     openFilter,
     openRule: () => setRuleOpen(true),
     askMove: setMoving,
-    openPanel: (item) => onOpenPanel(item.id),
+    openPanel: (item, tab) => onOpenPanel(item.id, tab),
     askDelete: setRemovingItem,
     duplicate: (item) => mutations.duplicateItem.mutate(item.id, { onSuccess: (copy) => notify.success(t('plan.duplicated', { name: copy.name })), onError }),
     shift: (item, step) => {

@@ -4,6 +4,7 @@ import type { TaskListOptions } from '@/domain/repositories'
 import type { TaskInput } from '@/domain/tasks'
 import type { ForkInput, LinkOption } from '@/domain/relations'
 import { useRepositories } from '@/presentation/common/repositories-context'
+import { planKeys } from '@/features/plan/queries'
 
 export const taskKeys = {
   all: ['tasks'] as const,
@@ -125,10 +126,17 @@ export function useFieldFileUpload() {
   })
 }
 
+/**
+ * Criar/editar/excluir tarefa. Recarrega também a Gestão de projetos aberta: o elemento com tarefas
+ * vinculadas tem a contagem e o progresso calculados por elas (vincular é editar `planItemId`).
+ */
 export function useTaskMutations() {
   const { tasks } = useRepositories()
   const queryClient = useQueryClient()
-  const invalidate = () => void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    void queryClient.invalidateQueries({ queryKey: planKeys.all })
+  }
   return {
     create: useMutation({
       mutationFn: (data: TaskInput & { projectId: string; taskTypeId: string; title: string }) => tasks.create(data),

@@ -11,7 +11,7 @@ import type { CustomField, TaskType, TaskTypeDetail } from '@/domain/task-config
 import type { TaskDetail } from '@/domain/tasks'
 import type { TaskPriority, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/test/utils'
-import { KanbanPage } from './KanbanPage'
+import { KanbanPage, ProjectKanbanPage } from './KanbanPage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -139,7 +139,7 @@ function setup({
   data = board,
   create = vi.fn<TaskRepository['create']>(() => Promise.resolve(detail)),
   type = bugDetail,
-  path = '/kanban/p1',
+  path = '/projects/p1/kanban',
   get = vi.fn<BoardRepository['get']>(() => Promise.resolve(data)),
   getAll = vi.fn<BoardRepository['getAll']>(() => Promise.resolve(allBoard)),
   move = vi.fn<BoardRepository['move']>(() => Promise.resolve(detail)),
@@ -172,7 +172,8 @@ function setup({
   const utils = renderRoutes(
     [
       { path: '/kanban', element: <KanbanPage /> },
-      { path: '/kanban/:projectId', element: <KanbanPage /> },
+      { path: '/kanban/all', element: <KanbanPage /> },
+      { path: '/projects/:projectId/kanban', element: <ProjectKanbanPage /> },
     ],
     { repositories, initialPath: path },
   )
@@ -188,21 +189,28 @@ describe('KanbanPage', () => {
     expect(screen.getByText('1/1')).toBeInTheDocument()
     expect(screen.getByText('1 de no máximo 1 tarefas')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /CRM-3 · Nova tela de login/ })).toBeInTheDocument()
-    // lembra o quadro para a próxima visita a /kanban
-    await waitFor(() => expect(window.localStorage.getItem('kamban.kanban.project')).toBe('p1'))
   })
 
-  it('/kanban sem escolha abre todos os projetos; com quadro lembrado, abre direto', async () => {
-    const first = setup({ path: '/kanban' })
-    await waitFor(() => expect(first.router.state.location.pathname).toBe('/kanban/all'))
-    expect(await screen.findByText('Conciliar notas')).toBeInTheDocument()
-    await waitFor(() => expect(window.localStorage.getItem('kamban.kanban.project')).toBe('all'))
-    first.unmount()
+  it('dentro do projeto: sem título nem seletor de projeto; visões da aba Tarefas e "Nova tarefa" ao lado', async () => {
+    setup()
+    await screen.findByText('Erro ao salvar pedido')
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Projeto' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('kanban-project-filter')).not.toBeInTheDocument()
+    const views = screen.getByRole('navigation', { name: 'Visões das tarefas' })
+    expect(within(views).getAllByRole('link').map((link) => link.textContent)).toEqual(['Lista', 'Kanban', 'Planejamento', 'Cronograma'])
+    expect(within(views).getByRole('link', { name: 'Kanban' })).toHaveAttribute('aria-current', 'page')
+    expect(within(views).getByRole('link', { name: 'Planejamento' })).toHaveAttribute('href', '/projects/p1/planning')
+    expect(screen.getByRole('button', { name: 'Nova tarefa' })).toBeInTheDocument()
+  })
 
-    window.localStorage.setItem('kamban.kanban.project', 'p1')
-    const { router } = setup({ path: '/kanban' })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/kanban/p1'))
-    expect(await screen.findByText('Erro ao salvar pedido')).toBeInTheDocument()
+  it('/kanban abre o quadro de todos os projetos, sem seletor de projeto', async () => {
+    const { router, get } = setup({ path: '/kanban' })
+    expect(await screen.findByText('Conciliar notas')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/kanban')
+    expect(screen.getByRole('heading', { name: 'Kanban' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Projeto' })).not.toBeInTheDocument()
+    expect(get).not.toHaveBeenCalled()
   })
 
   it('busca e filtro "minhas tarefas" filtram no navegador', async () => {
@@ -282,7 +290,7 @@ describe('KanbanPage', () => {
     const full = await screen.findByRole('dialog', { name: 'Erro ao salvar pedido' })
     // as abas da tarefa ficam na janela e não mexem no endereço do quadro
     await userEvent.click(within(full).getByRole('tab', { name: /Comentários/ }))
-    expect(router.state.location.pathname).toBe('/kanban/p1')
+    expect(router.state.location.pathname).toBe('/projects/p1/kanban')
     expect(router.state.location.search).toBe('')
     expect(within(full).getByRole('link', { name: 'Abrir em página inteira' })).toHaveAttribute('href', '/tasks/1')
   })
@@ -316,11 +324,9 @@ describe('KanbanPage', () => {
     expect(screen.queryByRole('button', { name: /Criar tarefa em/ })).not.toBeInTheDocument()
   })
 
-  it('sem acesso ao projeto: aviso e esquece o quadro lembrado', async () => {
-    window.localStorage.setItem('kamban.kanban.project', 'p1')
+  it('sem acesso ao projeto: aviso no lugar do quadro', async () => {
     setup({ get: () => Promise.reject(new AppError({ code: 'PROJECT_NOT_FOUND', message: 'x', status: 404 })) })
     expect(await screen.findByText('Quadro não encontrado ou você não tem acesso a este projeto.')).toBeInTheDocument()
-    await waitFor(() => expect(window.localStorage.getItem('kamban.kanban.project')).toBeNull())
   })
 })
 
@@ -389,7 +395,7 @@ describe('KanbanPage — configurador do filtro de projetos', () => {
     await screen.findByText('Conciliar notas')
     expect(getAll).toHaveBeenCalledTimes(1)
     expect(getAll).toHaveBeenCalledWith(['p1'])
-    // engrenagem ao lado do seletor e do filtro de projetos, marcada como ativa
+    // engrenagem ao lado do filtro de projetos, marcada como ativa
     expect(screen.getAllByRole('button', { name: 'Configurar filtro de projetos (ativo nesta tela)' })).toHaveLength(1)
     // a lista do filtro de projetos também respeita a configuração (ERP está no quadro, mas não participo)
     await userEvent.click(screen.getByTestId('kanban-project-filter'))
@@ -407,5 +413,7 @@ describe('KanbanPage — configurador do filtro de projetos', () => {
     const { getAll } = setup({ path: '/kanban/all', projectList, projectFilter: { statuses: ['cancelled'], membersOnly: false } })
     expect(await screen.findByText('Nenhum projeto atende ao filtro desta tela')).toBeInTheDocument()
     expect(getAll).not.toHaveBeenCalled()
+    // sem a barra de filtros, a engrenagem fica no aviso
+    expect(screen.getByRole('button', { name: 'Configurar filtro de projetos (ativo nesta tela)' })).toBeInTheDocument()
   })
 })

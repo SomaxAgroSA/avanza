@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime, formatDay, formatNumber } from '@/core/utils/format'
 import type { TaskDetail } from '@/domain/tasks'
+import { useCan } from '@/features/auth/session'
+import { managementLink } from '@/features/plan/paths'
 import { CustomFieldValue } from '@/features/task-config/CustomFieldValue'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
 import { DueDate, PersonCell } from './task-visuals'
@@ -21,6 +24,7 @@ export function TaskProperties({ task }: { task: TaskDetail }) {
   const locale = i18n.language
   const hours = (n: number | null) => (n === null ? <span className="text-subtle">—</span> : `${formatNumber(n, locale)} h`)
   const date = (d: Date | null) => (d ? formatDateTime(d, locale) : <span className="text-subtle">—</span>)
+  const canViewPlan = useCan('plan.view')
   return (
     <dl className="divide-y divide-border">
       <Row label={t('tasks.fields.project')}>{task.project ? `${task.project.key} · ${task.project.name}` : '—'}</Row>
@@ -40,6 +44,21 @@ export function TaskProperties({ task }: { task: TaskDetail }) {
           <span className="text-subtle">{t('sprints.none')}</span>
         )}
       </Row>
+      {task.planItem && (
+        <Row label={t('tasks.planLink.label')}>
+          {canViewPlan && task.project ? (
+            <Link
+              to={managementLink(task.project.id, { item: task.planItem.id })}
+              title={t('tasks.planLink.open', { name: task.planItem.name })}
+              className="font-medium break-words text-fg hover:text-primary-text"
+            >
+              {task.planItem.name}
+            </Link>
+          ) : (
+            <span className="break-words">{task.planItem.name}</span>
+          )}
+        </Row>
+      )}
       <Row label={t('tasks.fields.startDate')}>{task.startDate ? formatDay(task.startDate, i18n.language) : '—'}</Row>
       <Row label={t('tasks.fields.dueDate')}>
         <DueDate task={task} />

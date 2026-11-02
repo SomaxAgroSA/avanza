@@ -32,7 +32,7 @@ describe('E2E — Tempo real', { timeout: 180000 }, () => {
       if (frame === page.mainFrame()) reloads++
     })
 
-    await page.goto(`${app.baseUrl}/kanban/${seed.project.id}`)
+    await page.goto(`${app.baseUrl}/projects/${seed.project.id}/kanban`)
     await page.waitForSelector('[data-testid=kanban-board]')
     const onBoard = reloads
     // outra pessoa cria uma tarefa (pela API, como faria em outra aba)

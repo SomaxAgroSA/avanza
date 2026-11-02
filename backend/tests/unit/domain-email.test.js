@@ -86,7 +86,7 @@ describe('domain/email — modelos', () => {
       { locale: 'es', actorName: 'Rafa', platform: 'KAMBAN', appUrl: 'https://k.com' },
     )
     assert.equal(item.subject, 'Rafa respondió tu actualización en “Kickoff”')
-    assert.match(item.html, /href="https:\/\/k\.com\/project-management\/p1\?item=i9"/)
+    assert.match(item.html, /href="https:\/\/k\.com\/projects\/p1\/management\?item=i9"/)
     const due = email.renderNotificationEmail({ type: 'due_soon', taskId: 't2', data: { code: 'CRM-3', title: 'Y' } }, { locale: 'pt-BR', actorName: null, platform: 'KAMBAN', appUrl: 'https://k.com' })
     assert.equal(due.subject, 'CRM-3 vence amanhã')
   })

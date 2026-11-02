@@ -40,6 +40,8 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
         ['tasks', 'detail', event.id],
         ['tasks', 'history', event.id],
         ['tasks', 'relations', event.id],
+        // elemento da Gestão com tarefas vinculadas: o progresso e a contagem vêm delas
+        ['plan', p],
       ]
     case 'comments':
       return [

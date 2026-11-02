@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router'
+import { Navigate, Outlet, useLocation, useOutletContext } from 'react-router'
 import { can, canAny, type PermissionCode } from '@/domain/permissions'
 import { AppLoading } from '@/presentation/components'
 import { ForbiddenPage } from '@/features/errors/ErrorPages'
@@ -33,11 +33,15 @@ export function GuestOnly({ children }: { children?: ReactNode }) {
   return children ? <>{children}</> : <Outlet />
 }
 
-/** Rota de layout que exige permissão(ões). A autorização real continua no backend. */
+/**
+ * Rota de layout que exige permissão(ões). A autorização real continua no backend. Repassa o contexto
+ * da rota de cima (ex.: o projeto aberto, para as abas da página do projeto).
+ */
 export function PermissionGate({ permission, anyOf }: { permission?: PermissionCode; anyOf?: PermissionCode[] }) {
   const { current } = useSession()
+  const context: unknown = useOutletContext()
   const allowed = !!current && (permission ? can(current.permissions, permission) : true) && (anyOf ? canAny(current.permissions, anyOf) : true)
-  return allowed ? <Outlet /> : <ForbiddenPage />
+  return allowed ? <Outlet context={context} /> : <ForbiddenPage />
 }
 
 /** Renderiza `children` apenas com a permissão. */

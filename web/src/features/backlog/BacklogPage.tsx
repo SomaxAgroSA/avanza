@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Archive, ArrowDown, ArrowRight, ArrowUp, CalendarRange, ChevronDown, ChevronRight, ExternalLink, ListTodo, MoreHorizontal, Pencil, Play, Plus, Square, Trash2, Undo2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
@@ -25,13 +25,11 @@ import {
   SELECT_ALL,
   type AppDropdownItem,
 } from '@/presentation/components'
-import { PageHeader } from '@/presentation/layouts/PageHeader'
-import { useLiveProject } from '@/presentation/common/use-live'
-import { useDocumentTitle } from '@/presentation/common/use-document-title'
+import { SectionHeader } from '@/presentation/layouts/SectionHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { useProjectMembers } from '@/features/projects/queries'
-import { ProjectSwitcher } from '@/features/projects/ProjectSwitcher'
+import { ProjectTaskViewsNav } from '@/features/projects/ProjectTaskViewsNav'
 import { useTaskTypes } from '@/features/task-config/queries'
 import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTags } from '@/features/tags/queries'
@@ -45,32 +43,16 @@ import { useActivateTask, useBacklog, useSprintMutations, useRankTask } from './
 import { RequiredFieldsDialog, type RequiredFieldsRequest } from '@/features/tasks/RequiredFieldsDialog'
 import { missingForStatus } from '@/features/tasks/required-fields'
 
-const LAST_PROJECT_KEY = 'kamban.backlog.project'
 const SORT_KEY = 'kamban.backlog.sort'
 
-/** Planejamento: `/planning` abre o último projeto usado; `/planning/:projectId` mostra o do projeto. */
-export function BacklogPage() {
-  const { projectId } = useParams()
-  if (!projectId) {
-    const last = safeStorage.get(LAST_PROJECT_KEY)
-    return last ? <Navigate to={`/planning/${encodeURIComponent(last)}`} replace /> : <BacklogShell />
-  }
-  return <BacklogShell key={projectId} projectId={projectId} />
-}
-
-function BacklogShell({ projectId }: { projectId?: string }) {
-  useLiveProject(projectId)
-  const { t } = useTranslation()
-  useDocumentTitle(t('backlog.title'))
-  if (!projectId) {
-    return (
-      <>
-        <PageHeader title={t('backlog.title')} description={t('backlog.description')} />
-        <AppEmptyState icon={<ListTodo />} title={t('backlog.pickTitle')} description={t('backlog.pickHint')} action={<ProjectSwitcher screen="planning" basePath="/planning" />} />
-      </>
-    )
-  }
-  return <ProjectBacklog projectId={projectId} />
+/**
+ * Visão Planejamento (backlog e sprints) da aba Tarefas do projeto (`/projects/:projectId/planning`).
+ * O cabeçalho do projeto é o contexto (sem título próprio nem seletor de projeto); o tempo real vem da
+ * página do projeto.
+ */
+export function ProjectPlanningPage() {
+  const { projectId = '' } = useParams()
+  return <ProjectBacklog key={projectId} projectId={projectId} />
 }
 
 const refOf = (sprint: Sprint): SprintRef => ({ id: sprint.id, name: sprint.name, state: sprint.state })
@@ -119,14 +101,7 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
   const [confirm, setConfirm] = useState<{ kind: 'close' | 'delete'; sprint: Sprint } | null>(null)
 
   const data = backlog.data
-  useDocumentTitle(data ? `${t('backlog.title')} · ${data.project.name}` : t('backlog.title'))
-  useEffect(() => {
-    if (data) safeStorage.set(LAST_PROJECT_KEY, data.project.id)
-  }, [data])
   const notFound = backlog.isError && isAppError(backlog.error) && (backlog.error.code === 'PROJECT_NOT_FOUND' || backlog.error.code === 'FORBIDDEN')
-  useEffect(() => {
-    if (notFound && safeStorage.get(LAST_PROJECT_KEY) === projectId) safeStorage.remove(LAST_PROJECT_KEY)
-  }, [notFound, projectId])
 
   const userId = current?.user.id
   const visible = useCallback(
@@ -356,23 +331,23 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <PageHeader
-        title={t('backlog.title')}
-        description={data ? data.project.name : t('backlog.description')}
+      <SectionHeader
+        nav={<ProjectTaskViewsNav projectId={projectId} current="planning" />}
         actions={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <ProjectSwitcher screen="planning" projectId={projectId} basePath="/planning" />
-            {caps?.manageSprints && (
-              <AppButton variant="secondary" leftIcon={<CalendarRange />} onClick={() => setSprintForm(null)}>
-                {t('sprints.create')}
-              </AppButton>
-            )}
-            {caps?.create && defaultStatus && (
-              <AppButton leftIcon={<Plus />} onClick={() => setQuickAdd({ statusId: defaultStatus.id })}>
-                {t('tasks.create')}
-              </AppButton>
-            )}
-          </div>
+          (caps?.manageSprints || (caps?.create && defaultStatus)) && (
+            <>
+              {caps?.manageSprints && (
+                <AppButton variant="secondary" leftIcon={<CalendarRange />} onClick={() => setSprintForm(null)}>
+                  {t('sprints.create')}
+                </AppButton>
+              )}
+              {caps?.create && defaultStatus && (
+                <AppButton leftIcon={<Plus />} onClick={() => setQuickAdd({ statusId: defaultStatus.id })}>
+                  {t('tasks.create')}
+                </AppButton>
+              )}
+            </>
+          )
         }
       />
 

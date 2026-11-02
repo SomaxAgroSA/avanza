@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, BarChart3, CheckSquare, FolderKanban, KanbanSquare, KeyRound, ListTodo, ShieldCheck, Users } from 'lucide-react'
+import { ArrowRight, BarChart3, CheckSquare, FolderKanban, KanbanSquare, KeyRound, ShieldCheck, Users } from 'lucide-react'
 import { AppCard } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { usePlatformInfo } from '@/presentation/common/use-platform'
@@ -30,10 +30,10 @@ export function DashboardPage() {
   useDocumentTitle(t('nav.dashboard'))
 
   const shortcuts = [
-    { to: '/planning', icon: ListTodo, label: t('nav.planning'), description: t('dashboard.shortcuts.planning'), allowed: can(permissions, 'tasks.view') },
+    // o projeto é o centro do trabalho (gestão, tarefas, Kanban, planejamento e cronograma de cada um)
+    { to: '/projects', icon: FolderKanban, label: t('nav.projects'), description: t('dashboard.shortcuts.projects'), allowed: can(permissions, 'projects.view') },
     { to: '/kanban', icon: KanbanSquare, label: t('nav.kanban'), description: t('dashboard.shortcuts.kanban'), allowed: can(permissions, 'kanban.view') },
     { to: '/tasks', icon: CheckSquare, label: t('nav.tasks'), description: t('dashboard.shortcuts.tasks'), allowed: can(permissions, 'tasks.view') },
-    { to: '/projects', icon: FolderKanban, label: t('nav.projects'), description: t('dashboard.shortcuts.projects'), allowed: can(permissions, 'projects.view') },
     { to: '/reports', icon: BarChart3, label: t('nav.reports'), description: t('dashboard.shortcuts.reports'), allowed: can(permissions, 'reports.view') },
     { to: '/users', icon: Users, label: t('nav.users'), description: t('dashboard.shortcuts.users'), allowed: can(permissions, 'users.view') },
     { to: '/settings/permissions', icon: ShieldCheck, label: t('nav.permissions'), description: t('dashboard.shortcuts.permissions'), allowed: can(permissions, 'permissions.manage') },

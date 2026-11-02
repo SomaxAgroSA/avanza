@@ -13,8 +13,21 @@ import type { CustomValue, PlanColumn } from './plan-columns'
 export const PLAN_STATUS_CATEGORIES = ['todo', 'in_progress', 'review', 'blocked', 'done', 'canceled'] as const
 export type PlanStatusCategory = (typeof PLAN_STATUS_CATEGORIES)[number]
 
-export const PROGRESS_SOURCES = ['done', 'subitems', 'manual', 'none'] as const
+/** De onde vem o progresso: status concluído, subelementos, tarefas vinculadas, digitado ou nenhum. */
+export const PROGRESS_SOURCES = ['done', 'subitems', 'tasks', 'manual', 'none'] as const
 export type ProgressSource = (typeof PROGRESS_SOURCES)[number]
+
+/** Referência curta a um elemento (ou subelemento) do quadro — ex.: o vínculo da tarefa. */
+export interface PlanItemRef {
+  id: string
+  name: string
+}
+
+/** Tarefas vinculadas ao elemento (as canceladas não entram no total). */
+export interface PlanTaskCount {
+  total: number
+  done: number
+}
 
 /** Limites (iguais aos do servidor). */
 export const PLAN_LIMITS = {
@@ -101,6 +114,8 @@ export interface PlanItem {
   baselineEnd: string | null
   /** Valores das colunas personalizadas (GP-5; só elementos): { coluna: valor }. */
   custom: Record<string, CustomValue>
+  /** Tarefas vinculadas (execução do elemento); ausente = nenhuma (ver plan-tasks.ts). */
+  tasks?: PlanTaskCount
 }
 
 /** Dependência gravada: `blocks` = from bloqueia to (to depende de from); `relates` = relacionados. */
@@ -229,8 +244,8 @@ export interface PlanResourceInput {
 /** Duração só é digitada quando não há cronograma (senão é calculada pelas datas). */
 export const isDurationEditable = (item: PlanItem) => !item.startDate && !item.endDate
 
-/** Progresso só é digitado quando não vem dos subelementos nem do status concluído. */
-export const isProgressEditable = (item: PlanItem) => item.progress.source !== 'subitems' && item.progress.source !== 'done'
+/** Progresso só é digitado quando não vem dos subelementos, das tarefas vinculadas nem do status concluído. */
+export const isProgressEditable = (item: PlanItem) => item.progress.source !== 'subitems' && item.progress.source !== 'tasks' && item.progress.source !== 'done'
 
 /* ------------------------------------------------------------------ barra de status do rodapé */
 

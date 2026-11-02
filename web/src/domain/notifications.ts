@@ -1,4 +1,5 @@
 import type { UserSummary } from './projects'
+import { projectPath } from './project-routes'
 
 export const NOTIFICATION_TYPES = ['mention', 'assigned', 'comment', 'status_changed', 'due_soon', 'overdue', 'plan_mention', 'plan_reply'] as const
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
@@ -25,8 +26,8 @@ export function notificationTab(type: NotificationType): 'comments' | 'details' 
 
 /** Endereço que a notificação abre: a tarefa (na aba certa) ou o painel do elemento no quadro. */
 export function notificationLink(notification: AppNotification): string | null {
-  // elemento do quadro: abre o painel dele na Gestão de projetos
-  if (notification.planItem) return `/project-management/${encodeURIComponent(notification.planItem.projectId)}?item=${encodeURIComponent(notification.planItem.id)}`
+  // elemento do quadro: abre o painel dele na aba Gestão do projeto
+  if (notification.planItem) return projectPath(notification.planItem.projectId, 'management', { item: notification.planItem.id })
   if (!notification.task) return null
   return `/tasks/${notification.task.id}${notificationTab(notification.type) === 'comments' ? '?tab=comments' : ''}`
 }

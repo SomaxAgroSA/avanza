@@ -253,7 +253,7 @@ function renderEmail(kind, locale, data) {
 }
 
 function notificationLink(notification, appUrl) {
-  if (notification.planItemId) return `${appUrl}/project-management/${encodeURIComponent(notification.projectId || '')}?item=${encodeURIComponent(notification.planItemId)}`
+  if (notification.planItemId) return `${appUrl}/projects/${encodeURIComponent(notification.projectId || '')}/management?item=${encodeURIComponent(notification.planItemId)}`
   if (notification.taskId) return `${appUrl}/tasks/${encodeURIComponent(notification.taskId)}`
   return `${appUrl}/notifications`
 }

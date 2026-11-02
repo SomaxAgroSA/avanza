@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Check, Loader2, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
@@ -10,6 +10,8 @@ export interface PickerOption {
   label: string
   prefix?: ReactNode
   disabled?: boolean
+  /** Título da seção: opções seguidas com o mesmo grupo ficam sob um cabeçalho (a busca também olha o grupo). */
+  group?: string
 }
 
 /**
@@ -48,7 +50,7 @@ export function OptionPicker({ listboxId, options, isSelected, onPick, multiple,
   const root = useRef<HTMLDivElement>(null)
   const searchInput = useRef<HTMLInputElement>(null)
   const query = foldText(search)
-  const visible = query ? options.filter((o) => foldText(o.label).includes(query)) : options
+  const visible = query ? options.filter((o) => foldText(o.label).includes(query) || (!!o.group && foldText(o.group).includes(query))) : options
   const exact = query ? options.find((o) => foldText(o.label) === query && !o.disabled) : undefined
   const canCreate = !!onCreateOption && !!query && !options.some((o) => foldText(o.label) === query)
 
@@ -125,10 +127,17 @@ export function OptionPicker({ listboxId, options, isSelected, onPick, multiple,
           </li>
         )}
         {visible.length === 0 && !canCreate && <li className="px-2 py-6 text-center text-sm text-muted">{t('commandPalette.empty')}</li>}
-        {visible.map((option) => {
+        {visible.map((option, index) => {
           const checked = isSelected(option.value)
+          const heading = option.group && option.group !== visible[index - 1]?.group ? option.group : null
           return (
-            <li key={option.value} role="option" aria-selected={checked}>
+            <Fragment key={option.value}>
+              {heading && (
+                <li role="presentation" className="truncate px-2 pt-2 pb-1 text-xs font-semibold text-muted">
+                  {heading}
+                </li>
+              )}
+            <li role="option" aria-selected={checked}>
               <button
                 type="button"
                 data-picker-item
@@ -142,6 +151,7 @@ export function OptionPicker({ listboxId, options, isSelected, onPick, multiple,
                 <span className="truncate">{option.label}</span>
               </button>
             </li>
+            </Fragment>
           )
         })}
         {canCreate && (

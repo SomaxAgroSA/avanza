@@ -1,13 +1,13 @@
 /**
  * Quadro do projeto — organização da tela (Gerenciamento de Projetos, GP-1/GP-2): seções por grupo,
  * busca, filtros (barra, pessoa e por coluna), ordenação, agrupar por (status, recurso, cronograma),
- * totais das visões filtradas/agrupadas, dependências vistas de cada elemento e as colunas do Kanban (GP-4).
+ * totais das visões filtradas/agrupadas e dependências vistas de cada elemento.
  *
  * Os totais seguem a mesma fórmula do servidor (backend/src/domain/plan.js `groupSummary`),
  * aplicada só aos elementos visíveis — sem filtro, o rodapé usa os totais que vêm do servidor.
  */
 import type { OptionColor } from './task-config'
-import type { Plan, PlanGroup, PlanGroupSummary, PlanItem, PlanLink, PlanStatus, PlanStatusCategory } from './plan'
+import type { Plan, PlanGroup, PlanGroupSummary, PlanItem, PlanLink, PlanStatusCategory } from './plan'
 import { columnIdOf, customSortKey, isCustomColumnId, sumCustom } from './plan-columns'
 
 /* ------------------------------------------------------------------ tipos */
@@ -421,30 +421,9 @@ export function linkCandidates(itemId: string, plan: Plan, query: string): PlanI
     .sort((a, b) => (groupIndex.get(a.groupId) ?? 0) - (groupIndex.get(b.groupId) ?? 0) || byPosition(a, b))
 }
 
-/* ------------------------------------------------------------------ Kanban (GP-4) */
-
-export interface KanbanColumn {
-  /** null = "Em branco" (sem status). */
-  status: PlanStatus | null
-  items: PlanItem[]
-}
-
 /**
- * Kanban do quadro: uma coluna por etiqueta de status (na ordem do quadro) e "Em branco" por último;
- * os cards são os elementos de primeiro nível (busca pelo nome, sem acento), na ordem dos grupos.
+ * Visões do quadro (GP-4): todas leem os mesmos elementos. O Kanban e os Relatórios saíram — repetiam o
+ * Kanban das tarefas e o painel executivo; a saúde do projeto fica na visão geral do projeto.
  */
-export function kanbanColumns(plan: Plan, query = ''): KanbanColumn[] {
-  const q = fold(query.trim())
-  const order = new Map(plan.groups.map((g, index) => [g.id, index]))
-  const known = new Set(plan.statuses.map((s) => s.id))
-  const items = plan.items
-    .filter((i) => !i.parentId && (!q || fold(i.name).includes(q)))
-    .sort((a, b) => (order.get(a.groupId) ?? 0) - (order.get(b.groupId) ?? 0) || a.position - b.position)
-  const columns: KanbanColumn[] = plan.statuses.map((status) => ({ status, items: items.filter((i) => i.statusId === status.id) }))
-  columns.push({ status: null, items: items.filter((i) => !i.statusId || !known.has(i.statusId)) })
-  return columns
-}
-
-/** Visões do quadro (GP-4): todas leem os mesmos elementos. */
-export const PLAN_VIEWS = ['board', 'timeline', 'kanban', 'management', 'reports'] as const
+export const PLAN_VIEWS = ['board', 'timeline', 'management'] as const
 export type PlanView = (typeof PLAN_VIEWS)[number]

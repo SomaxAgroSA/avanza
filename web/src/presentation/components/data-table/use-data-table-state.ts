@@ -60,7 +60,8 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
     sort: saved.sort === undefined ? base.sort : saved.sort,
     search: typeof saved.search === 'string' ? saved.search : base.search,
     filters: saved.filters && typeof saved.filters === 'object' ? saved.filters : base.filters,
-    columnVisibility: saved.columnVisibility ?? base.columnVisibility,
+    // coluna nova oculta por padrão continua oculta para quem já tinha colunas salvas
+    columnVisibility: { ...base.columnVisibility, ...saved.columnVisibility },
     columnSizing: saved.columnSizing ?? base.columnSizing,
   }
 }

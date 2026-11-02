@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { CalendarX, CircleAlert, CircleCheck, Flag, OctagonAlert, TriangleAlert } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import type { AttentionItem } from '@/domain/executive'
+import { projectPath } from '@/domain/project-routes'
 import { AppButton } from '@/presentation/components'
 import { managementLink } from '@/features/plan/paths'
 import { ExecutiveSection, ProjectKey } from './executive-visuals'
@@ -140,7 +141,7 @@ function useRowView() {
         }
       default:
         return {
-          to: `/timeline/${item.project.id}`,
+          to: projectPath(item.project.id, 'timeline'),
           icon: <Flag aria-hidden />,
           tone: 'info',
           title: item.name,

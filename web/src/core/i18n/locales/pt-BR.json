@@ -688,6 +688,7 @@
       "allowed_next": "Pode ir para",
       "sprint": "Sprint",
       "parent": "Tarefa pai",
+      "plan_item": "Elemento da Gestão",
       "forked_from": "Fork de",
       "fork": "Fork criado",
       "visibility": "Visibilidade",
@@ -1006,7 +1007,15 @@
       "members": "Membros ({{count}})",
       "history": "Histórico",
       "settings": "Configurações",
-      "tasks": "Tarefas"
+      "tasks": "Tarefas",
+      "management": "Gestão"
+    },
+    "taskViews": {
+      "label": "Visões das tarefas",
+      "list": "Lista",
+      "kanban": "Kanban",
+      "planning": "Planejamento",
+      "timeline": "Cronograma"
     },
     "archivedNotice": "Este projeto está arquivado e somente leitura. Desarquive para voltar a editá-lo.",
     "details": "Detalhes",
@@ -1508,7 +1517,14 @@
       "message_one": "Para ir para \"{{status}}\", preencha: {{fields}}.",
       "message_other": "Para ir para \"{{status}}\", preencha: {{fields}}."
     },
-    "openFullPage": "Abrir em página inteira"
+    "openFullPage": "Abrir em página inteira",
+    "planLink": {
+      "label": "Elemento da Gestão",
+      "short": "Elemento",
+      "none": "Nenhum",
+      "hint": "Fase ou entrega do plano que esta tarefa executa.",
+      "open": "Abrir {{name}} na Gestão"
+    }
   },
   "tags": {
     "title": "Tags",
@@ -2574,6 +2590,7 @@
     "progressSource": {
       "done": "Concluído: 100%.",
       "subitems": "Calculado pelos subelementos (ponderado pelo trabalho).",
+      "tasks": "Calculado pelas tarefas vinculadas (concluídas ÷ total, sem as canceladas).",
       "manual": "Informado manualmente.",
       "none": "Sem progresso: informe de 0 a 100 ou use subelementos."
     },
@@ -2852,10 +2869,34 @@
       "instructions": "Para arrastar, pressione espaço ou Enter; use as setas para mover e espaço ou Enter para soltar. Esc cancela.",
       "board": "quadro"
     },
+    "itemTasks": {
+      "title": "Tarefas",
+      "progress": "{{done}} de {{total}} concluídas",
+      "progressHint": "As tarefas canceladas não entram na conta.",
+      "progressOf": "Tarefas concluídas de {{name}}",
+      "fromTasks": "pelas tarefas · {{done}}/{{total}}",
+      "indicator": "Tarefas de {{name}}: {{done}} de {{total}} concluídas",
+      "link": "Vincular tarefa",
+      "create": "Nova tarefa",
+      "searchLabel": "Buscar tarefas do projeto",
+      "searchPlaceholder": "Código ou título",
+      "results": "Tarefas para vincular",
+      "noResults": "Nenhuma tarefa encontrada.",
+      "linkTask": "Vincular {{code}} {{title}}",
+      "linkedElsewhere": "Em {{name}} — vincular aqui move a tarefa",
+      "linked": "{{code}} vinculada a {{name}}.",
+      "unlink": "Desvincular {{code}}",
+      "unlinked": "{{code}} desvinculada.",
+      "empty": "Nenhuma tarefa vinculada",
+      "emptyHint": "Vincule as tarefas que executam este elemento: o progresso dele passa a vir delas.",
+      "listLabel": "Tarefas vinculadas a {{name}}",
+      "more": "Mostrando {{shown}} de {{total}} tarefas."
+    },
     "panel": {
       "title": "Painel de {{name}}",
       "tabs": {
         "updates": "Atualizações",
+        "tasks": "Tarefas",
         "history": "Histórico",
         "details": "Detalhes"
       },
@@ -2892,7 +2933,7 @@
       "board": "Quadro principal",
       "timeline": "Cronograma",
       "kanban": "Kanban",
-      "management": "Gestão",
+      "management": "Diário e problemas",
       "reports": "Relatórios"
     },
     "timeline": {
