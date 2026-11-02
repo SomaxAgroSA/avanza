@@ -89,7 +89,8 @@ Regras em `backend/src/domain/task.js`.
 | Excluir comentário | ser o autor **ou** gestor do projeto / `projects.view_all` (exclusão lógica) |
 | Anexar arquivo no comentário | ser o autor do comentário (vale para o leitor); remover: autor ou gestor |
 | Mencionar (@) | a pessoa mencionada precisa ter acesso ao projeto e estar ativa |
-| Status, prioridades, tags, tipos e campos | ler: `settings.manage` ou `tasks.view`; alterar: `settings.manage` |
+| Status, prioridades, áreas, tags, tipos e campos | ler: `settings.manage` ou `tasks.view`; alterar: `settings.manage` |
+| Área responsável da tarefa (`PUT /tasks/{id}/area`) / do projeto | regra de editar a tarefa / o projeto (não exige os obrigatórios do status) |
 | Biblioteca de ícones | ver: qualquer autenticado (os seletores de ícone usam); importar e remover: `settings.manage` |
 
 Projeto arquivado: tudo fica somente leitura (inclusive comentários). A API devolve `capabilities` (`edit`, `delete`, `assign`, `comment`) em cada tarefa e (`edit`, `delete`) em cada comentário.

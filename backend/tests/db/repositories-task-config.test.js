@@ -235,6 +235,32 @@ describe('repositórios da configuração das tarefas', () => {
       assert.equal(await statuses.findById(blocked.id), null)
     })
 
+    it('áreas: carga inicial das 11 áreas, sem padrão; em uso por tarefa ou projeto não sai', async () => {
+      const areas = config.createLookupRepository(t.db, {}, 'areas', { hasCategory: false, taskColumn: 'area_id', projectColumn: 'area_id' })
+      const seeded = await areas.list({})
+      assert.deepEqual(
+        seeded.map((a) => a.name),
+        ['Inteligencia Estratégica', 'Dpto. TI', 'Desarrollo e Innovación', 'Marketing', 'Contabilidad', 'Administración', 'Fertilizantes', 'Logística', 'Supply', 'Comex', 'Créditos'],
+      )
+      assert.ok(seeded.every((a) => a.isActive && !a.isDefault && !('category' in a)))
+      await assert.rejects(areas.create({ key: 'TI', name: 'X' }), { code: 'AREA_KEY_IN_USE' })
+      const ti = await areas.findByKey('TI')
+      const comex = await areas.findByKey('COMEX')
+      const supply = await areas.findByKey('SUPPLY')
+      await seedTask({ area_id: ti.id })
+      const other = await insertRow(t.db, 'projects', { name: 'Comex', key: 'CMX', owner_id: owner.id, area_id: comex.id })
+      assert.deepEqual([await areas.countTasks(ti.id), await areas.countProjects(ti.id), await areas.countProjects(comex.id)], [1, 0, 1])
+      // a chave estrangeira também segura (RESTRICT) se a contagem passar
+      await assert.rejects(areas.delete(ti.id), { code: 'AREA_IN_USE' })
+      await assert.rejects(areas.delete(comex.id), { code: 'AREA_IN_USE' })
+      await t.db.exec('DELETE FROM projects WHERE id = $1', [other.id])
+      const created = await areas.create({ key: 'NOVA', name: 'Nova', description: '', color: 'teal', order: (await areas.maxOrder()) + 1, isActive: true, isDefault: false })
+      assert.equal((await areas.list({})).pop().id, created.id)
+      await areas.delete(created.id)
+      await areas.delete(supply.id)
+      assert.equal(await areas.findById(supply.id), null)
+    })
+
     it('trocas de padrão simultâneas deixam um padrão só', async () => {
       const list = await statuses.list({ includeInactive: true })
       await Promise.all(

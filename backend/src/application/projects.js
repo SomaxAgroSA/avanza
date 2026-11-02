@@ -1,5 +1,5 @@
 /**
- * Casos de uso de projetos e membros.
+ * Casos de uso de projetos e membros. Área responsável (§32): só área ativa de /areas; `null` limpa.
  */
 
 const { appError } = require('../core/errors')
@@ -15,6 +15,8 @@ const { URGENCY_LEVELS } = require('../domain/task')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 
+const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
+
 const keyRule = rules.custom((value) => (typeof value !== 'string' ? 'invalid_type' : projectDomain.keyIssue(projectDomain.normalizeKey(value))))
 
 const FIELD_RULES = {
@@ -26,6 +28,7 @@ const FIELD_RULES = {
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
   // urgência (semáforo, §31): null limpa
   urgency: [rules.oneOf(URGENCY_LEVELS)],
+  area_id: [idRule],
   start_date: [rules.isoDate()],
   due_date: [rules.isoDate()],
 }
@@ -39,6 +42,8 @@ const LIST_SCHEMA = {
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
   // `none` = sem urgência
   urgency: [rules.oneOf(URGENCY_LEVELS.concat(['none']))],
+  // `none` = sem área
+  area_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   owner_id: [rules.maxLength(40)],
 }
 
@@ -49,8 +54,8 @@ const MEMBER_SCHEMA = {
 
 const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority' }
 
-/** Campos auditáveis no formato público. */
-function auditView(project) {
+/** Campos auditáveis no formato público (`areas` = áreas por id, para mostrar o nome no histórico). */
+function auditView(project, areas) {
   return {
     name: project.name,
     description: project.description,
@@ -59,14 +64,34 @@ function auditView(project) {
     status: project.status,
     priority: project.priority,
     urgency: project.urgency || null,
+    area: project.areaId && areas[project.areaId] ? areas[project.areaId].name : null,
     start_date: iso(project.startDate),
     due_date: iso(project.dueDate),
   }
 }
 
+function presentArea(area) {
+  return area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null
+}
+
 function createProjectService(deps) {
   const projects = deps.projectRepository
   const members = deps.projectMemberRepository
+
+  async function areasById() {
+    const map = {}
+    ;(await deps.areaRepository.list({ includeInactive: true })).forEach((area) => {
+      map[area.id] = area
+    })
+    return map
+  }
+
+  /** Área ativa escolhida no formulário (inativa ou inexistente = opção inválida). */
+  function activeArea(id, areas) {
+    const area = areas[id]
+    if (!area || area.isActive === false) throw appError('VALIDATION_ERROR', undefined, { fields: { area_id: 'invalid_option' } })
+    return area
+  }
 
   async function load(ctx, id) {
     rbac.assertAuthenticated(ctx.principal)
@@ -82,6 +107,8 @@ function createProjectService(deps) {
     const memberCount = info.memberCount !== undefined ? info.memberCount : (await members.countByProjects([project.id]))[project.id] || 0
     const role = info.role !== undefined ? info.role : ((await members.find(project.id, ctx.principal.userId)) || {}).role || null
     const access = projectDomain.resolveAccess(ctx.principal, project, role ? { role } : null)
+    // listas passam as áreas lidas de uma vez; um projeto só busca a sua
+    const area = !project.areaId ? null : info.areas ? info.areas[project.areaId] : await deps.areaRepository.findById(project.areaId)
     return {
       id: project.id,
       name: project.name,
@@ -92,6 +119,7 @@ function createProjectService(deps) {
       status: project.status,
       priority: project.priority,
       urgency: project.urgency || null,
+      area: presentArea(area),
       owner: owner ? toUserSummary(owner) : null,
       start_date: iso(project.startDate),
       due_date: iso(project.dueDate),
@@ -117,7 +145,7 @@ function createProjectService(deps) {
     const q = query || {}
     const pick = (key) => (q[key] === undefined || q[key] === '' ? undefined : q[key])
     const filters = assertValid(
-      { view: pick('view'), search: pick('search'), status: pick('status'), priority: pick('priority'), urgency: pick('urgency'), owner_id: pick('owner_id') },
+      { view: pick('view'), search: pick('search'), status: pick('status'), priority: pick('priority'), urgency: pick('urgency'), area_id: pick('area_id'), owner_id: pick('owner_id') },
       LIST_SCHEMA,
     )
     const pagination = parsePagination(q)
@@ -128,6 +156,7 @@ function createProjectService(deps) {
       status: filters.status,
       priority: filters.priority,
       urgency: filters.urgency,
+      areaId: filters.area_id,
       ownerId: filters.owner_id,
       sort: parseSort(q.sort, SORTABLE, 'name'),
       pagination,
@@ -136,6 +165,7 @@ function createProjectService(deps) {
     const ids = result.items.map((p) => p.id)
     const counts = await members.countByProjects(ids)
     const roles = await members.rolesForUser(ctx.principal.userId, ids)
+    const areas = result.items.some((p) => p.areaId) ? await areasById() : {}
     const owners = {}
     ;(await deps.userRepository.findManyByIds(result.items.map((p) => p.ownerId))).forEach((u) => {
       owners[u.id] = u
@@ -143,7 +173,7 @@ function createProjectService(deps) {
     return {
       items: await Promise.all(
         result.items.map((p) =>
-          present(ctx, p, { owner: owners[p.ownerId] || null, memberCount: counts[p.id] || 0, role: roles[p.id] || null }),
+          present(ctx, p, { owner: owners[p.ownerId] || null, memberCount: counts[p.id] || 0, role: roles[p.id] || null, areas }),
         ),
       ),
       meta: buildPageMeta(pagination, result.total),
@@ -164,6 +194,7 @@ function createProjectService(deps) {
     const datesIssue = projectDomain.datesIssue(data.start_date || null, data.due_date || null)
     if (datesIssue) throw appError('VALIDATION_ERROR', undefined, { fields: { due_date: datesIssue } })
     if (await projects.findByKey(key)) throw appError('PROJECT_KEY_IN_USE')
+    const area = data.area_id ? activeArea(data.area_id, await areasById()) : null
 
     const project = await deps.unitOfWork.run(async (repos) => {
       const created = await repos.projectRepository.create({
@@ -175,6 +206,7 @@ function createProjectService(deps) {
         status: data.status || 'planning',
         priority: data.priority || 'medium',
         urgency: data.urgency || null,
+        areaId: area ? area.id : null,
         ownerId: ctx.principal.userId,
         createdBy: ctx.principal.userId,
         startDate: data.start_date || null,
@@ -201,6 +233,10 @@ function createProjectService(deps) {
     })
     const data = assertValid(source, schema)
     await assertIconAvailable(deps, data.icon, projectDomain.PROJECT_ICONS, project.icon)
+    const areas = await areasById()
+    let areaId = project.areaId || null
+    if (source.area_id === null) areaId = null
+    else if (data.area_id !== undefined && data.area_id !== areaId) areaId = activeArea(data.area_id, areas).id
 
     // Datas podem ser limpas com null; a validação do intervalo considera os valores já salvos.
     const pickDate = (field, current) => (source[field] === null ? null : data[field] !== undefined ? data[field] : current)
@@ -217,10 +253,11 @@ function createProjectService(deps) {
       status: data.status || project.status,
       priority: data.priority || project.priority,
       urgency: source.urgency === null ? null : data.urgency !== undefined ? data.urgency : project.urgency || null,
+      areaId,
       startDate,
       dueDate,
     })
-    const changes = diff(auditView(project), auditView(next), Object.keys(auditView(project)))
+    const changes = diff(auditView(project, areas), auditView(next, areas), Object.keys(auditView(project, areas)))
     if (!changes) return present(ctx, project)
 
     const saved = await deps.unitOfWork.run(async (repos) => {
@@ -232,6 +269,7 @@ function createProjectService(deps) {
         status: next.status,
         priority: next.priority,
         urgency: next.urgency,
+        areaId: next.areaId,
         startDate: next.startDate,
         dueDate: next.dueDate,
       })

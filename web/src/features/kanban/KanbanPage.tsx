@@ -42,7 +42,8 @@ import { useScreenProjects } from '@/features/projects/use-project-filter'
 import { allowedByProjectFilter, isDefaultProjectFilter, scopedProjectIds, toProjectFilterSubject } from '@/domain/project-filter'
 import { useSprints } from '@/features/backlog/queries'
 import { useTaskTypes } from '@/features/task-config/queries'
-import { usePriorities } from '@/features/workflow/queries'
+import { useAreas, usePriorities } from '@/features/workflow/queries'
+import { useAreaFilterOptions } from '@/features/workflow/area-options'
 import { useTags } from '@/features/tags/queries'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
 import { TaskFormDialog, type TaskFormInitial } from '@/features/tasks/TaskFormDialog'
@@ -99,6 +100,8 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
   const priorities = usePriorities(false)
   const tags = useTags()
   const urgencyOptions = useUrgencyFilterOptions()
+  const areas = useAreas(false)
+  const areaOptions = useAreaFilterOptions(areas.data)
   // sprints são do projeto: no quadro de todos os projetos o filtro não aparece
   const sprints = useSprints(projectId ?? undefined)
 
@@ -273,6 +276,7 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
                   (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
                 {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
+                {filterSelect('area', t('tasks.fields.area'), areaOptions)}
                 {!all &&
                   (sprints.data?.length ?? 0) > 0 &&
                   filterSelect('sprint', t('tasks.fields.sprint'), [

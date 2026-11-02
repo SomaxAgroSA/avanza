@@ -48,6 +48,7 @@ function summary(id: string, title: string, extra: Partial<TaskSummary> = {}): T
     blocked: false,
     inReport: true,
     urgency: null,
+    area: null,
     ...extra,
   }
 }

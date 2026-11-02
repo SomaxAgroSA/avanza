@@ -61,6 +61,7 @@ export function fakeRepositories(overrides: {
   taskTypes?: Partial<Repositories['taskTypes']>
   statuses?: Partial<Repositories['statuses']>
   priorities?: Partial<Repositories['priorities']>
+  areas?: Partial<Repositories['areas']>
   tasks?: Partial<Repositories['tasks']>
   tags?: Partial<Repositories['tags']>
   icons?: Partial<Repositories['icons']>
@@ -180,6 +181,14 @@ export function fakeRepositories(overrides: {
       reorder: notImplemented,
       ...overrides.priorities,
     },
+    areas: {
+      list: () => Promise.resolve([]),
+      create: notImplemented,
+      update: notImplemented,
+      remove: notImplemented,
+      reorder: notImplemented,
+      ...overrides.areas,
+    },
     tasks: {
       list: () => Promise.resolve({ items: [], page: 1, perPage: 20, total: 0, totalPages: 0 }),
       get: notImplemented,
@@ -187,6 +196,7 @@ export function fakeRepositories(overrides: {
       update: notImplemented,
       setInReport: notImplemented,
       setUrgency: notImplemented,
+      setArea: notImplemented,
       remove: notImplemented,
       history: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
       ...overrides.tasks,

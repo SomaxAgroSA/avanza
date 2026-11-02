@@ -28,8 +28,8 @@ function emittedActions() {
     let m
     while ((m = re.exec(text))) found.add(m[1])
   })
-  // status e prioridades: `${entity}.${action}` em application/lookups.js
-  ;['status', 'priority'].forEach((entity) => ['created', 'updated', 'deleted', 'reordered'].forEach((verb) => found.add(`${entity}.${verb}`)))
+  // status, prioridades e áreas: `${entity}.${action}` em application/lookups.js
+  ;['status', 'priority', 'area'].forEach((entity) => ['created', 'updated', 'deleted', 'reordered'].forEach((verb) => found.add(`${entity}.${verb}`)))
   return [...found].sort()
 }
 

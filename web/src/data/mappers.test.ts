@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toBoard, toCurrentUser, toRole, toUser } from './mappers'
+import { toArea, toBoard, toCurrentUser, toRole, toTaskSummary, toUser } from './mappers'
 import type { BoardDto, TaskDto, UserDto } from './dtos'
 
 const userDto: UserDto = {
@@ -68,5 +68,18 @@ describe('data/mappers', () => {
     const single = toBoard({ ...dto, project: { id: 'p2', key: 'ERP', name: 'ERP', archived: false }, projects: undefined, columns: [{ ...column, tasks: [task] }] })
     expect(single.projects).toEqual([{ id: 'p2', key: 'ERP', name: 'ERP' }])
     expect(single.columns[0]?.cards[0]?.canMove).toBeUndefined()
+  })
+
+  it('área responsável: resumo na tarefa (cor desconhecida = cinza; ausente = sem área) e item da lista', () => {
+    const task: TaskDto = {
+      id: 't1', code: 'CRM-1', number: 1, title: 'X', project: null, type: null, status: null, priority: null,
+      creator: null, assignee: null, reporter: null, parent_task_id: null, due_date: null, estimated_hours: null, actual_hours: null,
+      started_at: null, completed_at: null, created_at: null, updated_at: null,
+    }
+    expect(toTaskSummary({ ...task, area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' } }).area).toEqual({ id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' })
+    expect(toTaskSummary({ ...task, area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'xyz' } }).area?.color).toBe('gray')
+    expect(toTaskSummary(task).area).toBeNull()
+    const area = toArea({ id: 'a1', key: 'TI', name: 'Dpto. TI', description: '', color: 'blue', order: 1, is_active: true, is_default: false, created_at: null, updated_at: null })
+    expect([area.name, area.isDefault, area.isActive]).toEqual(['Dpto. TI', false, true])
   })
 })

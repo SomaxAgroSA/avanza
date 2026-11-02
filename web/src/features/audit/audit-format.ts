@@ -57,6 +57,10 @@ export const AUDIT_ACTIONS = [
   'priority.updated',
   'priority.deleted',
   'priority.reordered',
+  'area.created',
+  'area.updated',
+  'area.deleted',
+  'area.reordered',
   'task.created',
   'task.updated',
   'task.deleted',
@@ -151,7 +155,7 @@ export const AUDIT_ACTIONS = [
   'webhook.disabled',
 ] as const
 
-export const AUDIT_ENTITY_TYPES = ['user', 'role', 'project', 'task_type', 'custom_field', 'status', 'priority', 'task', 'tag', 'sprint', 'doc_space', 'doc_page', 'plan_item', 'platform_settings', 'audit_log', 'email_settings', 'api_token', 'webhook', 'icon_library'] as const
+export const AUDIT_ENTITY_TYPES = ['user', 'role', 'project', 'task_type', 'custom_field', 'status', 'priority', 'area', 'task', 'tag', 'sprint', 'doc_space', 'doc_page', 'plan_item', 'platform_settings', 'audit_log', 'email_settings', 'api_token', 'webhook', 'icon_library'] as const
 
 export function actionLabel(t: TFunction, action: string): string {
   return t(`audit.actions.${action}`, { defaultValue: action })
@@ -204,6 +208,7 @@ const FIELD_ORDER = [
   'task_type',
   'task_status',
   'task_priority',
+  'area',
   'sprint',
   'parent',
   'forked_from',

@@ -33,6 +33,7 @@ function project(id: string, key: string, status: ProjectStatus, myRole: Project
     status,
     priority: 'medium',
     urgency: null,
+    area: null,
     owner: null,
     startDate: null,
     dueDate: null,

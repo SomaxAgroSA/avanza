@@ -5,8 +5,13 @@ export const STATUS_CATEGORIES = ['backlog', 'todo', 'in_progress', 'done', 'can
 export type StatusCategory = (typeof STATUS_CATEGORIES)[number]
 
 /** Listas configuráveis que compartilham as mesmas regras (chave, ordem, cor, ativo e um padrão). */
-export const LOOKUP_KINDS = ['status', 'priority'] as const
+export const LOOKUP_KINDS = ['status', 'priority', 'area'] as const
 export type LookupKind = (typeof LOOKUP_KINDS)[number]
+
+/** A área responsável não tem padrão: tarefa e projeto podem ficar sem área (regras §32). */
+export function lookupHasDefault(kind: LookupKind): boolean {
+  return kind !== 'area'
+}
 
 export interface LookupItem {
   id: string
@@ -32,6 +37,22 @@ export interface TaskStatus extends LookupItem {
 }
 
 export type TaskPriority = LookupItem
+
+/** Área responsável (Configurações → Áreas). */
+export type Area = LookupItem
+
+/** Área resumida que vem na tarefa e no projeto. */
+export type AreaRef = Pick<LookupItem, 'id' | 'key' | 'name' | 'color'>
+
+/** Valor do filtro para "sem área" (nas listagens, no Kanban e na API: `area_id=none`). */
+export const NO_AREA = 'none'
+
+/** A área passa no filtro? ('' = qualquer; 'none' = só sem área.) */
+export function matchesArea(area: AreaRef | null | undefined, filter: string): boolean {
+  if (!filter) return true
+  if (filter === NO_AREA) return !area
+  return area?.id === filter
+}
 
 /** Tarefas em status destas categorias são consideradas encerradas. */
 export function isClosedCategory(category: StatusCategory): boolean {

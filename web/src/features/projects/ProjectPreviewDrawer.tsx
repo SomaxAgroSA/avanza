@@ -9,6 +9,7 @@ import { AppAvatar, AppBadge, AppButton, AppDrawer, AppErrorState, AppSkeleton }
 import { useProjectMembers } from './queries'
 import { coverStyle } from './project-theme'
 import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
+import { AreaBadge } from '@/features/workflow/area-visuals'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -118,6 +119,9 @@ export function ProjectPreviewDrawer({
             </Row>
             <Row label={t('tasks.fields.urgency')}>
               <UrgencyLabel urgency={project.urgency} />
+            </Row>
+            <Row label={t('tasks.fields.area')}>
+              <AreaBadge area={project.area} />
             </Row>
             <Row label={t('projects.fields.owner')}>
               {project.owner ? (

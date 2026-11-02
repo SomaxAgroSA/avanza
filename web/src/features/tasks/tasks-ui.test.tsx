@@ -8,7 +8,7 @@ import type { ProjectMember } from '@/domain/projects'
 import type { AttachmentRepository, CustomFieldRepository, TaskRepository } from '@/domain/repositories'
 import type { CustomField, FieldOption, TaskType, TaskTypeDetail } from '@/domain/task-config'
 import type { TaskDetail } from '@/domain/tasks'
-import type { TaskPriority, TaskStatus } from '@/domain/workflow'
+import type { Area, TaskPriority, TaskStatus } from '@/domain/workflow'
 import { notify } from '@/presentation/components'
 import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/test/utils'
 import { TaskFormDialog } from './TaskFormDialog'
@@ -68,6 +68,8 @@ function lookup<T extends TaskStatus | TaskPriority>(overrides: Partial<T>): T {
 const backlog = lookup<TaskStatus>({ id: 's1', key: 'BACKLOG', name: 'Backlog', category: 'backlog', isDefault: true })
 const dev = lookup<TaskStatus>({ id: 's2', key: 'DEV', name: 'Desenvolvimento', category: 'in_progress', order: 1 })
 const media = lookup<TaskPriority>({ id: 'p2', key: 'MEDIA', name: 'Média', color: 'amber', isDefault: true })
+const ti = lookup<Area>({ id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' })
+const mkt = lookup<Area>({ id: 'a2', key: 'MARKETING', name: 'Marketing', color: 'pink', order: 1 })
 
 const members: ProjectMember[] = [
   { user: { id: 'u1', name: 'Gabi', email: 'g@x.com', avatarUrl: null, status: 'active' }, role: 'manager', isOwner: true, joinedAt: null },
@@ -106,6 +108,7 @@ const detail: TaskDetail = {
   blocked: false,
   inReport: true,
   urgency: null,
+  area: null,
   sprint: null,
   fields: bugDetail.fields,
   parent: null, forkedFrom: null, capabilities: { edit: true, delete: false, assign: true, comment: true, link: true, fork: true },
@@ -117,6 +120,7 @@ function repositories(tasks: Partial<TaskRepository> = {}) {
     taskTypes: { list: () => Promise.resolve([bugType]), get: () => Promise.resolve(bugDetail) },
     statuses: { list: () => Promise.resolve([backlog, dev]) },
     priorities: { list: () => Promise.resolve([media]) },
+    areas: { list: () => Promise.resolve([ti, mkt]) },
     projects: { listMembers: () => Promise.resolve(members) },
     tasks,
   })
@@ -169,6 +173,18 @@ describe('TaskFormDialog', () => {
       priorityId: 'p2',
       customValues: { versao: '2.1', severidade: 'o2' },
     })
+  })
+
+  it('área responsável: começa sem área e vai na criação quando escolhida', async () => {
+    const { create } = setup()
+    await chooseOption(/^Tipo/, 'Bug')
+    await userEvent.type(await screen.findByLabelText(/^Versão/), '2.1')
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Erro ao salvar pedido')
+    expect(screen.getByRole('combobox', { name: /^Área/ })).toHaveTextContent('Sem área')
+    await chooseOption(/^Área/, 'Marketing')
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ areaId: 'a2' })
   })
 
   it('leitor do projeto não aparece como responsável; erros do servidor voltam ao campo', async () => {
@@ -438,5 +454,40 @@ describe('TasksTable: urgência (semáforo)', () => {
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ urgency: 'high' }) }), { projectId: 'p1' }))
     // ativo: o filtro mostra "Nome: valor"
     expect(screen.getByRole('combobox', { name: 'Urgência' })).toHaveTextContent('Urgência: Alta')
+  })
+})
+
+describe('TasksTable: área responsável', () => {
+  it('a célula mostra a área e quem edita troca com um clique (sem abrir a tarefa)', async () => {
+    const setArea = vi.fn<TaskRepository['setArea']>(() => Promise.resolve({ ...detail, area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' } }))
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="area-test" projectId="p1" /> }], { repositories: repositories({ list, setArea }), initialPath: '/' })
+    await userEvent.click(await screen.findByRole('button', { name: i18n.t('areas.change', { name: detail.code, area: i18n.t('areas.none') }) }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Dpto. TI' }))
+    await waitFor(() => expect(setArea).toHaveBeenCalledWith(detail.id, 'a1'))
+  })
+
+  it('sem permissão de editar, só o selo da área', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [{ ...detail, area: { id: 'a2', key: 'MARKETING', name: 'Marketing', color: 'pink' } }], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="area-readonly" projectId="p1" /> }], {
+      repositories: fakeRepositories({
+        auth: { me: async () => makeCurrentUser(['tasks.view', 'projects.view']) },
+        areas: { list: () => Promise.resolve([ti, mkt]) },
+        tasks: { list },
+      }),
+      initialPath: '/',
+    })
+    expect(await screen.findByText('Marketing')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Mudar área/ })).not.toBeInTheDocument()
+  })
+
+  it('filtro de área à vista na barra: escolher a área (ou "Sem área") pede area_id à API', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="area-filter" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByText(detail.title)
+    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Sem área' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ area: 'none' }) }), undefined))
+    expect(screen.getByRole('combobox', { name: 'Área' })).toHaveTextContent('Área: Sem área')
   })
 })

@@ -236,6 +236,26 @@ describe('application/charter — seguimento', () => {
     assert.deepEqual((await s.charter.getCharter(g, s.project.id)).items.filter((i) => i.id === o.id)[0].link_ids, [f.id])
   })
 
+  it('funcionalidade atrasada: tarefa vinculada aberta com o prazo vencido; o objetivo fica em risco', async () => {
+    const s = await setup()
+    const g = s.ctx.gabi
+    const t = await s.newTask('Aprovação')
+    const f = await s.charter.createItem(g, s.project.id, { kind: 'feature', title: 'Aprovação', task_ids: [t.id] })
+    const o = await s.charter.createItem(g, s.project.id, { kind: 'objective', title: 'Aprovar', link_ids: [f.id] })
+    assert.equal(f.effective_state, 'planned')
+    // hoje = 15/10: prazo de hoje ainda não venceu
+    await s.deps.taskRepository.update(t.id, { dueDate: '2026-10-15T00:00:00.000Z' })
+    assert.equal((await s.charter.getCharter(g, s.project.id)).items.find((i) => i.id === f.id).effective_state, 'planned')
+    await s.deps.taskRepository.update(t.id, { dueDate: '2026-10-14T00:00:00.000Z' })
+    const byId = Object.fromEntries((await s.charter.getCharter(g, s.project.id)).items.map((i) => [i.id, i]))
+    assert.deepEqual([byId[f.id].effective_state, byId[o.id].effective_state], ['late', 'at_risk'])
+    // concluída não atrasa
+    await s.setStatus(t, s.statuses.done)
+    assert.equal((await s.charter.getCharter(g, s.project.id)).items.find((i) => i.id === f.id).effective_state, 'delivered')
+    // escolhida à mão
+    assert.equal((await s.charter.updateItem(g, f.id, { state: 'late' })).effective_state, 'late')
+  })
+
   it('sem tasks.view a ficha mostra o avanço, mas não os dados das tarefas', async () => {
     const s = await setup()
     const t = await s.newTask('Tela')

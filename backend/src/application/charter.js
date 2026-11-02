@@ -225,11 +225,15 @@ function createCharterService(deps) {
     if (linkedIds.length) {
       const found = (await deps.taskRepository.findManyByIds(linkedIds)).filter((t) => t.projectId === project.id)
       ;(await taskService.summarize(found)).forEach((summary) => {
-        tasks[summary.id] = { summary, category: summary.status ? summary.status.category : null }
+        tasks[summary.id] = { summary, category: summary.status ? summary.status.category : null, due: summary.due_date ? summary.due_date.slice(0, 10) : null }
       })
     }
     const objective = record ? record.objective || '' : ''
-    const evaluated = charter.evaluate(objective, list, (ids) => ids.filter((id) => tasks[id]).map((id) => tasks[id].category), today())
+    const now = today()
+    // tarefa atrasada: aberta (nem concluída nem cancelada) com o prazo antes de hoje
+    const overdue = (task) => task.category !== 'done' && task.category !== 'cancelled' && !!task.due && task.due < now
+    const overdueOf = (ids) => ids.filter((id) => tasks[id] && overdue(tasks[id])).length
+    const evaluated = charter.evaluate(objective, list, (ids) => ids.filter((id) => tasks[id]).map((id) => tasks[id].category), now, overdueOf)
 
     const userIds = unique(list.map((i) => i.ownerId).concat(record && record.updatedBy ? [record.updatedBy] : []).filter(Boolean))
     const users = {}

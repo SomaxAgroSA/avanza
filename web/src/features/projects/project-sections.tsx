@@ -13,6 +13,7 @@ import { useCan } from '@/features/auth/session'
 import { ProjectHealth } from '@/features/plan/PlanHealth'
 import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
 import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
+import { AreaBadge } from '@/features/workflow/area-visuals'
 import { useProjectOutlet } from './project-context'
 import { ProjectChronology } from './ProjectChronology'
 import { ProjectFilesPanel } from './ProjectFilesPanel'
@@ -95,6 +96,9 @@ function Overview({ project }: { project: Project }) {
             </Detail>
             <Detail label={t('tasks.fields.urgency')}>
               <UrgencyLabel urgency={project.urgency} />
+            </Detail>
+            <Detail label={t('tasks.fields.area')}>
+              <AreaBadge area={project.area} />
             </Detail>
             <Detail label={t('projects.fields.owner')}>
               {project.owner ? (

@@ -51,6 +51,7 @@ function createProjectRepository(db) {
     status: ['status', 'text'],
     priority: ['priority', 'text'],
     urgency: ['urgency', 'text'],
+    areaId: ['area_id', 'relation'],
     ownerId: ['owner_id', 'relation'],
     createdBy: ['created_by', 'relation'],
     startDate: ['start_date', 'date'],
@@ -71,6 +72,7 @@ function createProjectRepository(db) {
       status: row.status,
       priority: row.priority,
       urgency: row.urgency || null,
+      areaId: row.area_id || null,
       ownerId: row.owner_id,
       createdBy: row.created_by || '',
       startDate: row.start_date,
@@ -119,6 +121,7 @@ function createProjectRepository(db) {
       if (query.status) where.push(`status = ${param(query.status)}`)
       if (query.priority) where.push(`priority = ${param(query.priority)}`)
       if (query.urgency) where.push(`urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
+      if (query.areaId) where.push(query.areaId === 'none' ? 'area_id IS NULL' : `area_id = ${param(query.areaId)}`)
       if (query.ownerId) where.push(`owner_id = ${param(query.ownerId)}`)
 
       const filter = `WHERE ${where.join(' AND ')}`

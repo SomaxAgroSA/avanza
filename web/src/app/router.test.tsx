@@ -32,6 +32,7 @@ function project(capabilities = MANAGER): Project {
     status: 'active',
     priority: 'medium',
     urgency: null,
+    area: null,
     owner: null,
     startDate: null,
     dueDate: null,

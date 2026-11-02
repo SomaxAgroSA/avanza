@@ -15,7 +15,7 @@
 
 const KINDS = Object.freeze(['objective', 'feature', 'scope_in', 'scope_out', 'result'])
 const OBJECTIVE_STATES = Object.freeze(['auto', 'pending', 'in_progress', 'achieved', 'at_risk'])
-const FEATURE_STATES = Object.freeze(['auto', 'planned', 'in_progress', 'delivered', 'cancelled'])
+const FEATURE_STATES = Object.freeze(['auto', 'planned', 'in_progress', 'late', 'delivered', 'cancelled'])
 const FREQUENCIES = Object.freeze(['none', 'weekly', 'monthly', 'quarterly'])
 const FREQUENCY_DAYS = Object.freeze({ weekly: 7, monthly: 31, quarterly: 92 })
 const SECTIONS = Object.freeze(['objectives', 'features', 'scope', 'results'])
@@ -53,11 +53,16 @@ function taskProgress(categories) {
   return { done, total, started }
 }
 
-function featureState(item, categories) {
+/**
+ * Estado automático da funcionalidade. `overdue` = tarefas vinculadas abertas (nem concluídas nem
+ * canceladas) com o prazo vencido: alguma → atrasada (entregue ganha de atrasada).
+ */
+function featureState(item, categories, overdue) {
   if (item.state && item.state !== 'auto') return item.state
   const progress = taskProgress(categories)
   if (progress.total === 0) return 'planned'
   if (progress.done === progress.total) return 'delivered'
+  if (overdue > 0) return 'late'
   return progress.started > 0 ? 'in_progress' : 'planned'
 }
 
@@ -104,10 +109,11 @@ function objectiveState(item, linked) {
   if (item.state && item.state !== 'auto') return item.state
   const relevant = (linked || []).filter((l) => !(l.kind === 'feature' && l.state === 'cancelled'))
   if (relevant.length === 0) return 'pending'
-  if (relevant.some((l) => l.kind === 'result' && l.state === 'late')) return 'at_risk'
+  // resultado atrasado ou funcionalidade atrasada
+  if (relevant.some((l) => l.state === 'late')) return 'at_risk'
   const finished = (l) => (l.kind === 'feature' ? l.state === 'delivered' : l.state === 'achieved')
   if (relevant.every(finished)) return 'achieved'
-  const moving = (l) => (l.kind === 'feature' ? l.state === 'in_progress' || l.state === 'delivered' : l.state !== 'no_data')
+  const moving = (l) => (l.kind === 'feature' ? l.state === 'in_progress' || l.state === 'late' || l.state === 'delivered' : l.state !== 'no_data')
   return relevant.some(moving) ? 'in_progress' : 'pending'
 }
 
@@ -125,16 +131,17 @@ function completeness(objective, items) {
 
 /**
  * Calcula tudo da ficha. `items` = itens gravados; `categoriesOf(taskIds)` = categorias de status das
- * tarefas vinculadas (as que não existem mais ficam de fora). Devolve os itens com `effectiveState`,
- * `progress`, `situation`, `percent`, `stale`, além da completude e do resumo.
+ * tarefas vinculadas (as que não existem mais ficam de fora); `overdueOf(taskIds)` = quantas delas
+ * estão abertas com o prazo vencido (opcional). Devolve os itens com `effectiveState`, `progress`,
+ * `situation`, `percent`, `stale`, além da completude e do resumo.
  */
-function evaluate(objective, items, categoriesOf, today) {
+function evaluate(objective, items, categoriesOf, today, overdueOf) {
   const computed = items.map((item) => {
     const out = Object.assign({}, item)
     if (item.kind === 'feature') {
       const categories = categoriesOf(item.taskIds || [])
       out.progress = taskProgress(categories)
-      out.effectiveState = featureState(item, categories)
+      out.effectiveState = featureState(item, categories, overdueOf ? overdueOf(item.taskIds || []) : 0)
     } else if (item.kind === 'result') {
       out.situation = resultSituation(item, today)
       out.percent = resultPercent(item)

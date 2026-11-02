@@ -12,6 +12,7 @@ import { TagList } from '@/features/tags/tag-visuals'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { DueDate, TaskCode, TaskIndicators } from '@/features/tasks/task-visuals'
 import { UrgencyBadge } from '@/features/tasks/TaskUrgency'
+import { AreaBadge } from '@/features/workflow/area-visuals'
 
 /** Tipos que não cabem no card (ficam no detalhe). */
 const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
@@ -53,6 +54,8 @@ export function KanbanCardContent({
         {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" iconOnly={compact} />}
       </div>
       <p className={cn('font-medium break-words text-fg', compact ? 'line-clamp-2 text-xs leading-snug' : 'line-clamp-3 text-sm')}>{card.title}</p>
+      {/* área responsável: o selo com o nome (no compacto, menor) */}
+      {card.area && <AreaBadge area={card.area} className={cn('self-start', compact && 'px-1.5 py-0 text-[10px]')} />}
       {fields.length > 0 && (
         <dl className="flex flex-col gap-0.5 text-xs">
           {fields.map(({ field, value }) => (

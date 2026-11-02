@@ -78,6 +78,17 @@ describe('mcp/catalog config e admin', () => {
     assert.deepEqual(remove.calls[0], { service: 'priorities', method: 'delete', args: ['p1'] })
   })
 
+  it('áreas: sem padrão no esquema, o id sai do corpo e a reordenação leva a lista de ids', async () => {
+    assert.deepEqual((await run('list_areas', { include_inactive: true })).calls[0], { service: 'areas', method: 'list', args: [{ include_inactive: '1' }] })
+    assert.deepEqual(validateArguments({ key: 'TI', name: 'Dpto. TI', is_default: true }, byName('create_area').inputSchema), { is_default: 'unknown_field' })
+    const create = await run('create_area', { key: 'TI', name: 'Dpto. TI', color: 'blue' })
+    assert.deepEqual(create.calls[0], { service: 'areas', method: 'create', args: [{ key: 'TI', name: 'Dpto. TI', color: 'blue' }] })
+    const update = await run('update_area', { area_id: 'a1', is_active: false })
+    assert.deepEqual(update.calls[0], { service: 'areas', method: 'update', args: ['a1', { is_active: false }] })
+    assert.deepEqual((await run('delete_area', { area_id: 'a1' })).calls[0], { service: 'areas', method: 'delete', args: ['a1'] })
+    assert.deepEqual((await run('reorder_areas', { ids: ['a2', 'a1'] })).calls[0], { service: 'areas', method: 'reorder', args: [['a2', 'a1']] })
+  })
+
   it('tipos de tarefa: campos do tipo, reordenação e histórico paginado', async () => {
     const fields = [{ field_id: 'f1', required: false, required_status_ids: ['s3'] }]
     assert.deepEqual(validateArguments({ task_type_id: 't1', fields }, byName('set_task_type_fields').inputSchema), {})

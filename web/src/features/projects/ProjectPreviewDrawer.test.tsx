@@ -17,6 +17,7 @@ const project = {
   status: 'active',
   priority: 'medium',
   urgency: null,
+  area: null,
   icon: 'folder',
   cover: 'violet',
   owner: { id: 'u1', name: 'Administrador', email: 'admin@x.com', avatarUrl: null },

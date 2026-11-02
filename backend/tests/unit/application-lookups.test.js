@@ -109,3 +109,35 @@ describe('application/lookups (status e prioridades)', () => {
     assert.equal(await codeOf(() => statuses.create(member, { key: 'X1', name: 'X', category: 'todo', color: 'gray' })), 'FORBIDDEN')
   })
 })
+
+describe('application/lookups — áreas responsáveis (sem padrão, §32)', () => {
+  it('cria sem padrão, ignora is_default e não exclui área em uso por tarefa ou projeto', async () => {
+    const { deps, admin, member } = await setup()
+    const areas = createLookupService(deps, 'area')
+    const ti = await areas.create(admin, { key: 'ti', name: 'Dpto. TI', color: 'blue', is_default: true })
+    const mkt = await areas.create(admin, { key: 'MARKETING', name: 'Marketing', color: 'pink' })
+    assert.deepEqual([ti.key, ti.is_default, mkt.is_default], ['TI', false, false])
+    assert.equal((await areas.update(admin, ti.id, { is_active: false, is_default: true })).is_active, false)
+    assert.equal(deps.store.audit.at(-1).newValue.is_default, undefined)
+    assert.deepEqual((await areas.list(member, {})).map((a) => a.key), ['MARKETING'])
+
+    deps.store.projects.push({ id: 'p1', areaId: mkt.id })
+    assert.equal(await codeOf(() => areas.delete(admin, mkt.id)), 'AREA_IN_USE')
+    deps.store.lookupTaskCounts[ti.id] = 2
+    assert.equal(await codeOf(() => areas.delete(admin, ti.id)), 'AREA_IN_USE')
+    deps.store.lookupTaskCounts[ti.id] = 0
+    assert.deepEqual(await areas.delete(admin, ti.id), { deleted: true })
+    assert.equal(await codeOf(() => areas.create(member, { key: 'X', name: 'X' })), 'FORBIDDEN')
+    assert.equal(deps.store.audit.at(-1).action, 'area.deleted')
+    assert.equal(await codeOf(() => areas.get(admin, 'nada')), 'AREA_NOT_FOUND')
+  })
+
+  it('em uso: detalhes com tarefas e projetos', async () => {
+    const { deps, admin } = await setup()
+    const areas = createLookupService(deps, 'area')
+    const ti = await areas.create(admin, { key: 'TI', name: 'Dpto. TI' })
+    deps.store.projects.push({ id: 'p1', areaId: ti.id })
+    deps.store.lookupTaskCounts[ti.id] = 3
+    await assert.rejects(() => areas.delete(admin, ti.id), (err) => err.code === 'AREA_IN_USE' && err.details.tasks === 3 && err.details.projects === 1)
+  })
+})

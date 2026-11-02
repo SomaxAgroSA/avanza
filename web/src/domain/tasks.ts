@@ -3,7 +3,7 @@ import type { PlanItemRef } from './plan'
 import type { SprintRef } from './sprints'
 import type { UserSummary } from './projects'
 import { isRequiredIn, valueIssue, type FieldValue, type OptionColor, type TaskTypeField, type TaskTypeIcon } from './task-config'
-import type { StatusCategory } from './workflow'
+import type { AreaRef, StatusCategory } from './workflow'
 import type { Urgency } from './urgency'
 
 export interface TaskStatusRef {
@@ -91,6 +91,8 @@ export interface TaskSummary {
   inReport: boolean
   /** Urgência (semáforo); null = sem urgência. */
   urgency: Urgency | null
+  /** Área responsável; null = sem área. */
+  area: AreaRef | null
 }
 
 export interface TaskCapabilities {
@@ -149,6 +151,8 @@ export interface TaskInput {
   parentTaskId?: string | null
   /** Elemento ou subelemento da Gestão do mesmo projeto (null desvincula). */
   planItemId?: string | null
+  /** Área responsável ativa (null limpa). */
+  areaId?: string | null
 }
 
 // ---------------------------------------------------------------- menções (@)

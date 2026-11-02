@@ -12,7 +12,7 @@ export type CharterKind = (typeof CHARTER_KINDS)[number]
 export const OBJECTIVE_STATES = ['pending', 'in_progress', 'achieved', 'at_risk'] as const
 export type ObjectiveState = (typeof OBJECTIVE_STATES)[number]
 
-export const FEATURE_STATES = ['planned', 'in_progress', 'delivered', 'cancelled'] as const
+export const FEATURE_STATES = ['planned', 'in_progress', 'late', 'delivered', 'cancelled'] as const
 export type FeatureState = (typeof FEATURE_STATES)[number]
 
 export const RESULT_SITUATIONS = ['achieved', 'on_track', 'late', 'no_data'] as const
@@ -140,7 +140,7 @@ export const itemsOf = <K extends CharterKind>(charter: ProjectCharter, kind: K)
 type Tone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
 export const OBJECTIVE_TONE: Record<ObjectiveState, Tone> = { pending: 'neutral', in_progress: 'info', achieved: 'success', at_risk: 'warning' }
-export const FEATURE_TONE: Record<FeatureState, Tone> = { planned: 'neutral', in_progress: 'info', delivered: 'success', cancelled: 'danger' }
+export const FEATURE_TONE: Record<FeatureState, Tone> = { planned: 'neutral', in_progress: 'info', late: 'warning', delivered: 'success', cancelled: 'danger' }
 export const SITUATION_TONE: Record<ResultSituation, Tone> = { achieved: 'success', on_track: 'info', late: 'warning', no_data: 'neutral' }
 
 /** Texto do valor com a unidade ("68 %", "46 pessoas"); null = "—". */

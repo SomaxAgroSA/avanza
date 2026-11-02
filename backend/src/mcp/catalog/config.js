@@ -1,6 +1,6 @@
 /**
- * Ferramentas MCP da configuração das tarefas (Configurações → Fluxo, Prioridades, Tipos de tarefa,
- * Campos personalizados e Tags): status, prioridades, tipos e os campos de cada tipo, a biblioteca de
+ * Ferramentas MCP da configuração das tarefas (Configurações → Fluxo, Prioridades, Áreas, Tipos de tarefa,
+ * Campos personalizados e Tags): status, prioridades, áreas, tipos e os campos de cada tipo, a biblioteca de
  * campos e as tags. Cada ferramenta delega para o caso de uso da rota equivalente (http/routes.js);
  * permissões, validação e histórico são os dos casos de uso. A leitura do dia a dia (ids ativos) fica
  * em get_task_settings/get_task_type (catalog/work.js).
@@ -12,6 +12,7 @@ const { READ, ADD, CHANGE, DELETE, schema, id, ids, text, oneOf, bool, int, colo
 
 const STATUS_ID = id('Status id (from list_statuses).')
 const PRIORITY_ID = id('Priority id (from list_priorities).')
+const AREA_ID = id('Responsible area id (from list_areas).')
 const TASK_TYPE_ID = id('Task type id (from list_task_types).')
 const FIELD_ID = id('Custom field id (from list_custom_fields).')
 const TAG_ID = id('Tag id (from get_task_settings).')
@@ -26,6 +27,14 @@ const LOOKUP_FIELDS = {
   color: color(),
   is_active: bool('Inactive items stay on existing tasks but cannot be chosen for new ones. The default item must stay active.'),
   is_default: bool('Make it the default for new tasks (exactly one default; the previous one stops being default).'),
+}
+
+/** Área responsável: mesmos campos, sem padrão (tarefa e projeto podem ficar sem área). */
+const AREA_FIELDS = {
+  name: text(60, 'Display name.'),
+  description: text(255, 'Short description.'),
+  color: color(),
+  is_active: bool('Inactive areas stay on existing tasks and projects but cannot be chosen for new ones.'),
 }
 
 const STATUS_FIELDS = Object.assign({}, LOOKUP_FIELDS, {
@@ -203,6 +212,48 @@ const TOOLS = [
     inputSchema: schema({ ids: ids(200, 'All priority ids in the new order.') }, ['ids']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.priorities.reorder(ctx, args.ids),
+  },
+
+  // ---------------------------------------------------------------- áreas responsáveis
+  {
+    name: 'list_areas',
+    title: 'List responsible areas',
+    description: 'Lists the responsible areas of tasks and projects in order: key, name, color and active flag (no default: tasks and projects may have no area). Requires tasks.view or settings.manage.',
+    inputSchema: schema({ include_inactive: INCLUDE_INACTIVE }),
+    annotations: READ,
+    run: (args, { services, ctx }) => services.areas.list(ctx, includeInactive(args)),
+  },
+  {
+    name: 'create_area',
+    title: 'Create responsible area',
+    description: 'Creates a responsible area (added at the end) that tasks and projects can use. Requires settings.manage.',
+    inputSchema: schema(Object.assign({ key: KEY }, AREA_FIELDS), ['key', 'name']),
+    annotations: ADD,
+    run: (args, { services, ctx }) => services.areas.create(ctx, args),
+  },
+  {
+    name: 'update_area',
+    title: 'Update responsible area',
+    description: 'Changes a responsible area (only the fields sent; the key cannot change). Requires settings.manage.',
+    inputSchema: schema(Object.assign({ area_id: AREA_ID }, AREA_FIELDS), ['area_id']),
+    annotations: CHANGE,
+    run: (args, { services, ctx }) => services.areas.update(ctx, args.area_id, without(args, 'area_id')),
+  },
+  {
+    name: 'delete_area',
+    title: 'Delete responsible area',
+    description: 'Deletes a responsible area. Refused while tasks or projects use it (AREA_IN_USE with the counts; deactivate it instead). Requires settings.manage. Confirm with the user first.',
+    inputSchema: schema({ area_id: AREA_ID }, ['area_id']),
+    annotations: DELETE,
+    run: (args, { services, ctx }) => services.areas.delete(ctx, args.area_id),
+  },
+  {
+    name: 'reorder_areas',
+    title: 'Reorder responsible areas',
+    description: 'Sets the order of the responsible areas (lists and filters). Send every area id exactly once, inactive ones included. Requires settings.manage.',
+    inputSchema: schema({ ids: ids(200, 'All area ids in the new order.') }, ['ids']),
+    annotations: CHANGE,
+    run: (args, { services, ctx }) => services.areas.reorder(ctx, args.ids),
   },
 
   // ---------------------------------------------------------------- tipos de tarefa

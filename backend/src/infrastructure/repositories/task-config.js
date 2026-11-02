@@ -320,16 +320,18 @@ function createTaskTypeFieldRepository(db) {
   }
 }
 
-// erros de cada cadastro (chave repetida; em uso pelas tarefas)
+// erros de cada cadastro (chave repetida; em uso pelas tarefas — e pelos projetos, na área)
 const LOOKUP_ERRORS = {
   task_statuses: { keyInUse: 'STATUS_KEY_IN_USE', inUse: 'STATUS_IN_USE' },
   task_priorities: { keyInUse: 'PRIORITY_KEY_IN_USE', inUse: 'PRIORITY_IN_USE' },
+  areas: { keyInUse: 'AREA_KEY_IN_USE', inUse: 'AREA_IN_USE' },
 }
 
 /**
- * Status e prioridades: mesmas colunas; status têm ainda categoria, limite WIP e destinos permitidos.
- * @param {string} table 'task_statuses' | 'task_priorities'
- * @param {{ hasCategory: boolean, taskColumn: string }} options coluna de `tasks` que referencia o cadastro
+ * Status, prioridades e áreas: mesmas colunas; status têm ainda categoria, limite WIP e destinos permitidos.
+ * @param {string} table 'task_statuses' | 'task_priorities' | 'areas'
+ * @param {{ hasCategory: boolean, taskColumn: string, projectColumn?: string }} options colunas de `tasks`
+ *   (e de `projects`, na área) que referenciam o cadastro
  */
 function createLookupRepository(db, _ctx, table, options) {
   const TABLE = ident(table)
@@ -352,6 +354,7 @@ function createLookupRepository(db, _ctx, table, options) {
   const VIOLATIONS = {}
   if (errors.keyInUse) VIOLATIONS[`idx_${table}_key`] = errors.keyInUse
   if (errors.inUse) VIOLATIONS[`fk_tasks_${options.taskColumn}`] = errors.inUse
+  if (errors.inUse && options.projectColumn) VIOLATIONS[`fk_projects_${options.projectColumn}`] = errors.inUse
 
   function toEntity(row) {
     const entity = {
@@ -374,7 +377,7 @@ function createLookupRepository(db, _ctx, table, options) {
     return entity
   }
 
-  return {
+  const repo = {
     async findById(id) {
       const row = await findRow(db, table, id)
       return row ? toEntity(row) : null
@@ -417,6 +420,12 @@ function createLookupRepository(db, _ctx, table, options) {
       return (await db.one(`SELECT count(*) AS total FROM tasks WHERE ${taskColumn} = $1`, [id])).total
     },
   }
+  // a área também é usada por projetos: em uso por eles, não se exclui
+  if (options.projectColumn) {
+    const projectColumn = ident(options.projectColumn)
+    repo.countProjects = async (id) => (await db.one(`SELECT count(*) AS total FROM projects WHERE ${projectColumn} = $1`, [id])).total
+  }
+  return repo
 }
 
 function createTagRepository(db) {

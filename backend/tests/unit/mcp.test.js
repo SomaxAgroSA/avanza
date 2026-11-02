@@ -210,6 +210,7 @@ describe('mcp/tools', () => {
       priority: { id: 'pr', name: 'Alta' }, sprint: null, assignee: { id: 'u2', name: 'Ana', email: 'ana@x', avatar_url: null },
       tags: [{ id: 'g', name: 'api', color: 'red' }], due_date: '2026-11-01T00:00:00.000Z', blocked: false,
       checklist_progress: { done: 0, total: 0 }, comment_count: 3, urgency: 'high', in_report: false,
+      area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' },
     }
     const { calls, services } = spyServices({ 'tasks.listTasks': { items: [summary], meta: { page: 1, perPage: 5, total: 1, totalPages: 1 } } })
     const out = await byName('list_tasks').run({ project_id: 'p1', categories: ['todo', 'in_progress'], assignee_id: 'me', urgency: 'none', in_report: false, per_page: 5 }, { services, ctx })
@@ -217,7 +218,7 @@ describe('mcp/tools', () => {
     assert.deepEqual(out.meta, { page: 1, perPage: 5, total: 1, totalPages: 1 })
     assert.deepEqual(out.items[0], {
       id: 't1', code: 'CRM-1', title: 'Tarefa', project: 'CRM', type: 'Bug', status: { id: 's1', name: 'A fazer', category: 'todo' },
-      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', in_report: false, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
+      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', area: { id: 'a1', name: 'Dpto. TI' }, in_report: false, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
       tags: ['api'], blocked: false, parent_task_id: null, updated_at: null,
     })
   })
@@ -246,6 +247,29 @@ describe('mcp/tools', () => {
     await byName('list_projects').run({ urgency: 'high' }, { services, ctx })
     await byName('update_project').run({ project_id: 'p1', urgency: null }, { services, ctx })
     assert.deepEqual(calls.map((c) => c.args), [[{ urgency: 'high' }], ['p1', { urgency: null }]])
+  })
+
+  it('área responsável: nas tarefas e nos projetos (criar, editar com null para limpar e filtrar com none)', async () => {
+    const { validateArguments: check } = require('../../src/mcp/schema')
+    ;['create_task', 'create_project'].forEach((name) => {
+      assert.equal(check({ area_id: 'a1' }, byName(name).inputSchema).area_id, undefined, name)
+      assert.equal(check({ area_id: null }, byName(name).inputSchema).area_id, 'invalid_type', name)
+    })
+    ;['update_task', 'update_project'].forEach((name) => assert.equal(check({ area_id: null }, byName(name).inputSchema).area_id, undefined, name))
+    ;['list_tasks', 'list_projects'].forEach((name) => assert.equal(check({ area_id: 'none' }, byName(name).inputSchema).area_id, undefined, name))
+    const { calls, services } = spyServices({ 'projects.listProjects': { items: [], meta: {} }, 'tasks.listTasks': { items: [], meta: {} } })
+    await byName('list_projects').run({ area_id: 'none' }, { services, ctx })
+    await byName('update_project').run({ project_id: 'p1', area_id: null }, { services, ctx })
+    await byName('list_tasks').run({ area_id: 'a1' }, { services, ctx })
+    await byName('update_task').run({ task_id: 't1', area_id: 'a2' }, { services, ctx })
+    assert.deepEqual(calls.map((c) => c.args), [[{ area_id: 'none' }], ['p1', { area_id: null }], [{ area_id: 'a1' }], ['t1', { area_id: 'a2' }]])
+  })
+
+  it('get_task_settings: status, prioridades, áreas, tipos e tags ativos', async () => {
+    const { calls, services } = spyServices({ 'areas.list': [{ id: 'a1' }] })
+    const out = await byName('get_task_settings').run({}, { services, ctx })
+    assert.deepEqual(out.areas, [{ id: 'a1' }])
+    assert.ok(calls.some((c) => c.service === 'areas' && c.method === 'list'))
   })
 
   it('get_board: cards enxutos e no máximo `limit_per_column` por coluna', async () => {

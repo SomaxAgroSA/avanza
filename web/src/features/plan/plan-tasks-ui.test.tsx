@@ -106,6 +106,7 @@ const summary = (id: string, number: number, title: string, extra: Partial<TaskS
   blocked: false,
   inReport: true,
   urgency: null,
+  area: null,
   planItem: null,
   ...extra,
 })

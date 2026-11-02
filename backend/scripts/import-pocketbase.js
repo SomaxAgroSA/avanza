@@ -20,6 +20,8 @@ const { loadEnv } = require('./env')
 
 // colunas internas da collection de autenticação que não existem no Postgres
 const SKIP_AUTH = new Set(['tokenKey', 'emailVisibility', 'verified'])
+// campos de texto no PocketBase que no Postgres são relação (vazio = NULL): a área responsável (§32)
+const TEXT_RELATIONS = new Set(['area_id'])
 const MIME = {
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', ico: 'image/x-icon',
   pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', json: 'application/json', zip: 'application/zip',
@@ -99,7 +101,7 @@ function columnsOf(collection) {
           convert = multi ? (v) => jsonText(v, '[]') : (v) => (v === null || v === undefined ? '' : String(v))
           break
         default:
-          convert = (v) => (v === null || v === undefined ? '' : String(v))
+          convert = TEXT_RELATIONS.has(f.name) ? (v) => (v ? String(v) : null) : (v) => (v === null || v === undefined ? '' : String(v))
       }
       return { name, source: f.name, type: f.type, multi, convert }
     })

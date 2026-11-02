@@ -94,6 +94,7 @@ const detail: TaskDetail = {
   blocked: false,
   inReport: true,
   urgency: null,
+  area: null,
   planItem: { id: 'i1', name: 'Kickoff' },
   description: '',
   customValues: {},

@@ -1,8 +1,9 @@
 /**
- * Status e prioridades de tarefas (listas configuráveis pelo administrador).
+ * Status e prioridades de tarefas e áreas responsáveis (listas configuráveis pelo administrador).
  *
- * As duas listas compartilham as mesmas regras: chave imutável, ordem, cor, ativo e
- * exatamente um item padrão (usado ao criar tarefas), sempre ativo.
+ * As listas compartilham as mesmas regras: chave imutável, ordem, cor, ativo e
+ * exatamente um item padrão (usado ao criar tarefas), sempre ativo. A área não tem padrão (`noDefault`):
+ * tarefa e projeto podem ficar sem área (§32).
  * O status tem ainda uma categoria, que dá significado ao fluxo independentemente do nome
  * escolhido (ex.: "Produção" e "Concluído" podem ser da categoria `done`).
  */
@@ -24,6 +25,14 @@ const LOOKUP_KINDS = Object.freeze({
     repository: 'priorityRepository',
     hasCategory: false,
     errors: { notFound: 'PRIORITY_NOT_FOUND', keyInUse: 'PRIORITY_KEY_IN_USE', inUse: 'PRIORITY_IN_USE', isDefault: 'PRIORITY_IS_DEFAULT' },
+  },
+  // em uso = por tarefas ou por projetos (`countProjects` no repositório); sem padrão, `isDefault` nunca ocorre
+  area: {
+    entityType: 'area',
+    repository: 'areaRepository',
+    hasCategory: false,
+    noDefault: true,
+    errors: { notFound: 'AREA_NOT_FOUND', keyInUse: 'AREA_KEY_IN_USE', inUse: 'AREA_IN_USE', isDefault: 'AREA_NOT_FOUND' },
   },
 })
 

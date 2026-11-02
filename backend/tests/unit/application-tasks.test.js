@@ -415,3 +415,60 @@ describe('application/tasks — urgência (semáforo)', () => {
     assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, task.id, { urgency: 'roja' })), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
   })
 })
+
+describe('application/tasks — área responsável (§32)', () => {
+  async function withAreas(s) {
+    const areas = createLookupService(s.deps, 'area')
+    const ti = await areas.create(s.ctx.admin, { key: 'TI', name: 'Dpto. TI', color: 'blue' })
+    const mkt = await areas.create(s.ctx.admin, { key: 'MKT', name: 'Marketing', color: 'pink' })
+    return { ti, mkt, areas }
+  }
+
+  it('nasce com a área do formulário; muda pela lista com histórico; null limpa; filtra (none = sem área)', async () => {
+    const s = await setup()
+    const { ti, mkt } = await withAreas(s)
+    const a = await s.tasks.createTask(s.ctx.mario, newBug(s, { area_id: ti.id }))
+    const b = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Outra' }))
+    assert.deepEqual([a.area, b.area], [{ id: ti.id, key: 'TI', name: 'Dpto. TI', color: 'blue' }, null])
+    assert.equal(s.deps.store.audit.find((e) => e.action === 'task.created' && e.entityId === a.id).newValue.area, 'Dpto. TI')
+
+    assert.equal((await s.tasks.setTaskArea(s.ctx.mario, b.id, { area_id: mkt.id })).area.name, 'Marketing')
+    const audit = s.deps.store.audit.at(-1)
+    assert.deepEqual([audit.action, audit.oldValue, audit.newValue], ['task.updated', { area: null }, { area: 'Marketing' }])
+    const before = s.deps.store.audit.length
+    await s.tasks.setTaskArea(s.ctx.mario, b.id, { area_id: mkt.id })
+    assert.equal(s.deps.store.audit.length, before)
+
+    const codes = async (value) => (await s.tasks.listTasks(s.ctx.mario, { project_id: s.project.id, area_id: value })).items.map((t) => t.code)
+    assert.deepEqual(await codes(mkt.id), [b.code])
+    assert.equal((await s.tasks.setTaskArea(s.ctx.mario, a.id, { area_id: null })).area, null)
+    assert.deepEqual(await codes('none'), [a.code])
+    assert.equal(await codeOf(() => codes('a b')), 'VALIDATION_ERROR:{"area_id":"invalid_type"}')
+  })
+
+  it('valida área ativa e acesso; não exige os campos do status', async () => {
+    const s = await setup()
+    const { ti, areas } = await withAreas(s)
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    await s.deps.taskValueRepository.replace(task.id, {}, {})
+    assert.equal((await s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: ti.id })).area.key, 'TI')
+    await areas.update(s.ctx.admin, ti.id, { is_active: false })
+    // a área que a tarefa já tem continua valendo, mesmo inativa
+    assert.equal(await codeOf(() => s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: ti.id })), 'OK')
+    assert.equal(await codeOf(() => s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: 'nada' })), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
+    assert.equal(await codeOf(() => s.tasks.setTaskArea(s.ctx.mario, task.id, {})), 'VALIDATION_ERROR:{"area_id":"invalid_type"}')
+    assert.equal(await codeOf(() => s.tasks.setTaskArea(s.ctx.lia, task.id, { area_id: null })), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.tasks.setTaskArea(s.ctx.outsider, task.id, { area_id: null })), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.mario, newBug(s, { area_id: ti.id }))), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
+  })
+
+  it('também na edição completa (null limpa), com o nome da área no histórico', async () => {
+    const s = await setup()
+    const { ti, mkt } = await withAreas(s)
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s, { area_id: ti.id }))
+    assert.equal((await s.tasks.updateTask(s.ctx.mario, task.id, { area_id: mkt.id })).area.name, 'Marketing')
+    assert.deepEqual([s.deps.store.audit.at(-1).oldValue, s.deps.store.audit.at(-1).newValue], [{ area: 'Dpto. TI' }, { area: 'Marketing' }])
+    assert.equal((await s.tasks.updateTask(s.ctx.mario, task.id, { area_id: null })).area, null)
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, task.id, { area_id: 'nada' })), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
+  })
+})

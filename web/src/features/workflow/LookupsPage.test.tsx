@@ -3,9 +3,9 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import type { LookupRepository } from '@/domain/repositories'
-import type { TaskStatus } from '@/domain/workflow'
+import type { Area, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, renderRoutes } from '@/test/utils'
-import { StatusesPage } from './LookupsPage'
+import { AreasPage, StatusesPage } from './LookupsPage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -99,5 +99,57 @@ describe('StatusesPage', () => {
     await userEvent.click(within(dialog).getByRole('switch', { name: /^Padrão/ }))
     expect(active).toBeChecked()
     expect(active).toBeDisabled()
+  })
+})
+
+describe('AreasPage (áreas responsáveis, sem padrão)', () => {
+  const area = (overrides: Partial<Area>): Area => ({
+    id: 'a1',
+    key: 'TI',
+    name: 'Dpto. TI',
+    description: '',
+    color: 'blue',
+    order: 0,
+    isActive: true,
+    isDefault: false,
+    createdAt: null,
+    updatedAt: null,
+    ...overrides,
+  })
+  const ti = area({})
+  const comex = area({ id: 'a2', key: 'COMEX', name: 'Comex', color: 'teal', order: 1 })
+
+  function setupAreas() {
+    const update = vi.fn<LookupRepository<Area>['update']>(() => Promise.resolve(comex))
+    const create = vi.fn<LookupRepository<Area>['create']>(() => Promise.resolve(comex))
+    const repositories = fakeRepositories({ areas: { list: () => Promise.resolve([ti, comex]), update, create } })
+    renderRoutes([{ path: '/settings/areas', element: <AreasPage /> }], { repositories, initialPath: '/settings/areas' })
+    return { update, create }
+  }
+
+  it('lista as áreas sem "Padrão" e sem a ação "Tornar padrão"; desativar e excluir ficam', async () => {
+    const { update } = setupAreas()
+    expect(await screen.findByText('Comex')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Áreas' })).toBeInTheDocument()
+    expect(screen.queryByText('Padrão')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Ações de Dpto. TI' }))
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).queryByRole('menuitem', { name: 'Tornar padrão' })).not.toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Excluir' })).toBeInTheDocument()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Desativar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('a1', { isActive: false }))
+  })
+
+  it('cria área sem o interruptor de padrão (o campo nem vai)', async () => {
+    const { create } = setupAreas()
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova área' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).queryByRole('switch', { name: /Padrão/ })).not.toBeInTheDocument()
+    await userEvent.type(within(dialog).getByLabelText(/^Nome/), 'Jurídico')
+    expect(within(dialog).getByLabelText(/^Chave/)).toHaveValue('JURIDICO')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ key: 'JURIDICO', name: 'Jurídico', isActive: true })
+    expect(create.mock.calls[0]?.[0]).not.toHaveProperty('isDefault')
   })
 })

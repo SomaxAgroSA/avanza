@@ -106,6 +106,7 @@ function createContainer(runtime, options) {
     taskTypes: createTaskTypeService(deps),
     statuses: createLookupService(deps, 'status'),
     priorities: createLookupService(deps, 'priority'),
+    areas: createLookupService(deps, 'area'),
     tasks: createTaskService(deps),
     tags: createTagService(deps),
     iconLibrary: createIconLibraryService(deps),

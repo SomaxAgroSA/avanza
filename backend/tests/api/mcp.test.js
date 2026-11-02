@@ -224,6 +224,15 @@ describe('API MCP', { timeout: 180000 }, () => {
     assert.deepEqual(filtered.data.items.map((t) => [t.code, t.urgency, t.in_report]), [[task.code, 'high', false]])
     assert.equal((await tool('update_project', { project_id: project.id, urgency: 'medium' })).data.urgency, 'medium')
     assert.ok((await tool('list_projects', { urgency: 'medium' })).data.items.some((p) => p.id === project.id))
+    // área responsável: o id sai de get_task_settings
+    const settings = await tool('get_task_settings', {})
+    const ti = settings.data.areas.find((a) => a.key === 'TI')
+    assert.ok(ti, JSON.stringify(settings.data.areas))
+    assert.equal((await tool('update_task', { task_id: task.id, area_id: ti.id })).data.area.name, 'Dpto. TI')
+    assert.deepEqual((await tool('list_tasks', { project_id: project.id, area_id: ti.id })).data.items.map((t) => [t.code, t.area]), [[task.code, { id: ti.id, name: 'Dpto. TI' }]])
+    assert.equal((await tool('update_project', { project_id: project.id, area_id: ti.id })).data.area.key, 'TI')
+    assert.ok((await tool('list_projects', { area_id: ti.id })).data.items.some((p) => p.id === project.id))
+    assert.equal((await tool('update_project', { project_id: project.id, area_id: null })).data.area, null)
 
     // o Gil (gestor) não administra a plataforma; o administrador sim
     const denied = await tool('create_tag', { name: 'via-claude' })
@@ -233,6 +242,12 @@ describe('API MCP', { timeout: 180000 }, () => {
     const asAdmin = { Authorization: `Bearer ${adminToken}` }
     const tag = await tool('create_tag', { name: 'via-claude', color: 'teal' }, asAdmin)
     assert.equal(tag.isError, false, JSON.stringify(tag.data))
+    const area = await tool('create_area', { key: 'JURIDICO', name: 'Jurídico', color: 'violet' }, asAdmin)
+    assert.equal(area.isError, false, JSON.stringify(area.data))
+    assert.equal((await tool('update_area', { area_id: area.data.id, is_active: false }, asAdmin)).data.is_active, false)
+    assert.ok((await tool('list_areas', { include_inactive: true }, asAdmin)).data.some((a) => a.key === 'JURIDICO'))
+    assert.equal((await tool('delete_area', { area_id: ti.id }, asAdmin)).data.error.code, 'AREA_IN_USE')
+    assert.equal((await tool('delete_area', { area_id: area.data.id }, asAdmin)).isError, false)
     const users = await tool('list_users', { search: 'gil' }, asAdmin)
     assert.deepEqual(users.data.items.map((u) => u.email), ['gil@example.com'])
     // documentação: o Claude escreve e lê em Markdown

@@ -70,6 +70,13 @@ function setup(data: ProjectCharter = charter()) {
 }
 
 describe('Ficha del proyecto', () => {
+  it('funcionalidad retrasada: estado "Retrasada" (calculado por una tarea vencida) y el objetivo en riesgo', async () => {
+    const late = items.map((item) => (item.kind === 'feature' ? { ...item, effectiveState: 'late' as const } : item))
+    setup(charter({ items: late }))
+    expect(await screen.findByText('Retrasada')).toBeInTheDocument()
+    expect(screen.getByText('En riesgo')).toBeInTheDocument()
+  })
+
   it('muestra el resumen y las cuatro secciones con el avance calculado', async () => {
     setup()
     expect(await screen.findByText('Centralizar la gestión comercial')).toBeInTheDocument()

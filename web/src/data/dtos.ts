@@ -80,6 +80,8 @@ export interface ProjectDto {
   priority: string
   /** 'high' | 'medium' | 'low' | null */
   urgency?: string | null
+  /** Área responsável (lista de /areas); null = sem área. */
+  area?: AreaRefDto | null
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
@@ -171,6 +173,16 @@ export interface TaskDto {
   in_report?: boolean
   /** 'high' | 'medium' | 'low' | null */
   urgency?: string | null
+  /** Área responsável (lista de /areas); null = sem área. */
+  area?: AreaRefDto | null
+}
+
+/** Área resumida que vem na tarefa e no projeto. */
+export interface AreaRefDto {
+  id: string
+  key: string
+  name: string
+  color: string
 }
 
 export interface PlanStatusDto {

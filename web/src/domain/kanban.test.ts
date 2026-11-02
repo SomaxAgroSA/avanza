@@ -57,6 +57,7 @@ function card(id: string, extra: Partial<BoardCard> = {}): BoardCard {
     blocked: false,
     inReport: true,
     urgency: null,
+    area: null,
     sprint: null,
     cardFields: [],
     ...extra,
@@ -91,6 +92,15 @@ describe('domain/kanban', () => {
     expect(matchesFilters(card('6', { urgency: null }), { ...EMPTY_FILTERS, urgency: 'none' }, 'u1')).toBe(true)
     expect(matchesFilters(card('7', { urgency: 'medium' }), { ...EMPTY_FILTERS, urgency: 'none' }, 'u1')).toBe(false)
     expect(matchesFilters(card('8', { urgency: 'medium' }), EMPTY_FILTERS, 'u1')).toBe(true)
+  })
+
+  it('filtra por área: a área escolhida ou sem área', () => {
+    const ti = { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' as const }
+    expect(matchesFilters(card('4', { area: ti }), { ...EMPTY_FILTERS, area: 'a1' }, 'u1')).toBe(true)
+    expect(matchesFilters(card('5', { area: ti }), { ...EMPTY_FILTERS, area: 'a2' }, 'u1')).toBe(false)
+    expect(matchesFilters(card('6', { area: null }), { ...EMPTY_FILTERS, area: 'none' }, 'u1')).toBe(true)
+    expect(matchesFilters(card('7', { area: ti }), { ...EMPTY_FILTERS, area: 'none' }, 'u1')).toBe(false)
+    expect(matchesFilters(card('8', { area: ti }), EMPTY_FILTERS, 'u1')).toBe(true)
   })
 
   it('contêineres por raia × coluna', () => {

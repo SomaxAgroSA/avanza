@@ -32,7 +32,8 @@ import { useSession } from '@/features/auth/session'
 import { useProjectMembers } from '@/features/projects/queries'
 import { ProjectTaskViewsNav } from '@/features/projects/ProjectTaskViewsNav'
 import { useTaskTypes } from '@/features/task-config/queries'
-import { usePriorities, useStatuses } from '@/features/workflow/queries'
+import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
+import { useAreaFilterOptions } from '@/features/workflow/area-options'
 import { useTags } from '@/features/tags/queries'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
 import { TaskFormDialog, type TaskFormInitial } from '@/features/tasks/TaskFormDialog'
@@ -73,6 +74,8 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
   const types = useTaskTypes(false)
   const tags = useTags()
   const urgencyOptions = useUrgencyFilterOptions()
+  const areas = useAreas(false)
+  const areaOptions = useAreaFilterOptions(areas.data)
 
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
   const [sort, setSortState] = useState<BacklogSort>(() => {
@@ -321,7 +324,7 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
   }
 
   // mesmo filtro das listagens: parado mostra só o nome; ativo fica verde com "Nome: valor"
-  const filterSelect = (key: 'assignee' | 'type' | 'priority' | 'urgency' | 'tag', label: string, options: Array<{ value: string; label: string }>) => (
+  const filterSelect = (key: 'assignee' | 'type' | 'priority' | 'urgency' | 'area' | 'tag', label: string, options: Array<{ value: string; label: string }>) => (
     <FilterSelect key={key} filter={{ id: key, label, options }} value={filters[key] || undefined} onChange={(value) => setFilters((f) => ({ ...f, [key]: value ?? '' }))} />
   )
 
@@ -383,6 +386,7 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
                   (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
                 {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
+                {filterSelect('area', t('tasks.fields.area'), areaOptions)}
                 {filterSelect(
                   'tag',
                   t('tasks.fields.tags'),

@@ -167,5 +167,13 @@ export function useTaskMutations() {
         invalidate()
       },
     }),
+    /** Área responsável direto da lista (não exige os obrigatórios do status). */
+    setArea: useMutation({
+      mutationFn: ({ id, areaId }: { id: string; areaId: string | null }) => tasks.setArea(id, areaId),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
   }
 }

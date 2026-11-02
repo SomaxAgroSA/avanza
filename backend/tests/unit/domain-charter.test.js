@@ -20,6 +20,31 @@ describe('domain/charter — funcionalidades', () => {
     assert.equal(charter.featureState(auto, ['done', 'cancelled']), 'delivered')
   })
 
+  it('atrasada: tarefa aberta com prazo vencido (entregue ganha de atrasada)', () => {
+    const auto = { state: 'auto' }
+    assert.equal(charter.featureState(auto, ['done', 'todo'], 1), 'late')
+    assert.equal(charter.featureState(auto, ['todo'], 0), 'planned')
+    assert.equal(charter.featureState(auto, ['done', 'done'], 0), 'delivered')
+    assert.equal(charter.featureState({ state: 'late' }, ['done']), 'late')
+    assert.ok(charter.FEATURE_STATES.includes('late'))
+  })
+
+  it('objetivo com funcionalidade atrasada fica em risco', () => {
+    assert.equal(charter.objectiveState({ state: 'auto' }, [{ kind: 'feature', state: 'late' }, { kind: 'feature', state: 'delivered' }]), 'at_risk')
+  })
+
+  it('evaluate: overdueOf conta as tarefas vencidas de cada funcionalidade', () => {
+    const items = [
+      { id: 'f1', kind: 'feature', state: 'auto', taskIds: ['t1', 't2'] },
+      { id: 'o1', kind: 'objective', state: 'auto', linkIds: ['f1'] },
+    ]
+    const categories = () => ['in_progress', 'todo']
+    const late = charter.evaluate('', items, categories, '2026-11-02', (ids) => (ids.includes('t2') ? 1 : 0))
+    assert.deepEqual(late.items.map((i) => i.effectiveState), ['late', 'at_risk'])
+    // sem overdueOf, nada fica atrasado
+    assert.deepEqual(charter.evaluate('', items, categories, '2026-11-02').items.map((i) => i.effectiveState), ['in_progress', 'in_progress'])
+  })
+
   it('estado escolhido à mão vale sobre o cálculo', () => {
     assert.equal(charter.featureState({ state: 'cancelled' }, ['done']), 'cancelled')
     assert.equal(charter.featureState({ state: 'delivered' }, ['todo']), 'delivered')

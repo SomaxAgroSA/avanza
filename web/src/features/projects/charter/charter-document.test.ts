@@ -32,4 +32,10 @@ describe('charter-document', () => {
     expect(html).not.toContain('<directo>')
     ;['Objetivos', 'Funcionalidades', 'Alcance', 'Resultados esperados', 'Elegir a los mejores clientes', 'Ofertas directas', '1 de 2 hechas', 'Cobro y facturación', '12 %', 'En camino'].forEach((text) => expect(html).toContain(text))
   })
+
+  it('funcionalidad retrasada sale con el estado y el tono de aviso', () => {
+    const late: ProjectCharter = { ...charter, items: charter.items.map((item) => (item.kind === 'feature' ? { ...item, effectiveState: 'late' as const } : item)) }
+    const html = renderCharterDocument(late, { t: (k, v) => i18n.t(k, v), locale: 'es', project: { key: 'ADP', name: 'Aplicación del productor' }, platformName: 'Avanza', origin: 'http://localhost', today: '2026-11-01' })
+    expect(html).toContain('Retrasada')
+  })
 })

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MoreHorizontal, Pencil, Plus, Power, Star, Trash2 } from 'lucide-react'
+import { Building2, MoreHorizontal, Pencil, Plus, Power, Star, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { normalizeTypeKey, type OptionColor } from '@/domain/task-config'
-import { STATUS_CATEGORIES, type LookupItem, type LookupKind, type StatusCategory } from '@/domain/workflow'
+import { STATUS_CATEGORIES, lookupHasDefault, type LookupItem, type LookupKind, type StatusCategory } from '@/domain/workflow'
 import {
   AppBadge,
   AppButton,
@@ -36,7 +36,15 @@ export function PrioritiesPage() {
   return <LookupsPage kind="priority" />
 }
 
-/** Configuração de status (`kind="status"`) ou prioridades (`kind="priority"`): mesmas regras e tela. */
+/** Áreas responsáveis de tarefas e projetos (Configurações → Áreas): como as prioridades, sem padrão. */
+export function AreasPage() {
+  return <LookupsPage kind="area" />
+}
+
+/**
+ * Configuração de status (`kind="status"`), prioridades (`kind="priority"`) ou áreas responsáveis
+ * (`kind="area"`, sem padrão): mesmas regras e tela.
+ */
 export function LookupsPage({ kind }: { kind: LookupKind }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
@@ -103,7 +111,7 @@ export function LookupsPage({ kind }: { kind: LookupKind }) {
                 <AppDragHandle handle={handle} />
                 <div className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
-                    <LookupBadge item={item} className="text-sm" />
+                    <LookupBadge item={item} icon={kind === 'area' ? Building2 : undefined} className="text-sm" />
                     <span className="font-mono text-xs text-subtle">{item.key}</span>
                     {item.isDefault && (
                       <AppBadge tone="primary">
@@ -127,7 +135,7 @@ export function LookupsPage({ kind }: { kind: LookupKind }) {
                 <AppDropdown
                   items={[
                     { key: 'edit', label: t('common.edit'), icon: <Pencil />, onSelect: () => setEditing(item) },
-                    ...(item.isDefault || !item.isActive
+                    ...(item.isDefault || !item.isActive || !lookupHasDefault(kind)
                       ? []
                       : [{ key: 'default', label: t('workflow.setDefault'), icon: <Star />, onSelect: () => patch(item, { isDefault: true }, t('workflow.madeDefault', { name: item.name })) }]),
                     ...(item.isDefault
@@ -262,7 +270,8 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
       description: draft.description.trim(),
       color: draft.color,
       isActive: draft.isActive,
-      isDefault: draft.isDefault,
+      // a área não tem padrão: o campo nem vai
+      ...(lookupHasDefault(kind) ? { isDefault: draft.isDefault } : {}),
       ...(kind === 'status' ? { category: draft.category, wipLimit: wip, allowedNext: draft.allowedNext } : {}),
     }
     const onError = (error: unknown) => {
@@ -303,7 +312,11 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
         }}
       >
         <div className="flex min-h-12 items-center rounded-xl border border-border p-3">
-          <LookupBadge item={{ name: draft.name || t('workflow.namePlaceholder'), color: draft.color, category: kind === 'status' ? draft.category : undefined }} className="text-sm" />
+          <LookupBadge
+            item={{ name: draft.name || t('workflow.namePlaceholder'), color: draft.color, category: kind === 'status' ? draft.category : undefined }}
+            icon={kind === 'area' ? Building2 : undefined}
+            className="text-sm"
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
           <AppTextField
@@ -374,13 +387,15 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
           </div>
         )}
         <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
-          <AppSwitch
-            checked={draft.isDefault}
-            disabled={defaultLocked}
-            onCheckedChange={(isDefault) => setDraft((d) => ({ ...d, isDefault, isActive: isDefault ? true : d.isActive }))}
-            label={t('workflow.fields.default')}
-            description={defaultLocked ? t('workflow.defaultLockedHint') : t(`workflow.${kind}.defaultHint`)}
-          />
+          {lookupHasDefault(kind) && (
+            <AppSwitch
+              checked={draft.isDefault}
+              disabled={defaultLocked}
+              onCheckedChange={(isDefault) => setDraft((d) => ({ ...d, isDefault, isActive: isDefault ? true : d.isActive }))}
+              label={t('workflow.fields.default')}
+              description={defaultLocked ? t('workflow.defaultLockedHint') : t(`workflow.${kind}.defaultHint`)}
+            />
+          )}
           <AppSwitch
             checked={draft.isActive}
             disabled={draft.isDefault}

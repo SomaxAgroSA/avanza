@@ -44,6 +44,7 @@ function task(id: string, title: string, extra: Partial<TaskSummary> = {}): Task
     blocked: false,
     inReport: true,
     urgency: null,
+    area: null,
     ...extra,
   }
 }

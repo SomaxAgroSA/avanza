@@ -46,6 +46,8 @@ const lookup = <T extends TaskStatus | TaskPriority>(overrides: Partial<T>): T =
 const todo = lookup<TaskStatus>({ id: 's1', key: 'TODO', name: 'A fazer', category: 'todo', isDefault: true })
 const doing = lookup<TaskStatus>({ id: 's2', key: 'DOING', name: 'Fazendo', category: 'in_progress', order: 1 })
 const alta = lookup<TaskPriority>({ id: 'p1', key: 'ALTA', name: 'Alta', color: 'orange', isDefault: true })
+const ti = lookup<TaskPriority>({ id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' })
+const comex = lookup<TaskPriority>({ id: 'a2', key: 'COMEX', name: 'Comex', color: 'teal', order: 1 })
 
 const gabi = { id: 'u1', name: 'Gabi Rocha', email: 'g@x.com', avatarUrl: null }
 const members: ProjectMember[] = [{ user: { ...gabi, status: 'active' }, role: 'manager', isOwner: true, joinedAt: null }]
@@ -80,6 +82,7 @@ function card(id: string, title: string, extra: Partial<BoardCard> = {}): BoardC
     blocked: false,
     inReport: true,
     urgency: null,
+    area: null,
     sprint: null,
     cardFields: [],
     ...extra,
@@ -164,6 +167,7 @@ function setup({
     taskTypes: { list: () => Promise.resolve([bugType]), get: () => Promise.resolve(type) },
     statuses: { list: () => Promise.resolve([todo, doing]) },
     priorities: { list: () => Promise.resolve([alta]) },
+    areas: { list: () => Promise.resolve([ti, comex]) },
     projects: {
       listMembers: () => Promise.resolve(members),
       list: () => Promise.resolve({ items: projectList, page: 1, perPage: 100, total: projectList.length, totalPages: 1 }),
@@ -246,6 +250,31 @@ describe('KanbanPage', () => {
     expect(screen.getByText('Erro ao salvar pedido')).toBeInTheDocument()
     expect(screen.queryByText('Ajustar relatório de vendas')).not.toBeInTheDocument()
     expect(screen.queryByText('Nova tela de login')).not.toBeInTheDocument()
+  })
+
+  it('área: selo com o nome no cartão e filtro na barra (área ou "Sem área")', async () => {
+    const withAreas: Board = {
+      ...board,
+      columns: [
+        column(todo, [card('1', 'Erro ao salvar pedido', { area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' } }), card('2', 'Ajustar relatório de vendas', { area: { id: 'a2', key: 'COMEX', name: 'Comex', color: 'teal' } })]),
+        column(doing, [card('3', 'Nova tela de login')]),
+      ],
+    }
+    setup({ data: withAreas })
+    const first = await screen.findByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })
+    expect(within(first).getByText('Dpto. TI')).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: /CRM-3 · Nova tela de login/ })).queryByText('Sem área')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Comex' }))
+    expect(screen.getByRole('combobox', { name: 'Área' })).toHaveTextContent('Área: Comex')
+    expect(screen.getByText('Ajustar relatório de vendas')).toBeInTheDocument()
+    expect(screen.queryByText('Erro ao salvar pedido')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Sem área' }))
+    expect(screen.getByText('Nova tela de login')).toBeInTheDocument()
+    expect(screen.queryByText('Ajustar relatório de vendas')).not.toBeInTheDocument()
   })
 
   it('filtro de etapas: só as colunas escolhidas; Limpar filtros traz todas de volta', async () => {

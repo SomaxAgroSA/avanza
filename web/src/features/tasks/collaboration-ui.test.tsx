@@ -42,6 +42,7 @@ const task: TaskDetail = {
   blocked: false,
   inReport: true,
   urgency: null,
+  area: null,
   sprint: null,
   description: '',
   customValues: {},

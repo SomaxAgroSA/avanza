@@ -31,14 +31,14 @@ import type { LibraryIcon } from '@/domain/icons'
 import type { ProjectFilterDto } from './dtos'
 import { normalizeProjectFilter, type ProjectFilterSettings } from '@/domain/project-filter'
 import { toIcon } from '@/domain/icons'
-import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
+import type { AreaRefDto, AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { isUrgency } from '@/domain/urgency'
 import type { CharterDto, CharterItemDto, CharterMeasurementDto } from './dtos'
 import { CHARTER_SECTIONS, FEATURE_STATES, MEASURE_FREQUENCIES, OBJECTIVE_STATES, RESULT_SITUATIONS, type CharterItem, type CharterMeasurement, type ProjectCharter } from '@/domain/charter'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
-import { STATUS_CATEGORIES, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
+import { STATUS_CATEGORIES, type Area, type AreaRef, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
 import { toColor } from '@/domain/colors'
 import { FIELD_TYPES, OPTION_COLORS, TASK_TYPE_ICONS, type CustomField, type FieldOption, type TaskType, type TaskTypeDetail, type ContentLocale, type TypeTexts } from '@/domain/task-config'
 import type { AuditEntryDto, MeDto, PermissionDto, ProjectDto, ProjectMemberDto, RoleDto, SessionDto, UserDto, UserSummaryDto } from './dtos'
@@ -146,6 +146,7 @@ export function toProject(dto: ProjectDto): Project {
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
+    area: toAreaRef(dto.area),
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
@@ -224,6 +225,15 @@ export function toStatus(dto: LookupDto): TaskStatus {
 
 export function toPriority(dto: LookupDto): TaskPriority {
   return toLookup(dto)
+}
+
+export function toArea(dto: LookupDto): Area {
+  return toLookup(dto)
+}
+
+/** Área resumida da tarefa e do projeto (null = sem área). */
+function toAreaRef(dto: AreaRefDto | null | undefined): AreaRef | null {
+  return dto ? { id: dto.id, key: dto.key, name: dto.name, color: toColor(OPTION_COLORS, dto.color, 'gray') } : null
 }
 
 /** Versões do tipo: pt-BR (original) + en/es; servidor antigo sem traduções usa o próprio texto. */
@@ -306,6 +316,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     planItem: dto.plan_item ? { id: dto.plan_item.id, name: dto.plan_item.name } : null,
     inReport: dto.in_report ?? true,
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
+    area: toAreaRef(dto.area),
   }
 }
 

@@ -2,7 +2,7 @@ import type { AuditEntry, CurrentUser, Permission, Role, Session, User, UserStat
 import type { ListQuery, Page } from './pagination'
 import type { PermissionCode } from './permissions'
 import type { CustomField, FieldConfig, FieldOption, FieldType, FieldValue, OptionColor, TaskType, TaskTypeDetail, TaskTypeIcon, TranslatedLocale, TypeTexts } from './task-config'
-import type { LookupItem, StatusCategory, TaskPriority, TaskStatus } from './workflow'
+import type { Area, LookupItem, StatusCategory, TaskPriority, TaskStatus } from './workflow'
 import type { Attachment, ProjectFile } from './attachments'
 import type { AppNotification } from './notifications'
 import type { Board } from './kanban'
@@ -219,6 +219,8 @@ export interface ProjectData {
   priority: ProjectPriority
   /** null = sem urgência. */
   urgency: Urgency | null
+  /** Área responsável ativa (null limpa; ausente = não muda). */
+  areaId?: string | null
   startDate: string | null
   dueDate: string | null
 }
@@ -340,6 +342,8 @@ export interface TaskRepository {
   setInReport(id: string, inReport: boolean): Promise<TaskDetail>
   /** Troca a urgência (semáforo; null = sem urgência), sem exigir os obrigatórios do status. */
   setUrgency(id: string, urgency: Urgency | null): Promise<TaskDetail>
+  /** Área responsável direto da lista (não exige os obrigatórios do status); null limpa. */
+  setArea(id: string, areaId: string | null): Promise<TaskDetail>
   remove(id: string): Promise<void>
   history(id: string): Promise<Page<AuditEntry>>
 }
@@ -554,6 +558,7 @@ export interface Repositories {
   taskTypes: TaskTypeRepository
   statuses: LookupRepository<TaskStatus>
   priorities: LookupRepository<TaskPriority>
+  areas: LookupRepository<Area>
   tasks: TaskRepository
   tags: TagRepository
   icons: IconLibraryRepository

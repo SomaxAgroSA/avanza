@@ -19,8 +19,13 @@ import { isHexColor } from '@/domain/colors'
 import { IconPicker } from '@/features/icons/IconPicker'
 import { useCreateProject, useUpdateProject } from './queries'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
+import { useAreas } from '@/features/workflow/queries'
+import { AreaBadge } from '@/features/workflow/area-visuals'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId' }
+
+/** Valor do select para "sem área" (o select não aceita texto vazio). */
+const NO_AREA = '__none__'
 
 function defaults(project?: Project | null): ProjectInput {
   return {
@@ -32,6 +37,7 @@ function defaults(project?: Project | null): ProjectInput {
     status: project?.status ?? 'planning',
     priority: project?.priority ?? 'medium',
     urgency: project?.urgency ?? NO_URGENCY,
+    areaId: project?.area?.id ?? '',
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -48,6 +54,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
   const { t } = useTranslation()
   const navigate = useNavigate()
   const urgencyOptions = useUrgencyFilterOptions()
+  const areas = useAreas(false)
   const errorMessage = useErrorMessage()
   const isEdit = !!project
   const create = useCreateProject()
@@ -75,6 +82,8 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
       status: values.status,
       priority: values.priority,
       urgency: values.urgency === NO_URGENCY ? null : values.urgency,
+      // só quando mudou: a área inativa que o projeto já tem continua valendo
+      areaId: values.areaId !== (project?.area?.id ?? '') ? values.areaId || null : undefined,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -192,7 +201,27 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
               render={({ field }) => <AppSelect label={t('tasks.fields.urgency')} value={field.value} onValueChange={field.onChange} options={urgencyOptions} />}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Controller
+              control={control}
+              name="areaId"
+              render={({ field }) => (
+                <AppSelect
+                  label={t('tasks.fields.area')}
+                  value={field.value || NO_AREA}
+                  onValueChange={(value) => field.onChange(value === NO_AREA ? '' : value)}
+                  error={errors.areaId?.message}
+                  options={[
+                    { value: NO_AREA, label: t('areas.none') },
+                    // a área inativa que o projeto já tem continua na lista
+                    ...[...(areas.data ?? []), ...(project?.area && !(areas.data ?? []).some((a) => a.id === project.area?.id) ? [project.area] : [])].map((a) => ({
+                      value: a.id,
+                      label: <AreaBadge area={a} />,
+                    })),
+                  ]}
+                />
+              )}
+            />
             <Controller
               control={control}
               name="startDate"

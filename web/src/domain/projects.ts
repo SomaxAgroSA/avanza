@@ -1,5 +1,6 @@
 import type { HexColor } from './colors'
 import type { Urgency } from './urgency'
+import type { AreaRef } from './workflow'
 /**
  * Projetos — tipos e regras de apresentação (espelham backend/src/domain/project.js).
  */
@@ -57,6 +58,8 @@ export interface Project {
   priority: ProjectPriority
   /** Urgência (semáforo); null = sem urgência. */
   urgency: Urgency | null
+  /** Área responsável; null = sem área. */
+  area: AreaRef | null
   owner: UserSummary | null
   startDate: Date | null
   dueDate: Date | null

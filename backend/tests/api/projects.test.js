@@ -156,6 +156,26 @@ describe('API /api/v1/projects', { timeout: 120000 }, () => {
     assert.equal((await admin.patch(`/projects/${calm.id}`, { urgency: 'roja' })).body.error.details.fields.urgency, 'invalid_option')
   })
 
+  it('área responsável: criar, editar (null limpa), filtrar (none = sem área), histórico e em uso', async () => {
+    const areas = (await admin.get('/areas')).body.data
+    const cred = areas.find((a) => a.key === 'CREDITOS')
+    const withArea = (await admin.post('/projects', { name: 'Créditos', key: 'CRD', area_id: cred.id })).body.data
+    assert.deepEqual(withArea.area, { id: cred.id, key: 'CREDITOS', name: 'Créditos', color: 'red' })
+    assert.equal((await admin.post('/projects', { name: 'X', key: 'XAR', area_id: 'naoexiste12345' })).body.error.details.fields.area_id, 'invalid_option')
+    const keys = async (area) => (await admin.get(`/projects?area_id=${area}&perPage=100`)).body.data.map((p) => p.key)
+    assert.deepEqual(await keys(cred.id), ['CRD'])
+    assert.ok(!(await keys('none')).includes('CRD'))
+    assert.equal((await admin.get(`/projects/${withArea.id}`)).body.data.area.name, 'Créditos')
+    const inUse = await admin.del(`/areas/${cred.id}`)
+    assert.deepEqual([inUse.body.error.code, inUse.body.error.details.projects], ['AREA_IN_USE', 1])
+    const cleared = await admin.patch(`/projects/${withArea.id}`, { area_id: null })
+    assert.equal(cleared.status, 200, JSON.stringify(cleared.body))
+    assert.equal(cleared.body.data.area, null)
+    const history = (await admin.get(`/projects/${withArea.id}/history`)).body.data
+    assert.deepEqual([history[0].action, history[0].old_value.area, history[0].new_value.area], ['project.updated', 'Créditos', null])
+    assert.ok((await keys('none')).includes('CRD'))
+  })
+
     it('valida entrada e exige permissão para criar', async () => {
     const viewer = await userWithRole('VIEWER', 'leitor@kamban.test')
     assert.equal((await viewer.client.post('/projects', { name: 'X', key: 'XX' })).body.error.code, 'FORBIDDEN')

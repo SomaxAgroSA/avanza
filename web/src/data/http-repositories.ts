@@ -51,7 +51,7 @@ import type { PreferenceDto, ProjectFilterDto } from './dtos'
 import { fromProjectFilterSettings, toProjectFilterSettings } from './mappers'
 import { projectFilterKey } from '@/domain/project-filter'
 import type { PreferenceRepository } from '@/domain/repositories'
-import { toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
+import { toArea, toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import type {
   AttachmentRepository,
   ProjectFileRepository,
@@ -422,7 +422,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -447,6 +447,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           status: query.filters.status,
           priority: query.filters.priority,
           urgency: query.filters.urgency,
+          area_id: query.filters.area,
           owner_id: query.filters.owner_id,
         },
       })
@@ -578,6 +579,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     taskTypes: createHttpTaskTypeRepository(api),
     statuses: createHttpLookupRepository(api, '/statuses', toStatus),
     priorities: createHttpLookupRepository(api, '/priorities', toPriority),
+    areas: createHttpLookupRepository(api, '/areas', toArea),
     tasks: createHttpTaskRepository(api),
     tags: createHttpTagRepository(api),
     icons: createHttpIconLibraryRepository(api),
@@ -623,6 +625,7 @@ function taskBody(data: TaskInput) {
     sprint_id: data.sprintId,
     parent_task_id: data.parentTaskId,
     plan_item_id: data.planItemId,
+    area_id: data.areaId,
     checklist: data.checklist?.map((item) => ({ id: item.id, text: item.text, done: item.done })),
   }
 }
@@ -1273,6 +1276,7 @@ const TASK_FILTERS: Record<string, string> = {
   sprint: 'sprint_id',
   in_report: 'in_report',
   urgency: 'urgency',
+  area: 'area_id',
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {
@@ -1304,6 +1308,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setUrgency(id, urgency: Urgency | null) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/urgency`, { urgency })).data)
+    },
+    async setArea(id, areaId: string | null) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/area`, { area_id: areaId })).data)
     },
     async remove(id) {
       await api.del(path(id))

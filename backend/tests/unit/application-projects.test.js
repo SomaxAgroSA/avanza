@@ -2,6 +2,7 @@ const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
 const { createFakeDeps, seedUser } = require('../support/fakes')
+const { createLookupService } = require('../../src/application/lookups')
 const { createProjectService } = require('../../src/application/projects')
 const { createPrincipal } = require('../../src/domain/rbac')
 
@@ -219,5 +220,37 @@ describe('application/projects — urgência (semáforo)', () => {
     await assert.rejects(() => projects.listProjects(ctx.manager, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
     // POST com urgency: null = sem urgência
     assert.equal((await projects.createProject(ctx.manager, input({ name: 'Terceiro', key: 'TER', urgency: null }))).urgency, null)
+  })
+})
+
+describe('application/projects — área responsável (§32)', () => {
+  it('nasce com a área escolhida; edita, limpa com null, registra o nome no histórico e filtra', async () => {
+    const { deps, projects, ctx } = await setup()
+    const areas = createLookupService(deps, 'area')
+    const ti = await areas.create(ctx.admin, { key: 'TI', name: 'Dpto. TI', color: 'blue' })
+    const cred = await areas.create(ctx.admin, { key: 'CRED', name: 'Créditos', color: 'red' })
+    const a = await projects.createProject(ctx.manager, input({ area_id: ti.id }))
+    const b = await projects.createProject(ctx.manager, input({ name: 'Outro', key: 'OUT' }))
+    assert.deepEqual([a.area, b.area], [{ id: ti.id, key: 'TI', name: 'Dpto. TI', color: 'blue' }, null])
+    assert.equal((await projects.getProject(ctx.manager, a.id)).area.name, 'Dpto. TI')
+    assert.equal((await projects.updateProject(ctx.manager, b.id, { area_id: cred.id })).area.name, 'Créditos')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue.area, entry.newValue.area], ['project.updated', null, 'Créditos'])
+    const keys = async (area) => (await projects.listProjects(ctx.manager, { area_id: area })).items.map((p) => [p.key, p.area && p.area.name])
+    assert.deepEqual(await keys(cred.id), [['OUT', 'Créditos']])
+    assert.equal((await projects.updateProject(ctx.manager, a.id, { area_id: null })).area, null)
+    assert.deepEqual(await keys('none'), [['CRM', null]])
+    await assert.rejects(() => projects.updateProject(ctx.manager, a.id, { area_id: 'nada' }), (err) => err.code === 'VALIDATION_ERROR' && err.details.fields.area_id === 'invalid_option')
+    await assert.rejects(() => projects.listProjects(ctx.manager, { area_id: 'a b' }), { code: 'VALIDATION_ERROR' })
+  })
+
+  it('área inativa: não se escolhe, mas continua no projeto que já a tinha', async () => {
+    const { deps, projects, ctx } = await setup()
+    const areas = createLookupService(deps, 'area')
+    const ti = await areas.create(ctx.admin, { key: 'TI', name: 'Dpto. TI' })
+    const a = await projects.createProject(ctx.manager, input({ area_id: ti.id }))
+    await areas.update(ctx.admin, ti.id, { is_active: false })
+    assert.equal((await projects.updateProject(ctx.manager, a.id, { name: 'CRM 2', area_id: ti.id })).area.name, 'Dpto. TI')
+    await assert.rejects(() => projects.createProject(ctx.manager, input({ name: 'X', key: 'XYZ', area_id: ti.id })), { code: 'VALIDATION_ERROR' })
   })
 })

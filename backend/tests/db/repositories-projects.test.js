@@ -119,6 +119,22 @@ describe('repositórios de projetos e membros', () => {
     }
   })
 
+  it('área: relação vazia é NULL, filtro pela área ou none = sem área', async () => {
+    const base = { scope: { userId: users.ana.id, viewAll: true }, view: 'all', sort: [{ column: 'name', direction: 'ASC' }], pagination: page() }
+    const list = (extra) => projects.list(Object.assign({}, base, extra))
+    const ti = await t.db.one("SELECT id FROM areas WHERE key = 'TI'")
+    assert.equal(p.alpha.areaId, null)
+    assert.equal((await projects.update(p.delta.id, { areaId: ti.id })).areaId, ti.id)
+    try {
+      assert.deepEqual(ids(await list({ areaId: ti.id })), ['DEL'])
+      assert.deepEqual(ids(await list({ areaId: 'none' })), ['ALP', 'BET'])
+      assert.deepEqual(await t.db.one('SELECT area_id FROM projects WHERE id = $1', [p.alpha.id]), { area_id: null })
+      await assert.rejects(projects.update(p.alpha.id, { areaId: 'naoexiste12345' }), { code: '23503' })
+    } finally {
+      assert.equal((await projects.update(p.delta.id, { areaId: null })).areaId, null)
+    }
+  })
+
   it('ordenam pelas colunas da whitelist (data vazia primeiro na crescente) e paginam com o total', async () => {
     const base = { scope: { userId: users.ana.id, viewAll: true }, view: 'all', pagination: page() }
     const sorted = async (column, dir) => ids(await projects.list(Object.assign({}, base, { sort: [{ column, direction: dir }] })))

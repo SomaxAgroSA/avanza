@@ -89,6 +89,7 @@ function createTaskRepository(db) {
       forkedFromTaskId: row.forked_from_task_id || null,
       sprintId: row.sprint_id || null,
       planItemId: row.plan_item_id || null,
+      areaId: row.area_id || null,
       startDate: row.start_date,
       dueDate: row.due_date,
       startedAt: row.started_at,
@@ -107,7 +108,7 @@ function createTaskRepository(db) {
   /** Colunas do cartão (quadro e backlog): tudo menos a descrição. */
   const CARD_COLUMNS = [
     'id', 'project_id', 'number', 'code', 'title', 'task_type_id', 'status_id', 'priority_id', 'creator_id', 'assignee_id',
-    'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'start_date', 'due_date', 'started_at', 'completed_at',
+    'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'area_id', 'start_date', 'due_date', 'started_at', 'completed_at',
     'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'urgency', 'position', 'created', 'updated',
   ]
     .map(ident)
@@ -129,6 +130,7 @@ function createTaskRepository(db) {
     forkedFromTaskId: 'forked_from_task_id',
     sprintId: 'sprint_id',
     planItemId: 'plan_item_id',
+    areaId: 'area_id',
   }
   const DATES = { startDate: 'start_date', dueDate: 'due_date', startedAt: 'started_at', completedAt: 'completed_at' }
   const NUMBERS = { estimatedHours: 'estimated_hours', actualHours: 'actual_hours' }
@@ -182,6 +184,7 @@ function createTaskRepository(db) {
     if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)
     if (query.inReport !== undefined) where.push(`tasks.report_excluded = ${param(!query.inReport)}`)
     if (query.urgency) where.push(`tasks.urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
+    if (query.areaId) where.push(query.areaId === 'none' ? 'tasks.area_id IS NULL' : `tasks.area_id = ${param(query.areaId)}`)
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
     if (query.search) {
       const q = param(likePattern(query.search.text))

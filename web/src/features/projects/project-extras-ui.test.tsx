@@ -31,6 +31,7 @@ const project = (overrides: Partial<Project> = {}): Project => ({
   status: 'active',
   priority: 'medium',
   urgency: null,
+  area: null,
   owner: null,
   startDate: new Date('2026-09-22T00:00:00.000Z'),
   dueDate: null,
@@ -56,6 +57,7 @@ const task = (n: number, start: string | null, extra: Partial<TaskSummary> = {})
     dueDate: start ? day(start) : null,
     inReport: true,
     urgency: null,
+    area: null,
     ...extra,
   }) as TaskSummary
 const milestone = (id: string, dueDate: string): Milestone => ({ id, projectId: 'p1', name: `Marco ${id}`, description: '', dueDate, state: 'done', createdAt: null, updatedAt: null })
@@ -87,6 +89,40 @@ describe('Projetos — urgência na lista', () => {
     const row = (await screen.findByRole('link', { name: 'CRM Corporativo' })).closest('tr') as HTMLElement
     expect(within(row).getByText('Alta')).toBeInTheDocument()
     expect(within(row).queryByRole('button', { name: /Mudar urgência/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('Projetos — área responsável na lista', () => {
+  const ti = { id: 'a1', key: 'TI', name: 'Dpto. TI', description: '', color: 'blue' as const, order: 0, isActive: true, isDefault: false, createdAt: null, updatedAt: null }
+
+  it('coluna com a área: quem edita troca com um clique; o filtro pede area_id à API', async () => {
+    const list = vi.fn<ProjectRepository['list']>(() => Promise.resolve({ items: [project()], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    const update = vi.fn<ProjectRepository['update']>(() => Promise.resolve(project({ area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' } })))
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(['projects.view', 'projects.edit']) },
+      projects: { list, update },
+      areas: { list: () => Promise.resolve([ti]) },
+    })
+    renderRoutes([{ path: '/', element: <AllProjectsPage /> }], { repositories, initialPath: '/' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Mudar área de CRM Corporativo (agora: Sem área)' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Dpto. TI' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('p1', { areaId: 'a1' }))
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Dpto. TI' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { area: 'a1' } })))
+  })
+
+  it('quem não edita vê só o selo da área', async () => {
+    const readOnly = project({ area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' }, capabilities: { ...EDIT, edit: false } })
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(['projects.view']) },
+      projects: { list: () => Promise.resolve({ items: [readOnly], page: 1, perPage: 20, total: 1, totalPages: 1 }) },
+    })
+    renderRoutes([{ path: '/', element: <AllProjectsPage /> }], { repositories, initialPath: '/' })
+    const row = (await screen.findByRole('link', { name: 'CRM Corporativo' })).closest('tr') as HTMLElement
+    expect(within(row).getByText('Dpto. TI')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: /Mudar área/ })).not.toBeInTheDocument()
   })
 })
 

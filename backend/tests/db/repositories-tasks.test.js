@@ -194,6 +194,24 @@ describe('repositórios de tarefas (Postgres)', () => {
       assert.equal((await r.tasks.findById(list[1].id)).urgency, null)
     })
 
+    it('filtra por área (none = sem área; relação vazia é NULL) e traz a área no cartão', async () => {
+      const areas = await t.db.query("SELECT id, key FROM areas WHERE key IN ('TI', 'COMEX') ORDER BY key")
+      const [comex, ti] = areas.map((a) => a.id)
+      await r.tasks.update(list[1].id, { areaId: ti })
+      await r.tasks.update(list[2].id, { areaId: comex })
+      try {
+        assert.deepEqual(await listed({ areaId: ti }), { codes: nth(1), total: 1 })
+        assert.deepEqual(await listed({ areaId: 'none' }), { codes: nth(0, 3), total: 2 })
+        assert.deepEqual(await t.db.one('SELECT area_id FROM tasks WHERE id = $1', [list[0].id]), { area_id: null })
+        const card = (await r.tasks.listForBoard(project.id, status.BACKLOG, { closed: false, limit: 50 })).find((task) => task.id === list[1].id)
+        assert.equal(card.areaId, ti)
+      } finally {
+        await r.tasks.update(list[1].id, { areaId: null })
+        await r.tasks.update(list[2].id, { areaId: null })
+      }
+      assert.equal((await r.tasks.findById(list[1].id)).areaId, null)
+    })
+
     it('respeita o escopo de quem não vê todos os projetos', async () => {
       assert.equal((await listed({ scope: { viewAll: false, userId: member.id } })).total, 4)
       assert.equal((await listed({ scope: { viewAll: false, userId: outsider.id } })).total, 0)
