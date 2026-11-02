@@ -13,7 +13,8 @@ const rbac = require('./rbac')
 
 const PROJECT_STATUS = Object.freeze(['planning', 'active', 'paused', 'completed', 'cancelled'])
 const PROJECT_PRIORITY = Object.freeze(['low', 'medium', 'high', 'critical'])
-const MEMBER_ROLES = Object.freeze(['manager', 'member', 'viewer'])
+/** `it` = Responsável TI: só vê o resumo do projeto (nome, objetivo e o que precisamos dele) e as próprias tarefas. */
+const MEMBER_ROLES = Object.freeze(['manager', 'member', 'viewer', 'it'])
 const PROJECT_ICONS = Object.freeze([
   'folder', 'rocket', 'briefcase', 'code', 'database', 'globe', 'shield', 'users', 'chart', 'settings',
   'layers', 'zap', 'star', 'box', 'truck', 'building', 'cpu', 'headphones', 'book', 'target',
@@ -40,13 +41,16 @@ function resolveAccess(principal, project, membership) {
   const viewAll = rbac.can(principal, 'projects.view_all')
   const isOwner = !!principal && project.ownerId === principal.userId
   const memberRole = membership ? membership.role : null
+  // Responsável TI: fora de tudo por padrão (canView = false); só o resumo e as próprias tarefas
+  const limited = !viewAll && !isOwner && memberRole === 'it' && rbac.can(principal, 'projects.view')
   return {
     principal,
     viewAll,
     isOwner,
     role: isOwner ? 'owner' : memberRole,
     isManager: isOwner || memberRole === 'manager' || viewAll,
-    canView: rbac.can(principal, 'projects.view') && (viewAll || isOwner || !!membership),
+    limited,
+    canView: rbac.can(principal, 'projects.view') && (viewAll || isOwner || (!!membership && !limited)),
     get canEdit() {
       return this.canView && rbac.can(principal, 'projects.edit') && this.isManager && !project.archivedAt
     },
@@ -55,9 +59,14 @@ function resolveAccess(principal, project, membership) {
 
 /**
  * Verifica se a ação é permitida; lança o erro adequado caso contrário.
- * Ações: view | edit | manage_members | archive | transfer | delete
+ * Ações: brief | view | edit | manage_members | archive | transfer | delete
+ * (`brief` = resumo do projeto, também liberado para o Responsável TI).
  */
 function assertAccess(access, project, action) {
+  if (action === 'brief') {
+    if (!access.canView && !access.limited) throw appError('PROJECT_NOT_FOUND')
+    return
+  }
   if (!access.canView) throw appError('PROJECT_NOT_FOUND')
   if (action === 'view') return
 

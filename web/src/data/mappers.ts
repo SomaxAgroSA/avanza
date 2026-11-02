@@ -41,6 +41,7 @@ import {
   PROJECT_STATUSES,
   type Project,
   type ProjectMember,
+  type ProjectRole,
   type UserSummary,
 } from '@/domain/projects'
 
@@ -144,7 +145,7 @@ export function toProject(dto: ProjectDto): Project {
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
     memberCount: dto.member_count ?? 0,
-    myRole: role === 'owner' || role === 'manager' || role === 'member' || role === 'viewer' ? role : null,
+    myRole: role === 'owner' || (MEMBER_ROLES as readonly string[]).includes(role ?? '') ? (role as ProjectRole) : null,
     capabilities: {
       edit: !!dto.capabilities?.edit,
       manageMembers: !!dto.capabilities?.manage_members,

@@ -192,6 +192,7 @@ apiRoute('POST', '/api/v1/projects/{id}/milestones', (e) => require(`${__hooks}/
 apiRoute('PATCH', '/api/v1/milestones/{id}', (e) => require(`${__hooks}/src/http/routes.js`).updateMilestone(e), JSON_BODY_LIMIT)
 apiRoute('DELETE', '/api/v1/milestones/{id}', (e) => require(`${__hooks}/src/http/routes.js`).deleteMilestone(e))
 apiRoute('GET', '/api/v1/projects/{id}/charter', (e) => require(`${__hooks}/src/http/routes.js`).getCharter(e))
+apiRoute('GET', '/api/v1/projects/{id}/brief', (e) => require(`${__hooks}/src/http/routes.js`).getProjectBrief(e))
 apiRoute('PUT', '/api/v1/projects/{id}/charter', (e) => require(`${__hooks}/src/http/routes.js`).updateCharter(e), JSON_BODY_LIMIT)
 apiRoute('POST', '/api/v1/projects/{id}/charter/items', (e) => require(`${__hooks}/src/http/routes.js`).createCharterItem(e), JSON_BODY_LIMIT)
 apiRoute('PUT', '/api/v1/projects/{id}/charter/order', (e) => require(`${__hooks}/src/http/routes.js`).reorderCharterItems(e), JSON_BODY_LIMIT)

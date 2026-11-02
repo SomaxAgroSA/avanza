@@ -428,6 +428,7 @@ const updateMilestone = configAction('milestones', (s, ctx, r) => s.updateMilest
 const deleteMilestone = configAction('milestones', (s, ctx, r) => s.deleteMilestone(ctx, r.id))
 // ficha do projeto (objetivos, funcionalidades, escopo e resultados esperados)
 const getCharter = configAction('charter', (s, ctx, r) => s.getCharter(ctx, r.id))
+const getProjectBrief = configAction('charter', (s, ctx, r) => s.getBrief(ctx, r.id))
 const updateCharter = configAction('charter', (s, ctx, r) => s.updateCharter(ctx, r.id, r.body()))
 const createCharterItem = configAction('charter', (s, ctx, r) => s.createItem(ctx, r.id, r.body()), 201)
 const reorderCharterItems = configAction('charter', (s, ctx, r) => s.reorderItems(ctx, r.id, r.body()))
@@ -879,6 +880,7 @@ module.exports = {
   updateMilestone,
   deleteMilestone,
   getCharter,
+  getProjectBrief,
   updateCharter,
   createCharterItem,
   reorderCharterItems,

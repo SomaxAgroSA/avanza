@@ -972,12 +972,26 @@ function charterItemBody(input: CharterItemInput): Record<string, unknown> {
   return body
 }
 
+interface ProjectBriefDto {
+  objective?: string
+  tasks?: TaskDto[]
+  items?: Array<{ id: string; kind: string; title: string; description?: string; unit?: string; target?: number | null }>
+}
+
 export function createHttpCharterRepository(api: ApiClient): CharterRepository {
   const project = (id: string) => `/projects/${encodeURIComponent(id)}/charter`
   const item = (id: string) => `/charter-items/${encodeURIComponent(id)}`
   return {
     async get(projectId) {
       return toProjectCharter((await api.get<CharterDto>(project(projectId))).data)
+    },
+    async brief(projectId) {
+      const { data } = await api.get<ProjectBriefDto>(`/projects/${encodeURIComponent(projectId)}/brief`)
+      return {
+        objective: data.objective ?? '',
+        tasks: (data.tasks ?? []).map(toTaskSummary),
+        items: (data.items ?? []).map((i) => ({ id: i.id, kind: i.kind === 'result' ? ('result' as const) : ('feature' as const), title: i.title, description: i.description ?? '', unit: i.unit ?? '', target: i.target ?? null })),
+      }
     },
     async saveObjective(projectId, objective) {
       return toProjectCharter((await api.put<CharterDto>(project(projectId), { objective })).data)

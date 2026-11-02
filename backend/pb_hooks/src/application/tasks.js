@@ -129,10 +129,11 @@ function createTaskService(deps) {
     rbac.assertAuthenticated(ctx.principal)
     const task = id ? tasks.findById(id) : null
     if (!task) throw appError('TASK_NOT_FOUND')
-    const { project, access } = projectAccess(ctx.principal, task.projectId)
-    if (!project) throw appError('TASK_NOT_FOUND')
-    taskDomain.assertTaskAccess(access, project, 'view', task)
-    return { task, project, access }
+    const found = projectAccess(ctx.principal, task.projectId)
+    if (!found.project) throw appError('TASK_NOT_FOUND')
+    const access = taskDomain.scopedAccess(found.access, task)
+    taskDomain.assertTaskAccess(access, found.project, 'view', task)
+    return { task, project: found.project, access }
   }
 
   /** Campos configurados no tipo, com a definição completa (mesmo formato do formulário). */

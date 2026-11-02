@@ -55,7 +55,7 @@ const ENTITY_HISTORY = {
     const project = task ? deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError('TASK_NOT_FOUND')
     const membership = deps.projectMemberRepository.find(project.id, principal.userId)
-    taskDomain.assertTaskAccess(projectDomain.resolveAccess(principal, project, membership), project, 'view', task)
+    taskDomain.assertTaskAccess(taskDomain.scopedAccess(projectDomain.resolveAccess(principal, project, membership), task), project, 'view', task)
   },
 }
 

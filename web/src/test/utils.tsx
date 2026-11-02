@@ -239,6 +239,7 @@ export function fakeRepositories(overrides: {
     },
     charter: {
       get: notImplemented,
+      brief: notImplemented,
       saveObjective: notImplemented,
       createItem: notImplemented,
       updateItem: notImplemented,

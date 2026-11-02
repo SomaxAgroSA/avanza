@@ -6,6 +6,8 @@ const { createTaskService } = require('../../pb_hooks/src/application/tasks')
 const { createCustomFieldService } = require('../../pb_hooks/src/application/custom-fields')
 const { createTaskTypeService } = require('../../pb_hooks/src/application/task-types')
 const { createLookupService } = require('../../pb_hooks/src/application/lookups')
+const { createCharterService } = require('../../pb_hooks/src/application/charter')
+const { createProjectService } = require('../../pb_hooks/src/application/projects')
 const { createPrincipal } = require('../../pb_hooks/src/domain/rbac')
 
 function ctxOf(deps, user) {
@@ -439,5 +441,47 @@ describe('application/tasks — área responsável', () => {
     assert.equal(codeOf(() => s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: 'nada' })), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
     assert.equal(codeOf(() => s.tasks.setTaskArea(s.ctx.lia, task.id, { area_id: null })), 'FORBIDDEN')
     assert.equal(codeOf(() => s.tasks.createTask(s.ctx.mario, newBug(s, { area_id: ti.id }))), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
+  })
+})
+
+describe('Responsável TI: só o resumo do projeto e as próprias tarefas', () => {
+  function withTi(s) {
+    const tito = seedUser(s.deps, { roleCode: 'MEMBER', name: 'Tito TI' })
+    s.deps.projectMemberRepository.add({ projectId: s.project.id, userId: tito.id, role: 'it' })
+    const ti = ctxOf(s.deps, tito)
+    const mine = s.tasks.createTask(s.ctx.gabi, newBug(s, { title: 'Liberar acesso ao banco', assignee_id: tito.id }))
+    const other = s.tasks.createTask(s.ctx.gabi, newBug(s, { title: 'Tela de pedidos' }))
+    return { tito, ti, mine, other }
+  }
+
+  it('vê e atualiza só as tarefas atribuídas a ele; o resto do projeto não existe para ele', () => {
+    const s = setup()
+    const { ti, mine, other } = withTi(s)
+    assert.deepEqual(s.tasks.listTasks(ti, {}).items.map((t) => t.code), [mine.code])
+    assert.deepEqual(s.tasks.listTasks(ti, { project_id: s.project.id }).items.map((t) => t.code), [mine.code])
+    assert.equal(s.tasks.getTask(ti, mine.id).capabilities.edit, true)
+    assert.equal(s.tasks.updateTask(ti, mine.id, { status_id: s.statuses.dev.id }).status.key, 'DEV')
+    assert.equal(codeOf(() => s.tasks.getTask(ti, other.id)), 'TASK_NOT_FOUND')
+    assert.equal(codeOf(() => s.tasks.deleteTask(ti, mine.id)), 'FORBIDDEN')
+    assert.equal(codeOf(() => s.tasks.updateTask(ti, mine.id, { assignee_id: s.users.mario.id })), 'FORBIDDEN')
+    assert.equal(codeOf(() => s.tasks.createTask(ti, newBug(s))), 'PROJECT_NOT_FOUND')
+  })
+
+  it('o resumo traz objetivo, tarefas e itens da ficha dele; a ficha completa e o histórico ficam fechados', () => {
+    const s = setup()
+    const { tito, ti, mine } = withTi(s)
+    const charter = createCharterService(s.deps)
+    const projects = createProjectService(s.deps)
+    charter.updateCharter(s.ctx.gabi, s.project.id, { objective: 'Portal comercial' })
+    charter.createItem(s.ctx.gabi, s.project.id, { kind: 'result', title: 'Disponibilidade do banco', target: 99.5, unit: '%', owner_id: tito.id })
+    charter.createItem(s.ctx.gabi, s.project.id, { kind: 'feature', title: 'Tela de pedidos' })
+    const brief = charter.getBrief(ti, s.project.id)
+    assert.equal(brief.objective, 'Portal comercial')
+    assert.deepEqual(brief.tasks.map((t) => t.code), [mine.code])
+    assert.deepEqual(brief.items.map((i) => i.title), ['Disponibilidade do banco'])
+    assert.equal(projects.getProject(ti, s.project.id).my_role, 'it')
+    assert.equal(codeOf(() => charter.getCharter(ti, s.project.id)), 'PROJECT_NOT_FOUND')
+    assert.equal(codeOf(() => projects.listMembers(ti, s.project.id)), 'PROJECT_NOT_FOUND')
+    assert.equal(codeOf(() => charter.getBrief(s.ctx.outsider, s.project.id)), 'PROJECT_NOT_FOUND')
   })
 })

@@ -10,7 +10,8 @@ export type ProjectStatus = (typeof PROJECT_STATUSES)[number]
 export const PROJECT_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const
 export type ProjectPriority = (typeof PROJECT_PRIORITIES)[number]
 
-export const MEMBER_ROLES = ['manager', 'member', 'viewer'] as const
+/** `it` = Responsável TI: só vê o resumo do projeto e as tarefas atribuídas a ele. */
+export const MEMBER_ROLES = ['manager', 'member', 'viewer', 'it'] as const
 export type MemberRole = (typeof MEMBER_ROLES)[number]
 export type ProjectRole = MemberRole | 'owner'
 

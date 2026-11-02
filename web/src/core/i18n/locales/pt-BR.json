@@ -933,7 +933,8 @@
       "owner": "Dono",
       "manager": "Gestor",
       "member": "Membro",
-      "viewer": "Leitor"
+      "viewer": "Leitor",
+      "it": "Responsável TI"
     },
     "icons": {
       "folder": "Pasta",
@@ -1550,6 +1551,21 @@
     "none": "Sem área",
     "change": "Mudar área de {{name}} (agora: {{area}})",
     "saved": "{{name}}: área {{area}}."
+  },
+  "brief": {
+    "subtitle": "O que o projeto precisa da TI",
+    "aboutTitle": "Sobre o projeto",
+    "aboutDescription": "Para que ele existe e o que precisa alcançar.",
+    "noObjective": "A equipe do projeto ainda não escreveu o objetivo.",
+    "needsTitle": "O que precisamos da TI",
+    "needsDescription_one": "{{count}} tarefa atribuída a você. Abra para ver o detalhe, comentar ou atualizar o status.",
+    "needsDescription_other": "{{count}} tarefas atribuídas a você. Abra para ver o detalhe, comentar ou atualizar o status.",
+    "noTasksTitle": "Nada pendente por enquanto",
+    "noTasksDescription": "Quando a equipe atribuir uma tarefa a você, ela aparecerá aqui.",
+    "noDueDate": "Sem prazo",
+    "itemsTitle": "Indicadores sob sua responsabilidade",
+    "itemsDescription": "Metas da ficha do projeto que dependem da TI.",
+    "target": "meta: {{value}} {{unit}}"
   },
   "tasks": {
     "title": "Tarefas",

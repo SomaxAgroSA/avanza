@@ -1114,7 +1114,7 @@ function createTaskRepository(app) {
     /** Linhas enxutas para relatórios (só as colunas usadas nos cálculos). */
     listForReport(query) {
       const exprs = []
-      if (!query.scope.viewAll) exprs.push($dbx.exp('project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})', { uid: query.scope.userId }))
+      if (!query.scope.viewAll) exprs.push($dbx.exp("project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid} AND role != 'it')", { uid: query.scope.userId }))
       if (!query.includeArchived) exprs.push($dbx.exp("project_id IN (SELECT id FROM projects WHERE archived_at = '' OR archived_at IS NULL)"))
       if (query.projectId) exprs.push($dbx.hashExp({ project_id: query.projectId }))
       if (query.assigneeId) exprs.push($dbx.hashExp({ assignee_id: query.assigneeId === 'none' ? '' : query.assigneeId }))
@@ -1187,7 +1187,12 @@ function createTaskRepository(app) {
     list(query) {
       const exprs = []
       if (!query.scope.viewAll) {
-        exprs.push($dbx.exp('tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})', { uid: query.scope.userId }))
+        exprs.push(
+          $dbx.exp(
+            "(tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid} AND role != 'it') OR (tasks.assignee_id = {:uid} AND tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})))",
+            { uid: query.scope.userId },
+          ),
+        )
       }
       if (query.projectId) exprs.push($dbx.hashExp({ 'tasks.project_id': query.projectId }))
       if (query.typeId) exprs.push($dbx.hashExp({ 'tasks.task_type_id': query.typeId }))

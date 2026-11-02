@@ -933,7 +933,8 @@
       "owner": "Owner",
       "manager": "Manager",
       "member": "Member",
-      "viewer": "Viewer"
+      "viewer": "Viewer",
+      "it": "IT owner"
     },
     "icons": {
       "folder": "Folder",
@@ -1550,6 +1551,21 @@
     "none": "No area",
     "change": "Change area of {{name}} (now: {{area}})",
     "saved": "{{name}}: area {{area}}."
+  },
+  "brief": {
+    "subtitle": "What the project needs from IT",
+    "aboutTitle": "About the project",
+    "aboutDescription": "Why it exists and what it must achieve.",
+    "noObjective": "The project team has not written the objective yet.",
+    "needsTitle": "What we need from IT",
+    "needsDescription_one": "{{count}} task assigned to you. Open it to see the details, comment or update the status.",
+    "needsDescription_other": "{{count}} tasks assigned to you. Open them to see the details, comment or update the status.",
+    "noTasksTitle": "Nothing pending for now",
+    "noTasksDescription": "When the team assigns you a task, it will show up here.",
+    "noDueDate": "No due date",
+    "itemsTitle": "Indicators you own",
+    "itemsDescription": "Project charter targets that depend on IT.",
+    "target": "target: {{value}} {{unit}}"
   },
   "tasks": {
     "title": "Tasks",

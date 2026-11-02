@@ -33,11 +33,21 @@ function isContributor(access) {
   return access.viewAll || access.isOwner || access.role === 'manager' || access.role === 'member'
 }
 
+/**
+ * Acesso do Responsável TI à tarefa: só às atribuídas a ele, como contribuidor daquela tarefa
+ * (vê, edita, comenta e anexa; não exclui, não reatribui e não cria tarefas no projeto).
+ */
+function scopedAccess(access, task) {
+  if (!access || !access.limited || !task || !access.principal || task.assigneeId !== access.principal.userId) return access
+  return Object.assign({}, access, { canView: true, limited: false, scoped: true, role: 'member' })
+}
+
 /** `task` só é necessário para `delete` ({ creatorId }). */
 function assertTaskAccess(access, project, action, task) {
   const principal = access.principal
   if (!access.canView || !rbac.can(principal, 'tasks.view')) throw appError('TASK_NOT_FOUND')
   if (action === 'view') return
+  if (access.scoped && (action === 'delete' || action === 'assign' || action === 'create')) throw appError('FORBIDDEN')
   const permission = ACTION_PERMISSION[action]
   if (!permission || !rbac.can(principal, permission) || !isContributor(access)) throw appError('FORBIDDEN')
   if (action === 'delete' && !(access.isManager || (task && principal && task.creatorId === principal.userId))) throw appError('FORBIDDEN')
@@ -248,6 +258,7 @@ module.exports = {
   assertTaskAccess,
   taskCapabilities,
   canBeAssignee,
+  scopedAccess,
   taskCode,
   statusDates,
   requiredIn,

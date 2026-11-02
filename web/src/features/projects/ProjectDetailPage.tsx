@@ -34,6 +34,7 @@ import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './proje
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
 import { ProjectChronology } from './ProjectChronology'
+import { ProjectBriefPage } from './ProjectBriefPage'
 import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
 
 export function ProjectDetailPage() {
@@ -68,6 +69,8 @@ export function ProjectDetailPage() {
     }
     return <AppErrorState onRetry={() => void project.refetch()} />
   }
+  // Responsável TI: só o resumo do projeto e o que precisamos dele
+  if (project.data.myRole === 'it') return <ProjectBriefPage project={project.data} />
   return <ProjectDetail project={project.data} />
 }
 

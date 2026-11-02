@@ -168,7 +168,7 @@ function createProjectService(deps) {
 
   function getProject(ctx, id) {
     const { project, access } = load(ctx, id)
-    projectDomain.assertAccess(access, project, 'view')
+    projectDomain.assertAccess(access, project, 'brief')
     return present(ctx, project)
   }
 
