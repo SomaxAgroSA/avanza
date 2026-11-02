@@ -2,6 +2,7 @@ const { describe, it, before, after } = require('node:test')
 const assert = require('node:assert/strict')
 const { createTestDatabase } = require('../support/db-harness')
 const { insertRow } = require('../../src/infrastructure/sql')
+const { WATCHED } = require('../../src/domain/realtime')
 
 describe('gatilhos', () => {
   let t
@@ -53,7 +54,16 @@ describe('gatilhos', () => {
     assert.equal(await t.db.one('SELECT key FROM storage_trash WHERE key = $1', [`platform_settings/${settings.id}/logo_bbb.png`]), null)
   })
 
-  it('gravações nas tabelas observadas avisam o canal do tempo real depois do commit', async () => {
+  it('toda tabela observada pelo tempo real tem o gatilho de aviso', async () => {
+    const rows = await t.db.query(
+      "SELECT c.relname AS table_name FROM pg_trigger g JOIN pg_class c ON c.oid = g.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND g.tgname LIKE 'trg\\_%\\_realtime'",
+      [t.schema],
+    )
+    const withTrigger = new Set(rows.map((row) => row.table_name))
+    assert.deepEqual(WATCHED.filter((table) => !withTrigger.has(table)), [])
+  })
+
+    it('gravações nas tabelas observadas avisam o canal do tempo real depois do commit', async () => {
     const listener = await t.db.connect()
     const received = []
     listener.on('notification', (msg) => received.push(JSON.parse(msg.payload)))

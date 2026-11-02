@@ -32,6 +32,7 @@ const { createExecutiveService } = require('../application/executive')
 const { createPreferenceService } = require('../application/preferences')
 const { createTimelineService } = require('../application/timeline')
 const { createMilestoneService } = require('../application/milestones')
+const { createCharterService } = require('../application/charter')
 const { createPlanService } = require('../application/plan')
 const { createPlanInteractionService } = require('../application/plan-interaction')
 const { createPlanCollaborationService } = require('../application/plan-collaboration')
@@ -121,6 +122,7 @@ function createContainer(runtime, options) {
     preferences: createPreferenceService(deps),
     timeline: createTimelineService(deps),
     milestones: createMilestoneService(deps),
+    charter: createCharterService(deps),
     plan: createPlanService(deps),
     planInteraction: createPlanInteractionService(deps),
     planCollaboration: createPlanCollaborationService(deps),

@@ -96,6 +96,8 @@ function createTaskRepository(db) {
       estimatedHours: hours(row.estimated_hours),
       actualHours: hours(row.actual_hours),
       checklist: row.checklist || [],
+      reportExcluded: !!row.report_excluded,
+      urgency: row.urgency || null,
       position: row.position,
       createdAt: row.created,
       updatedAt: row.updated,
@@ -106,7 +108,7 @@ function createTaskRepository(db) {
   const CARD_COLUMNS = [
     'id', 'project_id', 'number', 'code', 'title', 'task_type_id', 'status_id', 'priority_id', 'creator_id', 'assignee_id',
     'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'start_date', 'due_date', 'started_at', 'completed_at',
-    'estimated_hours', 'actual_hours', 'checklist', 'position', 'created', 'updated',
+    'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'urgency', 'position', 'created', 'updated',
   ]
     .map(ident)
     .join(', ')
@@ -142,6 +144,9 @@ function createTaskRepository(db) {
       else if (DATES[key]) values[DATES[key]] = toDbDate(value)
       else if (NUMBERS[key]) values[NUMBERS[key]] = value === null ? 0 : value
       else if (key === 'checklist') values.checklist = toJson(value || [])
+      else if (key === 'reportExcluded') values.report_excluded = !!value
+      // urgência vazia = '' (texto vazio, nunca NULL)
+      else if (key === 'urgency') values.urgency = value || ''
       else if (key === 'position') values.position = value
     })
     return values
@@ -175,6 +180,8 @@ function createTaskRepository(db) {
     if (query.tagId) where.push(`tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = ${param(query.tagId)})`)
     if (query.sprintId) where.push(query.sprintId === 'none' ? 'tasks.sprint_id IS NULL' : `tasks.sprint_id = ${param(query.sprintId)}`)
     if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)
+    if (query.inReport !== undefined) where.push(`tasks.report_excluded = ${param(!query.inReport)}`)
+    if (query.urgency) where.push(`tasks.urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
     if (query.search) {
       const q = param(likePattern(query.search.text))

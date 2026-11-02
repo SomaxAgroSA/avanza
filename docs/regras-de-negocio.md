@@ -657,3 +657,37 @@ A Gestão de projetos é o **plano macro** do projeto (fases, entregas, cronogra
 - **Progresso pelas tarefas:** elemento que não está "feito" e tem tarefas ligadas tem o progresso = tarefas concluídas ÷ tarefas ligadas (canceladas não contam). Isso vale antes do progresso dos subelementos e do informado à mão; o elemento "feito" continua 100%. O quadro mostra "pelas tarefas · 3/5". A saúde do projeto e o Painel executivo usam esse mesmo progresso.
 - **Excluir o elemento** desliga as tarefas (elas continuam existindo, sem elemento). Ligar, trocar e desligar ficam no histórico da tarefa ("Elemento da Gestão").
 - O Claude (MCP) liga com `plan_item_id` em `create_task`/`update_task` e filtra com `list_tasks`.
+
+## 29. Informe do projeto
+
+Página do projeto → aba **Informe**: monta o informe do projeto com os dados da plataforma e baixa em PDF.
+
+- **Quais tarefas entram:** toda tarefa entra por padrão (também as que já existiam). Na aba **Tarefas** do projeto, o botão de informe de cada linha (antes do "Visualizar") tira ou devolve a tarefa; a coluna/filtro **No informe** mostra quais estão fora. Pode mudar quem edita a tarefa; não exige os campos obrigatórios do status e fica no histórico da tarefa ("No informe: Sim → Não").
+- **O que o informe mostra:** capa (projeto, início, data de corte e equipe = responsáveis das tarefas do informe), resumo com indicadores (dias corridos e úteis, tarefas concluídas, marcos alcançados, fases encerradas) e cronograma, avanço por fase, marcos, linha do tempo dia a dia (Diário, marcos e tarefas pela data do fato — mesma regra do Histórico), tarefas por situação e próximos passos (marcos pendentes e tarefas abertas pelo prazo). Cada seção pode ser desligada; a numeração acompanha.
+- **Fases:** elementos de primeiro nível de um grupo da Gestão de projetos (e dos subgrupos dele), com a etiqueta de status e o progresso do quadro; sem escolha, o primeiro grupo do quadro. Só aparece para quem tem `plan.view`.
+- **Período e corte:** "De/Até" recortam tarefas (pela data de início, ou o prazo), marcos e Diário; tarefa sem data só entra sem período. A **data de corte** é o "hoje" do documento: dias, fases em andamento e a linha tracejada do cronograma vão até ela. Tarefas canceladas aparecem na lista, mas não contam no total de tarefas.
+- **PDF:** a prévia é o próprio documento A4; "Baixar PDF" abre a impressão do navegador ("Salvar como PDF"), com rodapé e número de página. Título, subtítulo, resumo, observações e opções ficam guardados no navegador de cada pessoa, por projeto.
+- **API e Claude (MCP):** `PUT /tasks/{id}/report` (`{ in_report }`) e o filtro `in_report=true|false` em `GET /tasks`; toda tarefa sai com `in_report`. O Claude usa `set_task_in_report` e o filtro `in_report` de `list_tasks`.
+
+## 30. Ficha do projeto
+
+Página do projeto → aba **Ficha** (logo depois da Visão geral): para que o projeto existe, o que vai entregar, até onde vai e como se mede o sucesso — com o avanço calculado pelo que já está na plataforma.
+
+- **Seções:** **Objetivos** (objetivo geral + objetivos específicos), **Funcionalidades**, **Alcance** (inclui / não inclui) e **Resultados esperados**. A **completude** conta quatro seções: objetivos (objetivo geral ou ao menos um específico), funcionalidades, alcance incluído e resultados.
+- **Quem faz o quê:** quem vê o projeto vê a ficha (os dados das tarefas vinculadas só com `tasks.view`). Montar e editar: gestor ou dono do projeto (`projects.edit`, projeto não arquivado), como os marcos. Registrar a **medição** de um resultado: quem edita ou o **responsável** pelo resultado. Responsável = dono ou membro do projeto. Projeto arquivado: a ficha fica só para leitura.
+- **Funcionalidade:** vinculada a tarefas do projeto. Avanço = tarefas concluídas / tarefas vinculadas (canceladas não contam). Estado **automático**: nenhuma começou → *Planejada*; alguma em andamento ou concluída → *Em desenvolvimento*; todas concluídas → *Entregue*. Quem edita pode fixar o estado à mão (inclusive *Cancelada*); "Automático" volta ao cálculo. Tarefa excluída sai do vínculo.
+- **Objetivo:** vinculado a funcionalidades e resultados. Estado **automático**: algum resultado atrasado → *Em risco*; tudo entregue/cumprido → *Atingido*; algo andando → *Em curso*; senão *Pendente*. Funcionalidades canceladas não contam. Também pode ser fixado à mão. Item excluído sai do vínculo.
+- **Resultado esperado:** indicador com partida, meta, unidade, início, prazo, frequência de medição e responsável. Cada **medição** (valor, data — hoje ou antes —, comentário) entra na série; a de data mais recente vira o **valor atual**. **Situação:** *Cumprido* (chegou à meta), *No caminho* (no ritmo de uma reta entre a partida no início e a meta no prazo), *Atrasado* (abaixo da reta, ou passou do prazo) ou *Sem dados* (nenhuma medição). Meta abaixo da partida = quanto menos, melhor. **Sem medir:** com frequência semanal (7 dias), mensal (31) ou trimestral (92), passou do intervalo desde a última medição (ou da criação).
+- **Limites:** até 200 itens por projeto, 200 tarefas por funcionalidade e 50 vínculos por objetivo; objetivo geral até 2000 caracteres.
+- **Histórico:** no projeto — `charter.updated` (objetivo geral), `charter_item.created/updated/deleted/reordered` e `charter_item.measured`. Mudanças atualizam a aba de quem está com ela aberta (tempo real).
+- **Claude (MCP):** `get_project_charter`, `update_project_charter`, `create_charter_item`, `update_charter_item`, `reorder_charter_items`, `delete_charter_item`, `list_charter_measurements` e `add_charter_measurement`, com as mesmas permissões.
+
+## 31. Urgência (semáforo)
+
+Tarefas e projetos têm uma **urgência** em semáforo: 🔴 **Alta**, 🟡 **Média**, 🟢 **Baixa** — ou nenhuma (sem urgência, o padrão, inclusive do que já existia).
+
+- **Tarefas:** coluna **Urgência** na aba Tarefas (do projeto e da lista geral). Quem edita a tarefa troca com um clique na célula (menu com as três opções e "Sem urgência"), sem exigir os campos obrigatórios do status; fica no histórico da tarefa ("Urgência: — → Alta"). No Kanban, o semáforo aparece no canto de cada cartão com urgência e há o filtro "Urgência".
+- **Projetos:** coluna e filtro "Urgência" na lista de Projetos (quem edita o projeto troca com um clique) e campo no formulário do projeto; histórico em `project.updated`.
+- **Diferença da prioridade:** a prioridade segue o cadastro de prioridades (ordem de atendimento); a urgência é o sinal rápido de "quanto aperta" para quem olha a lista. As duas convivem.
+- **Filtro:** "Urgência" na barra de filtros (Alta, Média, Baixa, Sem urgência).
+- **API e Claude (MCP):** tarefas — `PUT /tasks/{id}/urgency` (`null` limpa; sem exigir os obrigatórios), também `urgency` em `POST/PATCH /tasks`, e o filtro `GET /tasks?urgency=high|medium|low|none`; projetos — `urgency` em `POST/PATCH /projects` (`null` limpa) e `GET /projects?urgency=…`. O Claude usa `urgency` em `create_task`/`update_task`/`list_tasks` e `create_project`/`update_project`/`list_projects`.

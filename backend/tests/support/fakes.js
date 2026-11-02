@@ -67,6 +67,9 @@ function createFakeStore() {
     notifications: [],
     sprints: [],
     milestones: [],
+    charters: [],
+    charterItems: [],
+    charterMeasurements: [],
     projectGroups: [],
     planStatuses: [],
     planResources: [],
@@ -413,6 +416,7 @@ function createFakeRepositories(store) {
       }
       if (query.status) items = items.filter((p) => p.status === query.status)
       if (query.priority) items = items.filter((p) => p.priority === query.priority)
+      if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
       if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
       const sort = query.sort[0]
       if (sort) {
@@ -604,6 +608,9 @@ function createFakeRepositories(store) {
       if (query.assigneeId) items = items.filter((t) => t.assigneeId === query.assigneeId)
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
+      if (query.planItemId) items = items.filter((t) => t.planItemId === query.planItemId)
+      if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
+      if (query.urgency) items = items.filter((t) => (t.urgency || 'none') === query.urgency)
       if (query.search) {
         const q = query.search.text.toLowerCase()
         items = items.filter(
@@ -670,6 +677,60 @@ function createFakeRepositories(store) {
     update: (id, patch) => Object.assign(milestoneRepository.findById(id), patch, { updatedAt: new Date() }),
     delete: (id) => {
       store.milestones = store.milestones.filter((m) => m.id !== id)
+    },
+  }
+
+  const charterRepository = {
+    findByProject: (projectId) => store.charters.find((c) => c.projectId === projectId) || null,
+    upsert: (projectId, patch) => {
+      let found = charterRepository.findByProject(projectId)
+      if (!found) {
+        found = { id: 'charter_' + (store.charters.length + 1), projectId, objective: '', createdAt: new Date() }
+        store.charters.push(found)
+      }
+      return Object.assign(found, patch, { updatedAt: new Date() })
+    },
+  }
+
+  let charterItemSeq = 0
+  const charterItemRepository = {
+    findById: (id) => store.charterItems.find((i) => i.id === id) || null,
+    /** Pela posição; empate pela criação. */
+    listByProject: (projectId) =>
+      store.charterItems
+        .filter((i) => i.projectId === projectId)
+        .slice()
+        .sort((a, b) => (a.position || 0) - (b.position || 0) || a.createdAt - b.createdAt),
+    create: (data) => {
+      charterItemSeq += 1
+      const item = Object.assign(
+        { id: 'charter_item_' + charterItemSeq, taskIds: [], linkIds: [], current: null, measuredAt: null, createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, charterItemSeq)), updatedAt: new Date() },
+        data,
+      )
+      store.charterItems.push(item)
+      return item
+    },
+    update: (id, patch) => Object.assign(charterItemRepository.findById(id), patch, { updatedAt: new Date() }),
+    delete: (id) => {
+      store.charterItems = store.charterItems.filter((i) => i.id !== id)
+      store.charterMeasurements = store.charterMeasurements.filter((m) => m.itemId !== id)
+    },
+  }
+
+  let measurementSeq = 0
+  const charterMeasurementRepository = {
+    /** Mais recente primeiro (pela data da medição; empate pela gravação). */
+    listByItem: (itemId, limit) =>
+      store.charterMeasurements
+        .filter((m) => m.itemId === itemId)
+        .slice()
+        .sort((a, b) => (a.measuredAt < b.measuredAt ? 1 : a.measuredAt > b.measuredAt ? -1 : b.seq - a.seq))
+        .slice(0, limit || undefined),
+    create: (data) => {
+      measurementSeq += 1
+      const m = Object.assign({ id: 'measurement_' + measurementSeq, seq: measurementSeq, createdAt: new Date() }, data)
+      store.charterMeasurements.push(m)
+      return m
     },
   }
 
@@ -1344,6 +1405,9 @@ function createFakeRepositories(store) {
     webhookDeliveryRepository,
     sprintRepository,
     milestoneRepository,
+    charterRepository,
+    charterItemRepository,
+    charterMeasurementRepository,
     projectGroupRepository,
     planStatusRepository,
     planResourceRepository,

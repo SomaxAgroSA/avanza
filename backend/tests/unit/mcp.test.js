@@ -209,27 +209,43 @@ describe('mcp/tools', () => {
       type: { id: 'ty', name: 'Bug' }, status: { id: 's1', key: 'todo', name: 'A fazer', color: 'gray', category: 'todo' },
       priority: { id: 'pr', name: 'Alta' }, sprint: null, assignee: { id: 'u2', name: 'Ana', email: 'ana@x', avatar_url: null },
       tags: [{ id: 'g', name: 'api', color: 'red' }], due_date: '2026-11-01T00:00:00.000Z', blocked: false,
-      checklist_progress: { done: 0, total: 0 }, comment_count: 3,
+      checklist_progress: { done: 0, total: 0 }, comment_count: 3, urgency: 'high', in_report: false,
     }
     const { calls, services } = spyServices({ 'tasks.listTasks': { items: [summary], meta: { page: 1, perPage: 5, total: 1, totalPages: 1 } } })
-    const out = await byName('list_tasks').run({ project_id: 'p1', categories: ['todo', 'in_progress'], assignee_id: 'me', per_page: 5 }, { services, ctx })
-    assert.deepEqual(calls[0], { service: 'tasks', method: 'listTasks', args: [{ project_id: 'p1', category: 'todo,in_progress', assignee_id: 'me', perPage: 5 }] })
+    const out = await byName('list_tasks').run({ project_id: 'p1', categories: ['todo', 'in_progress'], assignee_id: 'me', urgency: 'none', in_report: false, per_page: 5 }, { services, ctx })
+    assert.deepEqual(calls[0], { service: 'tasks', method: 'listTasks', args: [{ project_id: 'p1', category: 'todo,in_progress', assignee_id: 'me', urgency: 'none', in_report: 'false', perPage: 5 }] })
     assert.deepEqual(out.meta, { page: 1, perPage: 5, total: 1, totalPages: 1 })
     assert.deepEqual(out.items[0], {
       id: 't1', code: 'CRM-1', title: 'Tarefa', project: 'CRM', type: 'Bug', status: { id: 's1', name: 'A fazer', category: 'todo' },
-      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
+      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', in_report: false, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
       tags: ['api'], blocked: false, parent_task_id: null, updated_at: null,
     })
   })
 
   it('update_task e move_task: o id vai no caminho, o resto vira o corpo', async () => {
     const { calls, services } = spyServices()
-    await byName('update_task').run({ task_id: 't1', title: 'Novo', due_date: null }, { services, ctx })
+    await byName('update_task').run({ task_id: 't1', title: 'Novo', due_date: null, urgency: null }, { services, ctx })
     await byName('move_task').run({ task_id: 't1', status_id: 's2' }, { services, ctx })
+    await byName('set_task_in_report').run({ task_id: 't1', in_report: false }, { services, ctx })
     assert.deepEqual(calls, [
-      { service: 'tasks', method: 'updateTask', args: ['t1', { title: 'Novo', due_date: null }] },
+      { service: 'tasks', method: 'updateTask', args: ['t1', { title: 'Novo', due_date: null, urgency: null }] },
       { service: 'tasks', method: 'moveTask', args: ['t1', { status_id: 's2' }] },
+      { service: 'tasks', method: 'setTaskReport', args: ['t1', { in_report: false }] },
     ])
+  })
+
+  it('urgência: nas tarefas e nos projetos (criar, editar com null para limpar e filtrar)', async () => {
+    const { validateArguments: check } = require('../../src/mcp/schema')
+    ;['create_task', 'create_project'].forEach((name) => {
+      assert.deepEqual(check({ urgency: 'roja' }, byName(name).inputSchema).urgency, 'invalid_option', name)
+      assert.equal(check({ urgency: null }, byName(name).inputSchema).urgency, 'invalid_type', name)
+    })
+    ;['update_task', 'update_project'].forEach((name) => assert.equal(check({ urgency: null }, byName(name).inputSchema).urgency, undefined, name))
+    ;['list_tasks', 'list_projects'].forEach((name) => assert.equal(check({ urgency: 'none' }, byName(name).inputSchema).urgency, undefined, name))
+    const { calls, services } = spyServices({ 'projects.listProjects': { items: [], meta: {} } })
+    await byName('list_projects').run({ urgency: 'high' }, { services, ctx })
+    await byName('update_project').run({ project_id: 'p1', urgency: null }, { services, ctx })
+    assert.deepEqual(calls.map((c) => c.args), [[{ urgency: 'high' }], ['p1', { urgency: null }]])
   })
 
   it('get_board: cards enxutos e no máximo `limit_per_column` por coluna', async () => {

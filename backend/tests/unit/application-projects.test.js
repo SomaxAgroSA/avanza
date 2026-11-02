@@ -199,3 +199,25 @@ describe('application/projects — membros', () => {
     assert.equal((await projects.getProject(ctx.manager, project.id)).capabilities.transfer, false)
   })
 })
+
+describe('application/projects — urgência (semáforo)', () => {
+  it('nasce sem urgência; edita, limpa com null, registra no histórico e filtra a listagem', async () => {
+    const { deps, projects, ctx } = await setup()
+    const a = await projects.createProject(ctx.manager, input())
+    const b = await projects.createProject(ctx.manager, input({ name: 'Outro', key: 'OUT', urgency: 'low' }))
+    assert.equal(a.urgency, null)
+    assert.equal(b.urgency, 'low')
+    assert.equal((await projects.updateProject(ctx.manager, a.id, { urgency: 'high' })).urgency, 'high')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue.urgency, entry.newValue.urgency], ['project.updated', null, 'high'])
+    const keys = async (urgency) => (await projects.listProjects(ctx.manager, { urgency })).items.map((p) => p.key)
+    assert.deepEqual(await keys('high'), ['CRM'])
+    assert.deepEqual(await keys('low'), ['OUT'])
+    assert.equal((await projects.updateProject(ctx.manager, b.id, { urgency: null })).urgency, null)
+    assert.deepEqual(await keys('none'), ['OUT'])
+    await assert.rejects(() => projects.updateProject(ctx.manager, a.id, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
+    await assert.rejects(() => projects.listProjects(ctx.manager, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
+    // POST com urgency: null = sem urgência
+    assert.equal((await projects.createProject(ctx.manager, input({ name: 'Terceiro', key: 'TER', urgency: null }))).urgency, null)
+  })
+})

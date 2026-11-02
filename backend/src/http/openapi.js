@@ -266,6 +266,7 @@ function build() {
             { name: 'search', in: 'query', schema: { type: 'string' } },
             { name: 'status', in: 'query', schema: { type: 'string' } },
             { name: 'priority', in: 'query', schema: { type: 'string' } },
+            { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência do projeto; none = sem urgência' },
             { name: 'owner_id', in: 'query', schema: { type: 'string' } },
           ],
         }),
@@ -414,6 +415,9 @@ function build() {
             { name: 'category', in: 'query', schema: { type: 'string' }, description: 'categorias de status separadas por vírgula (ex.: backlog,todo,in_progress)' },
             { name: 'tag_id', in: 'query', schema: { type: 'string' } },
             { name: 'sprint_id', in: 'query', schema: { type: 'string' }, description: 'id da sprint ou `none` (sem sprint)' },
+            { name: 'plan_item_id', in: 'query', schema: { type: 'string' }, description: 'tarefas ligadas a um elemento da Gestão de projetos' },
+            { name: 'in_report', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'entra (true) ou não (false) no informe do projeto' },
+            { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência (semáforo); none = sem urgência' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
@@ -434,6 +438,24 @@ function build() {
           requestBody: jsonBody(ref('TaskInput')),
         }),
         delete: op('Exclui (tasks.delete + gestor do projeto ou autor)', ['tasks'], { 200: ok('Excluída', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/tasks/{id}/report': {
+        put: op('Liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+          404: errorResponse('TASK_NOT_FOUND'),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['in_report'], properties: { in_report: { type: 'boolean' } } }),
+        }),
+      },
+      '/tasks/{id}/urgency': {
+        put: op('Urgência da tarefa (semáforo alta/média/baixa; null limpa); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+          404: errorResponse('TASK_NOT_FOUND'),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['urgency'], properties: { urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null] } } }),
+        }),
       },
       '/tasks/{id}/history': {
         get: op('Histórico da tarefa com valores legíveis', ['tasks'], { 200: ok('Registros', { type: 'array', items: ref('AuditEntry') }, true) }, { parameters: [idParam] }),
@@ -796,6 +818,59 @@ function build() {
       '/milestones/{id}': {
         patch: op('Edita marco (gestor/dono)', ['timeline'], { 200: ok('Marco', ref('Milestone')), 404: errorResponse('MILESTONE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('MilestoneInput')) }),
         delete: op('Exclui marco (gestor/dono)', ['timeline'], { 200: ok('Excluído', { type: 'object' }), 404: errorResponse('MILESTONE_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/projects/{id}/charter': {
+        get: op(
+          'Ficha do projeto (quem vê o projeto): objetivo geral, itens com estado calculado (funcionalidades pelas tarefas vinculadas, objetivos pelos vínculos, resultados pela meta e o prazo), completude e resumo',
+          ['charter'],
+          { 200: ok('Ficha', ref('Charter')), 404: errorResponse('PROJECT_NOT_FOUND') },
+          { parameters: [idParam] },
+        ),
+        put: op('Grava o objetivo geral (gestor/dono)', ['charter'], { 200: ok('Ficha', ref('Charter')), 403: errorResponse('FORBIDDEN') }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['objective'], properties: { objective: { type: 'string', maxLength: 2000 } } }),
+        }),
+      },
+      '/projects/{id}/charter/items': {
+        post: op('Cria item da ficha (gestor/dono)', ['charter'], { 201: ok('Item', ref('CharterItem')), 403: errorResponse('FORBIDDEN'), 404: errorResponse('PROJECT_NOT_FOUND') }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody(ref('CharterItemInput')),
+        }),
+      },
+      '/projects/{id}/charter/order': {
+        put: op('Nova ordem dos itens de um tipo (gestor/dono)', ['charter'], { 200: ok('Ficha', ref('Charter')) }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({
+            type: 'object',
+            required: ['kind', 'ids'],
+            properties: { kind: { type: 'string', enum: ['objective', 'feature', 'scope_in', 'scope_out', 'result'] }, ids: { type: 'array', items: { type: 'string' } } },
+          }),
+        }),
+      },
+      '/charter-items/{id}': {
+        patch: op('Edita item da ficha (gestor/dono). O tipo não muda', ['charter'], { 200: ok('Item', ref('CharterItem')), 404: errorResponse('CHARTER_ITEM_NOT_FOUND') }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody(ref('CharterItemInput')),
+        }),
+        delete: op('Exclui item da ficha (gestor/dono)', ['charter'], { 200: ok('Excluído', { type: 'object' }), 404: errorResponse('CHARTER_ITEM_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/charter-items/{id}/measurements': {
+        get: op('Medições de um resultado esperado (mais recente primeiro)', ['charter'], { 200: ok('Medições', { type: 'array', items: ref('CharterMeasurement') }), 404: errorResponse('CHARTER_ITEM_NOT_FOUND') }, {
+          parameters: [idParam],
+        }),
+        post: op(
+          'Registra medição (gestor/dono ou o responsável pelo resultado). A mais recente vira o valor atual',
+          ['charter'],
+          { 201: ok('Item', ref('CharterItem')), 403: errorResponse('FORBIDDEN'), 404: errorResponse('CHARTER_ITEM_NOT_FOUND') },
+          {
+            parameters: [idParam, csrfHeader],
+            requestBody: jsonBody({
+              type: 'object',
+              required: ['value'],
+              properties: { value: { type: 'number' }, note: { type: 'string', maxLength: 500 }, measured_at: { type: 'string', format: 'date', description: 'padrão: hoje; não pode ser futura' } },
+            }),
+          },
+        ),
       },
       '/docs/spaces': {
         get: op('Espaços de documentação que a pessoa lê (docs.view + visibilidade)', ['docs'], { 200: ok('Espaços', { type: 'array', items: ref('DocSpace') }) }),
@@ -1168,6 +1243,8 @@ function build() {
             parent_task_id: { type: ['string', 'null'] },
             subtask_progress: { type: 'object', properties: { done: { type: 'integer' }, total: { type: 'integer' } } },
             blocked: { type: 'boolean', description: 'algum bloqueador (bloqueia/depende de) ainda aberto' },
+            in_report: { type: 'boolean', description: 'entra no informe do projeto (padrão: true)' },
+            urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo): alta = vermelho, média = amarelo, baixa = verde; null = sem urgência' },
             start_date: { type: ['string', 'null'], format: 'date-time', description: 'início planejado (timeline)' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
             estimated_hours: { type: ['number', 'null'] },
@@ -1512,6 +1589,7 @@ function build() {
             parent_task_id: { type: ['string', 'null'], description: 'Subtarefa: pai do mesmo projeto, sem ciclo; null solta' },
             sprint_id: { type: ['string', 'null'], description: 'Sprint aberto do mesmo projeto; null tira da sprint' },
             plan_item_id: { type: ['string', 'null'], description: 'Elemento (ou subelemento) da Gestão de projetos do mesmo projeto que a tarefa executa (ADR-050); null desliga' },
+            urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null limpa. Para trocar sem exigir os obrigatórios do status, use PUT /tasks/{id}/urgency' },
             title: { type: 'string', maxLength: 200 },
             description: { type: 'string', maxLength: 50000 },
             status_id: { type: 'string', description: 'padrão: status marcado como padrão' },
@@ -1677,6 +1755,81 @@ function build() {
             state: { type: 'string', enum: ['pending', 'done'] },
           },
         },
+        CharterItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            project_id: { type: 'string' },
+            kind: { type: 'string', enum: ['objective', 'feature', 'scope_in', 'scope_out', 'result'] },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            position: { type: 'integer' },
+            owner: { oneOf: [ref('UserSummary'), { type: 'null' }] },
+            state: { type: 'string', description: 'objetivo/funcionalidade: auto ou o estado escolhido à mão' },
+            effective_state: { type: 'string', description: 'objetivo: pending|in_progress|achieved|at_risk; funcionalidade: planned|in_progress|delivered|cancelled' },
+            link_ids: { type: 'array', items: { type: 'string' }, description: 'objetivo: funcionalidades e resultados vinculados' },
+            task_ids: { type: 'array', items: { type: 'string' }, description: 'funcionalidade: tarefas vinculadas' },
+            tasks: { type: 'array', items: ref('Task'), description: 'funcionalidade: resumo das tarefas (com tasks.view)' },
+            progress: { type: 'object', properties: { done: { type: 'integer' }, total: { type: 'integer' } } },
+            unit: { type: 'string' },
+            baseline: { type: 'number' },
+            target: { type: 'number' },
+            current: { type: ['number', 'null'] },
+            start_date: { type: ['string', 'null'], format: 'date' },
+            due_date: { type: ['string', 'null'], format: 'date' },
+            frequency: { type: 'string', enum: ['none', 'weekly', 'monthly', 'quarterly'] },
+            measured_at: { type: ['string', 'null'], format: 'date' },
+            situation: { type: 'string', enum: ['achieved', 'on_track', 'late', 'no_data'] },
+            percent: { type: 'integer' },
+            stale: { type: 'boolean', description: 'passou do intervalo da frequência sem medição' },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        CharterItemInput: {
+          type: 'object',
+          description: 'Cada tipo aceita só os seus campos; os demais são ignorados',
+          properties: {
+            kind: { type: 'string', enum: ['objective', 'feature', 'scope_in', 'scope_out', 'result'], description: 'obrigatório na criação; não muda' },
+            title: { type: 'string', maxLength: 200, description: 'obrigatório na criação' },
+            description: { type: 'string', maxLength: 1000 },
+            state: { type: 'string', description: 'objetivo: auto|pending|in_progress|achieved|at_risk; funcionalidade: auto|planned|in_progress|delivered|cancelled' },
+            owner_id: { type: ['string', 'null'], description: 'dono ou membro do projeto' },
+            link_ids: { type: 'array', items: { type: 'string' }, maxItems: 50 },
+            task_ids: { type: 'array', items: { type: 'string' }, maxItems: 200 },
+            unit: { type: 'string', maxLength: 20 },
+            baseline: { type: 'number' },
+            target: { type: 'number', description: 'resultado: obrigatório na criação' },
+            start_date: { type: ['string', 'null'], format: 'date' },
+            due_date: { type: ['string', 'null'], format: 'date' },
+            frequency: { type: 'string', enum: ['none', 'weekly', 'monthly', 'quarterly'] },
+          },
+        },
+        CharterMeasurement: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            item_id: { type: 'string' },
+            value: { type: 'number' },
+            note: { type: 'string' },
+            measured_at: { type: 'string', format: 'date' },
+            created_by: { oneOf: [ref('UserSummary'), { type: 'null' }] },
+            created_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        Charter: {
+          type: 'object',
+          properties: {
+            project_id: { type: 'string' },
+            objective: { type: 'string' },
+            updated_at: { type: ['string', 'null'], format: 'date-time' },
+            updated_by: { oneOf: [ref('UserSummary'), { type: 'null' }] },
+            capabilities: { type: 'object', properties: { edit: { type: 'boolean' } } },
+            completeness: { type: 'object', properties: { sections: { type: 'object' }, done: { type: 'integer' }, total: { type: 'integer' }, percent: { type: 'integer' } } },
+            summary: { type: 'object', description: 'features_total, features_delivered, tasks_total, tasks_done, results_total, results_on_track, results_late, results_stale' },
+            items: { type: 'array', items: ref('CharterItem') },
+          },
+        },
         Timeline: {
           type: 'object',
           properties: {
@@ -1740,6 +1893,7 @@ function build() {
             cover: { type: 'string' },
             status: { type: 'string', enum: ['planning', 'active', 'paused', 'completed', 'cancelled'] },
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+            urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null = sem urgência' },
             owner: ref('UserSummary'),
             start_date: { type: ['string', 'null'], format: 'date-time' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
@@ -1765,6 +1919,7 @@ function build() {
             cover: { type: 'string' },
             status: { type: 'string', enum: ['planning', 'active', 'paused', 'completed', 'cancelled'] },
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+            urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null limpa' },
             start_date: { type: ['string', 'null'], format: 'date', description: 'AAAA-MM-DD; null limpa' },
             due_date: { type: ['string', 'null'], format: 'date', description: 'AAAA-MM-DD; null limpa' },
           },

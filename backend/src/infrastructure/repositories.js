@@ -14,6 +14,7 @@ const taskConfig = require('./repositories/task-config')
 const tasks = require('./repositories/tasks')
 const plan = require('./repositories/plan')
 const docs = require('./repositories/docs')
+const charter = require('./repositories/charter')
 
 function createRepositories(db, ctx) {
   const repos = {
@@ -54,6 +55,9 @@ function createRepositories(db, ctx) {
     notificationRepository: tasks.createNotificationRepository(db, ctx),
     sprintRepository: tasks.createSprintRepository(db, ctx),
     milestoneRepository: tasks.createMilestoneRepository(db, ctx),
+    charterRepository: charter.createCharterRepository(db, ctx),
+    charterItemRepository: charter.createCharterItemRepository(db, ctx),
+    charterMeasurementRepository: charter.createCharterMeasurementRepository(db, ctx),
     relationRepository: tasks.createRelationRepository(db, ctx),
 
     projectGroupRepository: plan.createProjectGroupRepository(db, ctx),

@@ -35,6 +35,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   RELATION_NOT_FOUND: { status: 404, message: 'Relation not found' },
   SPRINT_NOT_FOUND: { status: 404, message: 'Sprint not found' },
   MILESTONE_NOT_FOUND: { status: 404, message: 'Milestone not found' },
+  CHARTER_ITEM_NOT_FOUND: { status: 404, message: 'Project charter item not found' },
   GROUP_NOT_FOUND: { status: 404, message: 'Project group not found' },
   PLAN_ITEM_NOT_FOUND: { status: 404, message: 'Board item not found' },
   PLAN_STATUS_NOT_FOUND: { status: 404, message: 'Board status label not found' },

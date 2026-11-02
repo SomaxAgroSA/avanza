@@ -139,7 +139,24 @@ describe('API /api/v1/projects', { timeout: 120000 }, () => {
     assert.equal((await manager.client.get(`/projects/${project.id}`)).status, 404)
   })
 
-  it('valida entrada e exige permissão para criar', async () => {
+  it('urgência: criar, editar (null limpa), filtrar e registrar no histórico', async () => {
+    const red = (await admin.post('/projects', { name: 'Urgente', key: 'URG', urgency: 'high' })).body.data
+    const calm = (await admin.post('/projects', { name: 'Calmo', key: 'CAL', urgency: null })).body.data
+    assert.deepEqual([red.urgency, calm.urgency], ['high', null])
+    const keys = async (urgency) => (await admin.get(`/projects?urgency=${urgency}&perPage=100`)).body.data.map((p) => p.key)
+    assert.ok((await keys('high')).includes('URG'))
+    assert.ok(!(await keys('none')).includes('URG'))
+    assert.ok((await keys('none')).includes('CAL'))
+    assert.equal((await admin.get('/projects?urgency=roja')).status, 400)
+    const edited = await admin.patch(`/projects/${red.id}`, { urgency: null })
+    assert.equal(edited.status, 200, JSON.stringify(edited.body))
+    assert.equal(edited.body.data.urgency, null)
+    const history = (await admin.get(`/projects/${red.id}/history`)).body.data
+    assert.deepEqual([history[0].action, history[0].old_value.urgency, history[0].new_value.urgency], ['project.updated', 'high', null])
+    assert.equal((await admin.patch(`/projects/${calm.id}`, { urgency: 'roja' })).body.error.details.fields.urgency, 'invalid_option')
+  })
+
+    it('valida entrada e exige permissão para criar', async () => {
     const viewer = await userWithRole('VIEWER', 'leitor@kamban.test')
     assert.equal((await viewer.client.post('/projects', { name: 'X', key: 'XX' })).body.error.code, 'FORBIDDEN')
 

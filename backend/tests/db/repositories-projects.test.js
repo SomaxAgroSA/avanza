@@ -105,6 +105,20 @@ describe('repositórios de projetos e membros', () => {
     assert.deepEqual(ids(await list({ ownerId: users.bia.id, status: 'planning', search: 'b' })), ['BET'])
   })
 
+  it('urgência: vazia gravada como texto vazio (lida como null), filtro com none = sem urgência', async () => {
+    const base = { scope: { userId: users.ana.id, viewAll: true }, view: 'all', sort: [{ column: 'name', direction: 'ASC' }], pagination: page() }
+    const list = (extra) => projects.list(Object.assign({}, base, extra))
+    assert.equal(p.alpha.urgency, null)
+    assert.equal((await projects.update(p.delta.id, { urgency: 'high' })).urgency, 'high')
+    try {
+      assert.deepEqual(ids(await list({ urgency: 'high' })), ['DEL'])
+      assert.deepEqual(ids(await list({ urgency: 'none' })), ['ALP', 'BET'])
+      assert.deepEqual(await t.db.one('SELECT urgency FROM projects WHERE id = $1', [p.alpha.id]), { urgency: '' })
+    } finally {
+      assert.equal((await projects.update(p.delta.id, { urgency: null })).urgency, null)
+    }
+  })
+
   it('ordenam pelas colunas da whitelist (data vazia primeiro na crescente) e paginam com o total', async () => {
     const base = { scope: { userId: users.ana.id, viewAll: true }, view: 'all', pagination: page() }
     const sorted = async (column, dir) => ids(await projects.list(Object.assign({}, base, { sort: [{ column, direction: dir }] })))

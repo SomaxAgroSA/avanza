@@ -40,7 +40,7 @@ describe('domain/realtime — eventos', () => {
   })
 
   it('coleções acompanhadas: tarefas, quadro do projeto, gestão, sprints, marcos, projeto e notificações', () => {
-    ;['tasks', 'comments', 'attachments', 'task_relations', 'sprints', 'project_milestones', 'projects', 'project_members', 'project_groups', 'plan_items', 'plan_item_updates', 'plan_journal', 'plan_issues', 'plan_columns', 'notifications'].forEach((c) =>
+    ;['tasks', 'comments', 'attachments', 'task_relations', 'sprints', 'project_milestones', 'project_charters', 'charter_items', 'charter_measurements', 'projects', 'project_members', 'project_groups', 'plan_items', 'plan_item_updates', 'plan_journal', 'plan_issues', 'plan_columns', 'notifications'].forEach((c) =>
       assert.ok(realtime.WATCHED.includes(c), c),
     )
     assert.equal(realtime.WATCHED.includes('sessions'), false)

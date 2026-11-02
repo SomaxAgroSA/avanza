@@ -175,6 +175,25 @@ describe('repositórios de tarefas (Postgres)', () => {
       assert.deepEqual(await listed({ priorityId: priorities[1], typeId: type.id }), { codes: nth(2), total: 1 })
     })
 
+    it('filtra por informe do projeto e por urgência (none = sem urgência; vazio gravado como texto vazio)', async () => {
+      await r.tasks.update(list[1].id, { reportExcluded: true, urgency: 'high' })
+      await r.tasks.update(list[3].id, { urgency: 'low' })
+      try {
+        assert.deepEqual(await listed({ inReport: false }), { codes: nth(1), total: 1 })
+        assert.deepEqual(await listed({ inReport: true }), { codes: nth(0, 2, 3), total: 3 })
+        assert.deepEqual(await listed({ urgency: 'high' }), { codes: nth(1), total: 1 })
+        assert.deepEqual(await listed({ urgency: 'none' }), { codes: nth(0, 2), total: 2 })
+        const raw = await t.db.one('SELECT urgency, report_excluded FROM tasks WHERE id = $1', [list[0].id])
+        assert.deepEqual(raw, { urgency: '', report_excluded: false })
+        const card = (await r.tasks.listForBoard(project.id, status.BACKLOG, { closed: false, limit: 50 })).find((task) => task.id === list[1].id)
+        assert.deepEqual([card.reportExcluded, card.urgency], [true, 'high'])
+      } finally {
+        await r.tasks.update(list[1].id, { reportExcluded: false, urgency: null })
+        await r.tasks.update(list[3].id, { urgency: null })
+      }
+      assert.equal((await r.tasks.findById(list[1].id)).urgency, null)
+    })
+
     it('respeita o escopo de quem não vê todos os projetos', async () => {
       assert.equal((await listed({ scope: { viewAll: false, userId: member.id } })).total, 4)
       assert.equal((await listed({ scope: { viewAll: false, userId: outsider.id } })).total, 0)

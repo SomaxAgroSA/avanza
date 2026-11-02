@@ -8,6 +8,8 @@
  * - Sprint (Fase 6): opcional, do mesmo projeto e não encerrada (ver domain/sprint.js).
  * - Subtarefa (Fase 7): `parent_task_id` do mesmo projeto, sem ciclo (ver domain/relation.js);
  *   excluir o pai solta as subtarefas. Resumos trazem progresso das subtarefas e "bloqueada".
+ * - Informe do projeto (§29) e urgência (§31): ligar/desligar a tarefa no informe e trocar a urgência
+ *   têm casos de uso próprios, que não exigem os campos obrigatórios do status (um clique na lista).
  */
 
 const { appError } = require('../core/errors')
@@ -53,10 +55,11 @@ const BASE_RULES = {
   sprint_id: [idRule],
   parent_task_id: [idRule],
   plan_item_id: [idRule],
+  urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS)],
 }
 
 /** Campos que aceitam `null` para limpar. */
-const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id']
+const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id', 'urgency']
 
 const SORTABLE = {
   code: 'code',
@@ -79,6 +82,9 @@ const LIST_SCHEMA = {
   // `none` = sem sprint
   plan_item_id: [idRule],
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
+  // `none` = sem urgência
+  urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
   category: [
     rules.custom((value) =>
       typeof value === 'string' && value.split(',').every((c) => workflow.STATUS_CATEGORIES.indexOf(c.trim()) >= 0) ? null : 'invalid_option',
@@ -348,6 +354,8 @@ function createTaskService(deps) {
       attachment_count: refs.attachmentCounts[task.id] || 0,
       subtask_progress: refs.subtasks[task.id] || { done: 0, total: 0 },
       blocked: !!refs.blocked[task.id],
+      in_report: !task.reportExcluded,
+      urgency: task.urgency || null,
     }
   }
 
@@ -419,6 +427,7 @@ function createTaskService(deps) {
       actual_hours: task.actualHours === undefined ? null : task.actualHours,
       tags: tagsOf(task, refs).map((tag) => tag.name).join(', ') || null,
       checklist: task.checklist && task.checklist.length ? taskDomain.checklistSummary(task.checklist) : null,
+      urgency: task.urgency || null,
     }
     for (const link of links) {
       value[`cf:${link.field.label}`] = await displayCustom(link.field, taskValues[link.field.id], refs.users)
@@ -500,6 +509,8 @@ function createTaskService(deps) {
         tag_id: pick('tag_id'),
         sprint_id: pick('sprint_id'),
         plan_item_id: pick('plan_item_id'),
+        in_report: pick('in_report'),
+        urgency: pick('urgency'),
       },
       LIST_SCHEMA,
     )
@@ -533,6 +544,8 @@ function createTaskService(deps) {
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
       planItemId: filters.plan_item_id,
+      inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
+      urgency: filters.urgency,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       pagination,
@@ -616,6 +629,7 @@ function createTaskService(deps) {
         forkedFromTaskId: forkedFrom ? forkedFrom.id : null,
         sprintId: data.sprint_id || null,
         planItemId: data.plan_item_id || null,
+        urgency: data.urgency || null,
         startDate: data.start_date || null,
         dueDate: data.due_date || null,
         estimatedHours: data.estimated_hours === undefined ? null : data.estimated_hours,
@@ -684,6 +698,8 @@ function createTaskService(deps) {
       if (planItemChange) await assertPlanItem(project, planItemChange)
       patch.planItemId = planItemChange
     }
+    const urgencyChange = cleared.indexOf('urgency') >= 0 ? null : data.urgency
+    if (urgencyChange !== undefined && urgencyChange !== (task.urgency || null)) patch.urgency = urgencyChange
     if (cleared.indexOf('start_date') >= 0) patch.startDate = null
     else if (data.start_date !== undefined) patch.startDate = data.start_date
     if (cleared.indexOf('due_date') >= 0) patch.dueDate = null
@@ -767,6 +783,40 @@ function createTaskService(deps) {
     return presentDetail(ctx, updated, project, access)
   }
 
+  /**
+   * Liga/desliga a tarefa no informe do projeto (§29). Não passa pela edição completa: não exige os
+   * obrigatórios do status nem mexe em outros campos; grava no histórico.
+   */
+  async function setTaskReport(ctx, id, input) {
+    const { task, project, access } = await loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const value = (input || {}).in_report
+    if (typeof value !== 'boolean') throw invalid({ in_report: 'invalid_type' })
+    if (value === !task.reportExcluded) return presentDetail(ctx, task, project, access)
+    const updated = await deps.unitOfWork.run(async (repos) => {
+      const result = await repos.taskRepository.update(task.id, { reportExcluded: !value })
+      await audit(repos, ctx, task, 'task.updated', { in_report: !value }, { in_report: value })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
+  /** Urgência (semáforo alta/média/baixa ou nenhuma, §31): muda direto da lista, sem exigir os campos do status. */
+  async function setTaskUrgency(ctx, id, input) {
+    const { task, project, access } = await loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const raw = (input || {}).urgency
+    if (raw !== null && taskDomain.URGENCY_LEVELS.indexOf(raw) < 0) throw invalid({ urgency: 'invalid_option' })
+    const before = task.urgency || null
+    if (raw === before) return presentDetail(ctx, task, project, access)
+    const updated = await deps.unitOfWork.run(async (repos) => {
+      const result = await repos.taskRepository.update(task.id, { urgency: raw })
+      await audit(repos, ctx, task, 'task.updated', { urgency: before }, { urgency: raw })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
   async function deleteTask(ctx, id) {
     const { task, project, access } = await loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'delete', task)
@@ -826,7 +876,7 @@ function createTaskService(deps) {
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, deleteTask, moveTask, summarize }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskUrgency, deleteTask, moveTask, summarize }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

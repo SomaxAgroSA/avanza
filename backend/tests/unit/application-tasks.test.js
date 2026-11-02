@@ -320,3 +320,98 @@ describe('application/tasks — listagem', () => {
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { category: 'done' })).items.map((t) => t.code), ['CRM-1'])
   })
 })
+
+describe('application/tasks — informe do projeto', () => {
+  it('toda tarefa entra no informe por padrão; quem edita tira e devolve, com histórico', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(task.in_report, true)
+
+    const out = await s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: false })
+    assert.equal(out.in_report, false)
+    const audit = s.deps.store.audit.at(-1)
+    assert.equal(audit.action, 'task.updated')
+    assert.deepEqual(audit.oldValue, { in_report: true })
+    assert.deepEqual(audit.newValue, { in_report: false })
+
+    const before = s.deps.store.audit.length
+    await s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: false })
+    assert.equal(s.deps.store.audit.length, before)
+    assert.equal((await s.tasks.setTaskReport(s.ctx.gabi, task.id, { in_report: true })).in_report, true)
+  })
+
+  it('não exige os campos obrigatórios do status (só liga/desliga)', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    await s.deps.taskValueRepository.replace(task.id, {}, {})
+    assert.equal((await s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: false })).in_report, false)
+  })
+
+  it('valida o valor e o acesso (leitor não altera; estranho não enxerga)', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(await codeOf(() => s.tasks.setTaskReport(s.ctx.mario, task.id, { in_report: 'sim' })), 'VALIDATION_ERROR:{"in_report":"invalid_type"}')
+    assert.equal(await codeOf(() => s.tasks.setTaskReport(s.ctx.lia, task.id, { in_report: false })), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.tasks.setTaskReport(s.ctx.outsider, task.id, { in_report: false })), 'TASK_NOT_FOUND')
+  })
+
+  it('a listagem filtra por in_report', async () => {
+    const s = await setup()
+    const a = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    const b = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Outra' }))
+    await s.tasks.setTaskReport(s.ctx.mario, b.id, { in_report: false })
+    const codes = async (value) => (await s.tasks.listTasks(s.ctx.mario, { project_id: s.project.id, in_report: value })).items.map((t) => t.code)
+    assert.deepEqual(await codes('true'), [a.code])
+    assert.deepEqual(await codes('false'), [b.code])
+    assert.equal(await codeOf(() => codes('talvez')), 'VALIDATION_ERROR:{"in_report":"invalid_option"}')
+  })
+})
+
+describe('application/tasks — urgência (semáforo)', () => {
+  it('nasce sem urgência; quem edita escolhe alta/média/baixa ou limpa, com histórico', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(task.urgency, null)
+    assert.equal((await s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'high' })).urgency, 'high')
+    const audit = s.deps.store.audit.at(-1)
+    assert.equal(audit.action, 'task.updated')
+    assert.deepEqual([audit.oldValue, audit.newValue], [{ urgency: null }, { urgency: 'high' }])
+    const before = s.deps.store.audit.length
+    await s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'high' })
+    assert.equal(s.deps.store.audit.length, before)
+    assert.equal((await s.tasks.setTaskUrgency(s.ctx.gabi, task.id, { urgency: null })).urgency, null)
+  })
+
+  it('valida o valor e o acesso; não exige os campos do status', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    await s.deps.taskValueRepository.replace(task.id, {}, {})
+    assert.equal((await s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'low' })).urgency, 'low')
+    assert.equal(await codeOf(() => s.tasks.setTaskUrgency(s.ctx.mario, task.id, { urgency: 'urgente' })), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+    assert.equal(await codeOf(() => s.tasks.setTaskUrgency(s.ctx.mario, task.id, {})), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+    assert.equal(await codeOf(() => s.tasks.setTaskUrgency(s.ctx.lia, task.id, { urgency: 'high' })), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.tasks.setTaskUrgency(s.ctx.outsider, task.id, { urgency: 'high' })), 'TASK_NOT_FOUND')
+  })
+
+  it('a listagem filtra por urgência (none = sem urgência)', async () => {
+    const s = await setup()
+    const a = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    const b = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Outra' }))
+    await s.tasks.setTaskUrgency(s.ctx.mario, b.id, { urgency: 'medium' })
+    const codes = async (value) => (await s.tasks.listTasks(s.ctx.mario, { project_id: s.project.id, urgency: value })).items.map((t) => t.code)
+    assert.deepEqual(await codes('medium'), [b.code])
+    assert.deepEqual(await codes('none'), [a.code])
+    assert.equal(await codeOf(() => codes('roja')), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+  })
+
+  it('também entra na criação e na edição (null limpa), com histórico', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s, { urgency: 'high' }))
+    assert.equal(task.urgency, 'high')
+    assert.equal(s.deps.store.audit.at(-1).newValue.urgency, 'high')
+    const edited = await s.tasks.updateTask(s.ctx.mario, task.id, { urgency: null })
+    assert.equal(edited.urgency, null)
+    assert.deepEqual([s.deps.store.audit.at(-1).oldValue, s.deps.store.audit.at(-1).newValue], [{ urgency: 'high' }, { urgency: null }])
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, task.id, { urgency: 'roja' })), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+  })
+})

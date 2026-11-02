@@ -9,10 +9,16 @@ const workflow = require('../../domain/workflow')
 const relationDomain = require('../../domain/relation')
 const sprintDomain = require('../../domain/sprint')
 const report = require('../../domain/report')
+const { URGENCY_LEVELS } = require('../../domain/task')
 const { READ, ADD, CHANGE, DELETE, schema, id, nullableId, ids, text, date, nullableDate, oneOf, bool, int, hours, nullableHours, PAGE, PROJECT_ID, TASK_ID, pick, without, pageQuery, page } = require('../kit')
 
 const BOARD_LIMIT = 50
 const BACKLOG_LIMIT = 100
+
+const URGENCY = 'Urgency traffic light: high (red), medium (yellow) or low (green); independent of the priority.'
+const urgency = () => oneOf(URGENCY_LEVELS, URGENCY)
+const nullableUrgency = () => ({ type: ['string', 'null'], enum: URGENCY_LEVELS.slice(), description: `${URGENCY} null clears it.` })
+const urgencyFilter = () => oneOf(URGENCY_LEVELS.concat(['none']), 'Only items with this urgency; none = without urgency.')
 
 const PROJECT_FIELDS = {
   name: text(120, 'Project name.'),
@@ -50,6 +56,7 @@ const TASK_CREATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   sprint_id: id('Sprint id (from list_sprints).'),
   parent_task_id: id('Parent task id, to create a subtask (same project).'),
   plan_item_id: id('Project management element (or subelement) this task executes, from get_plan (same project). Linked tasks drive the element progress.'),
+  urgency: urgency(),
 })
 
 const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
@@ -63,6 +70,7 @@ const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   sprint_id: nullableId('Sprint id (from list_sprints).'),
   parent_task_id: nullableId('Parent task id (same project).'),
   plan_item_id: nullableId('Project management element (or subelement) this task executes, from get_plan (same project).'),
+  urgency: nullableUrgency(),
 })
 
 const REPORT_FILTERS = {
@@ -101,6 +109,8 @@ function compactTask(task) {
     assignee: task.assignee ? { id: task.assignee.id, name: task.assignee.name } : null,
     sprint: nameOf(task.sprint),
     plan_item: task.plan_item ? { id: task.plan_item.id, name: task.plan_item.name } : null,
+    urgency: task.urgency || null,
+    in_report: task.in_report !== false,
     start_date: task.start_date || null,
     due_date: task.due_date || null,
     tags: (task.tags || []).map(nameOf),
@@ -154,13 +164,14 @@ const TOOLS = [
           view: oneOf(['all', 'mine', 'archived'], 'all = open projects the user can see (default); mine = projects the user belongs to; archived = archived projects.'),
           status: oneOf(projectDomain.PROJECT_STATUS, 'Only projects with this status.'),
           priority: oneOf(projectDomain.PROJECT_PRIORITY, 'Only projects with this priority.'),
+          urgency: urgencyFilter(),
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: name, key, created_at, due_date, status, priority.'),
         },
         PAGE,
       ),
     ),
     annotations: READ,
-    run: async (args, { services, ctx }) => page(await services.projects.listProjects(ctx, Object.assign(pick(args, ['search', 'view', 'status', 'priority', 'sort']), pageQuery(args)))),
+    run: async (args, { services, ctx }) => page(await services.projects.listProjects(ctx, Object.assign(pick(args, ['search', 'view', 'status', 'priority', 'urgency', 'sort']), pageQuery(args)))),
   },
   {
     name: 'get_project',
@@ -180,6 +191,7 @@ const TOOLS = [
           key: text(10, 'Unique short code: 2-10 uppercase letters or digits, starting with a letter (e.g. CRM). Task codes use it (CRM-12). It cannot be changed later.'),
           start_date: date('Start date'),
           due_date: date('Due date'),
+          urgency: urgency(),
         },
         PROJECT_FIELDS,
       ),
@@ -192,7 +204,7 @@ const TOOLS = [
     name: 'update_project',
     title: 'Update project',
     description: 'Changes a project (only the fields sent). The key cannot change; archived projects are read-only. Requires being a project manager.',
-    inputSchema: schema(Object.assign({ project_id: PROJECT_ID, start_date: nullableDate('Start date'), due_date: nullableDate('Due date') }, PROJECT_FIELDS), ['project_id']),
+    inputSchema: schema(Object.assign({ project_id: PROJECT_ID, start_date: nullableDate('Start date'), due_date: nullableDate('Due date'), urgency: nullableUrgency() }, PROJECT_FIELDS), ['project_id']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.projects.updateProject(ctx, args.project_id, without(args, 'project_id')),
   },
@@ -344,6 +356,8 @@ const TOOLS = [
           tag_id: id('Only tasks with this tag.'),
           sprint_id: text(64, 'Sprint id, or "none" for tasks without a sprint.'),
           plan_item_id: id('Only tasks linked to this project management element (from get_plan).'),
+          urgency: urgencyFilter(),
+          in_report: bool('true = only tasks included in the project report; false = only the excluded ones.'),
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: code, title, created_at, updated_at, due_date, priority, status. Default: code.'),
         },
         PAGE,
@@ -351,8 +365,9 @@ const TOOLS = [
     ),
     annotations: READ,
     run: async (args, { services, ctx }) => {
-      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'sort']), pageQuery(args))
+      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'sort']), pageQuery(args))
       if (args.categories && args.categories.length > 0) query.category = args.categories.join(',')
+      if (args.in_report !== undefined) query.in_report = String(args.in_report)
       const result = await services.tasks.listTasks(ctx, query)
       return { items: result.items.map(compactTask), meta: result.meta }
     },
@@ -378,7 +393,7 @@ const TOOLS = [
     name: 'update_task',
     title: 'Update task',
     description:
-      'Changes a task (only the fields sent; null clears people, dates, hours, sprint and parent). The project cannot change. Changing the type drops custom values the new type does not have.',
+      'Changes a task (only the fields sent; null clears people, dates, hours, sprint, parent and urgency). The project cannot change. Changing the type drops custom values the new type does not have.',
     inputSchema: schema(Object.assign({ task_id: TASK_ID }, TASK_UPDATE_FIELDS), ['task_id']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.tasks.updateTask(ctx, args.task_id, without(args, 'task_id')),
@@ -399,6 +414,15 @@ const TOOLS = [
     ),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.tasks.moveTask(ctx, args.task_id, without(args, 'task_id')),
+  },
+  {
+    name: 'set_task_in_report',
+    title: 'Include task in project report',
+    description:
+      'Includes (true) or excludes (false) a task from the project report (the Report tab of the project page). Every task is included by default. Does not require the fields of the status; recorded in the task history.',
+    inputSchema: schema({ task_id: TASK_ID, in_report: bool('true = included in the project report; false = left out.') }, ['task_id', 'in_report']),
+    annotations: CHANGE,
+    run: (args, { services, ctx }) => services.tasks.setTaskReport(ctx, args.task_id, pick(args, ['in_report'])),
   },
   {
     name: 'delete_task',

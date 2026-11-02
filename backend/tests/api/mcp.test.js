@@ -201,6 +201,30 @@ describe('API MCP', { timeout: 180000 }, () => {
     const all = await tool('get_board_all_projects', {})
     assert.ok(all.data.projects.some((p) => p.id === project.id))
 
+    // ficha do projeto, urgência e informe
+    const objective = await tool('update_project_charter', { project_id: project.id, objective: 'Integrar o Claude' })
+    assert.equal(objective.isError, false, JSON.stringify(objective.data))
+    const task = (await tool('list_tasks', { project_id: project.id })).data.items[0]
+    const feature = await tool('create_charter_item', { project_id: project.id, kind: 'feature', title: 'Ferramentas MCP', task_ids: [task.id] })
+    assert.equal(feature.isError, false, JSON.stringify(feature.data))
+    assert.deepEqual(feature.data.tasks.map((t) => t.code), [task.code])
+    const result = await tool('create_charter_item', { project_id: project.id, kind: 'result', title: 'Ferramentas cobertas', unit: '%', target: 100 })
+    const measured = await tool('add_charter_measurement', { item_id: result.data.id, value: 80, note: 'catálogo' })
+    assert.equal(measured.isError, false, JSON.stringify(measured.data))
+    assert.equal(measured.data.current, 80)
+    assert.deepEqual((await tool('list_charter_measurements', { item_id: result.data.id })).data.map((m) => m.value), [80])
+    const charter = await tool('get_project_charter', { project_id: project.id })
+    assert.equal(charter.data.objective, 'Integrar o Claude')
+    assert.deepEqual(charter.data.items.map((i) => i.kind), ['feature', 'result'])
+    const urgent = await tool('update_task', { task_id: task.id, urgency: 'high' })
+    assert.equal(urgent.data.urgency, 'high')
+    const excluded = await tool('set_task_in_report', { task_id: task.id, in_report: false })
+    assert.equal(excluded.data.in_report, false)
+    const filtered = await tool('list_tasks', { project_id: project.id, urgency: 'high', in_report: false })
+    assert.deepEqual(filtered.data.items.map((t) => [t.code, t.urgency, t.in_report]), [[task.code, 'high', false]])
+    assert.equal((await tool('update_project', { project_id: project.id, urgency: 'medium' })).data.urgency, 'medium')
+    assert.ok((await tool('list_projects', { urgency: 'medium' })).data.items.some((p) => p.id === project.id))
+
     // o Gil (gestor) não administra a plataforma; o administrador sim
     const denied = await tool('create_tag', { name: 'via-claude' })
     assert.equal(denied.isError, true)
