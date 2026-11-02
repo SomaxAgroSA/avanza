@@ -4,7 +4,7 @@ import { MoreHorizontal, Pencil, Plus, Power, Star, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { normalizeTypeKey, type OptionColor } from '@/domain/task-config'
-import { STATUS_CATEGORIES, type LookupItem, type LookupKind, type StatusCategory } from '@/domain/workflow'
+import { STATUS_CATEGORIES, lookupHasDefault, type LookupItem, type LookupKind, type StatusCategory } from '@/domain/workflow'
 import {
   AppBadge,
   AppButton,
@@ -36,7 +36,11 @@ export function PrioritiesPage() {
   return <LookupsPage kind="priority" />
 }
 
-/** Configuração de status (`kind="status"`) ou prioridades (`kind="priority"`): mesmas regras e tela. */
+export function AreasPage() {
+  return <LookupsPage kind="area" />
+}
+
+/** Configuração de status (`kind="status"`), prioridades (`kind="priority"`) ou áreas (`kind="area"`, sem padrão): mesmas regras e tela. */
 export function LookupsPage({ kind }: { kind: LookupKind }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
@@ -127,7 +131,7 @@ export function LookupsPage({ kind }: { kind: LookupKind }) {
                 <AppDropdown
                   items={[
                     { key: 'edit', label: t('common.edit'), icon: <Pencil />, onSelect: () => setEditing(item) },
-                    ...(item.isDefault || !item.isActive
+                    ...(item.isDefault || !item.isActive || !lookupHasDefault(kind)
                       ? []
                       : [{ key: 'default', label: t('workflow.setDefault'), icon: <Star />, onSelect: () => patch(item, { isDefault: true }, t('workflow.madeDefault', { name: item.name })) }]),
                     ...(item.isDefault
@@ -374,6 +378,7 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
           </div>
         )}
         <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+          {lookupHasDefault(kind) && (
           <AppSwitch
             checked={draft.isDefault}
             disabled={defaultLocked}
@@ -381,6 +386,7 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
             label={t('workflow.fields.default')}
             description={defaultLocked ? t('workflow.defaultLockedHint') : t(`workflow.${kind}.defaultHint`)}
           />
+          )}
           <AppSwitch
             checked={draft.isActive}
             disabled={draft.isDefault}

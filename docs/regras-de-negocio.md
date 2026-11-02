@@ -561,8 +561,8 @@ Página do projeto → aba **Ficha** (logo depois de Resumo): para que o projeto
 
 - **Seções:** **Objetivos** (objetivo geral + objetivos específicos), **Funcionalidades**, **Alcance** (inclui / não inclui) e **Resultados esperados**. A **completude** conta quatro seções: objetivos (objetivo geral ou ao menos um específico), funcionalidades, alcance incluído e resultados.
 - **Quem faz o quê:** quem vê o projeto vê a ficha (os dados das tarefas vinculadas só com `tasks.view`). Montar e editar: gestor ou dono do projeto (`projects.edit`, projeto não arquivado), como os marcos. Registrar a **medição** de um resultado: quem edita ou o **responsável** pelo resultado. Responsável = dono ou membro do projeto.
-- **Funcionalidade:** vinculada a tarefas do projeto. Avanço = tarefas concluídas / tarefas vinculadas (canceladas não contam). Estado **automático**: nenhuma começou → *Planejada*; alguma em andamento ou concluída → *Em desenvolvimento*; todas concluídas → *Entregue*. Quem edita pode fixar o estado à mão (inclusive *Cancelada*); "Automático" volta ao cálculo. Tarefa excluída sai do vínculo.
-- **Objetivo:** vinculado a funcionalidades e resultados. Estado **automático**: algum resultado atrasado → *Em risco*; tudo entregue/cumprido → *Atingido*; algo andando → *Em curso*; senão *Pendente*. Funcionalidades canceladas não contam. Também pode ser fixado à mão.
+- **Funcionalidade:** vinculada a tarefas do projeto. Avanço = tarefas concluídas / tarefas vinculadas (canceladas não contam). Estado **automático**: nenhuma começou → *Planejada*; alguma em andamento ou concluída → *Em desenvolvimento*; alguma tarefa aberta (nem concluída nem cancelada) com o prazo vencido → *Atrasada*; todas concluídas → *Entregue*. Quem edita pode fixar o estado à mão (inclusive *Cancelada*); "Automático" volta ao cálculo. Tarefa excluída sai do vínculo.
+- **Objetivo:** vinculado a funcionalidades e resultados. Estado **automático**: algum resultado ou funcionalidade atrasada → *Em risco*; tudo entregue/cumprido → *Atingido*; algo andando → *Em curso*; senão *Pendente*. Funcionalidades canceladas não contam. Também pode ser fixado à mão.
 - **Resultado esperado:** indicador com partida, meta, unidade, início, prazo, frequência de medição e responsável. Cada **medição** (valor, data — hoje ou antes —, comentário) entra na série; a de data mais recente vira o **valor atual**. **Situação:** *Cumprido* (chegou à meta), *No caminho* (no ritmo de uma reta entre a partida no início e a meta no prazo), *Atrasado* (abaixo da reta, ou passou do prazo) ou *Sem dados* (nenhuma medição). Meta abaixo da partida = quanto menos, melhor. **Sem medir:** com frequência semanal (7 dias), mensal (31) ou trimestral (92), passou do intervalo desde a última medição (ou da criação).
 - **Histórico:** no projeto — `charter.updated` (objetivo geral), `charter_item.created/updated/deleted/reordered` e `charter_item.measured`.
 
@@ -575,3 +575,13 @@ Na aba **Tarefas** (do projeto e da lista geral), a coluna **Urgência** mostra 
 - **Filtro:** "Urgência" na barra de filtros (Alta, Média, Baixa, Sem urgência); na API, `urgency=high|medium|low|none`.
 - **Projetos também têm urgência** (mesmo semáforo): coluna e filtro "Urgência" na lista de Projetos (quem edita o projeto troca com um clique), campo no formulário do projeto, histórico em `project.updated`; na API, `urgency` em `POST/PATCH /projects` (`null` limpa) e filtro `GET /projects?urgency=high|medium|low|none`.
 - **Kanban:** filtro "Urgência" na barra e o semáforo no canto de cada cartão com urgência.
+
+## 23. Área responsável
+
+Lista configurável em **Configurações → Áreas** (`settings.manage`), com as mesmas regras de status e prioridades (chave imutável, ordem, cor, ativa/inativa), mas **sem padrão**: tarefa e projeto podem ficar sem área (o padrão, inclusive para o que já existia). Carga inicial: Inteligencia Estratégica, Dpto. TI, Desarrollo e Innovación, Marketing, Contabilidad, Administración, Fertilizantes, Logística, Supply, Comex e Créditos.
+
+- **Tarefas:** coluna **Área** logo depois de Responsável; quem edita a tarefa troca com um clique (não exige os campos obrigatórios do status) e também no formulário. Histórico: `task.updated` com o nome da área.
+- **Projetos:** coluna e filtro na lista (quem edita o projeto troca com um clique) e campo no formulário; histórico em `project.updated`.
+- **Kanban:** filtro "Área" e o selo da área no cartão.
+- **Filtro:** área ou "Sin área" (`area_id=none` na API).
+- Só áreas **ativas** podem ser escolhidas; a área inativa continua aparecendo onde já estava. Área em uso por tarefas ou projetos não se exclui (`AREA_IN_USE`): desative.

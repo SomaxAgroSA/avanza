@@ -1,8 +1,8 @@
 /**
- * Casos de uso de status e prioridades de tarefas.
+ * Casos de uso de status e prioridades de tarefas e das áreas responsáveis.
  *
- * Um único serviço atende às duas listas (`kind` = 'status' | 'priority'): as regras são as mesmas
- * (ver domain/workflow.js); só o status tem categoria.
+ * Um único serviço atende às três listas (`kind` = 'status' | 'priority' | 'area'): as regras são as mesmas
+ * (ver domain/workflow.js); só o status tem categoria e a área não tem padrão.
  */
 
 const { appError } = require('../core/errors')
@@ -32,6 +32,7 @@ function createLookupService(deps, kind) {
     is_active: [rules.boolean()],
     is_default: [rules.boolean()],
   }
+  if (spec.noDefault) delete fieldRules.is_default
   if (spec.hasCategory) {
     fieldRules.category = [rules.required(), rules.oneOf(workflow.STATUS_CATEGORIES)]
     // Kanban: limite WIP da coluna (0 = sem limite) e destinos permitidos (vazio = qualquer)
@@ -100,6 +101,7 @@ function createLookupService(deps, kind) {
 
   function snapshot(item) {
     const value = { name: item.name, description: item.description || '', color: item.color, is_active: item.isActive !== false, is_default: !!item.isDefault }
+    if (spec.noDefault) delete value.is_default
     if (spec.hasCategory) {
       value.category = item.category
       value.wip_limit = item.wipLimit || 0
@@ -132,7 +134,7 @@ function createLookupService(deps, kind) {
     const all = repository().list({ includeInactive: true })
     const isActive = data.is_active !== false
     // sem padrão ainda (primeiro item), o novo item assume o papel
-    const isDefault = data.is_default === true || !all.some((item) => item.isDefault)
+    const isDefault = !spec.noDefault && (data.is_default === true || !all.some((item) => item.isDefault))
     if (isDefault && !isActive) throw invalid(data.is_default === true ? 'is_default' : 'is_active', 'default_must_be_active')
 
     const created = deps.unitOfWork.run((repos) => {
@@ -204,7 +206,8 @@ function createLookupService(deps, kind) {
     const item = findOrFail(id)
     if (item.isDefault) throw appError(spec.errors.isDefault)
     const tasks = repository().countTasks(item.id)
-    if (tasks > 0) throw appError(spec.errors.inUse, undefined, { tasks })
+    const projects = repository().countProjects ? repository().countProjects(item.id) : 0
+    if (tasks > 0 || projects > 0) throw appError(spec.errors.inUse, undefined, spec.noDefault ? { tasks, projects } : { tasks })
     deps.unitOfWork.run((repos) => {
       repos[spec.repository].delete(item.id)
       audit(repos, ctx, item.id, 'deleted', Object.assign({ key: item.key }, snapshot(item)), null)

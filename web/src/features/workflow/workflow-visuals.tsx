@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { Flag } from 'lucide-react'
+import { Flag, type LucideIcon } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import type { LookupItem, StatusCategory } from '@/domain/workflow'
 import { optionText, optionTint } from '@/features/task-config/config-theme'
 import { CATEGORY_ICONS } from './workflow-theme'
 
-/** Selo de status ou prioridade na cor configurada (ícone da categoria no status, bandeira na prioridade). */
-export function LookupBadge({ item, className }: { item: Pick<LookupItem, 'name' | 'color' | 'category'>; className?: string }) {
-  const Icon = item.category ? CATEGORY_ICONS[item.category] : Flag
+/** Selo de status, prioridade ou área na cor configurada (ícone da categoria no status, bandeira na prioridade; `icon` troca). */
+export function LookupBadge({ item, icon, className }: { item: Pick<LookupItem, 'name' | 'color' | 'category'>; icon?: LucideIcon; className?: string }) {
+  const Icon = icon ?? (item.category ? CATEGORY_ICONS[item.category] : Flag)
   return (
     <span
       className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium', className)}

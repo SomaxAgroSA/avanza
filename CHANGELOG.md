@@ -5,6 +5,8 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Área responsável** (Configurações → Áreas, `settings.manage`): lista editável que já vem com Inteligencia Estratégica, Dpto. TI, Desarrollo e Innovación, Marketing, Contabilidad, Administración, Fertilizantes, Logística, Supply, Comex e Créditos. Coluna e filtro de área nas Tarefas (troca com um clique, `PUT /tasks/{id}/area`) e nos Projetos, campo nos formulários, filtro no Kanban e o nome da área no cartão.
+- **Funcionalidade atrasada** (aba Ficha): novo estado *Atrasada*, escolhido à mão ou calculado quando alguma tarefa vinculada aberta passou do prazo; o objetivo ligado a ela fica *Em risco*.
 - **Controle de acesso** (Administração → Controle de acesso, permissão `permissions.manage`): escolhe-se uma pessoa e se vê num só lugar o perfil, os módulos que ela vê e o que pode fazer em cada um, e em quais projetos entra, com interruptores para mudar ali. Se o perfil é compartilhado, a mudança pode virar um perfil próprio da pessoa (as demais não mudam) ou valer para todos com aquele perfil.
 - **Imprimir ficha** (aba Ficha): documento A4 com objetivos, funcionalidades, escopo e resultados, pronto para imprimir ou salvar em PDF. Na página do projeto, as ações da aba (Colunas, Nova tarefa, Imprimir ficha) ficam na linha das abas.
 - **Urgência também nos projetos e no Kanban:** coluna e filtro de urgência na lista de Projetos (troca com um clique), campo no formulário do projeto, filtro de urgência no Kanban e semáforo nos cartões.

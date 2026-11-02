@@ -118,6 +118,7 @@ export const routes: RouteObject[] = [
               { path: 'custom-fields', ...page(() => import('@/features/task-config/CustomFieldsPage').then((m) => ({ default: m.CustomFieldsPage }))) },
               { path: 'statuses', ...page(() => import('@/features/workflow/LookupsPage').then((m) => ({ default: m.StatusesPage }))) },
               { path: 'priorities', ...page(() => import('@/features/workflow/LookupsPage').then((m) => ({ default: m.PrioritiesPage }))) },
+              { path: 'areas', ...page(() => import('@/features/workflow/LookupsPage').then((m) => ({ default: m.AreasPage }))) },
               { path: 'tags', ...page(() => import('@/features/tags/TagsPage').then((m) => ({ default: m.TagsPage }))) },
             ],
           },

@@ -15,9 +15,10 @@ import { useProjectMembers } from '@/features/projects/queries'
 import { ProjectSwitcher } from '@/features/projects/ProjectSwitcher'
 import { FilterSelect } from '@/presentation/components/data-table/TableFilters'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
+import { useAreaFilterOptions } from '@/features/workflow/area-options'
 import { useSprints } from '@/features/backlog/queries'
 import { useTaskTypes } from '@/features/task-config/queries'
-import { usePriorities } from '@/features/workflow/queries'
+import { useAreas, usePriorities } from '@/features/workflow/queries'
 import { useTags } from '@/features/tags/queries'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
 import { TaskFormDialog, type TaskFormInitial } from '@/features/tasks/TaskFormDialog'
@@ -71,6 +72,8 @@ function ProjectBoard({ projectId }: { projectId: string }) {
 
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
   const urgencyOptions = useUrgencyFilterOptions()
+  const areas = useAreas(false)
+  const areaOptions = useAreaFilterOptions(areas.data)
   const [swimlane, setSwimlaneState] = useState<Swimlane>(() => {
     const saved = readJson<string>(SWIMLANE_KEY, 'none')
     return (SWIMLANES as readonly string[]).includes(saved) ? (saved as Swimlane) : 'none'
@@ -187,6 +190,7 @@ function ProjectBoard({ projectId }: { projectId: string }) {
                   (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
                 {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
+                {filterSelect('area', t('tasks.fields.area'), areaOptions)}
                 {(sprints.data?.length ?? 0) > 0 &&
                   filterSelect('sprint', t('tasks.fields.sprint'), [
                     { value: 'none', label: t('sprints.none') },

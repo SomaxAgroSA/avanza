@@ -125,7 +125,7 @@ function build() {
     },
     servers: [{ url: '/api/v1' }],
     security: [{ sessionCookie: [] }, { bearerToken: [] }],
-    paths: Object.assign(lookupPaths('/statuses', 'Status', 'Status', 'STATUS'), lookupPaths('/priorities', 'Prioridades', 'Priority', 'PRIORITY'), {
+    paths: Object.assign(lookupPaths('/statuses', 'Status', 'Status', 'STATUS'), lookupPaths('/priorities', 'Prioridades', 'Priority', 'PRIORITY'), lookupPaths('/areas', 'Áreas responsáveis', 'Area', 'AREA'), {
       '/health': { get: op('Health check', ['system'], { 200: ok('Serviço saudável', ref('Health')) }, { security: [] }) },
       '/auth/login': {
         post: op(
@@ -251,6 +251,7 @@ function build() {
             { name: 'status', in: 'query', schema: { type: 'string' } },
             { name: 'priority', in: 'query', schema: { type: 'string' } },
             { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência do projeto; none = sem urgência' },
+            { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
             { name: 'owner_id', in: 'query', schema: { type: 'string' } },
           ],
         }),
@@ -384,6 +385,7 @@ function build() {
             { name: 'sprint_id', in: 'query', schema: { type: 'string' }, description: 'id da sprint ou `none` (sem sprint)' },
             { name: 'in_report', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'entra (true) ou não (false) no informe do projeto' },
             { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência (semáforo); none = sem urgência' },
+            { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
@@ -419,6 +421,14 @@ function build() {
         }, {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({ type: 'object', required: ['urgency'], properties: { urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true } } }),
+        }),
+      },
+      '/tasks/{id}/area': {
+        put: op('Área responsável da tarefa (null limpa); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['area_id'], properties: { area_id: { type: 'string', nullable: true } } }),
         }),
       },
       '/tasks/{id}/history': {
@@ -1119,6 +1129,7 @@ function build() {
             blocked: { type: 'boolean', description: 'algum bloqueador (bloqueia/depende de) ainda aberto' },
             in_report: { type: 'boolean', description: 'entra no informe do projeto (padrão: true)' },
             urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true, description: 'urgência (semáforo): alta = vermelho, média = amarelo, baixa = verde' },
+            area: { oneOf: [{ type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, color: { type: 'string' } } }, { type: 'null' }], description: 'área responsável (lista de /areas)' },
             start_date: { type: ['string', 'null'], format: 'date-time', description: 'início planejado (timeline)' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
             estimated_hours: { type: ['number', 'null'] },
@@ -1451,6 +1462,7 @@ function build() {
         Status: { type: 'object', properties: Object.assign({}, LOOKUP_PROPERTIES, { category: STATUS_CATEGORY }, STATUS_FLOW) },
         StatusInput: { type: 'object', properties: Object.assign({}, LOOKUP_INPUT, { category: STATUS_CATEGORY }, STATUS_FLOW) },
         Priority: { type: 'object', properties: LOOKUP_PROPERTIES },
+        Area: { type: 'object', properties: LOOKUP_PROPERTIES },
         PriorityInput: { type: 'object', properties: LOOKUP_INPUT },
         FieldOption: {
           type: 'object',
@@ -1595,7 +1607,7 @@ function build() {
             position: { type: 'integer' },
             owner: { type: 'object', nullable: true },
             state: { type: 'string', description: 'objetivo/funcionalidade: auto ou o estado escolhido à mão' },
-            effective_state: { type: 'string', description: 'objetivo: pending|in_progress|achieved|at_risk; funcionalidade: planned|in_progress|delivered|cancelled' },
+            effective_state: { type: 'string', description: 'objetivo: pending|in_progress|achieved|at_risk; funcionalidade: planned|in_progress|late|delivered|cancelled' },
             link_ids: { type: 'array', items: { type: 'string' }, description: 'objetivo: funcionalidades e resultados vinculados' },
             task_ids: { type: 'array', items: { type: 'string' }, description: 'funcionalidade: tarefas vinculadas' },
             tasks: { type: 'array', items: ref('Task'), description: 'funcionalidade: resumo das tarefas (com tasks.view)' },
@@ -1622,7 +1634,7 @@ function build() {
             kind: { type: 'string', enum: ['objective', 'feature', 'scope_in', 'scope_out', 'result'], description: 'obrigatório na criação; não muda' },
             title: { type: 'string', maxLength: 200, description: 'obrigatório na criação' },
             description: { type: 'string', maxLength: 1000 },
-            state: { type: 'string', description: 'objetivo: auto|pending|in_progress|achieved|at_risk; funcionalidade: auto|planned|in_progress|delivered|cancelled' },
+            state: { type: 'string', description: 'objetivo: auto|pending|in_progress|achieved|at_risk; funcionalidade: auto|planned|in_progress|late|delivered|cancelled' },
             owner_id: { type: 'string', nullable: true, description: 'dono ou membro do projeto' },
             link_ids: { type: 'array', items: { type: 'string' }, maxItems: 50 },
             task_ids: { type: 'array', items: { type: 'string' }, maxItems: 200 },
@@ -1723,6 +1735,7 @@ function build() {
             status: { type: 'string', enum: ['planning', 'active', 'paused', 'completed', 'cancelled'] },
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
             urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true, description: 'urgência (semáforo); aceita null para limpar' },
+            area: { oneOf: [{ type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, color: { type: 'string' } } }, { type: 'null' }], description: 'área responsável (lista de /areas)' },
             owner: ref('UserSummary'),
             start_date: { type: ['string', 'null'], format: 'date-time' },
             due_date: { type: ['string', 'null'], format: 'date-time' },

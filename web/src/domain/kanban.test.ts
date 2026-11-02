@@ -44,6 +44,7 @@ function card(id: string, extra: Partial<BoardCard> = {}): BoardCard {
     blocked: false,
     inReport: true,
     urgency: null,
+    area: null,
     sprint: null,
     cardFields: [],
     ...extra,

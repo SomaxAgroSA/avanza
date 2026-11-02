@@ -66,6 +66,7 @@ export const NAV_ITEMS: NavItem[] = [
       { id: 'custom-fields', labelKey: 'nav.customFields', to: '/settings/custom-fields', anyOf: ['settings.manage'] },
       { id: 'statuses', labelKey: 'nav.statuses', to: '/settings/statuses', anyOf: ['settings.manage'] },
       { id: 'priorities', labelKey: 'nav.priorities', to: '/settings/priorities', anyOf: ['settings.manage'] },
+      { id: 'areas', labelKey: 'nav.areas', to: '/settings/areas', anyOf: ['settings.manage'] },
       { id: 'tags', labelKey: 'nav.tags', to: '/settings/tags', anyOf: ['settings.manage'] },
       { id: 'access', labelKey: 'nav.access', to: '/settings/access', anyOf: ['permissions.manage'] },
       { id: 'roles', labelKey: 'nav.roles', to: '/settings/roles', anyOf: ['permissions.manage'] },

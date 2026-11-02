@@ -20,6 +20,18 @@ describe('domain/charter — funcionalidades', () => {
     assert.equal(charter.featureState(auto, ['done', 'cancelled']), 'delivered')
   })
 
+  it('atrasada: tarefa aberta com prazo vencido (entregue ganha de atrasada)', () => {
+    const auto = { state: 'auto' }
+    assert.equal(charter.featureState(auto, ['done', 'todo'], 1), 'late')
+    assert.equal(charter.featureState(auto, ['todo'], 0), 'planned')
+    assert.equal(charter.featureState(auto, ['done', 'done'], 0), 'delivered')
+    assert.equal(charter.featureState({ state: 'late' }, ['done']), 'late')
+  })
+
+  it('objetivo com funcionalidade atrasada fica em risco', () => {
+    assert.equal(charter.objectiveState({ state: 'auto' }, [{ kind: 'feature', state: 'late' }, { kind: 'feature', state: 'delivered' }]), 'at_risk')
+  })
+
   it('estado escolhido à mão vale sobre o cálculo', () => {
     assert.equal(charter.featureState({ state: 'cancelled' }, ['done']), 'cancelled')
     assert.equal(charter.featureState({ state: 'delivered' }, ['todo']), 'delivered')

@@ -96,6 +96,7 @@ function createContainer(app, options) {
     taskTypes: createTaskTypeService(deps),
     statuses: createLookupService(deps, 'status'),
     priorities: createLookupService(deps, 'priority'),
+    areas: createLookupService(deps, 'area'),
     tasks: createTaskService(deps),
     tags: createTagService(deps),
     comments: createCommentService(deps),

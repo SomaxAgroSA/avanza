@@ -79,6 +79,7 @@ function card(id: string, title: string, extra: Partial<BoardCard> = {}): BoardC
     blocked: false,
     inReport: true,
     urgency: null,
+    area: null,
     sprint: null,
     cardFields: [],
     ...extra,

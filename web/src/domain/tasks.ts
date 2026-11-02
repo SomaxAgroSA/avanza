@@ -2,7 +2,7 @@ import type { Attachment } from './attachments'
 import type { SprintRef } from './sprints'
 import type { UserSummary } from './projects'
 import { isRequiredIn, valueIssue, type FieldValue, type OptionColor, type TaskTypeField, type TaskTypeIcon } from './task-config'
-import type { StatusCategory } from './workflow'
+import type { AreaRef, StatusCategory } from './workflow'
 
 export interface TaskStatusRef {
   id: string
@@ -87,6 +87,8 @@ export interface TaskSummary {
   inReport: boolean
   /** Urgência (semáforo); null = sem urgência. */
   urgency: TaskUrgency | null
+  /** Área responsável; null = sem área. */
+  area: AreaRef | null
 }
 
 /** Urgência da tarefa (semáforo): alta = vermelho, média = amarelo, baixa = verde. */
@@ -149,6 +151,8 @@ export interface TaskInput {
   sprintId?: string | null
   /** Subtarefa: tarefa pai (null solta). */
   parentTaskId?: string | null
+  /** Área responsável (null limpa). */
+  areaId?: string | null
 }
 
 // ---------------------------------------------------------------- menções (@)

@@ -11,6 +11,7 @@ import { CustomFieldValue } from '@/features/task-config/CustomFieldValue'
 import { TagList } from '@/features/tags/tag-visuals'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { DueDate, TaskCode, TaskIndicators } from '@/features/tasks/task-visuals'
+import { AreaBadge } from '@/features/workflow/area-visuals'
 
 /** Tipos que não cabem no card (ficam no detalhe). */
 const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
@@ -36,6 +37,7 @@ export function KanbanCardContent({ card, references }: { card: BoardCard; refer
         {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" />}
       </div>
       <p className="line-clamp-3 text-sm font-medium break-words text-fg">{card.title}</p>
+      {card.area && <AreaBadge area={card.area} className="self-start" />}
       {fields.length > 0 && (
         <dl className="flex flex-col gap-0.5 text-xs">
           {fields.map(({ field, value }) => (

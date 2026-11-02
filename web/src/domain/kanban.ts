@@ -41,12 +41,14 @@ export interface BoardFilters {
   priority: string
   /** 'high' | 'medium' | 'low' | 'none' | '' */
   urgency: string
+  /** id da área | 'none' | '' */
+  area: string
   tag: string
   /** 'none' | id da sprint | '' */
   sprint: string
 }
 
-export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', urgency: '', tag: '', sprint: '' }
+export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', urgency: '', area: '', tag: '', sprint: '' }
 
 function normalize(text: string): string {
   return text
@@ -68,6 +70,8 @@ export function matchesFilters(card: TaskSummary, filters: BoardFilters, current
   if (filters.priority && card.priority?.id !== filters.priority) return false
   if (filters.urgency === 'none' && card.urgency) return false
   if (filters.urgency && filters.urgency !== 'none' && card.urgency !== filters.urgency) return false
+  if (filters.area === 'none' && card.area) return false
+  if (filters.area && filters.area !== 'none' && card.area?.id !== filters.area) return false
   if (filters.tag && !card.tags.some((t) => t.id === filters.tag)) return false
   if (filters.sprint === 'none' && card.sprint) return false
   if (filters.sprint && filters.sprint !== 'none' && card.sprint?.id !== filters.sprint) return false

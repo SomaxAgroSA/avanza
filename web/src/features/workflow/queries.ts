@@ -10,7 +10,7 @@ export const workflowKeys = {
 
 function useLookupRepository(kind: LookupKind) {
   const repositories = useRepositories()
-  return kind === 'status' ? repositories.statuses : repositories.priorities
+  return kind === 'status' ? repositories.statuses : kind === 'area' ? repositories.areas : repositories.priorities
 }
 
 export function useLookups(kind: LookupKind, includeInactive = false) {
@@ -24,6 +24,10 @@ export function useStatuses(includeInactive = false) {
 
 export function usePriorities(includeInactive = false) {
   return useLookups('priority', includeInactive)
+}
+
+export function useAreas(includeInactive = false) {
+  return useLookups('area', includeInactive)
 }
 
 export function useLookupMutations(kind: LookupKind) {

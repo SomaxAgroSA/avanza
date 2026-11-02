@@ -144,5 +144,12 @@ export function useTaskMutations() {
         invalidate()
       },
     }),
+    setArea: useMutation({
+      mutationFn: ({ id, areaId }: { id: string; areaId: string | null }) => tasks.setArea(id, areaId),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
   }
 }

@@ -73,8 +73,8 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 
 | Método | Rota | Regra de acesso | Descrição |
 |---|---|---|---|
-| GET | `/projects` | `projects.view` | `view=all\|mine\|archived`, `search`, `status`, `priority`, `owner_id`, `sort` (`name`, `key`, `created_at`, `due_date`), paginado. Sem `projects.view_all`, só projetos em que é membro |
-| POST | `/projects` | `projects.create` | `{ name, key, description?, icon?, cover?, status?, priority?, start_date?, due_date? }` — criador vira dono e gestor |
+| GET | `/projects` | `projects.view` | `view=all\|mine\|archived`, `search`, `status`, `priority`, `urgency` (`high`, `medium`, `low`, `none`), `area_id` (ou `none`), `owner_id`, `sort` (`name`, `key`, `created_at`, `due_date`), paginado. Sem `projects.view_all`, só projetos em que é membro |
+| POST | `/projects` | `projects.create` | `{ name, key, description?, icon?, cover?, status?, priority?, urgency?, area_id?, start_date?, due_date? }` — criador vira dono e gestor; `area_id` = área ativa de `/areas` (`null` no PATCH limpa) |
 | GET | `/projects/{id}` | ver o projeto | inclui `owner`, `member_count`, `my_role` e `capabilities` (o que o usuário pode fazer) |
 | PATCH | `/projects/{id}` | gestor + `projects.edit` | parcial; `key` é imutável; datas aceitam `null`; projeto arquivado → `PROJECT_ARCHIVED` |
 | POST | `/projects/{id}/archive` · `/unarchive` | gestor + `projects.edit` | arquivado = somente leitura |
@@ -120,13 +120,15 @@ Leitura de status/prioridades/tags: `settings.manage` ou `tasks.view`. Alteraç�
 | GET · POST | `/statuses` · `/priorities` | lista em ordem (inativos com `include_inactive=1` e `settings.manage`) · cria `{ key, name, color?, description?, is_active?, is_default?, category* }` (*só status: `backlog`, `todo`, `in_progress`, `done`, `cancelled`) |
 | PUT | `/statuses/order` · `/priorities/order` | `{ ids }` com a lista completa |
 | GET · PATCH · DELETE | `/statuses/{id}` · `/priorities/{id}` | chave imutável; `is_default: true` desmarca o anterior; o padrão não pode ser desativado nem excluído (`*_IS_DEFAULT`); em uso não se exclui (`*_IN_USE`) |
-| GET | `/tasks` | paginado; `project_id`, `task_type_id`, `status_id`, `priority_id`, `assignee_id` (ou `me`), `tag_id`, `category` (ex.: `backlog,todo,in_progress`), `in_report` (`true`/`false`), `urgency` (`high`, `medium`, `low`, `none`), `search` (título, código e campos personalizados pesquisáveis), `sort` (`code`, `title`, `created_at`, `updated_at`, `due_date`, `priority`, `status`) |
+| GET · POST · PUT `/order` · GET · PATCH · DELETE | `/areas` · `/areas/{id}` | **áreas responsáveis** — mesmas regras de status/prioridades, mas **sem padrão** (`is_default` não se aplica): tarefa e projeto podem ficar sem área; em uso por tarefas ou projetos não se exclui (`AREA_IN_USE`, `details: { tasks, projects }`) — desative |
+| GET | `/tasks` | paginado; `project_id`, `task_type_id`, `status_id`, `priority_id`, `assignee_id` (ou `me`), `tag_id`, `category` (ex.: `backlog,todo,in_progress`), `in_report` (`true`/`false`), `urgency` (`high`, `medium`, `low`, `none`), `area_id` (ou `none`), `search` (título, código e campos personalizados pesquisáveis), `sort` (`code`, `title`, `created_at`, `updated_at`, `due_date`, `priority`, `status`) |
 | POST | `/tasks` | `{ project_id, task_type_id, title, description?, status_id?, priority_id?, assignee_id?, reporter_id?, due_date?, estimated_hours?, actual_hours?, custom_values?, tag_ids?, checklist? }` — número sequencial por projeto (`CRM-12`); padrões de status, prioridade e valores dos campos |
 | GET | `/tasks/{id}` | detalhe com `fields` do tipo, `custom_values` (por nome técnico), `checklist`, `tags` e `capabilities` |
 | PATCH | `/tasks/{id}` | parcial; `null` limpa responsável/relator/prazo/horas; trocar o tipo descarta valores de campos que o novo tipo não tem; `project_id` é imutável |
 | DELETE | `/tasks/{id}` | `tasks.delete` + gestor, `projects.view_all` ou autor |
 | PUT | `/tasks/{id}/report` | `{ in_report: boolean }` — liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `in_report` (padrão `true`) |
 | PUT | `/tasks/{id}/urgency` | `{ urgency: "high" \| "medium" \| "low" \| null }` — urgência da tarefa (semáforo 🔴 alta, 🟡 média, 🟢 baixa; `null` limpa); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `urgency` (padrão `null`) |
+| PUT | `/tasks/{id}/area` | `{ area_id: "<id>" \| null }` — área responsável (área ativa de `/areas`; `null` limpa); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `area` (`{ id, key, name, color }` ou `null`); `POST/PATCH /tasks` também aceitam `area_id` |
 | GET | `/tasks/{id}/history` | histórico legível (nomes em vez de IDs; campos personalizados como `cf:<rótulo>`; comentários e menções) |
 | GET · POST | `/tasks/{id}/comments` | lista (excluídos sem texto) · `{ content }` com menções `@[Nome](idDoUsuario)` — qualquer pessoa com acesso ao projeto, inclusive leitor |
 | GET | `/tasks/{id}/mention-candidates` | pessoas ativas com acesso ao projeto (lista do @) |

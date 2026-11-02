@@ -13,7 +13,7 @@ import { CustomFieldInput } from '@/features/task-config/CustomFieldInput'
 import { ColorDot, TaskTypeIconBadge } from '@/features/task-config/config-visuals'
 import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
-import { usePriorities, useStatuses } from '@/features/workflow/queries'
+import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskAttachments, useTaskMutations } from './queries'
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
@@ -51,6 +51,7 @@ interface Draft {
   statusId: string
   priorityId: string
   assigneeId: string
+  areaId: string
   startDate: string
   dueDate: string
   estimatedHours: string
@@ -72,6 +73,7 @@ function draftFrom(task: TaskDetail | null | undefined, projectId: string | unde
     statusId: task?.status?.id ?? '',
     priorityId: task?.priority?.id ?? '',
     assigneeId: task?.assignee?.id ?? '',
+    areaId: task?.area?.id ?? '',
     startDate: toDayInput(task?.startDate),
     dueDate: toDayInput(task?.dueDate),
     estimatedHours: hours(task?.estimatedHours ?? null),
@@ -107,6 +109,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const typeDetail = useTaskType(open ? draft.typeId || undefined : undefined)
   const statuses = useStatuses(false)
   const priorities = usePriorities(false)
+  const areas = useAreas(false)
   const members = useProjectMembers(open ? draft.projectId || undefined : undefined)
   // campos de imagem/arquivo escolhem entre os anexos da tarefa (só na edição: na criação ainda não há anexos)
   const taskAttachments = useTaskAttachments(open ? task?.id : undefined)
@@ -207,6 +210,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       statusId: draft.statusId || undefined,
       priorityId: draft.priorityId || undefined,
       assigneeId: draft.assigneeId || null,
+      areaId: draft.areaId || null,
       startDate: draft.startDate || null,
       dueDate: draft.dueDate || null,
       estimatedHours: estimated,
@@ -393,6 +397,13 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
               ...assignable.map((m) => ({ value: m.user.id, label: m.user.name })),
               ...(task?.assignee && !assignable.some((m) => m.user.id === task.assignee?.id) ? [{ value: task.assignee.id, label: task.assignee.name }] : []),
             ]}
+          />
+          <AppSelect
+            label={t('tasks.fields.area')}
+            value={draft.areaId || NONE}
+            error={errors.area_id}
+            onValueChange={(value) => set('areaId', value === NONE ? '' : value)}
+            options={[{ value: NONE, label: t('areas.none') }, ...lookupOptions(areas.data ?? [], task?.area ?? null)]}
           />
           <AppDatePicker
             label={t('tasks.fields.startDate')}

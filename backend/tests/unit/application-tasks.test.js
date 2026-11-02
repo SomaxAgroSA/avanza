@@ -404,3 +404,40 @@ describe('application/tasks — urgência (semáforo)', () => {
     assert.equal(codeOf(() => codes('roja')), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
   })
 })
+
+describe('application/tasks — área responsável', () => {
+  function withAreas(s) {
+    const areas = createLookupService(s.deps, 'area')
+    const admin = s.ctx.admin || s.ctx.gabi
+    return { ti: areas.create(admin, { key: 'TI', name: 'Dpto. TI', color: 'blue' }), mkt: areas.create(admin, { key: 'MKT', name: 'Marketing', color: 'pink' }), areas, admin }
+  }
+
+  it('nasce com a área do formulário; muda pela lista com histórico; null limpa; filtra (none = sem área)', () => {
+    const s = setup()
+    const { ti, mkt } = withAreas(s)
+    const a = s.tasks.createTask(s.ctx.mario, newBug(s, { area_id: ti.id }))
+    const b = s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Outra' }))
+    assert.deepEqual([a.area.name, b.area], ['Dpto. TI', null])
+
+    assert.equal(s.tasks.setTaskArea(s.ctx.mario, b.id, { area_id: mkt.id }).area.name, 'Marketing')
+    const audit = s.deps.store.audit.at(-1)
+    assert.deepEqual([audit.action, audit.oldValue, audit.newValue], ['task.updated', { area: null }, { area: 'Marketing' }])
+    const codes = (value) => s.tasks.listTasks(s.ctx.mario, { project_id: s.project.id, area_id: value }).items.map((t) => t.code)
+    assert.deepEqual(codes(mkt.id), [b.code])
+    assert.equal(s.tasks.setTaskArea(s.ctx.mario, a.id, { area_id: null }).area, null)
+    assert.deepEqual(codes('none'), [a.code])
+  })
+
+  it('valida área ativa e acesso; não exige os campos do status', () => {
+    const s = setup()
+    const { ti, areas, admin } = withAreas(s)
+    const task = s.tasks.createTask(s.ctx.mario, newBug(s))
+    s.deps.taskValueRepository.replace(task.id, {}, {})
+    assert.equal(s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: ti.id }).area.key, 'TI')
+    areas.update(admin, ti.id, { is_active: false })
+    assert.equal(codeOf(() => s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: ti.id })), 'OK')
+    assert.equal(codeOf(() => s.tasks.setTaskArea(s.ctx.mario, task.id, { area_id: 'nada' })), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
+    assert.equal(codeOf(() => s.tasks.setTaskArea(s.ctx.lia, task.id, { area_id: null })), 'FORBIDDEN')
+    assert.equal(codeOf(() => s.tasks.createTask(s.ctx.mario, newBug(s, { area_id: ti.id }))), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
+  })
+})
