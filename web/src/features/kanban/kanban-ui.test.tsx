@@ -78,6 +78,8 @@ function card(id: string, title: string, extra: Partial<BoardCard> = {}): BoardC
     attachmentCount: 0,
     subtaskProgress: { done: 0, total: 0 },
     blocked: false,
+    inReport: true,
+    urgency: null,
     sprint: null,
     cardFields: [],
     ...extra,
@@ -225,6 +227,24 @@ describe('KanbanPage', () => {
     await userEvent.click(screen.getByRole('combobox', { name: 'Responsável' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Sem responsável' }))
     expect(screen.getByText('Ajustar relatório de vendas')).toBeInTheDocument()
+    expect(screen.queryByText('Nova tela de login')).not.toBeInTheDocument()
+  })
+
+  it('urgência: semáforo no cartão (com o nome para leitores de tela) e filtro na barra', async () => {
+    const urgent: Board = {
+      ...board,
+      columns: [column(todo, [card('1', 'Erro ao salvar pedido', { urgency: 'high' }), card('2', 'Ajustar relatório de vendas', { urgency: 'low' })]), column(doing, [card('3', 'Nova tela de login')])],
+    }
+    setup({ data: urgent })
+    const first = await screen.findByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })
+    expect(within(first).getByText('Urgência: Alta')).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: /CRM-3 · Nova tela de login/ })).queryByText(/^Urgência:/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Urgência' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Alta' }))
+    expect(screen.getByRole('combobox', { name: 'Urgência' })).toHaveTextContent('Urgência: Alta')
+    expect(screen.getByText('Erro ao salvar pedido')).toBeInTheDocument()
+    expect(screen.queryByText('Ajustar relatório de vendas')).not.toBeInTheDocument()
     expect(screen.queryByText('Nova tela de login')).not.toBeInTheDocument()
   })
 

@@ -40,6 +40,8 @@ export interface AppSelectProps {
   onCreateOption?: CreateOptionHandler | undefined
   /** Lista com busca (sem acentos/maiúsculas) e cabeçalhos de grupo (`group` das opções) — para listas longas. */
   searchable?: boolean
+  /** Conteúdo do gatilho no lugar do texto da opção escolhida (ex.: filtro "Status: Aberta"). */
+  renderValue?: ReactNode
 }
 
 /** Valor sentinela para "todos" (Radix Select não aceita string vazia como item). */
@@ -79,12 +81,13 @@ export function AppSelect({
   size = 'md',
   onCreateOption,
   searchable,
+  renderValue,
   ...rest
 }: AppSelectProps) {
   if (onCreateOption || searchable) {
     return (
       <SearchableSelect
-        {...{ value, onValueChange, options, placeholder, label, error, hint, required, disabled, className, triggerClassName, size, onCreateOption }}
+        {...{ value, onValueChange, options, placeholder, label, error, hint, required, disabled, className, triggerClassName, size, onCreateOption, renderValue }}
         aria-label={rest['aria-label']}
       />
     )
@@ -101,7 +104,7 @@ export function AppSelect({
             className={triggerClass(size, triggerClassName)}
           >
             <span className="truncate">
-              <Select.Value placeholder={placeholder} />
+              <Select.Value placeholder={placeholder}>{renderValue}</Select.Value>
             </span>
             <Select.Icon>
               <ChevronDown className="size-4 text-subtle" aria-hidden />
@@ -159,6 +162,7 @@ function SearchableSelect({
   triggerClassName,
   size = 'md',
   onCreateOption,
+  renderValue,
   ...rest
 }: AppSelectProps) {
   const [open, setOpen] = useState(false)
@@ -187,7 +191,7 @@ function SearchableSelect({
               data-placeholder={current ? undefined : ''}
               className={triggerClass(size, triggerClassName)}
             >
-              <span className="truncate">{current ? <OptionLabel option={current} /> : placeholder}</span>
+              <span className="truncate">{renderValue ?? (current ? <OptionLabel option={current} /> : placeholder)}</span>
               <ChevronDown className="size-4 shrink-0 text-subtle" aria-hidden />
             </button>
           </Popover.Trigger>

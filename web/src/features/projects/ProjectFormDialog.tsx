@@ -9,6 +9,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
 import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, suggestKey, type Project } from '@/domain/projects'
 import { projectSchema, type ProjectInput } from '@/domain/validation'
+import { NO_URGENCY } from '@/domain/urgency'
 import { AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
@@ -17,6 +18,7 @@ import { CustomColorSwatch } from '@/features/task-config/config-visuals'
 import { isHexColor } from '@/domain/colors'
 import { IconPicker } from '@/features/icons/IconPicker'
 import { useCreateProject, useUpdateProject } from './queries'
+import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 
 const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate' }
 
@@ -29,6 +31,7 @@ function defaults(project?: Project | null): ProjectInput {
     cover: project?.cover ?? 'violet',
     status: project?.status ?? 'planning',
     priority: project?.priority ?? 'medium',
+    urgency: project?.urgency ?? NO_URGENCY,
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -44,6 +47,7 @@ export interface ProjectFormDialogProps {
 export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDialogProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const urgencyOptions = useUrgencyFilterOptions()
   const errorMessage = useErrorMessage()
   const isEdit = !!project
   const create = useCreateProject()
@@ -70,6 +74,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
       cover: values.cover,
       status: values.status,
       priority: values.priority,
+      urgency: values.urgency === NO_URGENCY ? null : values.urgency,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -156,7 +161,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
 
           <AppTextarea label={t('projects.fields.description')} rows={4} error={errors.description?.message} {...register('description')} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Controller
               control={control}
               name="status"
@@ -181,6 +186,13 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                 />
               )}
             />
+            <Controller
+              control={control}
+              name="urgency"
+              render={({ field }) => <AppSelect label={t('tasks.fields.urgency')} value={field.value} onValueChange={field.onChange} options={urgencyOptions} />}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={control}
               name="startDate"

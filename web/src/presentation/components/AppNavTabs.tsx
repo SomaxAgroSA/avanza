@@ -22,6 +22,11 @@ export interface AppNavTabsProps {
   variant?: 'line' | 'pill'
   /** Troca a entrada do histórico em vez de empilhar (visões da mesma tela). */
   replace?: boolean
+  /**
+   * À direita da linha de abas (variante `line`), fora da rolagem das abas: as ações da seção aberta
+   * (ver TabActionsSlotContext). Vazio, não ocupa espaço.
+   */
+  actions?: ReactNode
   className?: string
 }
 
@@ -29,10 +34,10 @@ export interface AppNavTabsProps {
  * Abas que são endereços (cada uma com a sua rota): links com `aria-current="page"` — recarregar ou
  * compartilhar o link abre a mesma aba. Para abas só da tela (sem rota), use o AppTabs.
  */
-export function AppNavTabs({ items, variant = 'line', replace, className, ...rest }: AppNavTabsProps) {
+export function AppNavTabs({ items, variant = 'line', replace, actions, className, ...rest }: AppNavTabsProps) {
   const line = variant === 'line'
-  return (
-    <nav aria-label={rest['aria-label']} className={cn(line ? 'border-b border-border' : '-mx-1 px-1', 'overflow-x-auto', className)}>
+  const nav = (
+    <nav aria-label={rest['aria-label']} className={cn(line ? (actions ? 'min-w-0 flex-1' : 'border-b border-border') : '-mx-1 px-1', 'overflow-x-auto', !actions && className)}>
       <ul className={cn('flex w-max gap-1', !line && 'rounded-xl border border-border bg-surface-2 p-1')}>
         {items.map((item) => (
           <li key={item.key} className="flex">
@@ -59,5 +64,12 @@ export function AppNavTabs({ items, variant = 'line', replace, className, ...res
         ))}
       </ul>
     </nav>
+  )
+  if (!actions) return nav
+  return (
+    <div className={cn('flex items-end gap-3', line && 'border-b border-border', className)}>
+      {nav}
+      <div className="mb-1.5 flex shrink-0 items-center gap-2 empty:hidden">{actions}</div>
+    </div>
   )
 }

@@ -17,6 +17,7 @@ import {
 import type { Project } from '@/domain/projects'
 import { AppBadge, AppButton, AppConfirmDialog, AppEmptyState, AppErrorState, AppIcon, AppIconButton, AppNavTabs, AppSkeleton, notify } from '@/presentation/components'
 import { useLiveProject } from '@/presentation/common/use-live'
+import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCopy } from '@/presentation/common/use-copy'
@@ -28,9 +29,10 @@ import type { ProjectOutletContext } from './project-context'
 import { useProject, useProjectLifecycle } from './queries'
 
 /**
- * Página do projeto — o centro do trabalho: cabeçalho do projeto e as abas Visão geral, Gestão,
- * Tarefas (Lista, Kanban, Planejamento e Cronograma), Arquivos, Membros, Histórico e Configurações,
- * cada uma com o seu endereço (`/projects/:projectId/<seção>`; as abas são rotas filhas).
+ * Página do projeto — o centro do trabalho: cabeçalho do projeto e as abas Visão geral, Ficha, Gestão,
+ * Tarefas (Lista, Kanban, Planejamento e Cronograma), Informe, Arquivos, Membros, Histórico e
+ * Configurações, cada uma com o seu endereço (`/projects/:projectId/<seção>`; as abas são rotas filhas).
+ * A seção sem sub-navegação põe as suas ações na ponta direita da linha das abas (SectionHeader).
  */
 export function ProjectDetailPage() {
   const { projectId } = useParams()
@@ -77,6 +79,8 @@ function ProjectDetail({ project }: { project: Project }) {
   const { current } = useSession()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // lugar das ações da seção aberta, à direita da linha das abas
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
   const archived = !!project.archivedAt
   const caps = project.capabilities
   const permissions = current?.permissions ?? []
@@ -111,8 +115,10 @@ function ProjectDetail({ project }: { project: Project }) {
   const taskViews = visibleTaskViews(permissions)
   const tabPath: Record<ProjectTab, string> = {
     overview: projectPath(project.id),
+    charter: projectPath(project.id, 'charter'),
     management: projectPath(project.id, 'management'),
     tasks: projectPath(project.id, taskViews[0] ?? 'list'),
+    report: projectPath(project.id, 'report'),
     files: projectPath(project.id, 'files'),
     members: projectPath(project.id, 'members'),
     history: projectPath(project.id, 'history'),
@@ -182,8 +188,11 @@ function ProjectDetail({ project }: { project: Project }) {
         aria-label={project.name}
         className="mb-4"
         items={visibleProjectTabs(permissions, access).map((tab) => ({ key: tab, to: tabPath[tab], label: tabLabel(tab, project, t), active: tab === activeTab }))}
+        actions={<div ref={setActionsSlot} className="flex items-center gap-2" />}
       />
-      <Outlet context={outlet} />
+      <TabActionsSlotContext.Provider value={actionsSlot}>
+        <Outlet context={outlet} />
+      </TabActionsSlotContext.Provider>
 
       <ProjectFormDialog open={editing} onOpenChange={setEditing} project={project} />
       <AppConfirmDialog

@@ -198,3 +198,57 @@ describe('AppDataTable — clique na linha', () => {
     expect(onRowClick).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('AppDataTable — barra de filtros', () => {
+  const filterColumns = (primary: string[]): DataTableColumn<Row>[] => [
+    { id: 'name', header: 'Nome', hideable: false, cell: (r) => r.name },
+    ...['status', 'type', 'owner', 'tag'].map((id) => ({
+      id,
+      header: id,
+      cell: () => '',
+      filter: { label: `Filtro ${id}`, primary: primary.includes(id) || undefined, options: [{ value: 'a', label: `Opção ${id}` }] },
+    })),
+  ]
+
+  function Filters({ primary = [], defaults }: { primary?: string[]; defaults?: Record<string, string> }) {
+    const api = useDataTableState('filters-table', { sort: null, filters: defaults })
+    useEffect(() => {
+      handle.api = api
+    })
+    return <AppDataTable caption="Filtros" columns={filterColumns(primary)} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} toolbarActions={<button type="button">Nova</button>} />
+  }
+
+  it('à vista só os filtros principais; o resto em "Mais filtros", com o ativo como ficha removível', async () => {
+    renderWithProviders(<Filters primary={['status', 'owner']} />)
+    expect(screen.getByRole('combobox', { name: 'Filtro status' })).toHaveTextContent('Filtro status')
+    expect(screen.getByRole('combobox', { name: 'Filtro owner' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Filtro type' })).not.toBeInTheDocument()
+    // a ação principal fica na mesma barra
+    expect(screen.getByRole('button', { name: 'Nova' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mais filtros' }))
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Filtro type' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Opção type' }))
+    expect(handle.api!.state.filters).toEqual({ type: 'a' })
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Mais filtros (1 ativos)' })).toBeInTheDocument()
+    const chips = screen.getByRole('list', { name: 'Filtros ativos' })
+    await userEvent.click(within(chips).getByRole('button', { name: 'Remover filtro Filtro type: Opção type' }))
+    expect(handle.api!.state.filters).toEqual({})
+  })
+
+  it('sem nenhum principal: os 3 primeiros à vista; filtro ativo mostra "Nome: valor"', async () => {
+    renderWithProviders(<Filters />)
+    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Filtro status', 'Filtro type', 'Filtro owner'])
+    act(() => handle.api!.setFilter('status', 'a'))
+    expect(screen.getByRole('combobox', { name: 'Filtro status' })).toHaveTextContent('Filtro status: Opção status')
+  })
+
+  it('"Limpar filtros" volta ao padrão da tabela; o padrão sozinho não conta como filtro ativo', async () => {
+    renderWithProviders(<Filters defaults={{ status: 'a' }} />)
+    expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument()
+    act(() => handle.api!.setFilter('owner', 'a'))
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    expect(handle.api!.state.filters).toEqual({ status: 'a' })
+  })
+})

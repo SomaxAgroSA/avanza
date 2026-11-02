@@ -48,7 +48,11 @@
     "clearFilters": "Limpar filtros",
     "noMoreActions": "Nenhuma outra ação",
     "resetColumns": "Restaurar colunas",
-    "openHint": "Clique para visualizar · duplo clique para abrir"
+    "openHint": "Clique para visualizar · duplo clique para abrir",
+    "moreFilters": "Mais filtros",
+    "moreFiltersActive": "Mais filtros ({{count}} ativos)",
+    "activeFilters": "Filtros ativos",
+    "removeFilter": "Remover filtro {{filter}}"
   },
   "validation": {
     "required": "Campo obrigatório",
@@ -117,7 +121,10 @@
     "unsafe_svg": "SVG com conteúdo ativo (script, eventos ou links externos) não é aceito",
     "invalid_slot": "Lugar de imagem inválido",
     "insecure_url": "Use um endereço https://",
-    "blocked_host": "Este endereço não é permitido (metadados da nuvem ou a própria máquina)"
+    "blocked_host": "Este endereço não é permitido (metadados da nuvem ou a própria máquina)",
+    "not_in_project": "A tarefa precisa ser deste projeto",
+    "invalid_link": "Vincule só funcionalidades ou resultados deste projeto",
+    "in_future": "A data não pode ser futura"
   },
   "errors": {
     "VALIDATION_ERROR": "Verifique os campos destacados.",
@@ -216,7 +223,8 @@
     "WEBHOOK_NOT_FOUND": "Webhook não encontrado.",
     "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega não encontrada.",
     "ICON_IN_USE": "Este ícone está em uso por projetos, tipos de tarefa ou espaços e não pode ser removido.",
-    "ICON_NOT_FOUND": "Este ícone não está na biblioteca."
+    "ICON_NOT_FOUND": "Este ícone não está na biblioteca.",
+    "CHARTER_ITEM_NOT_FOUND": "Item da ficha não encontrado."
   },
   "nav": {
     "main": "Navegação principal",
@@ -251,7 +259,8 @@
     "management": "Gestão de projetos",
     "general": "Geral",
     "integrations": "Integrações",
-    "executive": "Painel executivo"
+    "executive": "Painel executivo",
+    "access": "Controle de acesso"
   },
   "commandPalette": {
     "title": "Paleta de comandos",
@@ -758,7 +767,21 @@
       "url": "Endereço",
       "events": "Eventos",
       "failures": "Falhas seguidas",
-      "icons": "Ícones"
+      "icons": "Ícones",
+      "in_report": "No informe",
+      "objective": "Objetivo geral",
+      "kind": "Tipo",
+      "owner_id": "Responsável",
+      "task_ids": "Tarefas vinculadas",
+      "link_ids": "Vínculos",
+      "unit": "Unidade",
+      "baseline": "Partida",
+      "target": "Meta",
+      "current": "Valor atual",
+      "frequency": "Frequência",
+      "value": "Valor",
+      "measured_at": "Data da medição",
+      "urgency": "Urgência"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -896,7 +919,13 @@
       "webhook.secret_rotated": "Segredo do webhook trocado",
       "webhook.disabled": "Webhook desligado por falhas seguidas",
       "icon_library.imported": "Importou ícones",
-      "icon_library.removed": "Removeu um ícone"
+      "icon_library.removed": "Removeu um ícone",
+      "charter.updated": "Objetivo geral da ficha alterado",
+      "charter_item.created": "Item adicionado à ficha",
+      "charter_item.updated": "Item da ficha alterado",
+      "charter_item.deleted": "Item removido da ficha",
+      "charter_item.reordered": "Itens da ficha reordenados",
+      "charter_item.measured": "Medição registrada"
     }
   },
   "projects": {
@@ -1008,7 +1037,9 @@
       "history": "Histórico",
       "settings": "Configurações",
       "tasks": "Tarefas",
-      "management": "Gestão"
+      "management": "Gestão",
+      "report": "Informe",
+      "charter": "Ficha"
     },
     "taskViews": {
       "label": "Visões das tarefas",
@@ -1075,7 +1106,117 @@
       "saveError": "Não foi possível salvar o filtro de projetos. {{reason}}",
       "emptyTitle": "Nenhum projeto atende ao filtro desta tela",
       "emptyHint": "Ajuste o filtro de projetos na engrenagem ao lado do seletor."
-    }
+    },
+    "chronology": {
+      "title": "Linha do tempo do projeto",
+      "description": "O que aconteceu no projeto, na ordem da data em que ocorreu: diário, marcos e tarefas.",
+      "auditTitle": "Alterações registradas no sistema",
+      "auditDescription": "Auditoria: quem mudou o quê e quando foi gravado, do mais recente ao mais antigo.",
+      "empty": "Ainda não há fatos com data",
+      "emptyHint": "Registre no diário, crie marcos ou dê datas às tarefas para vê-los aqui.",
+      "undated": "Tarefas sem data ({{count}})",
+      "span": "{{start}} a {{end}}",
+      "kinds": {
+        "journal": "Diário",
+        "milestone": "Marco",
+        "task": "Tarefa"
+      }
+    },
+    "report": {
+      "optionsTitle": "Conteúdo do informe",
+      "description": "Monte o informe do projeto com os dados da plataforma e baixe em PDF.",
+      "tasksIncluded_one": "{{count}} de {{total}} tarefas entra no informe.",
+      "tasksIncluded_other": "{{count}} de {{total}} tarefas entram no informe.",
+      "chooseTasks": "Escolher tarefas",
+      "fields": {
+        "title": "Título",
+        "subtitle": "Subtítulo",
+        "from": "De",
+        "to": "Até",
+        "cutoff": "Data de corte",
+        "cutoffHint": "A data \"de hoje\" do informe: a duração e o cronograma contam até aqui.",
+        "phases": "Fases",
+        "phasesHint": "Grupo da Gestão de projetos cujos elementos são as fases do cronograma.",
+        "noPhases": "Sem fases",
+        "sections": "Seções",
+        "summary": "Resumo",
+        "summaryHint": "Texto que abre o informe. Opcional.",
+        "notes": "Observações e riscos",
+        "notesHint": "Aparece junto dos próximos passos. Opcional."
+      },
+      "download": "Baixar PDF",
+      "printHint": "Na janela de impressão, escolha \"Salvar como PDF\" e desmarque \"Cabeçalhos e rodapés\".",
+      "reset": "Restaurar opções",
+      "preview": "Prévia",
+      "doc": {
+        "defaultTitle": "Linha do tempo do projeto",
+        "defaultSubtitle": "Como o projeto se desenvolveu, quanto tempo levou e o que falta: fases, marcos e tarefas em ordem cronológica.",
+        "kicker": "Projeto {{key}} · {{name}}",
+        "start": "Início",
+        "cutoff": "Corte do informe",
+        "team": "Equipe",
+        "sections": {
+          "summary": "Resumo",
+          "phases": "Avanço por fase",
+          "milestones": "Marcos",
+          "chronology": "Linha do tempo, dia a dia",
+          "tasks": "Tarefas",
+          "next": "Próximos passos"
+        },
+        "of": "{{done}} de {{total}}",
+        "kpiDays_one": "{{count}} dia",
+        "kpiDays_other": "{{count}} dias",
+        "kpiDaysHint_one": "desde {{date}} ({{count}} útil)",
+        "kpiDaysHint_other": "desde {{date}} ({{count}} úteis)",
+        "kpiTasks": "tarefas concluídas",
+        "kpiMilestones": "marcos alcançados",
+        "kpiPhases": "fases encerradas",
+        "schedule": "Cronograma",
+        "legendDone": "Fase encerrada",
+        "legendOpen": "Fase em andamento",
+        "legendMilestone": "Marco",
+        "legendCutoff": "Data de corte",
+        "openSpan": "{{start}} – em andamento",
+        "inProgress": "em andamento",
+        "daysOpen_one": "{{count}} até agora",
+        "daysOpen_other": "{{count}} até agora",
+        "noPhases": "Sem fases: escolha nas opções o grupo da Gestão de projetos que as contém.",
+        "cols": {
+          "phase": "Fase",
+          "start": "Início",
+          "end": "Fim",
+          "days": "Dias",
+          "status": "Status",
+          "progress": "Avanço",
+          "date": "Data",
+          "milestone": "Marco",
+          "code": "Código",
+          "task": "Tarefa",
+          "due": "Prazo",
+          "assignee": "Responsável"
+        },
+        "chronologyLead": "Tudo o que aconteceu no projeto, na ordem em que aconteceu: registros do diário, marcos e tarefas.",
+        "tasksLead_one": "{{count}} tarefa, agrupada por situação e em ordem de data.",
+        "tasksLead_other": "{{count}} tarefas, agrupadas por situação e em ordem de data.",
+        "taskStates": {
+          "in_progress": "Em andamento",
+          "pending": "Pendentes",
+          "done": "Concluídas",
+          "cancelled": "Canceladas"
+        },
+        "nextMilestones": "Marcos a alcançar",
+        "nextTasks": "Tarefas abertas",
+        "notes": "Observações e riscos",
+        "nothingPending": "Nada pendente.",
+        "more_one": "e mais {{count}} tarefa",
+        "more_other": "e mais {{count}} tarefas",
+        "empty": "Sem dados no período.",
+        "generated": "Gerado em {{platform}} · corte em {{date}}.",
+        "footer": "{{name}} · {{title}} · corte {{date}}"
+      }
+    },
+    "urgencyChange": "Mudar urgência de {{name}} (agora: {{urgency}})",
+    "urgencySaved": "{{name}}: urgência {{urgency}}."
   },
   "calendar": {
     "open": "Abrir calendário",
@@ -1505,7 +1646,9 @@
       "situation": "Situação",
       "tags": "Tags",
       "sprint": "Sprint",
-      "startDate": "Início planejado"
+      "startDate": "Início planejado",
+      "inReport": "No informe",
+      "urgency": "Urgência"
     },
     "tagsPlaceholder": "Escolher tags…",
     "markdownHint": "Aceita **negrito**, *itálico*, `código`, listas com \"-\" e links.",
@@ -1524,6 +1667,20 @@
       "none": "Nenhum",
       "hint": "Fase ou entrega do plano que esta tarefa executa.",
       "open": "Abrir {{name}} na Gestão"
+    },
+    "report": {
+      "add": "Incluir no informe do projeto",
+      "remove": "Tirar do informe do projeto",
+      "added": "{{code}} entra no informe",
+      "removed": "{{code}} saiu do informe"
+    },
+    "urgency": {
+      "high": "Alta",
+      "medium": "Média",
+      "low": "Baixa",
+      "none": "Sem urgência",
+      "change": "Mudar urgência de {{code}} (agora: {{urgency}})",
+      "saved": "{{code}}: urgência {{urgency}}."
     }
   },
   "tags": {
@@ -3525,5 +3682,245 @@
     "imported_other": "{{count}} ícones importados.",
     "alreadyImported": "{{name}} (já importado)",
     "maxSelection": "Até {{count}} ícones por importação."
+  },
+  "charter": {
+    "created": "“{{title}}” adicionado à ficha.",
+    "updated": "“{{title}}” atualizado.",
+    "deleted": "“{{title}}” removido da ficha.",
+    "objectiveSaved": "Objetivo geral salvo.",
+    "deleteTitle": "Excluir “{{title}}”?",
+    "deleteDescription": "Sai da ficha e dos objetivos que o tenham vinculado. Fica registrado no histórico do projeto.",
+    "deleteResultDescription": "Todas as medições também são excluídas. Fica registrado no histórico do projeto.",
+    "editItem": "Editar “{{title}}”",
+    "deleteItem": "Excluir “{{title}}”",
+    "linkedCount_one": "{{count}} funcionalidade ou resultado vinculado",
+    "linkedCount_other": "{{count}} funcionalidades ou resultados vinculados",
+    "tasksDone": "{{done}} de {{total}} concluídas",
+    "noTasks": "Sem tarefas vinculadas",
+    "stale": "Sem medição",
+    "percentOfTarget": "{{percent}} % da meta",
+    "kinds": {
+      "objective": "Objetivo",
+      "feature": "Funcionalidade",
+      "scope_in": "Inclui",
+      "scope_out": "Não inclui",
+      "result": "Resultado"
+    },
+    "sections": {
+      "objectives": "Objetivos",
+      "features": "Funcionalidades",
+      "scope": "Escopo",
+      "results": "Resultados esperados"
+    },
+    "hints": {
+      "objectives": "Para que o projeto existe e o que ele precisa alcançar.",
+      "features": "O que o produto vai fazer. Cada uma se vincula a tarefas e o avanço é calculado sozinho.",
+      "scope": "O que entra e o que fica de fora, para evitar pedidos fora do combinado.",
+      "results": "Como se mede o sucesso: indicador, ponto de partida, meta e data. O valor atual é atualizado a cada medição."
+    },
+    "empty": {
+      "objectives": "Ainda não há objetivos",
+      "features": "Ainda não há funcionalidades",
+      "scope": "Ainda não há escopo definido",
+      "results": "Ainda não há resultados esperados",
+      "scopeList": "Nada cadastrado."
+    },
+    "emptyHint": {
+      "objectives": "Escrevam o objetivo geral em uma ou duas frases e depois os objetivos específicos.",
+      "features": "Listem o que o produto vai fazer. Ao vincular cada funcionalidade às suas tarefas, o Avanza mostra quantas estão prontas sem que ninguém precise atualizar.",
+      "scope": "Duas listas curtas: o que o projeto inclui e o que não inclui. A segunda é a que mais ajuda quando surgem pedidos novos.",
+      "results": "Escolham de dois a cinco indicadores: de onde parte, aonde precisa chegar e até quando. A situação é calculada sozinha."
+    },
+    "add": {
+      "objective": "Objetivo específico",
+      "feature": "Adicionar funcionalidade",
+      "scope": "Adicionar ao escopo",
+      "result": "Adicionar resultado"
+    },
+    "general": {
+      "title": "Objetivo geral",
+      "hint": "Em uma ou duas frases: para que o projeto existe e quem ele beneficia.",
+      "write": "Escrever objetivo geral",
+      "edit": "Editar objetivo geral",
+      "missing": "Sem objetivo geral."
+    },
+    "state": {
+      "auto": "Automático",
+      "autoTitle": "Calculado automaticamente",
+      "manualTitle": "Escolhido à mão",
+      "autoHint": {
+        "objective": "Automático: calculado pelas funcionalidades e resultados vinculados.",
+        "feature": "Automático: calculado pelas tarefas vinculadas."
+      }
+    },
+    "objectiveState": {
+      "pending": "Pendente",
+      "in_progress": "Em curso",
+      "achieved": "Atingido",
+      "at_risk": "Em risco"
+    },
+    "featureState": {
+      "planned": "Planejada",
+      "in_progress": "Em desenvolvimento",
+      "delivered": "Entregue",
+      "cancelled": "Cancelada"
+    },
+    "situation": {
+      "achieved": "Cumprido",
+      "on_track": "No caminho",
+      "late": "Atrasado",
+      "no_data": "Sem dados"
+    },
+    "frequency": {
+      "none": "Sem frequência",
+      "weekly": "Semanal",
+      "monthly": "Mensal",
+      "quarterly": "Trimestral"
+    },
+    "columns": {
+      "feature": "Funcionalidade",
+      "state": "Estado",
+      "tasks": "Tarefas vinculadas",
+      "owner": "Responsável",
+      "indicator": "Indicador",
+      "situation": "Situação"
+    },
+    "fields": {
+      "title": "Título",
+      "indicator": "Indicador",
+      "description": "Descrição",
+      "state": "Estado",
+      "owner": "Responsável",
+      "noOwner": "Sem responsável",
+      "ownerHint": "O responsável também pode registrar as medições.",
+      "links": "Vinculado a",
+      "linksHint": "Funcionalidades e resultados que cumprem este objetivo.",
+      "linksPlaceholder": "Escolher funcionalidades ou resultados",
+      "tasks": "Tarefas vinculadas",
+      "tasksHint": "O avanço é calculado com estas tarefas (as canceladas não contam).",
+      "tasksPlaceholder": "Buscar tarefa por código ou título",
+      "baseline": "Partida",
+      "target": "Meta",
+      "current": "Atual",
+      "unit": "Unidade",
+      "unitPlaceholder": "%, pessoas, dias…",
+      "startDate": "Início",
+      "dueDate": "Data da meta",
+      "frequency": "Frequência de medição",
+      "frequencyHint": "Se o intervalo passar sem medição nova, o indicador fica “Sem medição”.",
+      "scopeKind": "Tipo"
+    },
+    "dialog": {
+      "create": {
+        "objective": "Novo objetivo específico",
+        "feature": "Nova funcionalidade",
+        "scope": "Novo item de escopo",
+        "result": "Novo resultado esperado"
+      },
+      "edit": {
+        "objective": "Editar objetivo",
+        "feature": "Editar funcionalidade",
+        "scope": "Editar item de escopo",
+        "result": "Editar resultado esperado"
+      },
+      "hint": {
+        "objective": "Uma conquista concreta que o projeto precisa alcançar.",
+        "feature": "Algo que o produto vai fazer. Vincule às tarefas que a constroem.",
+        "scope": "Algo que o projeto inclui ou deixa de fora.",
+        "result": "Um indicador mensurável com ponto de partida, meta e data."
+      }
+    },
+    "measure": {
+      "title": "Registrar medição",
+      "hint": "{{title}} · meta {{target}} · atual {{current}}",
+      "value": "Valor ({{unit}})",
+      "date": "Data da medição",
+      "note": "Comentário",
+      "notePlaceholder": "Ex.: medição de outubro, fonte: relatório do CRM",
+      "saved": "Medição de “{{title}}” registrada.",
+      "action": "Registrar medição",
+      "actionFor": "Registrar medição de “{{title}}”",
+      "series": "Medições",
+      "empty": "Ainda não há medições",
+      "emptyHint": "A primeira medição passa a ser o valor atual do indicador."
+    },
+    "summary": {
+      "title": "Resumo da ficha",
+      "completeness": "Completude da ficha",
+      "sections": "{{done}} de {{total}} seções",
+      "filled": "completa",
+      "missing": "pendente",
+      "features": "Funcionalidades entregues",
+      "ofTotal": "de {{total}}",
+      "tasks": "{{done}} de {{total}} tarefas vinculadas concluídas",
+      "noFeatures": "Sem funcionalidades cadastradas",
+      "results": "Resultados no caminho",
+      "late_one": "{{count}} atrasado",
+      "late_other": "{{count}} atrasados",
+      "stale_one": "{{count}} sem medição",
+      "stale_other": "{{count}} sem medição",
+      "noResults": "Sem indicadores cadastrados",
+      "updated": "Última atualização",
+      "by": "por {{name}}",
+      "neverUpdated": "A ficha ainda não foi preenchida"
+    },
+    "print": "Imprimir ficha",
+    "doc": {
+      "title": "Ficha do projeto",
+      "issued": "emitida em {{date}}",
+      "empty": "Sem informação cadastrada."
+    }
+  },
+  "access": {
+    "title": "Controle de acesso",
+    "description": "Escolha uma pessoa e defina num só lugar quais módulos ela vê, o que pode fazer e em quais projetos entra.",
+    "noUsers": "Não há usuários.",
+    "user": "Usuário",
+    "role": "Perfil",
+    "roleUsers_one": "Perfil de {{count}} pessoa",
+    "roleUsers_other": "Perfil compartilhado por {{count}} pessoas",
+    "ownRoleHint": "O seu próprio acesso é alterado por outro administrador.",
+    "roleChanged": "{{name}} agora tem o perfil {{role}}.",
+    "roleUpdated": "Perfil {{role}} atualizado ({{change}}).",
+    "on": "sim",
+    "off": "não",
+    "sees": "Vê",
+    "doesNotSee": "Não vê",
+    "toggleView": "Ver {{module}}",
+    "personalRoleName": "{{name}} (personalizado)",
+    "personalRoleDescription": "Baseado em {{role}}, criado no Controle de acesso",
+    "personalRoleCreated": "{{name}} agora tem um perfil próprio com a mudança.",
+    "summary": {
+      "modules": "Módulos que vê",
+      "projects": "Projetos em que entra",
+      "allProjects": "Vê todos os projetos pelo perfil",
+      "role": "Perfil"
+    },
+    "modules": {
+      "title": "Módulos e ações",
+      "hint": "O interruptor define se vê o módulo; as etiquetas, o que pode fazer nele (verde = pode).",
+      "superLocked": "O perfil Super Admin tem acesso total e não pode ser reduzido.",
+      "ownLocked": "Você está vendo o seu próprio acesso: quem altera é outro administrador."
+    },
+    "shared": {
+      "title": "O perfil {{role}} é compartilhado",
+      "description_one": "Mudança: {{change}}. O perfil {{role}} é usado por {{count}} pessoa.",
+      "description_other": "Mudança: {{change}}. O perfil {{role}} é usado por {{count}} pessoas.",
+      "hint": "Você pode criar um perfil próprio para esta pessoa (as demais não mudam) ou aplicar a mudança a todas que têm este perfil.",
+      "everyone_one": "Mudar para {{count}} pessoa",
+      "everyone_other": "Mudar para as {{count}} pessoas",
+      "personal": "Criar perfil próprio para {{name}}"
+    },
+    "projects": {
+      "title": "Projetos",
+      "hint": "Só vê os projetos em que é membro. Escolha o acesso em cada um.",
+      "seesAll": "O perfil deixa ver todos os projetos; aqui você define em quais ele também participa.",
+      "project": "Projeto",
+      "access": "Acesso",
+      "accessFor": "Acesso a {{project}}",
+      "none": "Sem acesso",
+      "search": "Buscar projeto",
+      "changed": "{{name}} · {{project}}: {{access}}."
+    }
   }
 }

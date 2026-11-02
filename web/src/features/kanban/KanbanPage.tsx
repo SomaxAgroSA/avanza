@@ -27,7 +27,9 @@ import {
   type Swimlane,
 } from '@/domain/kanban'
 import { MAX_LIVE_PROJECTS } from '@/domain/realtime'
-import { AppBadge, AppButton, AppDropdown, AppEmptyState, AppErrorState, AppFilterBar, AppSearch, AppSelect, AppSkeleton, notify, SELECT_ALL } from '@/presentation/components'
+import { AppBadge, AppButton, AppDropdown, AppEmptyState, AppErrorState, AppFilterBar, AppSearch, AppSelect, AppSkeleton, notify } from '@/presentation/components'
+import { FilterSelect } from '@/presentation/components/data-table/TableFilters'
+import { filterTriggerClass } from '@/presentation/components/data-table/filter-styles'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { SectionHeader } from '@/presentation/layouts/SectionHeader'
 import { useLiveProjects } from '@/presentation/common/use-live'
@@ -45,6 +47,7 @@ import { useTags } from '@/features/tags/queries'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
 import { TaskFormDialog, type TaskFormInitial } from '@/features/tasks/TaskFormDialog'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
+import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { TaskDetailDialog } from '@/features/tasks/TaskDetailDialog'
 import { KanbanBoard, type KanbanDrop } from './KanbanBoard'
 import { QuickAddDialog } from './QuickAddDialog'
@@ -95,6 +98,7 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
   const tags = useTags()
+  const urgencyOptions = useUrgencyFilterOptions()
   // sprints são do projeto: no quadro de todos os projetos o filtro não aparece
   const sprints = useSprints(projectId ?? undefined)
 
@@ -187,15 +191,9 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
     })
   }
 
-  const filterSelect = (key: BoardSelectFilter, label: string, options: Array<{ value: string; label: ReactNode }>) => (
-    <AppSelect
-      size="sm"
-      className="w-full sm:w-44"
-      aria-label={label}
-      value={filters[key] || SELECT_ALL}
-      onValueChange={(value) => setFilters((f) => ({ ...f, [key]: value === SELECT_ALL ? '' : value }))}
-      options={[{ value: SELECT_ALL, label: t('kanban.filters.all', { name: label }) }, ...options]}
-    />
+  // mesmo filtro das listagens: parado mostra só o nome; ativo fica verde com "Nome: valor"
+  const filterSelect = (key: BoardSelectFilter, label: string, options: Array<{ value: string; label: string }>) => (
+    <FilterSelect key={key} filter={{ id: key, label, options }} value={filters[key] || undefined} onChange={(value) => setFilters((f) => ({ ...f, [key]: value ?? '' }))} />
   )
 
   const defaultStatus = data?.columns.find((c) => c.status.isDefault) ?? data?.columns[0]
@@ -250,13 +248,13 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
                     <CheckFilter
                       label={t('kanban.filters.project')}
                       testId="kanban-project-filter"
-                      className="min-w-0 flex-1 sm:w-44 sm:flex-none"
+                      className="min-w-0 flex-1 sm:w-auto sm:flex-none"
                       options={projectOptions.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}`, short: p.key }))}
                       value={filters.projects}
                       countLabel={(count) => t('kanban.filters.projectCount', { count })}
                       onChange={(projects) => setFilters((f) => ({ ...f, projects }))}
                     />
-                    <ProjectFilterSettingsButton screen="kanban" size="sm" />
+                    <ProjectFilterSettingsButton screen="kanban" />
                   </div>
                 )}
                 {filterSelect('assignee', t('tasks.fields.assignee'), [
@@ -274,6 +272,7 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
                   t('tasks.fields.priority'),
                   (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
+                {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
                 {!all &&
                   (sprints.data?.length ?? 0) > 0 &&
                   filterSelect('sprint', t('tasks.fields.sprint'), [
@@ -286,7 +285,6 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
                   (tags.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
                 <AppSelect
-                  size="sm"
                   className="w-full sm:w-48"
                   aria-label={t('kanban.swimlanes.label')}
                   value={swimlane}
@@ -295,7 +293,6 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
                 />
                 <AppButton
                   variant={view.compact ? 'soft' : 'secondary'}
-                  size="sm"
                   leftIcon={<Minimize2 />}
                   aria-pressed={view.compact}
                   title={t('kanban.compactHint')}
@@ -373,7 +370,7 @@ function CheckFilter({
   countLabel,
   onChange,
   testId,
-  className = 'w-full sm:w-44',
+  className = 'w-full sm:w-auto',
 }: {
   label: string
   options: Array<{ value: string; label: string; short: string }>
@@ -385,14 +382,14 @@ function CheckFilter({
 }) {
   const { t } = useTranslation()
   const chosen = options.filter((o) => value.includes(o.value))
-  const summary =
-    chosen.length === 0 ? t('kanban.filters.all', { name: label }) : t('kanban.filters.selected', { name: label, value: chosen.length === 1 ? chosen[0]?.short : countLabel(chosen.length) })
+  // como os filtros das listagens: parado mostra só o nome; com escolha, fica verde com "Nome: valor"
+  const summary = chosen.length === 0 ? label : t('kanban.filters.selected', { name: label, value: chosen.length === 1 ? chosen[0]?.short : countLabel(chosen.length) })
   return (
     <AppDropdown
       align="start"
       className="max-h-80 overflow-auto"
       trigger={
-        <AppButton variant="secondary" size="sm" className={cn('justify-between', className)} rightIcon={<ChevronDown />} data-testid={testId}>
+        <AppButton variant="secondary" className={cn('justify-between', filterTriggerClass(chosen.length > 0), className)} rightIcon={<ChevronDown />} data-testid={testId}>
           <span className="truncate">{summary}</span>
         </AppButton>
       }

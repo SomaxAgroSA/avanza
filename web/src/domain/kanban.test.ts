@@ -55,6 +55,8 @@ function card(id: string, extra: Partial<BoardCard> = {}): BoardCard {
     attachmentCount: 0,
     subtaskProgress: { done: 0, total: 0 },
     blocked: false,
+    inReport: true,
+    urgency: null,
     sprint: null,
     cardFields: [],
     ...extra,
@@ -81,6 +83,14 @@ describe('domain/kanban', () => {
     expect(matchesFilters(card('1', { assignee: ana }), { ...EMPTY_FILTERS, assignee: 'me' }, 'u1')).toBe(true)
     expect(matchesFilters(card('2'), { ...EMPTY_FILTERS, assignee: 'me' }, 'u1')).toBe(false)
     expect(matchesFilters(card('2'), { ...EMPTY_FILTERS, assignee: 'none' }, 'u1')).toBe(true)
+  })
+
+  it('filtra por urgência: alta/média/baixa ou sem urgência', () => {
+    expect(matchesFilters(card('4', { urgency: 'high' }), { ...EMPTY_FILTERS, urgency: 'high' }, 'u1')).toBe(true)
+    expect(matchesFilters(card('5', { urgency: 'low' }), { ...EMPTY_FILTERS, urgency: 'high' }, 'u1')).toBe(false)
+    expect(matchesFilters(card('6', { urgency: null }), { ...EMPTY_FILTERS, urgency: 'none' }, 'u1')).toBe(true)
+    expect(matchesFilters(card('7', { urgency: 'medium' }), { ...EMPTY_FILTERS, urgency: 'none' }, 'u1')).toBe(false)
+    expect(matchesFilters(card('8', { urgency: 'medium' }), EMPTY_FILTERS, 'u1')).toBe(true)
   })
 
   it('contêineres por raia × coluna', () => {

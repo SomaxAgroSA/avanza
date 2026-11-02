@@ -22,7 +22,7 @@ describe('navegação', () => {
 
   it('mostra apenas os filhos permitidos de configurações', () => {
     const settings = visibleNavItems(['permissions.manage']).find((i) => i.id === 'settings')
-    expect(settings?.children?.map((c) => c.id)).toEqual(['roles', 'permissions'])
+    expect(settings?.children?.map((c) => c.id)).toEqual(['access', 'roles', 'permissions'])
   })
 
   it('auditoria aparece só com audit.view', () => {

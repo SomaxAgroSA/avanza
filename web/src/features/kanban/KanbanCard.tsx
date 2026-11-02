@@ -11,6 +11,7 @@ import { CustomFieldValue } from '@/features/task-config/CustomFieldValue'
 import { TagList } from '@/features/tags/tag-visuals'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { DueDate, TaskCode, TaskIndicators } from '@/features/tasks/task-visuals'
+import { UrgencyBadge } from '@/features/tasks/TaskUrgency'
 
 /** Tipos que não cabem no card (ficam no detalhe). */
 const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
@@ -46,6 +47,8 @@ export function KanbanCardContent({
             </AppBadge>
           )}
           <TaskCode task={card} className="min-w-0" compact={compact} />
+          {/* urgência: o semáforo junto ao código (o nome fica no título e para leitores de tela) */}
+          <UrgencyBadge urgency={card.urgency} />
         </span>
         {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" iconOnly={compact} />}
       </div>

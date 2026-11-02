@@ -36,7 +36,6 @@ import {
   AppSkeleton,
   AppSwitch,
   AppTimeline,
-  SELECT_ALL,
   TIMELINE_DRAG_TYPE,
   notify,
   type AppTimelineBar,
@@ -50,6 +49,8 @@ import { optionColor, optionText, optionTint } from '@/features/task-config/conf
 import { usePriorities } from '@/features/workflow/queries'
 import { useTags } from '@/features/tags/queries'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
+import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
+import { FilterSelect } from '@/presentation/components/data-table/TableFilters'
 import { TaskCode, TaskStatusBadge } from '@/features/tasks/task-visuals'
 import { MilestoneDialog, type MilestoneDialogState } from './MilestoneDialog'
 import { ScheduleDialog } from './ScheduleDialog'
@@ -73,6 +74,7 @@ export function TimelineView({ projectId }: { projectId: string }) {
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
   const tags = useTags()
+  const urgencyOptions = useUrgencyFilterOptions()
 
   const [now] = useState(() => new Date())
   const today = todayOf(now)
@@ -206,15 +208,9 @@ export function TimelineView({ projectId }: { projectId: string }) {
   }
   const byId = (id: string) => data?.tasks.find((task) => task.id === id)
 
+  // mesmo filtro das listagens: parado mostra só o nome; ativo fica verde com "Nome: valor"
   const filterSelect = (key: BoardSelectFilter, label: string, options: Array<{ value: string; label: string }>) => (
-    <AppSelect
-      size="sm"
-      className="w-full sm:w-44"
-      aria-label={label}
-      value={filters[key] || SELECT_ALL}
-      onValueChange={(value) => setFilters((f) => ({ ...f, [key]: value === SELECT_ALL ? '' : value }))}
-      options={[{ value: SELECT_ALL, label: t('kanban.filters.all', { name: label }) }, ...options]}
-    />
+    <FilterSelect key={key} filter={{ id: key, label, options }} value={filters[key] || undefined} onChange={(value) => setFilters((f) => ({ ...f, [key]: value ?? '' }))} />
   )
 
   if (timeline.isPending) return <AppSkeleton className="h-[28rem] rounded-xl" />
@@ -240,6 +236,7 @@ export function TimelineView({ projectId }: { projectId: string }) {
             ])}
             {filterSelect('type', t('tasks.fields.type'), (types.data ?? []).map((x) => ({ value: x.id, label: x.name })))}
             {filterSelect('priority', t('tasks.fields.priority'), (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })))}
+            {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
             {data.sprints.length > 0 && filterSelect('sprint', t('tasks.fields.sprint'), [{ value: 'none', label: t('sprints.none') }, ...data.sprints.map((s) => ({ value: s.id, label: s.name }))])}
             {filterSelect('tag', t('tasks.fields.tags'), (tags.data ?? []).map((x) => ({ value: x.id, label: x.name })))}
             <AppSwitch size="sm" checked={hideDone} onCheckedChange={setHideDone} label={<span className="text-xs">{t('timeline.hideDone')}</span>} />

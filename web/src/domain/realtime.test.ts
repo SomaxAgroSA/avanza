@@ -23,6 +23,7 @@ describe('domain/realtime — o que atualizar na tela', () => {
       ['tasks', 'board-all'],
       ['tasks', 'backlog', 'p1'],
       ['tasks', 'timeline', 'p1'],
+      ['tasks', 'charter', 'p1'],
       ['tasks', 'list'],
       ['tasks', 'reports'],
       ['tasks', 'detail', 't1'],
@@ -30,6 +31,15 @@ describe('domain/realtime — o que atualizar na tela', () => {
       ['tasks', 'relations', 't1'],
       ['plan', 'p1'],
     ])
+  })
+
+  it('ficha do projeto: a ficha e as medições', () => {
+    for (const collection of ['project_charters', 'charter_items', 'charter_measurements']) {
+      expect(invalidationKeys(event(collection))).toEqual([
+        ['tasks', 'charter', 'p1'],
+        ['tasks', 'charter-measurements'],
+      ])
+    }
   })
 
   it('comentário, anexo e relação atualizam a tarefa deles', () => {

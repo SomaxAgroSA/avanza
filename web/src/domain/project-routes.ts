@@ -5,8 +5,11 @@
  */
 import { can, type PermissionCode } from './permissions'
 
-/** Abas da página do projeto, na ordem da tela. */
-export const PROJECT_TABS = ['overview', 'management', 'tasks', 'files', 'members', 'history', 'settings'] as const
+/**
+ * Abas da página do projeto, na ordem da tela: Visão geral, Ficha (para que o projeto existe e como se
+ * mede), Gestão, Tarefas, Informe (documento do projeto em PDF), Arquivos, Membros, Histórico e Configurações.
+ */
+export const PROJECT_TABS = ['overview', 'charter', 'management', 'tasks', 'report', 'files', 'members', 'history', 'settings'] as const
 export type ProjectTab = (typeof PROJECT_TABS)[number]
 
 /** Visões da aba Tarefas: lista, Kanban, planejamento (backlog e sprints) e cronograma (timeline). */
@@ -19,11 +22,13 @@ export type ProjectSection = Exclude<ProjectTab, 'tasks'> | ProjectTaskView
 /** Trecho do endereço depois de `/projects/:id` (a visão geral é o próprio projeto). */
 const SEGMENTS: Record<ProjectSection, string> = {
   overview: '',
+  charter: 'charter',
   management: 'management',
   list: 'tasks',
   kanban: 'kanban',
   planning: 'planning',
   timeline: 'timeline',
+  report: 'report',
   files: 'files',
   members: 'members',
   history: 'history',
@@ -69,6 +74,8 @@ export function legacyProjectTab(tab: string | null): { section: ProjectSection;
     case 'tasks':
       return { section: 'list', params: {} }
     case 'overview':
+    case 'charter':
+    case 'report':
     case 'files':
     case 'members':
     case 'history':
@@ -89,11 +96,15 @@ export interface ProjectTabAccess {
   manage: boolean
 }
 
-/** Abas que a pessoa vê: Gestão com `plan.view`, Tarefas com alguma visão, Configurações para quem administra. */
+/**
+ * Abas que a pessoa vê: Gestão com `plan.view`, Tarefas com alguma visão, Informe com `tasks.view` (é
+ * montado com as tarefas escolhidas), Configurações para quem administra; Ficha para todos do projeto.
+ */
 export function visibleProjectTabs(permissions: readonly string[], access: ProjectTabAccess): ProjectTab[] {
   return PROJECT_TABS.filter((tab) => {
     if (tab === 'management') return can(permissions, 'plan.view')
     if (tab === 'tasks') return visibleTaskViews(permissions).length > 0
+    if (tab === 'report') return can(permissions, 'tasks.view')
     if (tab === 'settings') return access.manage
     return true
   })

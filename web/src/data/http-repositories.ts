@@ -18,6 +18,10 @@ import type { ExecutiveDto } from './dtos'
 import { toExecutiveDashboard } from './mappers'
 import type { BacklogDto, BoardDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import type { MilestoneInput } from '@/domain/timeline'
+import type { CharterItemInput } from '@/domain/charter'
+import type { Urgency } from '@/domain/urgency'
+import type { CharterDto, CharterItemDto, CharterMeasurementDto } from './dtos'
+import { toCharterItem, toCharterMeasurement, toProjectCharter } from './mappers'
 import { toDocPage, toDocSpace, toDocTreePage, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
@@ -61,6 +65,7 @@ import type {
   TimelineRepository,
   PlanRepository,
   MilestoneRepository,
+  CharterRepository,
   DocsRepository,
   SprintRepository,
   TagRepository,
@@ -441,6 +446,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           search: query.search.trim() || undefined,
           status: query.filters.status,
           priority: query.filters.priority,
+          urgency: query.filters.urgency,
           owner_id: query.filters.owner_id,
         },
       })
@@ -586,6 +592,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     executive: createHttpExecutiveRepository(api),
     timeline: createHttpTimelineRepository(api),
     milestones: createHttpMilestoneRepository(api),
+    charter: createHttpCharterRepository(api),
     plan: createHttpPlanRepository(api),
     docs: createHttpDocsRepository(api),
     sprints: createHttpSprintRepository(api),
@@ -1045,6 +1052,59 @@ export function createHttpMilestoneRepository(api: ApiClient): MilestoneReposito
   }
 }
 
+function charterItemBody(input: CharterItemInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (input.kind !== undefined) body.kind = input.kind
+  if (input.title !== undefined) body.title = input.title
+  if (input.description !== undefined) body.description = input.description
+  if (input.state !== undefined) body.state = input.state
+  if (input.ownerId !== undefined) body.owner_id = input.ownerId
+  if (input.linkIds !== undefined) body.link_ids = input.linkIds
+  if (input.taskIds !== undefined) body.task_ids = input.taskIds
+  if (input.unit !== undefined) body.unit = input.unit
+  if (input.baseline !== undefined) body.baseline = input.baseline
+  if (input.target !== undefined) body.target = input.target
+  if (input.startDate !== undefined) body.start_date = input.startDate
+  if (input.dueDate !== undefined) body.due_date = input.dueDate
+  if (input.frequency !== undefined) body.frequency = input.frequency
+  return body
+}
+
+/** Ficha do projeto: `/projects/{id}/charter` (objetivo, itens, ordem) e `/charter-items/{id}` (item e medições). */
+export function createHttpCharterRepository(api: ApiClient): CharterRepository {
+  const project = (id: string) => `/projects/${encodeURIComponent(id)}/charter`
+  const item = (id: string) => `/charter-items/${encodeURIComponent(id)}`
+  return {
+    async get(projectId) {
+      return toProjectCharter((await api.get<CharterDto>(project(projectId))).data)
+    },
+    async saveObjective(projectId, objective) {
+      return toProjectCharter((await api.put<CharterDto>(project(projectId), { objective })).data)
+    },
+    async createItem(projectId, input) {
+      return toCharterItem((await api.post<CharterItemDto>(`${project(projectId)}/items`, charterItemBody(input))).data)
+    },
+    async updateItem(id, input) {
+      return toCharterItem((await api.patch<CharterItemDto>(item(id), charterItemBody(input))).data)
+    },
+    async removeItem(id) {
+      await api.del(item(id))
+    },
+    async reorder(projectId, kind, ids) {
+      return toProjectCharter((await api.put<CharterDto>(`${project(projectId)}/order`, { kind, ids })).data)
+    },
+    async measurements(itemId) {
+      return (await api.get<CharterMeasurementDto[]>(`${item(itemId)}/measurements`)).data.map(toCharterMeasurement)
+    },
+    async addMeasurement(itemId, input) {
+      const body: Record<string, unknown> = { value: input.value }
+      if (input.note !== undefined) body.note = input.note
+      if (input.measuredAt !== undefined) body.measured_at = input.measuredAt
+      return toCharterItem((await api.post<CharterItemDto>(`${item(itemId)}/measurements`, body)).data)
+    },
+  }
+}
+
 function docSpaceBody(input: DocSpaceInput): Record<string, unknown> {
   const body: Record<string, unknown> = {}
   if (input.key !== undefined) body.key = input.key
@@ -1211,6 +1271,8 @@ const TASK_FILTERS: Record<string, string> = {
   category: 'category',
   tags: 'tag_id',
   sprint: 'sprint_id',
+  in_report: 'in_report',
+  urgency: 'urgency',
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {
@@ -1236,6 +1298,12 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async update(id, data) {
       return toTaskDetail((await api.patch<TaskDetailDto>(path(id), taskBody(data))).data)
+    },
+    async setInReport(id, inReport) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/report`, { in_report: inReport })).data)
+    },
+    async setUrgency(id, urgency: Urgency | null) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/urgency`, { urgency })).data)
     },
     async remove(id) {
       await api.del(path(id))

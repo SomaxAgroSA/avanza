@@ -22,10 +22,11 @@ import {
   AppSelect,
   AppSkeleton,
   notify,
-  SELECT_ALL,
   type AppDropdownItem,
 } from '@/presentation/components'
 import { SectionHeader } from '@/presentation/layouts/SectionHeader'
+import { FilterSelect } from '@/presentation/components/data-table/TableFilters'
+import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { useProjectMembers } from '@/features/projects/queries'
@@ -71,6 +72,7 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
   const members = useProjectMembers(projectId)
   const types = useTaskTypes(false)
   const tags = useTags()
+  const urgencyOptions = useUrgencyFilterOptions()
 
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_FILTERS)
   const [sort, setSortState] = useState<BacklogSort>(() => {
@@ -318,15 +320,9 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
     )
   }
 
-  const filterSelect = (key: 'assignee' | 'type' | 'priority' | 'tag', label: string, options: Array<{ value: string; label: ReactNode }>) => (
-    <AppSelect
-      size="sm"
-      className="w-full sm:w-44"
-      aria-label={label}
-      value={filters[key] || SELECT_ALL}
-      onValueChange={(value) => setFilters((f) => ({ ...f, [key]: value === SELECT_ALL ? '' : value }))}
-      options={[{ value: SELECT_ALL, label: t('kanban.filters.all', { name: label }) }, ...options]}
-    />
+  // mesmo filtro das listagens: parado mostra só o nome; ativo fica verde com "Nome: valor"
+  const filterSelect = (key: 'assignee' | 'type' | 'priority' | 'urgency' | 'tag', label: string, options: Array<{ value: string; label: string }>) => (
+    <FilterSelect key={key} filter={{ id: key, label, options }} value={filters[key] || undefined} onChange={(value) => setFilters((f) => ({ ...f, [key]: value ?? '' }))} />
   )
 
   return (
@@ -386,24 +382,18 @@ function ProjectBacklog({ projectId }: { projectId: string }) {
                   t('tasks.fields.priority'),
                   (priorities.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
+                {filterSelect('urgency', t('tasks.fields.urgency'), urgencyOptions)}
                 {filterSelect(
                   'tag',
                   t('tasks.fields.tags'),
                   (tags.data ?? []).map((x) => ({ value: x.id, label: x.name })),
                 )}
-                <AppSelect
-                  size="sm"
-                  className="w-full sm:w-44"
-                  aria-label={t('tasks.fields.status')}
-                  value={statusFilter || SELECT_ALL}
-                  onValueChange={(value) => setStatusFilter(value === SELECT_ALL ? '' : value)}
-                  options={[
-                    { value: SELECT_ALL, label: t('kanban.filters.all', { name: t('tasks.fields.status') }) },
-                    ...data.statuses.map((s) => ({ value: s.id, label: s.name })),
-                  ]}
+                <FilterSelect
+                  filter={{ id: 'status', label: t('tasks.fields.status'), options: data.statuses.map((s) => ({ value: s.id, label: s.name })) }}
+                  value={statusFilter || undefined}
+                  onChange={(value) => setStatusFilter(value ?? '')}
                 />
                 <AppSelect
-                  size="sm"
                   className="w-full sm:w-52"
                   aria-label={t('backlog.sort.label')}
                   value={sort}

@@ -6,6 +6,7 @@ import { OPTION_COLORS } from './task-config'
 import { isHexColor, type HexColor } from './colors'
 import { isIconName } from './icons'
 import { DEFAULT_PASSWORD_POLICY, type PasswordPolicy } from './platform'
+import { URGENCY_FILTER_VALUES } from './urgency'
 
 /**
  * Schemas de validação de formulários. As mensagens são chaves de i18n (validation.*),
@@ -107,6 +108,8 @@ export const projectSchema = z
     cover: z.union([z.enum(PROJECT_COVERS), z.custom<HexColor>(isHexColor)]),
     status: z.enum(PROJECT_STATUSES),
     priority: z.enum(PROJECT_PRIORITIES),
+    /** 'none' = sem urgência */
+    urgency: z.enum(URGENCY_FILTER_VALUES),
     /** AAAA-MM-DD ou '' */
     startDate: z.string(),
     dueDate: z.string(),

@@ -4,6 +4,7 @@ import type { SprintRef } from './sprints'
 import type { UserSummary } from './projects'
 import { isRequiredIn, valueIssue, type FieldValue, type OptionColor, type TaskTypeField, type TaskTypeIcon } from './task-config'
 import type { StatusCategory } from './workflow'
+import type { Urgency } from './urgency'
 
 export interface TaskStatusRef {
   id: string
@@ -86,6 +87,10 @@ export interface TaskSummary {
   blocked: boolean
   /** Elemento da Gestão de projetos que a tarefa executa (ver plan-tasks.ts); null/ausente = sem vínculo. */
   planItem?: PlanItemRef | null
+  /** Entra no informe do projeto (aba Informe); padrão: sim. */
+  inReport: boolean
+  /** Urgência (semáforo); null = sem urgência. */
+  urgency: Urgency | null
 }
 
 export interface TaskCapabilities {

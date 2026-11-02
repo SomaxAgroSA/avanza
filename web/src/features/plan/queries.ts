@@ -149,9 +149,9 @@ export const managementKeys = {
   report: (projectId: string) => ['plan', projectId, 'report'] as const,
 }
 
-export function usePlanJournal(projectId: string) {
+export function usePlanJournal(projectId: string, enabled = true) {
   const { plan } = useRepositories()
-  return useQuery({ queryKey: managementKeys.journal(projectId), queryFn: () => plan.listJournal(projectId) })
+  return useQuery({ queryKey: managementKeys.journal(projectId), queryFn: () => plan.listJournal(projectId), enabled })
 }
 
 export function usePlanIssues(projectId: string) {

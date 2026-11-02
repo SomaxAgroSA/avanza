@@ -35,6 +35,8 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
         ALL_PROJECTS_BOARD,
         ['tasks', 'backlog', p],
         ['tasks', 'timeline', p],
+        // funcionalidades da ficha avançam com as tarefas vinculadas
+        ['tasks', 'charter', p],
         ['tasks', 'list'],
         ['tasks', 'reports'],
         ['tasks', 'detail', event.id],
@@ -68,6 +70,13 @@ export function invalidationKeys(event: RealtimeEvent): Key[] {
       ]
     case 'project_milestones':
       return [['tasks', 'timeline', p]]
+    case 'project_charters':
+    case 'charter_items':
+    case 'charter_measurements':
+      return [
+        ['tasks', 'charter', p],
+        ['tasks', 'charter-measurements'],
+      ]
     case 'projects':
     case 'project_members':
       // nome, arquivamento e quem participa mudam o que entra no quadro de todos os projetos

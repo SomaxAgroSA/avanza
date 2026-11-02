@@ -42,6 +42,8 @@ const overdueTask = {
   attachmentCount: 0,
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
+  inReport: true,
+  urgency: null,
 } satisfies TaskSummary
 
 function report(overrides: Partial<Report> = {}): Report {

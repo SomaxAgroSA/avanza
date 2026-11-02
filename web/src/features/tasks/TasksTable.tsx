@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, FileCheck2, FileX2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { isClosed, type TaskSummary } from '@/domain/tasks'
 import {
   AppConfirmDialog,
   AppDataTable,
+  AppIconButton,
   notify,
   useDataTableState,
   type DataTableColumn,
@@ -22,6 +23,8 @@ import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskMutations, useTasksList } from './queries'
 import { TaskEditDialog } from './TaskEditDialog'
 import { TaskPreviewDrawer } from './TaskPreviewDrawer'
+import { UrgencyCell } from './TaskUrgency'
+import { useUrgencyFilterOptions } from './urgency-options'
 import { DueDate, PersonCell, TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { useTags } from '@/features/tags/queries'
 import { TagList } from '@/features/tags/tag-visuals'
@@ -29,6 +32,7 @@ import { TagList } from '@/features/tags/tag-visuals'
 const EMPTY: TaskSummary[] = []
 const OPEN = 'backlog,todo,in_progress'
 const CLOSED = 'done,cancelled'
+const REPORT_OPTIONS = ['true', 'false'] as const
 
 export interface TasksTableProps {
   /** Chave do estado persistido da tabela. */
@@ -38,10 +42,12 @@ export interface TasksTableProps {
   /** Busca aplicada de fora (ex.: /tasks?search=… da command palette). */
   search?: string | null
   onSearchApplied?: () => void
+  /** Onde ficam "Colunas" (ex.: a linha das visões da aba Tarefas do projeto); sem ele, na barra de filtros. */
+  actionsSlot?: HTMLElement | null
 }
 
 /** Listagem padrão de tarefas (página Tarefas e aba do projeto). */
-export function TasksTable({ tableId, projectId, search, onSearchApplied }: TasksTableProps) {
+export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot }: TasksTableProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const navigate = useNavigate()
@@ -50,7 +56,11 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
   const canDelete = useCan('tasks.delete')
   const canViewPlan = useCan('plan.view')
 
-  const table = useDataTableState(tableId, { sort: { id: 'updated_at', direction: 'desc' }, filters: { category: OPEN }, columnVisibility: { category: false, tags: false, plan_item: false } })
+  const table = useDataTableState(tableId, {
+    sort: { id: 'updated_at', direction: 'desc' },
+    filters: { category: OPEN },
+    columnVisibility: { category: false, tags: false, plan_item: false, in_report: false },
+  })
   // busca vinda de fora (command palette): aplica uma vez e avisa para limpar o endereço
   const { setSearch } = table
   useEffect(() => {
@@ -66,7 +76,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
   // configurador do filtro de projetos (por pessoa): restringe as opções; o projeto escolhido não some
   const chosenProject = table.state.filters.project
   const projects = useScreenProjects('tasks', chosenProject ? [chosenProject] : [], !projectId)
-  const { remove } = useTaskMutations()
+  const { remove, setInReport } = useTaskMutations()
+  const urgencyOptions = useUrgencyFilterOptions()
 
   const [viewing, setViewing] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -99,7 +110,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         sortable: true,
         size: 170,
         cell: (task) => <TaskStatusBadge status={task.status} />,
-        filter: { label: t('tasks.fields.status'), options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
+        filter: { label: t('tasks.fields.status'), primary: true, options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
       },
       {
         id: 'priority',
@@ -107,14 +118,22 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         sortable: true,
         size: 140,
         cell: (task) => <TaskPriorityBadge priority={task.priority} />,
-        filter: { label: t('tasks.fields.priority'), options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
+        filter: { label: t('tasks.fields.priority'), primary: true, options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
+      },
+      {
+        // semáforo: quem edita troca com um clique, sem abrir a tarefa
+        id: 'urgency',
+        header: t('tasks.fields.urgency'),
+        size: 170,
+        cell: (task) => <UrgencyCell task={task} canEdit={canEdit} />,
+        filter: { label: t('tasks.fields.urgency'), primary: true, options: urgencyOptions },
       },
       {
         id: 'assignee',
         header: t('tasks.fields.assignee'),
         size: 180,
         cell: (task) => <PersonCell person={task.assignee} />,
-        filter: { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
+        filter: { label: t('tasks.fields.assignee'), primary: true, options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
       },
       {
         id: 'type',
@@ -134,7 +153,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
               filter: {
                 label: t('tasks.fields.project'),
                 options: projects.items.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
-                addon: <ProjectFilterSettingsButton screen="tasks" size="sm" />,
+                addon: <ProjectFilterSettingsButton screen="tasks" />,
+                primary: true,
               },
             } satisfies DataTableColumn<TaskSummary>,
           ]),
@@ -177,12 +197,28 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         cell: (task) => <span className="text-muted">{isClosed(task) ? t('tasks.closed') : t('tasks.open')}</span>,
         filter: {
           label: t('tasks.fields.situation'),
+          primary: true,
           options: [
             { value: OPEN, label: t('tasks.open') },
             { value: CLOSED, label: t('tasks.closed') },
           ],
         },
       },
+      // na aba do projeto: o que entra no informe (oculta por padrão; o botão da linha liga/desliga)
+      ...(projectId
+        ? [
+            {
+              id: 'in_report',
+              header: t('tasks.fields.inReport'),
+              size: 130,
+              cell: (task: TaskSummary) => <span className="text-muted">{task.inReport ? t('audit.yes') : t('audit.no')}</span>,
+              filter: {
+                label: t('tasks.fields.inReport'),
+                options: REPORT_OPTIONS.map((value) => ({ value, label: value === 'true' ? t('audit.yes') : t('audit.no') })),
+              },
+            } satisfies DataTableColumn<TaskSummary>,
+          ]
+        : []),
       {
         id: 'updated_at',
         header: t('tasks.fields.updatedAt'),
@@ -195,7 +231,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId, canViewPlan],
+    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId, canViewPlan, canEdit, urgencyOptions],
   )
 
   return (
@@ -212,7 +248,30 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied }: Task
         error={tasks.isError ? { correlationId: isAppError(tasks.error) ? tasks.error.correlationId : undefined } : null}
         onRetry={() => void tasks.refetch()}
         searchPlaceholder={t('tasks.searchPlaceholder')}
+        actionsSlot={actionsSlot}
         actions={{
+          // só na aba Tarefas do projeto: escolher o que sai no informe (aba Informe)
+          leading: projectId
+            ? (task) => (
+                <AppIconButton
+                  size="sm"
+                  label={task.inReport ? t('tasks.report.remove') : t('tasks.report.add')}
+                  aria-pressed={task.inReport}
+                  icon={task.inReport ? <FileCheck2 /> : <FileX2 />}
+                  className={task.inReport ? 'text-primary-text hover:text-primary-text' : 'text-subtle'}
+                  disabled={!canEdit || (setInReport.isPending && setInReport.variables?.id === task.id)}
+                  onClick={() =>
+                    setInReport.mutate(
+                      { id: task.id, inReport: !task.inReport },
+                      {
+                        onSuccess: (saved) => notify.success(t(saved.inReport ? 'tasks.report.added' : 'tasks.report.removed', { code: saved.code })),
+                        onError: (error) => notify.error(errorMessage(error)),
+                      },
+                    )
+                  }
+                />
+              )
+            : undefined,
           onView: (task) => setViewing(task.id),
           onOpen: (task) => void navigate(`/tasks/${task.id}`),
           onEdit: (task) => setEditing(task.id),

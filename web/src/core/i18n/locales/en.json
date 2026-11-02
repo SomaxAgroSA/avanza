@@ -48,7 +48,11 @@
     "clearFilters": "Clear filters",
     "noMoreActions": "No other actions",
     "resetColumns": "Reset columns",
-    "openHint": "Click to preview · double-click to open"
+    "openHint": "Click to preview · double-click to open",
+    "moreFilters": "More filters",
+    "moreFiltersActive": "More filters ({{count}} active)",
+    "activeFilters": "Active filters",
+    "removeFilter": "Remove filter {{filter}}"
   },
   "validation": {
     "required": "Required field",
@@ -117,7 +121,10 @@
     "unsafe_svg": "SVG with active content (scripts, events or external links) is not allowed",
     "invalid_slot": "Invalid image slot",
     "insecure_url": "Use an https:// address",
-    "blocked_host": "This address is not allowed (cloud metadata or the machine itself)"
+    "blocked_host": "This address is not allowed (cloud metadata or the machine itself)",
+    "not_in_project": "The task must belong to this project",
+    "invalid_link": "Link only features or results from this project",
+    "in_future": "The date can’t be in the future"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -216,7 +223,8 @@
     "WEBHOOK_NOT_FOUND": "Webhook not found.",
     "WEBHOOK_DELIVERY_NOT_FOUND": "Delivery not found.",
     "ICON_IN_USE": "This icon is used by projects, task types or spaces and cannot be removed.",
-    "ICON_NOT_FOUND": "This icon is not in the library."
+    "ICON_NOT_FOUND": "This icon is not in the library.",
+    "CHARTER_ITEM_NOT_FOUND": "Charter item not found."
   },
   "nav": {
     "main": "Main navigation",
@@ -251,7 +259,8 @@
     "management": "Project management",
     "general": "General",
     "integrations": "Integrations",
-    "executive": "Executive dashboard"
+    "executive": "Executive dashboard",
+    "access": "Access control"
   },
   "commandPalette": {
     "title": "Command palette",
@@ -758,7 +767,21 @@
       "url": "Address",
       "events": "Events",
       "failures": "Failures in a row",
-      "icons": "Icons"
+      "icons": "Icons",
+      "in_report": "In report",
+      "objective": "Main goal",
+      "kind": "Type",
+      "owner_id": "Owner",
+      "task_ids": "Linked tasks",
+      "link_ids": "Links",
+      "unit": "Unit",
+      "baseline": "Baseline",
+      "target": "Target",
+      "current": "Current value",
+      "frequency": "Frequency",
+      "value": "Value",
+      "measured_at": "Measurement date",
+      "urgency": "Urgency"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -896,7 +919,13 @@
       "webhook.secret_rotated": "Webhook secret changed",
       "webhook.disabled": "Webhook turned off after repeated failures",
       "icon_library.imported": "Imported icons",
-      "icon_library.removed": "Removed an icon"
+      "icon_library.removed": "Removed an icon",
+      "charter.updated": "Charter main goal changed",
+      "charter_item.created": "Item added to the charter",
+      "charter_item.updated": "Charter item changed",
+      "charter_item.deleted": "Item removed from the charter",
+      "charter_item.reordered": "Charter items reordered",
+      "charter_item.measured": "Measurement recorded"
     }
   },
   "projects": {
@@ -1008,7 +1037,9 @@
       "history": "History",
       "settings": "Settings",
       "tasks": "Tasks",
-      "management": "Management"
+      "management": "Management",
+      "report": "Report",
+      "charter": "Charter"
     },
     "taskViews": {
       "label": "Task views",
@@ -1075,7 +1106,117 @@
       "saveError": "Could not save the project filter. {{reason}}",
       "emptyTitle": "No project matches this screen's filter",
       "emptyHint": "Adjust the project filter with the gear next to the selector."
-    }
+    },
+    "chronology": {
+      "title": "Project timeline",
+      "description": "What happened in the project, ordered by the date it happened: journal, milestones and tasks.",
+      "auditTitle": "Changes recorded in the system",
+      "auditDescription": "Audit trail: who changed what and when it was saved, newest first.",
+      "empty": "No dated events yet",
+      "emptyHint": "Add journal entries, create milestones or set task dates to see them here.",
+      "undated": "Undated tasks ({{count}})",
+      "span": "{{start}} to {{end}}",
+      "kinds": {
+        "journal": "Journal",
+        "milestone": "Milestone",
+        "task": "Task"
+      }
+    },
+    "report": {
+      "optionsTitle": "Report content",
+      "description": "Build the project report from the platform data and download it as PDF.",
+      "tasksIncluded_one": "{{count}} of {{total}} tasks is in the report.",
+      "tasksIncluded_other": "{{count}} of {{total}} tasks are in the report.",
+      "chooseTasks": "Choose tasks",
+      "fields": {
+        "title": "Title",
+        "subtitle": "Subtitle",
+        "from": "From",
+        "to": "To",
+        "cutoff": "Cut-off date",
+        "cutoffHint": "The report's \"today\": duration and schedule are counted up to this date.",
+        "phases": "Phases",
+        "phasesHint": "Project management group whose items are the schedule phases.",
+        "noPhases": "No phases",
+        "sections": "Sections",
+        "summary": "Summary",
+        "summaryHint": "Text that opens the report. Optional.",
+        "notes": "Notes and risks",
+        "notesHint": "Shown next to the next steps. Optional."
+      },
+      "download": "Download PDF",
+      "printHint": "In the print window, choose \"Save as PDF\" and uncheck \"Headers and footers\".",
+      "reset": "Reset options",
+      "preview": "Preview",
+      "doc": {
+        "defaultTitle": "Project timeline",
+        "defaultSubtitle": "How the project unfolded, how long it took and what is left: phases, milestones and tasks in chronological order.",
+        "kicker": "Project {{key}} · {{name}}",
+        "start": "Start",
+        "cutoff": "Report cut-off",
+        "team": "Team",
+        "sections": {
+          "summary": "Summary",
+          "phases": "Progress by phase",
+          "milestones": "Milestones",
+          "chronology": "Timeline, day by day",
+          "tasks": "Tasks",
+          "next": "Next steps"
+        },
+        "of": "{{done}} of {{total}}",
+        "kpiDays_one": "{{count}} day",
+        "kpiDays_other": "{{count}} days",
+        "kpiDaysHint_one": "since {{date}} ({{count}} working day)",
+        "kpiDaysHint_other": "since {{date}} ({{count}} working days)",
+        "kpiTasks": "tasks completed",
+        "kpiMilestones": "milestones reached",
+        "kpiPhases": "phases closed",
+        "schedule": "Schedule",
+        "legendDone": "Closed phase",
+        "legendOpen": "Phase in progress",
+        "legendMilestone": "Milestone",
+        "legendCutoff": "Cut-off date",
+        "openSpan": "{{start}} – in progress",
+        "inProgress": "in progress",
+        "daysOpen_one": "{{count}} so far",
+        "daysOpen_other": "{{count}} so far",
+        "noPhases": "No phases: choose in the options the project management group that holds them.",
+        "cols": {
+          "phase": "Phase",
+          "start": "Start",
+          "end": "End",
+          "days": "Days",
+          "status": "Status",
+          "progress": "Progress",
+          "date": "Date",
+          "milestone": "Milestone",
+          "code": "Code",
+          "task": "Task",
+          "due": "Due",
+          "assignee": "Assignee"
+        },
+        "chronologyLead": "Everything that happened in the project, in the order it happened: journal entries, milestones and tasks.",
+        "tasksLead_one": "{{count}} task, grouped by situation and in date order.",
+        "tasksLead_other": "{{count}} tasks, grouped by situation and in date order.",
+        "taskStates": {
+          "in_progress": "In progress",
+          "pending": "Pending",
+          "done": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "nextMilestones": "Upcoming milestones",
+        "nextTasks": "Open tasks",
+        "notes": "Notes and risks",
+        "nothingPending": "Nothing pending.",
+        "more_one": "and {{count}} more task",
+        "more_other": "and {{count}} more tasks",
+        "empty": "No data in this period.",
+        "generated": "Generated in {{platform}} · cut-off {{date}}.",
+        "footer": "{{name}} · {{title}} · cut-off {{date}}"
+      }
+    },
+    "urgencyChange": "Change urgency of {{name}} (now: {{urgency}})",
+    "urgencySaved": "{{name}}: urgency {{urgency}}."
   },
   "calendar": {
     "open": "Open calendar",
@@ -1505,7 +1646,9 @@
       "situation": "Situation",
       "tags": "Tags",
       "sprint": "Sprint",
-      "startDate": "Planned start"
+      "startDate": "Planned start",
+      "inReport": "In report",
+      "urgency": "Urgency"
     },
     "tagsPlaceholder": "Choose tags…",
     "markdownHint": "Supports **bold**, *italic*, `code`, \"-\" lists and links.",
@@ -1524,6 +1667,20 @@
       "none": "None",
       "hint": "Plan phase or deliverable this task carries out.",
       "open": "Open {{name}} in Management"
+    },
+    "report": {
+      "add": "Include in the project report",
+      "remove": "Remove from the project report",
+      "added": "{{code}} is in the report",
+      "removed": "{{code}} left the report"
+    },
+    "urgency": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "none": "No urgency",
+      "change": "Change urgency of {{code}} (now: {{urgency}})",
+      "saved": "{{code}}: urgency {{urgency}}."
     }
   },
   "tags": {
@@ -3525,5 +3682,245 @@
     "imported_other": "{{count}} icons imported.",
     "alreadyImported": "{{name}} (already imported)",
     "maxSelection": "Up to {{count}} icons per import."
+  },
+  "charter": {
+    "created": "“{{title}}” added to the charter.",
+    "updated": "“{{title}}” updated.",
+    "deleted": "“{{title}}” removed from the charter.",
+    "objectiveSaved": "Main goal saved.",
+    "deleteTitle": "Delete “{{title}}”?",
+    "deleteDescription": "It leaves the charter and any objective linked to it. The project history keeps a record.",
+    "deleteResultDescription": "All its measurements are deleted too. The project history keeps a record.",
+    "editItem": "Edit “{{title}}”",
+    "deleteItem": "Delete “{{title}}”",
+    "linkedCount_one": "{{count}} linked feature or result",
+    "linkedCount_other": "{{count}} linked features or results",
+    "tasksDone": "{{done}} of {{total}} done",
+    "noTasks": "No linked tasks",
+    "stale": "Not measured",
+    "percentOfTarget": "{{percent}}% of target",
+    "kinds": {
+      "objective": "Objective",
+      "feature": "Feature",
+      "scope_in": "In scope",
+      "scope_out": "Out of scope",
+      "result": "Result"
+    },
+    "sections": {
+      "objectives": "Objectives",
+      "features": "Features",
+      "scope": "Scope",
+      "results": "Expected results"
+    },
+    "hints": {
+      "objectives": "Why the project exists and what it has to achieve.",
+      "features": "What the product will do. Each one links to tasks and its progress is calculated automatically.",
+      "scope": "What is in and what is out, to avoid requests beyond what was agreed.",
+      "results": "How success is measured: indicator, starting point, target and date. The current value updates with each measurement."
+    },
+    "empty": {
+      "objectives": "No objectives yet",
+      "features": "No features yet",
+      "scope": "No scope defined yet",
+      "results": "No expected results yet",
+      "scopeList": "Nothing added."
+    },
+    "emptyHint": {
+      "objectives": "Write the main goal in one or two sentences, then the specific objectives.",
+      "features": "List what the product will do. Link each feature to its tasks and Avanza shows how many are done without anyone updating it.",
+      "scope": "Two short lists: what the project includes and what it leaves out. The second one helps most when new requests come in.",
+      "results": "Pick two to five indicators: where it starts, where it must get to and by when. The status is calculated automatically."
+    },
+    "add": {
+      "objective": "Specific objective",
+      "feature": "Add feature",
+      "scope": "Add to scope",
+      "result": "Add result"
+    },
+    "general": {
+      "title": "Main goal",
+      "hint": "In one or two sentences: why the project exists and who benefits.",
+      "write": "Write main goal",
+      "edit": "Edit main goal",
+      "missing": "No main goal."
+    },
+    "state": {
+      "auto": "Automatic",
+      "autoTitle": "Calculated automatically",
+      "manualTitle": "Set by hand",
+      "autoHint": {
+        "objective": "Automatic: calculated from the linked features and results.",
+        "feature": "Automatic: calculated from the linked tasks."
+      }
+    },
+    "objectiveState": {
+      "pending": "Pending",
+      "in_progress": "In progress",
+      "achieved": "Achieved",
+      "at_risk": "At risk"
+    },
+    "featureState": {
+      "planned": "Planned",
+      "in_progress": "In development",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "situation": {
+      "achieved": "Achieved",
+      "on_track": "On track",
+      "late": "Behind",
+      "no_data": "No data"
+    },
+    "frequency": {
+      "none": "No frequency",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly"
+    },
+    "columns": {
+      "feature": "Feature",
+      "state": "Status",
+      "tasks": "Linked tasks",
+      "owner": "Owner",
+      "indicator": "Indicator",
+      "situation": "Status"
+    },
+    "fields": {
+      "title": "Title",
+      "indicator": "Indicator",
+      "description": "Description",
+      "state": "Status",
+      "owner": "Owner",
+      "noOwner": "No owner",
+      "ownerHint": "The owner can also record measurements.",
+      "links": "Linked to",
+      "linksHint": "Features and results that fulfil this objective.",
+      "linksPlaceholder": "Choose features or results",
+      "tasks": "Linked tasks",
+      "tasksHint": "Progress is calculated from these tasks (cancelled ones don’t count).",
+      "tasksPlaceholder": "Search a task by code or title",
+      "baseline": "Baseline",
+      "target": "Target",
+      "current": "Current",
+      "unit": "Unit",
+      "unitPlaceholder": "%, people, days…",
+      "startDate": "Start",
+      "dueDate": "Target date",
+      "frequency": "Measurement frequency",
+      "frequencyHint": "If the interval passes without a new measurement, the indicator shows “Not measured”.",
+      "scopeKind": "Type"
+    },
+    "dialog": {
+      "create": {
+        "objective": "New specific objective",
+        "feature": "New feature",
+        "scope": "New scope item",
+        "result": "New expected result"
+      },
+      "edit": {
+        "objective": "Edit objective",
+        "feature": "Edit feature",
+        "scope": "Edit scope item",
+        "result": "Edit expected result"
+      },
+      "hint": {
+        "objective": "A concrete achievement the project has to reach.",
+        "feature": "Something the product will do. Link it to the tasks that build it.",
+        "scope": "Something the project includes or leaves out.",
+        "result": "A measurable indicator with a starting point, target and date."
+      }
+    },
+    "measure": {
+      "title": "Record measurement",
+      "hint": "{{title}} · target {{target}} · current {{current}}",
+      "value": "Value ({{unit}})",
+      "date": "Measurement date",
+      "note": "Comment",
+      "notePlaceholder": "E.g. October measurement, source: CRM report",
+      "saved": "Measurement for “{{title}}” recorded.",
+      "action": "Record measurement",
+      "actionFor": "Record measurement for “{{title}}”",
+      "series": "Measurements",
+      "empty": "No measurements yet",
+      "emptyHint": "The first measurement becomes the indicator’s current value."
+    },
+    "summary": {
+      "title": "Charter summary",
+      "completeness": "Charter completeness",
+      "sections": "{{done}} of {{total}} sections",
+      "filled": "complete",
+      "missing": "missing",
+      "features": "Features delivered",
+      "ofTotal": "of {{total}}",
+      "tasks": "{{done}} of {{total}} linked tasks done",
+      "noFeatures": "No features added",
+      "results": "Results on track",
+      "late_one": "{{count}} behind",
+      "late_other": "{{count}} behind",
+      "stale_one": "{{count}} not measured",
+      "stale_other": "{{count}} not measured",
+      "noResults": "No indicators added",
+      "updated": "Last update",
+      "by": "by {{name}}",
+      "neverUpdated": "The charter hasn’t been filled in yet"
+    },
+    "print": "Print charter",
+    "doc": {
+      "title": "Project charter",
+      "issued": "issued on {{date}}",
+      "empty": "Nothing filled in yet."
+    }
+  },
+  "access": {
+    "title": "Access control",
+    "description": "Pick a person and set in one place which modules they see, what they can do and which projects they join.",
+    "noUsers": "No users.",
+    "user": "User",
+    "role": "Role",
+    "roleUsers_one": "Role of {{count}} person",
+    "roleUsers_other": "Role shared by {{count}} people",
+    "ownRoleHint": "Your own access is changed by another administrator.",
+    "roleChanged": "{{name}} now has the {{role}} role.",
+    "roleUpdated": "Role {{role}} updated ({{change}}).",
+    "on": "yes",
+    "off": "no",
+    "sees": "Sees it",
+    "doesNotSee": "Hidden",
+    "toggleView": "See {{module}}",
+    "personalRoleName": "{{name}} (custom)",
+    "personalRoleDescription": "Based on {{role}}, created in Access control",
+    "personalRoleCreated": "{{name}} now has a personal role with the change.",
+    "summary": {
+      "modules": "Modules they see",
+      "projects": "Projects they join",
+      "allProjects": "Sees every project through their role",
+      "role": "Role"
+    },
+    "modules": {
+      "title": "Modules and actions",
+      "hint": "The switch sets whether they see the module; the tags, what they can do in it (green = allowed).",
+      "superLocked": "The Super Admin role has full access and cannot be reduced.",
+      "ownLocked": "You are viewing your own access: another administrator changes it."
+    },
+    "shared": {
+      "title": "The {{role}} role is shared",
+      "description_one": "Change: {{change}}. The {{role}} role is used by {{count}} person.",
+      "description_other": "Change: {{change}}. The {{role}} role is used by {{count}} people.",
+      "hint": "You can create a personal role for this person (the others stay the same) or apply the change to everyone with this role.",
+      "everyone_one": "Change for {{count}} person",
+      "everyone_other": "Change for all {{count}} people",
+      "personal": "Create a personal role for {{name}}"
+    },
+    "projects": {
+      "title": "Projects",
+      "hint": "They only see projects they are a member of. Pick their access in each one.",
+      "seesAll": "Their role lets them see every project; here you set which ones they also take part in.",
+      "project": "Project",
+      "access": "Access",
+      "accessFor": "Access to {{project}}",
+      "none": "No access",
+      "search": "Search project",
+      "changed": "{{name}} · {{project}}: {{access}}."
+    }
   }
 }

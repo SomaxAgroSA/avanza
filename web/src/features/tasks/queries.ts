@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import type { ListQuery } from '@/domain/pagination'
 import type { TaskListOptions } from '@/domain/repositories'
 import type { TaskInput } from '@/domain/tasks'
+import type { Urgency } from '@/domain/urgency'
 import type { ForkInput, LinkOption } from '@/domain/relations'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { planKeys } from '@/features/plan/queries'
@@ -150,5 +151,21 @@ export function useTaskMutations() {
       },
     }),
     remove: useMutation({ mutationFn: (id: string) => tasks.remove(id), onSuccess: invalidate }),
+    // marcar para o informe e trocar a urgência: sem os obrigatórios do status; a timeline (fonte do
+    // informe) e a ficha ficam sob `tasks` e recarregam junto
+    setInReport: useMutation({
+      mutationFn: ({ id, inReport }: { id: string; inReport: boolean }) => tasks.setInReport(id, inReport),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
+    setUrgency: useMutation({
+      mutationFn: ({ id, urgency }: { id: string; urgency: Urgency | null }) => tasks.setUrgency(id, urgency),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
   }
 }

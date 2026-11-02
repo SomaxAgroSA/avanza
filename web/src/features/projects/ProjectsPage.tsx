@@ -23,7 +23,9 @@ import { useCan } from '@/features/auth/session'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
-import { useProjectLifecycle, useProjects } from './queries'
+import { useProjectLifecycle, useProjects, useUpdateProject } from './queries'
+import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
+import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 
 const EMPTY: Project[] = []
 
@@ -71,6 +73,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
     })
   }
 
+  const urgencyOptions = useUrgencyFilterOptions()
   const columns = useMemo<DataTableColumn<Project>[]>(
     () => [
       {
@@ -108,6 +111,14 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         filter: { label: t('projects.fields.priority'), options: PROJECT_PRIORITIES.map((p) => ({ value: p, label: t(`projects.priority.${p}`) })) },
       },
       {
+        // semáforo: quem edita o projeto troca com um clique
+        id: 'urgency',
+        header: t('tasks.fields.urgency'),
+        size: 160,
+        cell: (project) => <ProjectUrgencyCell project={project} />,
+        filter: { label: t('tasks.fields.urgency'), options: urgencyOptions },
+      },
+      {
         id: 'owner',
         header: t('projects.fields.owner'),
         size: 200,
@@ -134,7 +145,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale],
+    [t, locale, urgencyOptions],
   )
 
   const emptyState =
@@ -246,5 +257,30 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         }
       />
     </>
+  )
+}
+
+/** Urgência do projeto na lista: semáforo que quem edita o projeto troca com um clique. */
+function ProjectUrgencyCell({ project }: { project: Project }) {
+  const { t } = useTranslation()
+  const errorMessage = useErrorMessage()
+  const update = useUpdateProject()
+  const label = project.urgency ? t(`tasks.urgency.${project.urgency}`) : t('tasks.urgency.none')
+  return (
+    <UrgencyPicker
+      value={project.urgency}
+      canEdit={project.capabilities.edit && !project.archivedAt}
+      pending={update.isPending}
+      changeLabel={t('projects.urgencyChange', { name: project.name, urgency: label })}
+      onChoose={(urgency) =>
+        update.mutate(
+          { id: project.id, data: { urgency } },
+          {
+            onSuccess: (saved) => notify.success(t('projects.urgencySaved', { name: saved.name, urgency: saved.urgency ? t(`tasks.urgency.${saved.urgency}`) : t('tasks.urgency.none') })),
+            onError: (error) => notify.error(errorMessage(error)),
+          },
+        )
+      }
+    />
   )
 }

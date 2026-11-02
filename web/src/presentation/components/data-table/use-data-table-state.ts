@@ -22,7 +22,7 @@ type Persisted = Omit<DataTableState, 'page'>
 export interface DataTableStateDefaults {
   perPage?: number
   sort?: SortState | null
-  /** Filtros iniciais (ex.: só tarefas abertas); valem até o usuário mudar. */
+  /** Filtros iniciais (ex.: só tarefas abertas); valem até o usuário mudar e voltam com "Limpar filtros". */
   filters?: Record<string, string>
   /** Colunas ocultas por padrão (`{ coluna: false }`). */
   columnVisibility?: Record<string, boolean>
@@ -31,18 +31,25 @@ export interface DataTableStateDefaults {
 export interface DataTableStateApi {
   state: DataTableState
   query: ListQuery
+  /** Busca preenchida ou filtros diferentes do padrão da tabela. */
   hasActiveFilters: boolean
   setPage: (page: number) => void
   setPerPage: (perPage: number) => void
   setSort: (sort: SortState | null) => void
   setSearch: (search: string) => void
   setFilter: (id: string, value: string | undefined) => void
+  /** Limpa a busca e volta os filtros ao padrão da tabela (ex.: "Abertas"), não a nenhum. */
   resetFilters: () => void
   setColumnVisibility: (visibility: Record<string, boolean>) => void
   setColumnSizing: (sizing: Record<string, number>) => void
 }
 
 const storageKey = (id: string) => `kamban.table.${id}`
+
+function sameFilters(a: Record<string, string>, b: Record<string, string>): boolean {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
+}
 
 function initialState(id: string, defaults: DataTableStateDefaults): DataTableState {
   const base: Persisted = {
@@ -68,6 +75,9 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
 
 export function useDataTableState(id: string, defaults: DataTableStateDefaults = {}): DataTableStateApi {
   const [state, setState] = useState<DataTableState>(() => initialState(id, defaults))
+  // filtros iniciais da tabela, estáveis enquanto o valor não muda (quem chama passa um objeto novo a cada render)
+  const defaultsKey = JSON.stringify(defaults.filters ?? {})
+  const defaultFilters = useMemo<Record<string, string>>(() => JSON.parse(defaultsKey) as Record<string, string>, [defaultsKey])
 
   const update = useCallback(
     (patch: Partial<DataTableState>) => {
@@ -104,13 +114,13 @@ export function useDataTableState(id: string, defaults: DataTableStateDefaults =
   return {
     state,
     query,
-    hasActiveFilters: state.search.trim() !== '' || Object.keys(state.filters).length > 0,
+    hasActiveFilters: state.search.trim() !== '' || !sameFilters(state.filters, defaultFilters),
     setPage: useCallback((page) => update({ page }), [update]),
     setPerPage: useCallback((perPage) => update({ perPage, page: 1 }), [update]),
     setSort: useCallback((sort) => update({ sort, page: 1 }), [update]),
     setSearch: useCallback((search) => update({ search, page: 1 }), [update]),
     setFilter,
-    resetFilters: useCallback(() => update({ search: '', filters: {}, page: 1 }), [update]),
+    resetFilters: useCallback(() => update({ search: '', filters: defaultFilters, page: 1 }), [update, defaultFilters]),
     setColumnVisibility: useCallback((columnVisibility) => update({ columnVisibility }), [update]),
     setColumnSizing: useCallback((columnSizing) => update({ columnSizing }), [update]),
   }

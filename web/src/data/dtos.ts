@@ -78,6 +78,8 @@ export interface ProjectDto {
   cover: string
   status: string
   priority: string
+  /** 'high' | 'medium' | 'low' | null */
+  urgency?: string | null
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
@@ -165,6 +167,10 @@ export interface TaskDto {
   subtask_progress?: { done: number; total: number }
   blocked?: boolean
   plan_item?: { id: string; name: string } | null
+  /** Entra no informe do projeto (padrão: sim). */
+  in_report?: boolean
+  /** 'high' | 'medium' | 'low' | null */
+  urgency?: string | null
 }
 
 export interface PlanStatusDto {
@@ -367,6 +373,65 @@ export interface MilestoneDto {
   state: string
   created_at: string | null
   updated_at: string | null
+}
+
+export interface CharterItemDto {
+  id: string
+  project_id: string
+  kind: string
+  title: string
+  description: string
+  position: number
+  owner: UserSummaryDto | null
+  state?: string
+  effective_state?: string
+  link_ids?: string[]
+  task_ids?: string[]
+  tasks?: TaskDto[]
+  progress?: { done: number; total: number }
+  unit?: string
+  baseline?: number
+  target?: number
+  current?: number | null
+  start_date?: string | null
+  due_date?: string | null
+  frequency?: string
+  measured_at?: string | null
+  situation?: string
+  percent?: number
+  stale?: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface CharterDto {
+  project_id: string
+  objective: string
+  updated_at: string | null
+  updated_by: UserSummaryDto | null
+  capabilities: { edit: boolean }
+  completeness: { sections: Record<string, boolean>; done: number; total: number; percent: number }
+  summary: {
+    features_total: number
+    features_delivered: number
+    tasks_total: number
+    tasks_done: number
+    results_total: number
+    results_on_track: number
+    results_late: number
+    results_stale: number
+  }
+  items: CharterItemDto[]
+}
+
+export interface CharterMeasurementDto {
+  id: string
+  item_id: string
+  value: number
+  note: string
+  measured_at: string
+  created_by: UserSummaryDto | null
+  created_at: string | null
 }
 
 export interface TimelineDto {

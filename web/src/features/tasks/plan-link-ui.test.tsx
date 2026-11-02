@@ -92,6 +92,8 @@ const detail: TaskDetail = {
   attachmentCount: 0,
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
+  inReport: true,
+  urgency: null,
   planItem: { id: 'i1', name: 'Kickoff' },
   description: '',
   customValues: {},

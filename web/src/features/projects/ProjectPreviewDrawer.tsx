@@ -8,6 +8,7 @@ import type { Project } from '@/domain/projects'
 import { AppAvatar, AppBadge, AppButton, AppDrawer, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { useProjectMembers } from './queries'
 import { coverStyle } from './project-theme'
+import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -114,6 +115,9 @@ export function ProjectPreviewDrawer({
           <dl className="divide-y divide-border rounded-lg border border-border px-4">
             <Row label={t('projects.fields.priority')}>
               <ProjectPriorityLabel priority={project.priority} />
+            </Row>
+            <Row label={t('tasks.fields.urgency')}>
+              <UrgencyLabel urgency={project.urgency} />
             </Row>
             <Row label={t('projects.fields.owner')}>
               {project.owner ? (

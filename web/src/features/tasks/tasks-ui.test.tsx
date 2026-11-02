@@ -13,6 +13,7 @@ import { notify } from '@/presentation/components'
 import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/test/utils'
 import { TaskFormDialog } from './TaskFormDialog'
 import { TaskDetailPage } from './TaskDetailPage'
+import { TasksTable } from './TasksTable'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -103,6 +104,8 @@ const detail: TaskDetail = {
   attachmentCount: 0,
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
+  inReport: true,
+  urgency: null,
   sprint: null,
   fields: bugDetail.fields,
   parent: null, forkedFrom: null, capabilities: { edit: true, delete: false, assign: true, comment: true, link: true, fork: true },
@@ -392,5 +395,48 @@ describe('Status: só as transições permitidas', () => {
     await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
     await waitFor(() => expect(screen.getByRole('combobox', { name: /^Status/ })).toHaveTextContent('Backlog'))
     expect(await optionNames(/^Status/)).toEqual(['Backlog', 'Desenvolvimento', 'Redesenvolver', 'Homologação'])
+  })
+})
+
+describe('TasksTable: escolher o que sai no informe do projeto', () => {
+  const page = { items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }
+
+  it('o botão da linha liga/desliga a tarefa no informe (só na aba do projeto)', async () => {
+    const setInReport = vi.fn<TaskRepository['setInReport']>(() => Promise.resolve({ ...detail, inReport: false }))
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve(page))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test" projectId="p1" /> }], { repositories: repositories({ list, setInReport }), initialPath: '/' })
+    const toggle = await screen.findByRole('button', { name: i18n.t('tasks.report.remove') })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(toggle)
+    await waitFor(() => expect(setInReport).toHaveBeenCalledWith(detail.id, false))
+  })
+
+  it('fora do projeto (página Tarefas), não há o botão', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve(page))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test-2" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByText(detail.title)
+    expect(screen.queryByRole('button', { name: i18n.t('tasks.report.remove') })).not.toBeInTheDocument()
+  })
+})
+
+describe('TasksTable: urgência (semáforo)', () => {
+  it('a célula mostra a urgência e quem edita troca com um clique', async () => {
+    const setUrgency = vi.fn<TaskRepository['setUrgency']>(() => Promise.resolve({ ...detail, urgency: 'high' }))
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="urgency-test" projectId="p1" /> }], { repositories: repositories({ list, setUrgency }), initialPath: '/' })
+    await userEvent.click(await screen.findByRole('button', { name: i18n.t('tasks.urgency.change', { code: detail.code, urgency: i18n.t('tasks.urgency.none') }) }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Alta' }))
+    await waitFor(() => expect(setUrgency).toHaveBeenCalledWith(detail.id, 'high'))
+  })
+
+  it('filtro de urgência à vista na barra: escolher "Alta" pede à API urgency=high', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="urgency-filter" projectId="p1" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByText(detail.title)
+    await userEvent.click(screen.getByRole('combobox', { name: 'Urgência' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Alta' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ urgency: 'high' }) }), { projectId: 'p1' }))
+    // ativo: o filtro mostra "Nome: valor"
+    expect(screen.getByRole('combobox', { name: 'Urgência' })).toHaveTextContent('Urgência: Alta')
   })
 })

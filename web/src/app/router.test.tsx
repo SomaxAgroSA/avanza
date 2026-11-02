@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import i18n from '@/core/i18n'
 import type { PermissionCode } from '@/domain/permissions'
 import type { PlanReport } from '@/domain/plan-management'
+import type { ProjectCharter } from '@/domain/charter'
 import type { Project } from '@/domain/projects'
 import type { PlanRepository } from '@/domain/repositories'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
@@ -30,6 +31,7 @@ function project(capabilities = MANAGER): Project {
     cover: 'blue',
     status: 'active',
     priority: 'medium',
+    urgency: null,
     owner: null,
     startDate: null,
     dueDate: null,
@@ -73,6 +75,17 @@ function setup(path: string, { permissions = ALL, capabilities = MANAGER, total 
 
 const projectTabs = () => screen.findByRole('navigation', { name: 'CRM Corporativo' })
 
+const charter: ProjectCharter = {
+  projectId: 'p1',
+  objective: 'Centralizar o relacionamento com os clientes',
+  updatedAt: null,
+  updatedBy: null,
+  capabilities: { edit: true },
+  completeness: { sections: { objectives: true, features: false, scope: false, results: false }, done: 1, total: 4, percent: 25 },
+  summary: { featuresTotal: 0, featuresDelivered: 0, tasksTotal: 0, tasksDone: 0, resultsTotal: 0, resultsOnTrack: 0, resultsLate: 0, resultsStale: 0 },
+  items: [],
+}
+
 describe('Rotas — endereços antigos das visões por projeto (menu → abas do projeto)', () => {
   it.each([
     ['/project-management/p1?item=e1&panel=files', '/projects/p1/management', '?item=e1&panel=files'],
@@ -106,6 +119,9 @@ describe('Rotas — endereços antigos das visões por projeto (menu → abas do
     ['?tab=timeline', '/projects/p1/management', '?view=timeline'],
     ['?tab=tasks', '/projects/p1/tasks', ''],
     ['?tab=members&x=1', '/projects/p1/members', '?x=1'],
+    // Ficha e Informe eram abas com ?tab= na versão anterior
+    ['?tab=charter', '/projects/p1/charter', ''],
+    ['?tab=report', '/projects/p1/report', ''],
     ['?tab=desconhecida', '/projects/p1', ''],
   ])('/projects/p1%s (aba na query) → %s%s', async (query, pathname, search) => {
     const { router } = setup(`/projects/p1${query}`)
@@ -117,17 +133,25 @@ describe('Rotas — endereços antigos das visões por projeto (menu → abas do
     await waitFor(() => expect(router.state.location.search).toBe(''))
     expect(router.state.location.pathname).toBe('/projects/p1')
   })
+
+  it('?tab=report sem tasks.view fica na visão geral (o Informe é montado com as tarefas)', async () => {
+    const { router } = setup('/projects/p1?tab=report', { permissions: ['projects.view', 'kanban.view'] })
+    await waitFor(() => expect(router.state.location.search).toBe(''))
+    expect(router.state.location.pathname).toBe('/projects/p1')
+  })
 })
 
 describe('Página do projeto — abas com endereço', () => {
   it('todas as abas na ordem, com a aberta marcada; Tarefas abre na Lista', async () => {
     setup('/projects/p1/planning')
     const nav = await projectTabs()
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral', 'Gestão', 'Tarefas', 'Arquivos', 'Membros (2)', 'Histórico', 'Configurações'])
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral', 'Ficha', 'Gestão', 'Tarefas', 'Informe', 'Arquivos', 'Membros (2)', 'Histórico', 'Configurações'])
     expect(within(nav).getByRole('link', { name: 'Tarefas' })).toHaveAttribute('aria-current', 'page')
     expect(within(nav).getByRole('link', { name: 'Tarefas' })).toHaveAttribute('href', '/projects/p1/tasks')
     expect(within(nav).getByRole('link', { name: 'Gestão' })).toHaveAttribute('href', '/projects/p1/management')
     expect(within(nav).getByRole('link', { name: 'Visão geral' })).toHaveAttribute('href', '/projects/p1')
+    expect(within(nav).getByRole('link', { name: 'Ficha' })).toHaveAttribute('href', '/projects/p1/charter')
+    expect(within(nav).getByRole('link', { name: 'Informe' })).toHaveAttribute('href', '/projects/p1/report')
     // sub-navegação da aba Tarefas
     const views = await screen.findByRole('navigation', { name: 'Visões das tarefas' })
     expect(within(views).getByRole('link', { name: 'Planejamento' })).toHaveAttribute('aria-current', 'page')
@@ -137,11 +161,17 @@ describe('Página do projeto — abas com endereço', () => {
     const { router } = setup('/projects/p1/tasks', { permissions: [...ALL, 'tasks.create'] })
     const views = await screen.findByRole('navigation', { name: 'Visões das tarefas' })
     expect(within(views).getByRole('link', { name: 'Lista' })).toHaveAttribute('aria-current', 'page')
-    expect(await screen.findByRole('button', { name: 'Nova tarefa' })).toBeInTheDocument()
+    const create = await screen.findByRole('button', { name: 'Nova tarefa' })
     expect(router.state.location.pathname).toBe('/projects/p1/tasks')
+    // "Colunas" sobe para a linha das visões, ao lado de "Nova tarefa" (a barra de filtros fica numa linha)
+    const columns = await screen.findByRole('button', { name: 'Colunas' })
+    expect(create.parentElement).toContainElement(columns)
+    expect(columns.compareDocumentPosition(screen.getByRole('searchbox')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it.each([
+    ['charter', 'Ficha'],
+    ['report', 'Informe'],
     ['files', 'Arquivos'],
     ['members', 'Membros (2)'],
     ['history', 'Histórico'],
@@ -156,12 +186,28 @@ describe('Página do projeto — abas com endereço', () => {
   it('abas por permissão: sem plan.view não há Gestão; só com kanban.view, Tarefas abre no Kanban; leitor sem Configurações', async () => {
     const first = setup('/projects/p1', { permissions: ['projects.view', 'tasks.view'], capabilities: READER })
     let nav = await projectTabs()
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral', 'Tarefas', 'Arquivos', 'Membros (2)', 'Histórico'])
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral', 'Ficha', 'Tarefas', 'Informe', 'Arquivos', 'Membros (2)', 'Histórico'])
     first.unmount()
 
     setup('/projects/p1', { permissions: ['projects.view', 'kanban.view'], capabilities: READER })
     nav = await projectTabs()
     expect(within(nav).getByRole('link', { name: 'Tarefas' })).toHaveAttribute('href', '/projects/p1/kanban')
+    // sem tasks.view não há Informe
+    expect(within(nav).queryByRole('link', { name: 'Informe' })).not.toBeInTheDocument()
+  })
+
+  it('a ação da seção sem sub-navegação fica na linha das abas (Imprimir ficha)', async () => {
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(ALL) },
+      projects: { get: () => Promise.resolve(project()), listMembers: () => Promise.resolve([]) },
+      charter: { get: () => Promise.resolve(charter) },
+    })
+    renderRoutes(routes, { repositories, initialPath: '/projects/p1/charter' })
+    const nav = await projectTabs()
+    const print = await screen.findByRole('button', { name: 'Imprimir ficha' })
+    // mesma linha das abas (ao lado da navegação, fora da rolagem dela)
+    expect(nav.parentElement).toContainElement(print)
+    expect(nav).not.toContainElement(print)
   })
 
   it('seção que a pessoa não pode abrir volta à visão geral', async () => {

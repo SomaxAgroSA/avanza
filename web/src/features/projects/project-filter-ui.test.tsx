@@ -32,6 +32,7 @@ function project(id: string, key: string, status: ProjectStatus, myRole: Project
     cover: 'blue',
     status,
     priority: 'medium',
+    urgency: null,
     owner: null,
     startDate: null,
     dueDate: null,
@@ -122,6 +123,6 @@ describe('Configurador do filtro de projetos', () => {
     await waitFor(() => expect(getProjectFilter).toHaveBeenCalledWith('tasks'))
     await gear(true)
     await userEvent.click(screen.getByRole('combobox', { name: 'Projeto' }))
-    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Projeto: Todos', 'Projeto: CRM · Projeto CRM', 'Projeto: OLD · Projeto OLD']))
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos', 'CRM · Projeto CRM', 'OLD · Projeto OLD']))
   })
 })

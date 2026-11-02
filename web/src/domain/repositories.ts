@@ -38,6 +38,8 @@ import type { PlanFile, PlanUpdate, PlanUpdateInput, PlanUpdates } from './plan-
 import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, PlanJournal, PlanReport } from './plan-management'
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
 import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
+import type { Urgency } from './urgency'
+import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectCharter } from './charter'
 import type {
   MemberRole,
   Project,
@@ -215,6 +217,8 @@ export interface ProjectData {
   cover: ProjectCover
   status: ProjectStatus
   priority: ProjectPriority
+  /** null = sem urgência. */
+  urgency: Urgency | null
   startDate: string | null
   dueDate: string | null
 }
@@ -332,6 +336,10 @@ export interface TaskRepository {
   get(id: string): Promise<TaskDetail>
   create(data: TaskInput & { projectId: string; taskTypeId: string; title: string }): Promise<TaskDetail>
   update(id: string, data: TaskInput): Promise<TaskDetail>
+  /** Liga/desliga a tarefa no informe do projeto (não exige os obrigatórios do status). */
+  setInReport(id: string, inReport: boolean): Promise<TaskDetail>
+  /** Troca a urgência (semáforo; null = sem urgência), sem exigir os obrigatórios do status. */
+  setUrgency(id: string, urgency: Urgency | null): Promise<TaskDetail>
   remove(id: string): Promise<void>
   history(id: string): Promise<Page<AuditEntry>>
 }
@@ -415,6 +423,18 @@ export interface MilestoneRepository {
   create(projectId: string, input: MilestoneInput): Promise<Milestone>
   update(id: string, input: MilestoneInput): Promise<Milestone>
   remove(id: string): Promise<void>
+}
+
+/** Ficha do projeto: objetivo geral, itens com o avanço calculado e medições dos resultados. */
+export interface CharterRepository {
+  get(projectId: string): Promise<ProjectCharter>
+  saveObjective(projectId: string, objective: string): Promise<ProjectCharter>
+  createItem(projectId: string, input: CharterItemInput): Promise<CharterItem>
+  updateItem(id: string, input: CharterItemInput): Promise<CharterItem>
+  removeItem(id: string): Promise<void>
+  reorder(projectId: string, kind: CharterKind, ids: string[]): Promise<ProjectCharter>
+  measurements(itemId: string): Promise<CharterMeasurement[]>
+  addMeasurement(itemId: string, input: MeasurementInput): Promise<CharterItem>
 }
 
 /** Quadro do projeto (Gerenciamento de Projetos): grupos, elementos e etiquetas próprias. */
@@ -548,6 +568,7 @@ export interface Repositories {
   executive: ExecutiveRepository
   timeline: TimelineRepository
   milestones: MilestoneRepository
+  charter: CharterRepository
   plan: PlanRepository
   docs: DocsRepository
   sprints: SprintRepository

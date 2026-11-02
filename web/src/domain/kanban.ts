@@ -1,6 +1,7 @@
 import type { UserSummary } from './projects'
 import type { CustomField, FieldValue, OptionColor, TaskTypeIcon } from './task-config'
 import type { TaskStatusRef, TaskSummary } from './tasks'
+import { matchesUrgency } from './urgency'
 
 export interface BoardCardField {
   field: Pick<CustomField, 'id' | 'name' | 'label' | 'type' | 'options' | 'config'>
@@ -51,6 +52,8 @@ export interface BoardFilters {
   assignee: string
   type: string
   priority: string
+  /** 'high' | 'medium' | 'low' | 'none' (sem urgência) | '' */
+  urgency: string
   tag: string
   /** 'none' | id da sprint | '' */
   sprint: string
@@ -63,7 +66,7 @@ export interface BoardFilters {
 /** Filtros de escolha única (os que viram uma lista de seleção na barra). */
 export type BoardSelectFilter = Exclude<keyof BoardFilters, 'search' | 'projects' | 'statuses'>
 
-export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', tag: '', sprint: '', projects: [], statuses: [] }
+export const EMPTY_FILTERS: BoardFilters = { search: '', assignee: '', type: '', priority: '', urgency: '', tag: '', sprint: '', projects: [], statuses: [] }
 
 /** Colunas da etapa escolhida no filtro "Etapas" (vazio = todas; etapa que sumiu do fluxo é ignorada). */
 export function visibleColumns(columns: BoardColumn[], statuses: string[]): BoardColumn[] {
@@ -125,6 +128,7 @@ export function matchesFilters(card: TaskSummary, filters: BoardFilters, current
   if (filters.assignee && filters.assignee !== 'me' && filters.assignee !== 'none' && card.assignee?.id !== filters.assignee) return false
   if (filters.type && card.type?.id !== filters.type) return false
   if (filters.priority && card.priority?.id !== filters.priority) return false
+  if (!matchesUrgency(card.urgency, filters.urgency)) return false
   if (filters.tag && !card.tags.some((t) => t.id === filters.tag)) return false
   if (filters.sprint === 'none' && card.sprint) return false
   if (filters.sprint && filters.sprint !== 'none' && card.sprint?.id !== filters.sprint) return false

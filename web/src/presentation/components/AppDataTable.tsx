@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   columnPinningFeature,
   columnResizingFeature,
@@ -25,7 +26,7 @@ import { AppPagination } from './AppPagination'
 import { AppEmptyState, AppErrorState, AppLoadingBar, AppSkeleton } from './AppStates'
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
-import { AppSelect, SELECT_ALL } from './AppSelect'
+import { FilterChips, FilterSelect, MoreFilters, type TableFilterDef } from './data-table/TableFilters'
 import type { DataTableStateApi } from './data-table/use-data-table-state'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { useDelayedFlag } from '@/presentation/common/use-delayed-flag'
@@ -45,10 +46,18 @@ export interface DataTableColumn<T> {
   pinned?: boolean
   align?: 'start' | 'end'
   /** Filtro por coluna exibido na barra de filtros; `addon` fica colado ao filtro (ex.: engrenagem do configurador). */
-  filter?: { label: string; options: Array<{ value: string; label: string }>; addon?: ReactNode }
+  filter?: {
+    label: string
+    options: Array<{ value: string; label: string }>
+    addon?: ReactNode
+    /** Sempre à vista na barra; os demais vão para "Mais filtros". Sem nenhum marcado, valem os primeiros. */
+    primary?: boolean
+  }
 }
 
 export interface DataTableRowActions<T> {
+  /** Ação própria da tela, antes do "Visualizar" (ex.: incluir a tarefa no informe do projeto). */
+  leading?: (row: T) => ReactNode
   /** Clique na linha (e o botão "Visualizar"): abre a visualização rápida. */
   onView?: (row: T) => void
   /** Linha sem visualização: o botão fica desativado e o clique na linha não faz nada. */
@@ -84,7 +93,15 @@ export interface AppDataTableProps<T extends RowData> {
   searchPlaceholder?: string
   /** Filtros/controles extras na barra (além dos filtros por coluna). */
   toolbar?: ReactNode
+  /** À direita da barra, depois de "Colunas" (ex.: a ação principal da tela). */
   toolbarActions?: ReactNode
+  /** Quantos filtros ficam à vista quando nenhuma coluna marca `primary` (padrão 3); o resto vai para "Mais filtros". */
+  maxVisibleFilters?: number
+  /**
+   * Põe "Colunas" e as ações da barra noutro lugar da tela (ex.: na linha da sub-navegação da seção),
+   * deixando a barra de filtros numa linha só. `null` = o lugar ainda está montando.
+   */
+  actionsSlot?: HTMLElement | null
   emptyState?: ReactNode
   /** Desativa busca/paginação (listas pequenas carregadas de uma vez). */
   searchable?: boolean
@@ -154,6 +171,8 @@ export function AppDataTable<T extends RowData>({
   searchPlaceholder,
   toolbar,
   toolbarActions,
+  maxVisibleFilters = 3,
+  actionsSlot,
   emptyState,
   searchable = true,
   paginated = true,
@@ -190,8 +209,9 @@ export function AppDataTable<T extends RowData>({
           enableSorting: false,
           enableHiding: false,
           enableResizing: false,
-          size: 148,
-          minSize: 148,
+          // com a ação própria da tela (`leading`), cabe mais um botão
+          size: actions.leading ? 180 : 148,
+          minSize: actions.leading ? 180 : 148,
         }),
       )
     }
@@ -226,6 +246,10 @@ export function AppDataTable<T extends RowData>({
   })
 
   const filterColumns = columns.filter((c) => c.filter)
+  // filtros à vista (os marcados `primary` ou os primeiros) e o resto em "Mais filtros"
+  const filterDefs: Array<TableFilterDef & { primary?: boolean }> = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
+  const visibleFilters = filterDefs.some((f) => f.primary) ? filterDefs.filter((f) => f.primary) : filterDefs.slice(0, maxVisibleFilters)
+  const hiddenFilters = filterDefs.filter((f) => !visibleFilters.includes(f))
   const hideableColumns = table.getAllLeafColumns().filter((c) => c.getCanHide())
   const visibleColumnCount = table.getVisibleLeafColumns().length
   const showSkeleton = loading && data.length === 0
@@ -245,11 +269,29 @@ export function AppDataTable<T extends RowData>({
     })),
   ]
 
+  // "Colunas" e a ação principal: na barra ou no lugar indicado pela tela (actionsSlot)
+  const toolbarButtons = (
+    <>
+      {hideableColumns.length > 0 && (
+        <AppDropdown
+          items={columnMenu}
+          trigger={
+            <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
+              <span className="hidden sm:inline">{t('table.columns')}</span>
+            </AppButton>
+          }
+        />
+      )}
+      {toolbarActions}
+    </>
+  )
+
   // sem busca, filtros, colunas para escolher nem extras: nada de barra vazia acima da tabela
   const hasToolbar = searchable || filterColumns.length > 0 || hideableColumns.length > 0 || !!toolbar || !!toolbarActions
 
   return (
     <div className="flex flex-col gap-3">
+      {actionsSlot && createPortal(toolbarButtons, actionsSlot)}
       {hasToolbar && (
         <AppFilterBar
           search={
@@ -259,50 +301,18 @@ export function AppDataTable<T extends RowData>({
           }
           filters={
             <>
-              {filterColumns.map((column) => {
-                const select = (
-                  <AppSelect
-                    key={column.id}
-                    size="sm"
-                    aria-label={column.filter!.label}
-                    value={state.filters[column.id] ?? SELECT_ALL}
-                    onValueChange={(value) => tableState.setFilter(column.id, value === SELECT_ALL ? undefined : value)}
-                    options={[
-                      { value: SELECT_ALL, label: `${column.filter!.label}: ${t('common.all')}` },
-                      ...column.filter!.options.map((option) => ({ value: option.value, label: `${column.filter!.label}: ${option.label}` })),
-                    ]}
-                    triggerClassName="min-w-40"
-                  />
-                )
-                return column.filter!.addon ? (
-                  <div key={column.id} className="flex items-center gap-2">
-                    {select}
-                    {column.filter!.addon}
-                  </div>
-                ) : (
-                  select
-                )
-              })}
+              {visibleFilters.map((filter) => (
+                <FilterSelect key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
+              ))}
+              <MoreFilters filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />
               {toolbar}
             </>
           }
+          below={<FilterChips filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />}
           hasActiveFilters={tableState.hasActiveFilters}
           onReset={tableState.resetFilters}
-          actions={
-            <>
-              {hideableColumns.length > 0 && (
-                <AppDropdown
-                  items={columnMenu}
-                  trigger={
-                    <AppButton variant="secondary" size="sm" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
-                      <span className="hidden sm:inline">{t('table.columns')}</span>
-                    </AppButton>
-                  }
-                />
-              )}
-              {toolbarActions}
-            </>
-          }
+          // com lugar pedido (mesmo que ainda montando, null), os botões não aparecem na barra
+          actions={actionsSlot === undefined ? toolbarButtons : undefined}
         />
       )}
 
@@ -494,6 +504,7 @@ function RowActions<T extends RowData>({ row, actions }: { row: T; actions: Data
 
   return (
     <div className="flex items-center justify-end gap-0.5">
+      {actions.leading?.(row)}
       {actions.onView && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} disabled={!canView} onClick={() => actions.onView?.(row)} />}
       {actions.onEdit && (
         <AppIconButton size="sm" label={t('common.edit')} icon={<Pencil />} disabled={!canEdit} onClick={() => actions.onEdit?.(row)} />

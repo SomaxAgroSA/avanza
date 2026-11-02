@@ -12,7 +12,9 @@ import { AuditTimeline } from '@/features/audit/AuditTimeline'
 import { useCan } from '@/features/auth/session'
 import { ProjectHealth } from '@/features/plan/PlanHealth'
 import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
+import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
 import { useProjectOutlet } from './project-context'
+import { ProjectChronology } from './ProjectChronology'
 import { ProjectFilesPanel } from './ProjectFilesPanel'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
 import { ProjectTaskViewsNav } from './ProjectTaskViewsNav'
@@ -21,8 +23,8 @@ import { useProjectHistory, useProjectLifecycle, useProjectMembers } from './que
 
 /*
  * Abas da página do projeto (rotas filhas de `/projects/:projectId`). O projeto vem da página
- * (useProjectOutlet); as visões Kanban, Planejamento e Cronograma da aba Tarefas e a aba Gestão ficam
- * nos módulos delas.
+ * (useProjectOutlet); as visões Kanban, Planejamento e Cronograma da aba Tarefas e as abas Gestão, Ficha
+ * (charter/) e Informe (report/) ficam nos módulos delas (cada uma no seu pedaço do código).
  */
 
 /** Visão geral: saúde do projeto (quando há quadro de gestão), descrição e detalhes. */
@@ -91,6 +93,9 @@ function Overview({ project }: { project: Project }) {
             <Detail label={t('projects.fields.priority')}>
               <ProjectPriorityLabel priority={project.priority} />
             </Detail>
+            <Detail label={t('tasks.fields.urgency')}>
+              <UrgencyLabel urgency={project.urgency} />
+            </Detail>
             <Detail label={t('projects.fields.owner')}>
               {project.owner ? (
                 <span className="inline-flex items-center gap-2">
@@ -118,6 +123,7 @@ function Overview({ project }: { project: Project }) {
 }
 
 function ProjectHistory({ projectId }: { projectId: string }) {
+  const { t } = useTranslation()
   const history = useProjectHistory(projectId)
   if (history.isPending) {
     return (
@@ -128,10 +134,16 @@ function ProjectHistory({ projectId }: { projectId: string }) {
     )
   }
   if (history.isError) return <AppErrorState onRetry={() => void history.refetch()} />
+  // primeiro os fatos pela data em que aconteceram; depois a auditoria (quando cada coisa foi gravada)
   return (
-    <AppCard>
-      <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
-    </AppCard>
+    <div className="flex flex-col gap-4">
+      <AppCard title={t('projects.chronology.title')} description={t('projects.chronology.description')}>
+        <ProjectChronology projectId={projectId} />
+      </AppCard>
+      <AppCard title={t('projects.chronology.auditTitle')} description={t('projects.chronology.auditDescription')}>
+        <AuditTimeline entries={history.data.items} hiddenFields={['session_id', 'user_id']} />
+      </AppCard>
+    </div>
   )
 }
 

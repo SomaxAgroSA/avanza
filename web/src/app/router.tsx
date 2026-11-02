@@ -76,6 +76,8 @@ export const routes: RouteObject[] = [
             ...page(() => import('@/features/projects/ProjectDetailPage').then((m) => ({ default: m.ProjectDetailPage }))),
             children: [
               { index: true, ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectOverviewTab }))) },
+              // ficha do projeto: objetivos, funcionalidades, escopo e resultados (quem vê o projeto vê a ficha)
+              { path: 'charter', ...page(() => import('@/features/projects/charter/ProjectCharterPanel').then((m) => ({ default: m.ProjectCharterTab }))) },
               {
                 // quadro de gestão do projeto (à parte das tarefas)
                 element: <PermissionGate permission="plan.view" />,
@@ -87,6 +89,8 @@ export const routes: RouteObject[] = [
                   { path: 'tasks', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectTasksTab }))) },
                   { path: 'planning', ...page(() => import('@/features/backlog/BacklogPage').then((m) => ({ default: m.ProjectPlanningPage }))) },
                   { path: 'timeline', ...page(() => import('@/features/timeline/TimelinePage').then((m) => ({ default: m.ProjectTimelinePage }))) },
+                  // informe do projeto (PDF), montado com as tarefas escolhidas na Lista
+                  { path: 'report', ...page(() => import('@/features/projects/report/ProjectReportPanel').then((m) => ({ default: m.ProjectReportTab }))) },
                 ],
               },
               {
@@ -174,6 +178,7 @@ export const routes: RouteObject[] = [
           {
             element: <PermissionGate permission="permissions.manage" />,
             children: [
+              { path: 'access', ...page(() => import('@/features/settings/AccessControlPage').then((m) => ({ default: m.AccessControlPage }))) },
               { path: 'roles', ...page(() => import('@/features/settings/RolesPage').then((m) => ({ default: m.RolesPage }))) },
               { path: 'permissions', ...page(() => import('@/features/settings/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))) },
             ],
