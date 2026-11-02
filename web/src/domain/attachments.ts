@@ -31,7 +31,7 @@ export interface Attachment extends FileItem {
 export const MAX_FILE_SIZE = 20 * 1024 * 1024
 
 /** Extensões aceitas (o servidor confere o CONTEÚDO; aqui é só um aviso rápido). */
-export const ACCEPTED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt', 'zip', 'txt', 'log', 'md', 'csv', 'json'] as const
+export const ACCEPTED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'docx', 'xlsx', 'pptx', 'doc', 'xls', 'ppt', 'zip', 'txt', 'log', 'md', 'csv', 'json', 'sql'] as const
 export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp'] as const
 
 /** Valor para o atributo `accept` do seletor de arquivos. */

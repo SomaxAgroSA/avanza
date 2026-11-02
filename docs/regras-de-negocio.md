@@ -591,7 +591,7 @@ A página do projeto tem a aba **Arquivos**, para documentos e imagens que perte
 - **Ver e baixar:** todos que veem o projeto, inclusive o leitor.
 - **Enviar:** quem colabora no projeto (dono, gestor ou membro — ou quem vê todos os projetos) **e** tem permissão de editar tarefas (`tasks.edit`) — a mesma regra dos anexos das tarefas. Leitor não envia.
 - **Excluir:** quem enviou ou o gestor do projeto. A exclusão vale na hora e fica no histórico; o arquivo é apagado do armazenamento pouco depois.
-- **Tipos e limites:** os mesmos dos anexos das tarefas: imagens PNG, JPG, GIF e WebP, PDF, Office, ZIP e texto, até 20 MB por arquivo, conferidos pelo **conteúdo** (arquivo com extensão trocada ou HTML disfarçado é recusado). Fotos grandes são reduzidas antes do envio.
+- **Tipos e limites:** os mesmos dos anexos das tarefas: imagens PNG, JPG, GIF e WebP, PDF, Office, ZIP e texto (TXT, LOG, MD, CSV, JSON e SQL — scripts e dumps de banco, guardados e baixados como texto), até 20 MB por arquivo, conferidos pelo **conteúdo** (arquivo com extensão trocada ou HTML disfarçado é recusado). Fotos grandes são reduzidas antes do envio.
 - **Projeto arquivado:** os arquivos continuam visíveis e baixáveis; não dá para enviar nem excluir.
 - **Excluir o projeto** apaga também os arquivos dele.
 - Envio e exclusão aparecem no **histórico do projeto**, viram eventos de webhook (`project.file_added`, `project.file_deleted`) e atualizam a aba de quem está com ela aberta (tempo real). O Claude (MCP) lista os arquivos com `list_project_files`.

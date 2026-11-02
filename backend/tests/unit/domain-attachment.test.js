@@ -24,6 +24,9 @@ describe('domain/attachment — tipo real pelo conteúdo', () => {
     assert.equal(att.classify('planilha.xlsx', ZIP).mime, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     assert.equal(att.classify('antigo.doc', OLE).mime, 'application/msword')
     assert.equal(att.classify('dados.csv', TEXT).mime, 'text/csv')
+    assert.deepEqual(att.classify('dump.sql', bytes('-- dump\nCREATE TABLE clientes (id int);\nINSERT INTO clientes VALUES (1);\n')), { mime: 'text/plain', kind: 'document', ext: 'sql' })
+    assert.deepEqual(att.classify('dump.sql', bytes('<script>alert(1)</script>')), { error: 'invalid_file' })
+    assert.deepEqual(att.classify('dump.sql', [0x50, 0x4b, 0x03, 0x04, 0, 0]), { error: 'type_mismatch' })
     assert.equal(att.classify('log.txt', TEXT).mime, 'text/plain')
   })
 

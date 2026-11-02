@@ -5,6 +5,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Adicionado
+- **Arquivos .sql:** scripts e dumps de banco (`.sql`) podem ser enviados nos arquivos do projeto e nos anexos das tarefas, até 20 MB. São conferidos pelo conteúdo (texto puro; HTML disfarçado é recusado) e baixados como texto.
 - **Controle de acesso** (Configurações → Controle de acesso, permissão `permissions.manage`): escolhe-se uma pessoa e se vê num só lugar o perfil, os módulos que ela vê e o que pode fazer em cada um, e em quais projetos entra, com interruptores para mudar ali. Se o perfil é compartilhado, a mudança pode virar um perfil próprio da pessoa (as demais não mudam) ou valer para todos com aquele perfil.
 - **Imprimir ficha** (aba Ficha): documento A4 com objetivos, funcionalidades, escopo e resultados, pronto para imprimir ou salvar em PDF. Na página do projeto, as ações da aba (Colunas, Nova tarefa, Imprimir ficha) ficam na linha das abas.
 - **Urgência também nos projetos e no Kanban:** coluna e filtro de urgência na lista de Projetos (troca com um clique), campo no formulário do projeto, filtro de urgência no Kanban e semáforo nos cartões.

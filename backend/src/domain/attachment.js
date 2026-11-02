@@ -36,6 +36,8 @@ const ALLOWED = {
   md: { mime: 'text/plain', kind: 'document', family: 'text' },
   csv: { mime: 'text/csv', kind: 'document', family: 'text' },
   json: { mime: 'application/json', kind: 'document', family: 'text' },
+  // scripts e dumps de banco: texto puro (servidos como texto, nunca executados)
+  sql: { mime: 'text/plain', kind: 'document', family: 'text' },
 }
 
 /** Tipos aceitos pelo campo de arquivo do PocketBase (segunda barreira, também por conteúdo). */
