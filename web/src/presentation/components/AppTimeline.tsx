@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
-import { barBox, daysFromPixels, shiftSpan, weekdayOf, type DaySpan, type HeaderSegment } from '@/domain/timeline'
+import { MARKER_MAX_LANES, barBox, daysFromPixels, estimateTextWidth, layoutLabels, shiftSpan, weekdayOf, type DaySpan, type HeaderSegment } from '@/domain/timeline'
 
 /* ------------------------------------------------------------------ tipos */
 
@@ -102,6 +102,48 @@ const ROW_H = 44
 const BAR_H = 26
 const COMMIT_DELAY = 700
 
+/* marcos: losango + nome em faixas (text-[11px] font-medium) */
+const MARKER_FONT_PX = 11
+const MARKER_LANE_H = 22
+/** Do início do botão ao centro do losango: px-1 (4) + metade do losango (6). */
+const MARKER_ANCHOR = 10
+/** Tudo menos o texto: px-1 dos dois lados (8) + losango (12) + gap-1.5 (6) + folga de arredondamento (2). */
+const MARKER_CHROME = 28
+/** max-w-48 */
+const MARKER_MAX_W = 192
+/** Só o losango (sem nome) quando não sobra espaço. */
+const MARKER_MIN_W = 20
+/** Abaixo disso (≈ 3 letras + reticências) o nome não se lê: fica só o losango. */
+const MARKER_MIN_READABLE = MARKER_CHROME + 24
+const MARKER_GAP = 6
+
+let measureContext: OffscreenCanvasRenderingContext2D | null | undefined
+
+/** Mede textos com a fonte da página (canvas, peso 500); sem canvas (ex.: testes), a estimativa do domínio. */
+function textMeasurer(fontPx: number): (text: string) => number {
+  if (measureContext === undefined) measureContext = typeof OffscreenCanvas === 'undefined' ? null : new OffscreenCanvas(1, 1).getContext('2d')
+  const context = measureContext
+  if (!context) return (text) => estimateTextWidth(text, fontPx)
+  context.font = `500 ${fontPx}px ${getComputedStyle(document.body).fontFamily}`
+  return (text) => context.measureText(text).width
+}
+
+/** Muda quando as fontes da página terminam de carregar (medir de novo com a fonte certa). */
+function useFontsVersion(): number {
+  const [version, setVersion] = useState(0)
+  useEffect(() => {
+    if (!('fonts' in document)) return
+    let alive = true
+    void document.fonts.ready.then(() => {
+      if (alive) setVersion((v) => v + 1)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+  return version
+}
+
 type Edge = 'move' | 'start' | 'end'
 
 interface Row {
@@ -114,7 +156,8 @@ interface Row {
 
 /**
  * Linha do tempo (Gantt) do design system: régua com dois níveis, grupos recolhíveis, barras que
- * se arrastam (mover) e se esticam pelas pontas, setas de dependência, marcos, faixas (sprints),
+ * se arrastam (mover) e se esticam pelas pontas, setas de dependência, marcos (nomes próximos vão
+ * para faixas extras; além do máximo, reticências com o nome inteiro na dica), faixas (sprints),
  * linha de hoje, fins de semana, linha de base sob as barras e o período de cada grupo no cabeçalho.
  * Rola dentro de si mesma (a página não ganha 2ª barra).
  * Teclado: setas movem 1 dia; Shift + setas mudam o fim; Alt + setas mudam o início; Enter abre.
@@ -150,7 +193,31 @@ export function AppTimeline({
   const area = useRef<HTMLDivElement>(null)
   const days = range.end - range.start + 1
   const width = days * pxPerDay
-  const headerH = TIER_H * 2 + (bands.length ? LANE_H : 0) + (markers.length ? LANE_H : 0)
+  const fontsVersion = useFontsVersion()
+
+  // marcos próximos não se sobrepõem: nomes em faixas (guloso pela posição); além do máximo, reticências
+  const markerLayout = useMemo(() => {
+    void fontsVersion
+    const anchorOf = (day: number) => (day - range.start) * pxPerDay + pxPerDay / 2
+    const byId = new Map(markers.map((marker) => [marker.id, marker]))
+    const measure = markers.length ? textMeasurer(MARKER_FONT_PX) : () => 0
+    const { lanes, slots } = layoutLabels(
+      markers.map((marker) => ({
+        id: marker.id,
+        left: anchorOf(marker.day) - MARKER_ANCHOR,
+        width: Math.min(MARKER_MAX_W, Math.ceil(measure(marker.label)) + MARKER_CHROME),
+      })),
+      { maxLanes: MARKER_MAX_LANES, gap: MARKER_GAP, minWidth: MARKER_MIN_W, minReadable: MARKER_MIN_READABLE },
+    )
+    const height = lanes ? lanes * MARKER_LANE_H + 4 : 0
+    // faixa 0 embaixo, junto das linhas tracejadas do corpo
+    const items = slots.map((slot) => {
+      const marker = byId.get(slot.id) as AppTimelineMarker
+      return { marker, slot, anchor: anchorOf(marker.day), top: 3 + (lanes - 1 - slot.lane) * MARKER_LANE_H }
+    })
+    return { height, items }
+  }, [markers, range.start, pxPerDay, fontsVersion])
+  const headerH = TIER_H * 2 + (bands.length ? LANE_H : 0) + markerLayout.height
 
   // arraste com o mouse/toque (prévia local; grava ao soltar)
   const [drag, setDrag] = useState<{ id: string; edge: Edge; originX: number; delta: number; moved: boolean } | null>(null)
@@ -355,21 +422,33 @@ export function AppTimeline({
               )}
             </div>
             {markers.length > 0 && (
-              // marcos ficam fora do aria-hidden (são botões)
-              <div className="absolute border-t border-border" style={{ top: TIER_H * 2 + (bands.length ? LANE_H : 0), height: LANE_H, left: 'var(--tl-left)', width }}>
-                {markers.map((marker) => (
+              // marcos ficam fora do aria-hidden (são botões); na ordem da régua (Tab segue as datas)
+              <div className="absolute border-t border-border" style={{ top: TIER_H * 2 + (bands.length ? LANE_H : 0), height: markerLayout.height, left: 'var(--tl-left)', width }}>
+                {/* haste do losango até as linhas tracejadas do corpo (atrás dos nomes) */}
+                {markerLayout.items.map(({ marker, anchor, top }) => (
+                  <span
+                    key={`stem-${marker.id}`}
+                    aria-hidden
+                    className={cn('absolute bottom-0 border-l-2 border-dashed', marker.done ? 'border-success/50' : 'border-primary/50')}
+                    style={{ left: anchor - 1, top: top + MARKER_ANCHOR }}
+                  />
+                ))}
+                {markerLayout.items.map(({ marker, slot, anchor, top }) => (
                   <button
                     key={marker.id}
                     type="button"
                     aria-label={marker.ariaLabel}
                     title={marker.ariaLabel}
+                    data-testid={`timeline-marker-${marker.id}`}
+                    data-lane={slot.lane}
+                    data-truncated={slot.truncated || undefined}
                     disabled={!onMarkerClick}
                     onClick={() => onMarkerClick?.(marker.id)}
-                    className="absolute top-1 flex max-w-48 -translate-x-2 items-center gap-1.5 rounded-md px-1 text-[11px] font-medium leading-5 text-fg hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:hover:bg-transparent"
-                    style={{ left: x(marker.day) + pxPerDay / 2 }}
+                    className="absolute flex max-w-48 items-center gap-1.5 rounded-md bg-surface px-1 text-[11px] font-medium leading-5 text-fg hover:bg-surface-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:hover:bg-surface"
+                    style={{ left: anchor - MARKER_ANCHOR, top, maxWidth: slot.truncated ? slot.width : undefined }}
                   >
                     <span aria-hidden className={cn('size-3 shrink-0 rotate-45 rounded-[2px] border-2', marker.done ? 'border-success bg-success' : 'border-primary bg-surface')} />
-                    <span className="truncate">{marker.label}</span>
+                    {slot.width > MARKER_MIN_W && <span className="min-w-0 truncate">{marker.label}</span>}
                   </button>
                 ))}
               </div>
@@ -388,7 +467,7 @@ export function AppTimeline({
                 <div key={seg.start} className="absolute inset-y-0 border-l border-border/60" style={{ left: x(seg.start) }} />
               ))}
               {markers.map((marker) => (
-                <div key={marker.id} className={cn('absolute inset-y-0 border-l-2 border-dashed', marker.done ? 'border-success/50' : 'border-primary/50')} style={{ left: x(marker.day) + pxPerDay / 2 }} />
+                <div key={marker.id} className={cn('absolute inset-y-0 border-l-2 border-dashed', marker.done ? 'border-success/50' : 'border-primary/50')} style={{ left: x(marker.day) + pxPerDay / 2 - 1 }} />
               ))}
               {todayVisible && <div className="absolute inset-y-0 w-0.5 bg-primary" style={{ left: x(today) + pxPerDay / 2 }} />}
               <svg className="absolute inset-0 overflow-visible" width={width} height={rows.height}>

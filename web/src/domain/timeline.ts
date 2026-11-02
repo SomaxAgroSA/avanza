@@ -204,3 +204,75 @@ export function headerTiers(range: DaySpan, zoom: TimelineZoom): { top: HeaderSe
   if (zoom === 'week') return { top: segments(range, isMonthStart), bottom: segments(range, (day) => weekdayOf(day) === 1) }
   return { top: segments(range, isYearStart), bottom: segments(range, isMonthStart) }
 }
+
+/** Rótulo na régua (ex.: marco): começa em `left` (px) e ocupa `width` (largura natural). */
+export interface LabelBox {
+  id: string
+  left: number
+  width: number
+}
+
+/** Onde o rótulo fica: faixa (0 = a primeira), largura final e se foi encurtado (reticências). */
+export interface LabelSlot {
+  id: string
+  lane: number
+  width: number
+  truncated: boolean
+}
+
+/** Faixas de marcos no máximo; depois disso os rótulos são encurtados (o nome inteiro fica na dica). */
+export const MARKER_MAX_LANES = 4
+
+/**
+ * Rótulos sem sobreposição, guloso pela posição: cada rótulo vai para a primeira faixa em que cabe
+ * (`gap` px depois do anterior). Sem faixa livre e já no máximo, entra na faixa cujo último rótulo
+ * começou antes — esse é encurtado até o início do novo; se sobrar menos que `minReadable`, fica só
+ * com `minWidth` (ex.: o losango, sem o nome). A posição (a data) nunca muda.
+ * Devolve os rótulos na ordem da régua e quantas faixas foram usadas.
+ */
+export function layoutLabels(
+  boxes: LabelBox[],
+  options: { maxLanes?: number; gap?: number; minWidth?: number; minReadable?: number } = {},
+): { lanes: number; slots: LabelSlot[] } {
+  const maxLanes = Math.max(1, options.maxLanes ?? MARKER_MAX_LANES)
+  const gap = options.gap ?? 6
+  const minWidth = options.minWidth ?? 0
+  const minReadable = Math.max(minWidth, options.minReadable ?? minWidth)
+  const sorted = boxes.map((box, index) => ({ box, index })).sort((a, b) => a.box.left - b.box.left || a.index - b.index)
+  /** Último rótulo de cada faixa. */
+  const last: Array<{ left: number; slot: LabelSlot }> = []
+  const slots: LabelSlot[] = []
+  for (const { box } of sorted) {
+    let lane = last.findIndex((entry) => entry.left + entry.slot.width + gap <= box.left)
+    if (lane < 0 && last.length < maxLanes) lane = last.length
+    if (lane < 0) {
+      const previous = last.reduce((best, entry) => (entry.left < best.left ? entry : best))
+      lane = previous.slot.lane
+      const room = Math.min(previous.slot.width, box.left - gap - previous.left)
+      previous.slot.width = room >= minReadable ? room : minWidth
+      previous.slot.truncated = true
+    }
+    const slot: LabelSlot = { id: box.id, lane, width: box.width, truncated: false }
+    last[lane] = { left: box.left, slot }
+    slots.push(slot)
+  }
+  return { lanes: last.length, slots }
+}
+
+const NARROW = new Set([...`iljfrtI1.,:;'"!|()[]{}/- `])
+const WIDE = new Set([...'mwMW@%'])
+
+/**
+ * Largura aproximada do texto (px) numa fonte sem serifa com `fontPx` de corpo — para quando não dá
+ * para medir (sem canvas). Puxa um pouco para cima: sobrar espaço é melhor que encostar.
+ */
+export function estimateTextWidth(text: string, fontPx: number): number {
+  let em = 0
+  for (const char of text) {
+    if (NARROW.has(char)) em += 0.32
+    else if (WIDE.has(char)) em += 0.88
+    else if (char >= 'A' && char <= 'Z') em += 0.68
+    else em += 0.56
+  }
+  return em * fontPx
+}

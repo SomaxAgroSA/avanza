@@ -3,10 +3,12 @@ import {
   barBox,
   dayFromIso,
   dropSpan,
+  estimateTextWidth,
   groupTimelineTasks,
   headerTiers,
   isConflict,
   isoFromDay,
+  layoutLabels,
   shiftSpan,
   taskSpan,
   timelineRange,
@@ -110,5 +112,97 @@ describe('domain/timeline — grupos e régua', () => {
     const week = headerTiers({ start: d('2026-09-30'), end: d('2026-10-12') }, 'week')
     // 30/09 é quarta: a 1ª semana é cortada no início do período; a próxima começa na segunda 05/10
     expect(week.bottom.map((s) => isoFromDay(s.start))).toEqual(['2026-09-30', '2026-10-05', '2026-10-12'])
+  })
+})
+
+describe('domain/timeline — rótulos dos marcos sem sobreposição', () => {
+  const lanesOf = (result: ReturnType<typeof layoutLabels>) => Object.fromEntries(result.slots.map((s) => [s.id, s.lane]))
+
+  it('marcos distantes ficam todos na faixa 0, com a largura inteira', () => {
+    const result = layoutLabels([
+      { id: 'a', left: 0, width: 100 },
+      { id: 'b', left: 120, width: 80 },
+    ])
+    expect(result.lanes).toBe(1)
+    expect(result.slots).toEqual([
+      { id: 'a', lane: 0, width: 100, truncated: false },
+      { id: 'b', lane: 0, width: 80, truncated: false },
+    ])
+  })
+
+  it('rótulo que encostaria no anterior vai para a próxima faixa; a faixa 0 é reaproveitada assim que fica livre', () => {
+    const result = layoutLabels([
+      { id: 'a', left: 0, width: 100 },
+      { id: 'b', left: 30, width: 100 },
+      { id: 'c', left: 60, width: 100 },
+      { id: 'd', left: 110, width: 50 },
+    ])
+    expect(result.lanes).toBe(3)
+    expect(lanesOf(result)).toEqual({ a: 0, b: 1, c: 2, d: 0 })
+    expect(result.slots.every((s) => !s.truncated)).toBe(true)
+  })
+
+  it('respeita o espaço mínimo entre rótulos da mesma faixa', () => {
+    expect(lanesOf(layoutLabels([{ id: 'a', left: 0, width: 100 }, { id: 'b', left: 103, width: 40 }], { gap: 6 }))).toEqual({ a: 0, b: 1 })
+    expect(lanesOf(layoutLabels([{ id: 'a', left: 0, width: 100 }, { id: 'b', left: 106, width: 40 }], { gap: 6 }))).toEqual({ a: 0, b: 0 })
+  })
+
+  it('distribui pela posição na régua, não pela ordem recebida', () => {
+    const result = layoutLabels([
+      { id: 'late', left: 300, width: 50 },
+      { id: 'b', left: 20, width: 100 },
+      { id: 'a', left: 0, width: 100 },
+    ])
+    expect(result.slots.map((s) => s.id)).toEqual(['a', 'b', 'late'])
+    expect(lanesOf(result)).toEqual({ a: 0, b: 1, late: 0 })
+  })
+
+  it('no máximo de faixas, encurta o rótulo da faixa que começou antes (reticências) e o novo fica inteiro', () => {
+    const result = layoutLabels(
+      [
+        { id: 'a', left: 0, width: 150 },
+        { id: 'b', left: 40, width: 150 },
+        { id: 'c', left: 80, width: 150 },
+      ],
+      { maxLanes: 2, gap: 6 },
+    )
+    expect(result.lanes).toBe(2)
+    expect(result.slots).toEqual([
+      { id: 'a', lane: 0, width: 74, truncated: true },
+      { id: 'b', lane: 1, width: 150, truncated: false },
+      { id: 'c', lane: 0, width: 150, truncated: false },
+    ])
+  })
+
+  it('o rótulo encurtado nunca fica menor que o mínimo (o losango continua visível)', () => {
+    const result = layoutLabels(
+      [
+        { id: 'a', left: 0, width: 120 },
+        { id: 'b', left: 0, width: 120 },
+      ],
+      { maxLanes: 1, gap: 6, minWidth: 20 },
+    )
+    expect(result.slots[0]).toEqual({ id: 'a', lane: 0, width: 20, truncated: true })
+    expect(result.slots[1]).toEqual({ id: 'b', lane: 0, width: 120, truncated: false })
+  })
+
+  it('rótulo que ficaria curto demais para ler mostra só o losango', () => {
+    const boxes = [
+      { id: 'a', left: 0, width: 120 },
+      { id: 'b', left: 40, width: 120 },
+    ]
+    expect(layoutLabels(boxes, { maxLanes: 1, gap: 6, minWidth: 20, minReadable: 50 }).slots[0]).toEqual({ id: 'a', lane: 0, width: 20, truncated: true })
+    expect(layoutLabels(boxes, { maxLanes: 1, gap: 6, minWidth: 20, minReadable: 30 }).slots[0]).toEqual({ id: 'a', lane: 0, width: 34, truncated: true })
+  })
+
+  it('sem marcos, nenhuma faixa', () => {
+    expect(layoutLabels([])).toEqual({ lanes: 0, slots: [] })
+  })
+
+  it('estimativa da largura do texto cresce com o texto e com letras largas', () => {
+    expect(estimateTextWidth('', 11)).toBe(0)
+    expect(estimateTextWidth('Aceptación de usuario', 11)).toBeGreaterThan(estimateTextWidth('MVP', 11))
+    expect(estimateTextWidth('WWWW', 11)).toBeGreaterThan(estimateTextWidth('iiii', 11))
+    expect(estimateTextWidth('Go-live', 22)).toBeCloseTo(estimateTextWidth('Go-live', 11) * 2)
   })
 })
