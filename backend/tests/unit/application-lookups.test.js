@@ -109,3 +109,21 @@ describe('application/lookups (status e prioridades)', () => {
     assert.equal(codeOf(() => statuses.create(member, { key: 'X1', name: 'X', category: 'todo', color: 'gray' })), 'FORBIDDEN')
   })
 })
+
+describe('application/lookups — áreas responsáveis (sem padrão)', () => {
+  it('cria sem padrão, ignora is_default e não exclui área em uso por tarefa ou projeto', () => {
+    const { deps, admin, member } = setup()
+    const areas = createLookupService(deps, 'area')
+    const ti = areas.create(admin, { key: 'ti', name: 'Dpto. TI', color: 'blue', is_default: true })
+    const mkt = areas.create(admin, { key: 'MARKETING', name: 'Marketing', color: 'pink' })
+    assert.deepEqual([ti.key, ti.is_default, mkt.is_default], ['TI', false, false])
+    assert.equal(areas.update(admin, ti.id, { is_active: false }).is_active, false)
+    assert.deepEqual(areas.list(member, {}).map((a) => a.key), ['MARKETING'])
+
+    deps.store.projects.push({ id: 'p1', areaId: mkt.id })
+    assert.equal(codeOf(() => areas.delete(admin, mkt.id)), 'AREA_IN_USE')
+    assert.deepEqual(areas.delete(admin, ti.id), { deleted: true })
+    assert.equal(codeOf(() => areas.create(member, { key: 'X', name: 'X' })), 'FORBIDDEN')
+    assert.equal(deps.store.audit.at(-1).action, 'area.deleted')
+  })
+})

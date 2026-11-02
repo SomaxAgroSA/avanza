@@ -52,10 +52,11 @@ const BASE_RULES = {
   actual_hours: [hoursRule],
   sprint_id: [idRule],
   parent_task_id: [idRule],
+  area_id: [idRule],
 }
 
 /** Campos que aceitam `null` para limpar. */
-const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id']
+const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'area_id']
 
 const SORTABLE = {
   code: 'code',
@@ -79,6 +80,8 @@ const LIST_SCHEMA = {
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
+  // `none` = sem área
+  area_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   category: [
     rules.custom((value) =>
       typeof value === 'string' && value.split(',').every((c) => workflow.STATUS_CATEGORIES.indexOf(c.trim()) >= 0) ? null : 'invalid_option',
@@ -153,6 +156,7 @@ function createTaskService(deps) {
       types: byId(deps.taskTypeRepository.list({ includeInactive: true })),
       statuses: byId(deps.statusRepository.list({ includeInactive: true })),
       priorities: byId(deps.priorityRepository.list({ includeInactive: true })),
+      areas: byId(deps.areaRepository.list({ includeInactive: true })),
     }
   }
 
@@ -302,6 +306,7 @@ function createTaskService(deps) {
     const type = refs.types[task.typeId]
     const status = refs.statuses[task.statusId]
     const priority = refs.priorities[task.priorityId]
+    const area = task.areaId ? refs.areas[task.areaId] : null
     const sprint = task.sprintId ? refs.sprints[task.sprintId] : null
     const user = (id) => (id && refs.users[id] ? toUserSummary(refs.users[id]) : null)
     return {
@@ -335,6 +340,7 @@ function createTaskService(deps) {
       blocked: !!refs.blocked[task.id],
       in_report: !task.reportExcluded,
       urgency: task.urgency || null,
+      area: area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null,
     }
   }
 
@@ -395,6 +401,7 @@ function createTaskService(deps) {
       task_type: name(refs.types, task.typeId),
       task_status: name(refs.statuses, task.statusId),
       task_priority: name(refs.priorities, task.priorityId),
+      area: name(refs.areas, task.areaId),
       sprint: name(refs.sprints, task.sprintId),
       parent: task.parentTaskId ? taskLabel(refs.related[task.parentTaskId]) || task.parentTaskId : null,
       assignee: name(refs.users, task.assigneeId),
@@ -487,6 +494,7 @@ function createTaskService(deps) {
         sprint_id: pick('sprint_id'),
         in_report: pick('in_report'),
         urgency: pick('urgency'),
+        area_id: pick('area_id'),
       },
       LIST_SCHEMA,
     )
@@ -523,6 +531,7 @@ function createTaskService(deps) {
       sprintId: filters.sprint_id,
       inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
       urgency: filters.urgency,
+      areaId: filters.area_id,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       pagination,
@@ -563,6 +572,7 @@ function createTaskService(deps) {
       : Object.keys(refs.priorities).map((k) => refs.priorities[k]).find((p) => p.isDefault && p.isActive !== false)
     if (!status) throw invalid({ status_id: 'required' })
     if (!priority) throw invalid({ priority_id: 'required' })
+    const area = data.area_id ? activeOrInvalid(refs.areas[data.area_id], 'area_id') : null
 
     if (data.assignee_id) {
       taskDomain.assertTaskAccess(access, project, 'assign')
@@ -604,6 +614,7 @@ function createTaskService(deps) {
         parentTaskId: data.parent_task_id || null,
         forkedFromTaskId: forkedFrom ? forkedFrom.id : null,
         sprintId: data.sprint_id || null,
+        areaId: area ? area.id : null,
         startDate: data.start_date || null,
         dueDate: data.due_date || null,
         estimatedHours: data.estimated_hours === undefined ? null : data.estimated_hours,
@@ -645,6 +656,8 @@ function createTaskService(deps) {
     if (data.task_type_id !== undefined && data.task_type_id !== task.typeId) patch.typeId = activeOrInvalid(refs.types[data.task_type_id], 'task_type_id').id
     if (data.status_id !== undefined && data.status_id !== task.statusId) patch.statusId = activeOrInvalid(refs.statuses[data.status_id], 'status_id').id
     if (data.priority_id !== undefined && data.priority_id !== task.priorityId) patch.priorityId = activeOrInvalid(refs.priorities[data.priority_id], 'priority_id').id
+    const areaChange = cleared.indexOf('area_id') >= 0 ? null : data.area_id
+    if (areaChange !== undefined && areaChange !== (task.areaId || null)) patch.areaId = areaChange ? activeOrInvalid(refs.areas[areaChange], 'area_id').id : null
 
     const assigneeChange = cleared.indexOf('assignee_id') >= 0 ? null : data.assignee_id
     if (assigneeChange !== undefined && assigneeChange !== (task.assigneeId || null)) {
@@ -784,6 +797,25 @@ function createTaskService(deps) {
     return presentDetail(ctx, updated, project, access)
   }
 
+  /** Área responsável: muda direto da lista (como a urgência), sem exigir os campos do status; `null` limpa. */
+  function setTaskArea(ctx, id, input) {
+    const { task, project, access } = loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const raw = (input || {}).area_id
+    if (raw !== null && typeof raw !== 'string') throw invalid({ area_id: 'invalid_type' })
+    const before = task.areaId || null
+    if ((raw || null) === before) return presentDetail(ctx, task, project, access)
+    const areas = lookups().areas
+    const next = raw ? activeOrInvalid(areas[raw], 'area_id').id : null
+    const label = (areaId) => (areaId && areas[areaId] ? areas[areaId].name : null)
+    const updated = deps.unitOfWork.run((repos) => {
+      const result = repos.taskRepository.update(task.id, { areaId: next })
+      audit(repos, ctx, task, 'task.updated', { area: label(before) }, { area: label(next) })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
   function deleteTask(ctx, id) {
     const { task, project, access } = loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'delete', task)
@@ -843,7 +875,7 @@ function createTaskService(deps) {
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskUrgency, deleteTask, moveTask, summarize }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

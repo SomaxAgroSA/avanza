@@ -67,6 +67,12 @@ describe('API Ficha do projeto', { timeout: 180000 }, () => {
     assert.equal(feature.status, 201, JSON.stringify(feature.body))
     assert.deepEqual([feature.body.data.effective_state, feature.body.data.progress], ['planned', { done: 0, total: 1 }])
 
+    // tarefa aberta com o prazo vencido → funcionalidade atrasada
+    const overdue = (await mario.post('/tasks', { project_id: project.id, task_type_id: doc.id, title: 'Aprovação', due_date: '2020-01-10' })).body.data
+    const late = await admin.post(`/projects/${project.id}/charter/items`, { kind: 'feature', title: 'Aprovação', task_ids: [overdue.id] })
+    assert.equal(late.body.data.effective_state, 'late', JSON.stringify(late.body))
+    assert.equal((await admin.del(`/charter-items/${late.body.data.id}`)).status, 200)
+
     await admin.post(`/projects/${project.id}/charter/items`, { kind: 'scope_in', title: 'Portal web' })
     await admin.post(`/projects/${project.id}/charter/items`, { kind: 'scope_out', title: 'App móvel' })
     const result = (

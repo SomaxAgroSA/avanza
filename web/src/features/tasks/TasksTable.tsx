@@ -17,11 +17,13 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
 import { useProjects } from '@/features/projects/queries'
 import { useTaskTypes } from '@/features/task-config/queries'
-import { usePriorities, useStatuses } from '@/features/workflow/queries'
+import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskMutations, useTasksList } from './queries'
 import { TaskEditDialog } from './TaskEditDialog'
 import { TaskPreviewDrawer } from './TaskPreviewDrawer'
 import { UrgencyCell } from './TaskUrgency'
+import { AreaCell } from './TaskArea'
+import { useAreaFilterOptions } from '@/features/workflow/area-options'
 import { DueDate, PersonCell, TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { useTags } from '@/features/tags/queries'
 import { TagList } from '@/features/tags/tag-visuals'
@@ -70,6 +72,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
   const tasks = useTasksList(table.query, projectId ? { projectId } : undefined)
   const statuses = useStatuses(true)
   const priorities = usePriorities(true)
+  const areas = useAreas(false)
+  const areaOptions = useAreaFilterOptions(areas.data)
   const types = useTaskTypes(true)
   const tags = useTags()
   const projects = useProjects(PROJECT_QUERY, !projectId)
@@ -133,6 +137,13 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
         size: 180,
         cell: (task) => <PersonCell person={task.assignee} />,
         filter: { label: t('tasks.fields.assignee'), primary: true, options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
+      },
+      {
+        id: 'area',
+        header: t('tasks.fields.area'),
+        size: 190,
+        cell: (task) => <AreaCell task={task} areas={areas.data ?? []} canEdit={canEdit} />,
+        filter: { label: t('tasks.fields.area'), primary: true, options: areaOptions },
       },
       {
         id: 'type',
@@ -209,7 +220,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.data, projectId, canEdit],
+    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.data, projectId, canEdit, areas.data, areaOptions],
   )
 
   return (

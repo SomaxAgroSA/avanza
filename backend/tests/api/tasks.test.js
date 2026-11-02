@@ -164,6 +164,22 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal((await member.client.put(`/tasks/${task.id}/urgency`, { urgency: null })).body.data.urgency, null)
   })
 
+  it('área responsável: lista inicial, muda pela lista, histórico e filtro', async () => {
+    const areas = (await member.client.get('/areas')).body.data
+    assert.equal(areas.length, 11)
+    const ti = areas.find((a) => a.key === 'TI')
+    const task = (await member.client.get('/tasks?search=CRM-2')).body.data[0]
+    assert.equal(task.area, null)
+    const set = await member.client.put(`/tasks/${task.id}/area`, { area_id: ti.id })
+    assert.equal(set.status, 200, JSON.stringify(set.body))
+    assert.equal(set.body.data.area.name, 'Dpto. TI')
+    assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&area_id=${ti.id}`)).body.data.map((t) => t.code), ['CRM-2'])
+    const history = (await member.client.get(`/tasks/${task.id}/history`)).body.data
+    assert.deepEqual([history[0].old_value, history[0].new_value], [{ area: null }, { area: 'Dpto. TI' }])
+    assert.equal((await viewer.client.put(`/tasks/${task.id}/area`, { area_id: null })).status, 403)
+    assert.equal((await member.client.put(`/tasks/${task.id}/area`, { area_id: null })).body.data.area, null)
+  })
+
   it('protege acesso: leitor não edita, estranho não vê, CSRF exigido, exclusão por gestor', async () => {
     const task = (await member.client.get('/tasks?search=CRM-2')).body.data[0]
     assert.equal((await viewer.client.patch(`/tasks/${task.id}`, { title: 'x' })).status, 403)

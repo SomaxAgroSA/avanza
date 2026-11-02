@@ -417,6 +417,7 @@ function createProjectRepository(app) {
       status: record.getString('status'),
       priority: record.getString('priority'),
       urgency: record.getString('urgency') || null,
+      areaId: record.getString('area_id') || null,
       ownerId: record.getString('owner_id'),
       createdBy: record.getString('created_by'),
       startDate: toDate(record.getDateTime('start_date')),
@@ -436,6 +437,7 @@ function createProjectRepository(app) {
       else if (DATES[key]) record.set(DATES[key], toPbDate(data[key]))
       else if (key === 'key') record.set('key', data.key)
       else if (key === 'urgency') record.set('urgency', data.urgency || '')
+      else if (key === 'areaId') record.set('area_id', data.areaId || '')
     })
   }
 
@@ -460,6 +462,7 @@ function createProjectRepository(app) {
       if (query.status) exprs.push($dbx.hashExp({ status: query.status }))
       if (query.priority) exprs.push($dbx.hashExp({ priority: query.priority }))
       if (query.urgency) exprs.push($dbx.hashExp({ urgency: query.urgency === 'none' ? '' : query.urgency }))
+      if (query.areaId) exprs.push($dbx.hashExp({ area_id: query.areaId === 'none' ? '' : query.areaId }))
       if (query.ownerId) exprs.push($dbx.hashExp({ owner_id: query.ownerId }))
 
       const select = app.recordQuery(COLLECTION)
@@ -878,6 +881,7 @@ function createTaskRepository(app) {
       checklist: parseJsonField(record, 'checklist') || [],
       reportExcluded: record.getBool('report_excluded'),
       urgency: record.getString('urgency') || null,
+      areaId: record.getString('area_id') || null,
       position: record.getFloat('position'),
       createdAt: toDate(record.getDateTime('created')),
       updatedAt: toDate(record.getDateTime('updated')),
@@ -909,6 +913,7 @@ function createTaskRepository(app) {
     checklist: '',
     report_excluded: false,
     urgency: '',
+    area_id: '',
     position: -0,
     created: '',
     updated: '',
@@ -951,6 +956,7 @@ function createTaskRepository(app) {
       checklist,
       reportExcluded: !!row.report_excluded,
       urgency: row.urgency || null,
+      areaId: row.area_id || null,
       position: row.position,
       createdAt: toDate(row.created),
       updatedAt: toDate(row.updated),
@@ -972,6 +978,7 @@ function createTaskRepository(app) {
     parentTaskId: 'parent_task_id',
     forkedFromTaskId: 'forked_from_task_id',
     sprintId: 'sprint_id',
+    areaId: 'area_id',
   }
   const DATES = { startDate: 'start_date', dueDate: 'due_date', startedAt: 'started_at', completedAt: 'completed_at' }
   const NUMBERS = { estimatedHours: 'estimated_hours', actualHours: 'actual_hours' }
@@ -1190,6 +1197,7 @@ function createTaskRepository(app) {
       if (query.sprintId) exprs.push($dbx.hashExp({ 'tasks.sprint_id': query.sprintId === 'none' ? '' : query.sprintId }))
       if (query.inReport !== undefined) exprs.push($dbx.exp('tasks.report_excluded = {:excluded}', { excluded: query.inReport ? 0 : 1 }))
       if (query.urgency) exprs.push($dbx.hashExp({ 'tasks.urgency': query.urgency === 'none' ? '' : query.urgency }))
+      if (query.areaId) exprs.push($dbx.hashExp({ 'tasks.area_id': query.areaId === 'none' ? '' : query.areaId }))
       if (query.statusIds) {
         exprs.push(query.statusIds.length ? $dbx.in.apply(null, ['tasks.status_id'].concat(query.statusIds)) : $dbx.exp('1 = 0'))
       }
@@ -1730,6 +1738,15 @@ function createLookupRepository(app, COLLECTION, options) {
         return 0
       }
     },
+  }
+  if (options.projectColumn) {
+    repo.countProjects = (id) => {
+      try {
+        return app.countRecords('projects', $dbx.hashExp({ [options.projectColumn]: id }))
+      } catch (_) {
+        return 0
+      }
+    }
   }
   return repo
 }
@@ -2514,6 +2531,7 @@ function createRepositories(app) {
     notificationRepository: createNotificationRepository(app),
     statusRepository: createLookupRepository(app, 'task_statuses', { hasCategory: true, taskColumn: 'status_id' }),
     priorityRepository: createLookupRepository(app, 'task_priorities', { hasCategory: false, taskColumn: 'priority_id' }),
+    areaRepository: createLookupRepository(app, 'areas', { hasCategory: false, taskColumn: 'area_id', projectColumn: 'area_id' }),
     customFieldRepository: createCustomFieldRepository(app),
     taskTypeRepository: createTaskTypeRepository(app),
     taskTypeFieldRepository: createTaskTypeFieldRepository(app),

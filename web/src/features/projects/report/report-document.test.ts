@@ -19,6 +19,7 @@ const tasks = [
     dueDate: day('2026-10-05'),
     inReport: true,
     urgency: null,
+    area: null,
   },
   { id: 't2', number: 2, code: 'GCS-2', title: 'Tarea interna', status: null, assignee: null, startDate: day('2026-10-02'), dueDate: null, inReport: false },
 ] as TaskSummary[]

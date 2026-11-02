@@ -30,7 +30,7 @@ const TONE: Record<string, { bg: string; fg: string }> = {
   neutral: { bg: '#eef2ef', fg: '#55635a' },
 }
 const OBJECTIVE_TONE: Record<string, string> = { pending: 'neutral', in_progress: 'info', achieved: 'success', at_risk: 'warning' }
-const FEATURE_TONE: Record<string, string> = { planned: 'neutral', in_progress: 'info', delivered: 'success', cancelled: 'danger' }
+const FEATURE_TONE: Record<string, string> = { planned: 'neutral', in_progress: 'info', late: 'warning', delivered: 'success', cancelled: 'danger' }
 const SITUATION_TONE: Record<string, string> = { achieved: 'success', on_track: 'info', late: 'warning', no_data: 'neutral' }
 
 const esc = (value: unknown) =>

@@ -252,6 +252,13 @@ const updatePriority = configAction('priorities', (s, ctx, r) => s.update(ctx, r
 const deletePriority = configAction('priorities', (s, ctx, r) => s.delete(ctx, r.id))
 const reorderPriorities = configAction('priorities', (s, ctx, r) => s.reorder(ctx, r.body().ids))
 
+const listAreas = configAction('areas', (s, ctx, r) => s.list(ctx, r.query()))
+const getArea = configAction('areas', (s, ctx, r) => s.get(ctx, r.id))
+const createArea = configAction('areas', (s, ctx, r) => s.create(ctx, r.body()), 201)
+const updateArea = configAction('areas', (s, ctx, r) => s.update(ctx, r.id, r.body()))
+const deleteArea = configAction('areas', (s, ctx, r) => s.delete(ctx, r.id))
+const reorderAreas = configAction('areas', (s, ctx, r) => s.reorder(ctx, r.body().ids))
+
 // ---------------------------------------------------------------- tasks
 
 const taskAction = (fn, status) => configAction('tasks', fn, status)
@@ -267,6 +274,7 @@ const createTask = taskAction((s, ctx, r) => s.createTask(ctx, r.body()), 201)
 const updateTask = taskAction((s, ctx, r) => s.updateTask(ctx, r.id, r.body()))
 const setTaskReport = taskAction((s, ctx, r) => s.setTaskReport(ctx, r.id, r.body()))
 const setTaskUrgency = taskAction((s, ctx, r) => s.setTaskUrgency(ctx, r.id, r.body()))
+const setTaskArea = taskAction((s, ctx, r) => s.setTaskArea(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
 
 function taskHistory(e) {
@@ -763,12 +771,19 @@ module.exports = {
   updatePriority,
   deletePriority,
   reorderPriorities,
+  listAreas,
+  getArea,
+  createArea,
+  updateArea,
+  deleteArea,
+  reorderAreas,
   listTasks,
   getTask,
   createTask,
   updateTask,
   setTaskReport,
   setTaskUrgency,
+  setTaskArea,
   deleteTask,
   taskHistory,
   listTags,

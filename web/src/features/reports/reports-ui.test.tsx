@@ -44,6 +44,7 @@ const overdueTask = {
   blocked: false,
   inReport: true,
     urgency: null,
+    area: null,
 } satisfies TaskSummary
 
 function report(overrides: Partial<Report> = {}): Report {

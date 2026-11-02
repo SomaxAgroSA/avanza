@@ -124,7 +124,7 @@ apiRoute('DELETE', '/api/v1/task-types/{id}', (e) => require(`${__hooks}/src/htt
 apiRoute('PUT', '/api/v1/task-types/{id}/fields', (e) => require(`${__hooks}/src/http/routes.js`).setTaskTypeFields(e), JSON_BODY_LIMIT)
 apiRoute('GET', '/api/v1/task-types/{id}/history', (e) => require(`${__hooks}/src/http/routes.js`).taskTypeHistory(e))
 
-// statuses & priorities (rotas fixas como /order antes de /{id})
+// statuses, priorities & areas (rotas fixas como /order antes de /{id})
 apiRoute('GET', '/api/v1/statuses', (e) => require(`${__hooks}/src/http/routes.js`).listStatuses(e))
 apiRoute('POST', '/api/v1/statuses', (e) => require(`${__hooks}/src/http/routes.js`).createStatus(e), JSON_BODY_LIMIT)
 apiRoute('PUT', '/api/v1/statuses/order', (e) => require(`${__hooks}/src/http/routes.js`).reorderStatuses(e), JSON_BODY_LIMIT)
@@ -137,6 +137,12 @@ apiRoute('PUT', '/api/v1/priorities/order', (e) => require(`${__hooks}/src/http/
 apiRoute('GET', '/api/v1/priorities/{id}', (e) => require(`${__hooks}/src/http/routes.js`).getPriority(e))
 apiRoute('PATCH', '/api/v1/priorities/{id}', (e) => require(`${__hooks}/src/http/routes.js`).updatePriority(e), JSON_BODY_LIMIT)
 apiRoute('DELETE', '/api/v1/priorities/{id}', (e) => require(`${__hooks}/src/http/routes.js`).deletePriority(e))
+apiRoute('GET', '/api/v1/areas', (e) => require(`${__hooks}/src/http/routes.js`).listAreas(e))
+apiRoute('POST', '/api/v1/areas', (e) => require(`${__hooks}/src/http/routes.js`).createArea(e), JSON_BODY_LIMIT)
+apiRoute('PUT', '/api/v1/areas/order', (e) => require(`${__hooks}/src/http/routes.js`).reorderAreas(e), JSON_BODY_LIMIT)
+apiRoute('GET', '/api/v1/areas/{id}', (e) => require(`${__hooks}/src/http/routes.js`).getArea(e))
+apiRoute('PATCH', '/api/v1/areas/{id}', (e) => require(`${__hooks}/src/http/routes.js`).updateArea(e), JSON_BODY_LIMIT)
+apiRoute('DELETE', '/api/v1/areas/{id}', (e) => require(`${__hooks}/src/http/routes.js`).deleteArea(e))
 
 // tasks
 apiRoute('GET', '/api/v1/tasks', (e) => require(`${__hooks}/src/http/routes.js`).listTasks(e))
@@ -145,6 +151,7 @@ apiRoute('GET', '/api/v1/tasks/{id}', (e) => require(`${__hooks}/src/http/routes
 apiRoute('PATCH', '/api/v1/tasks/{id}', (e) => require(`${__hooks}/src/http/routes.js`).updateTask(e), JSON_BODY_LIMIT)
 apiRoute('PUT', '/api/v1/tasks/{id}/report', (e) => require(`${__hooks}/src/http/routes.js`).setTaskReport(e), JSON_BODY_LIMIT)
 apiRoute('PUT', '/api/v1/tasks/{id}/urgency', (e) => require(`${__hooks}/src/http/routes.js`).setTaskUrgency(e), JSON_BODY_LIMIT)
+apiRoute('PUT', '/api/v1/tasks/{id}/area', (e) => require(`${__hooks}/src/http/routes.js`).setTaskArea(e), JSON_BODY_LIMIT)
 apiRoute('DELETE', '/api/v1/tasks/{id}', (e) => require(`${__hooks}/src/http/routes.js`).deleteTask(e))
 apiRoute('GET', '/api/v1/tasks/{id}/history', (e) => require(`${__hooks}/src/http/routes.js`).taskHistory(e))
 apiRoute('GET', '/api/v1/tasks/{id}/comments', (e) => require(`${__hooks}/src/http/routes.js`).listTaskComments(e))

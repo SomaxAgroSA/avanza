@@ -79,6 +79,7 @@ export interface ProjectDto {
   status: string
   priority: string
   urgency?: string | null
+  area?: { id: string; key: string; name: string; color: string } | null
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
@@ -167,6 +168,7 @@ export interface TaskDto {
   blocked?: boolean
   in_report?: boolean
   urgency?: string | null
+  area?: { id: string; key: string; name: string; color: string } | null
 }
 
 export interface PlanStatusDto {

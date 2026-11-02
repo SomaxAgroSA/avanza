@@ -222,11 +222,14 @@ function createCharterService(deps) {
     if (Object.keys(linked).length) {
       const found = deps.taskRepository.listByProject(project.id, MAX_PROJECT_TASKS).filter((t) => linked[t.id])
       taskService.summarize(found).forEach((summary) => {
-        tasks[summary.id] = { summary, category: summary.status ? summary.status.category : null }
+        tasks[summary.id] = { summary, category: summary.status ? summary.status.category : null, due: summary.due_date ? summary.due_date.slice(0, 10) : null }
       })
     }
     const objective = record ? record.objective || '' : ''
-    const evaluated = charter.evaluate(objective, list, (ids) => ids.filter((id) => tasks[id]).map((id) => tasks[id].category), today())
+    const now = today()
+    const open = (task) => task.category !== 'done' && task.category !== 'cancelled'
+    const overdueOf = (ids) => ids.filter((id) => tasks[id] && open(tasks[id]) && tasks[id].due && tasks[id].due < now).length
+    const evaluated = charter.evaluate(objective, list, (ids) => ids.filter((id) => tasks[id]).map((id) => tasks[id].category), now, overdueOf)
 
     const userIds = unique(list.map((i) => i.ownerId).concat(record && record.updatedBy ? [record.updatedBy] : []).filter(Boolean))
     const users = {}

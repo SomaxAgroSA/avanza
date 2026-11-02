@@ -54,6 +54,7 @@ function createFakeStore() {
     taskCounts: {},
     statuses: [],
     priorities: [],
+    areas: [],
     tasks: [],
     taskValues: [],
     tags: [],
@@ -128,6 +129,7 @@ function createFakeLookupRepository(store, bucket, prefix) {
         x.isDefault = false
       }),
     countTasks: (id) => store.lookupTaskCounts[id] || 0,
+    countProjects: (id) => store.projects.filter((p) => p.areaId === id).length,
   }
   return repo
 }
@@ -395,6 +397,7 @@ function createFakeRepositories(store) {
       if (query.status) items = items.filter((p) => p.status === query.status)
       if (query.priority) items = items.filter((p) => p.priority === query.priority)
       if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
+      if (query.areaId) items = items.filter((p) => (p.areaId || 'none') === query.areaId)
       if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
       const sort = query.sort[0]
       if (sort) {
@@ -553,6 +556,7 @@ function createFakeRepositories(store) {
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
       if (query.urgency) items = items.filter((t) => (t.urgency || 'none') === query.urgency)
+      if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
       if (query.search) {
         const q = query.search.text.toLowerCase()
         items = items.filter(
@@ -1315,6 +1319,7 @@ function createFakeRepositories(store) {
     notificationRepository,
     statusRepository: createFakeLookupRepository(store, 'statuses', 'status'),
     priorityRepository: createFakeLookupRepository(store, 'priorities', 'priority'),
+    areaRepository: createFakeLookupRepository(store, 'areas', 'area'),
   }
 }
 

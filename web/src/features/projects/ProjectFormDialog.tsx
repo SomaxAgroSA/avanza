@@ -12,11 +12,15 @@ import { projectSchema, type ProjectInput } from '@/domain/validation'
 import { TASK_URGENCIES } from '@/domain/tasks'
 import { AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { useAreas } from '@/features/workflow/queries'
 import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
 import { ProjectAvatar } from './project-visuals'
 import { useCreateProject, useUpdateProject } from './queries'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId' }
+
+/** Valor do select para "sem área" (o select não aceita string vazia). */
+const NO_AREA = '__none__'
 
 function defaults(project?: Project | null): ProjectInput {
   return {
@@ -28,6 +32,7 @@ function defaults(project?: Project | null): ProjectInput {
     status: project?.status ?? 'planning',
     priority: project?.priority ?? 'medium',
     urgency: project?.urgency ?? 'none',
+    areaId: project?.area?.id ?? '',
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -48,6 +53,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
   const create = useCreateProject()
   const update = useUpdateProject()
   const pending = create.isPending || update.isPending
+  const areas = useAreas(false)
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<ProjectInput>({
     resolver: zodResolver(projectSchema),
@@ -70,6 +76,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
       status: values.status,
       priority: values.priority,
       urgency: values.urgency === 'none' ? null : values.urgency,
+      areaId: values.areaId || null,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -190,6 +197,23 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                   value={field.value}
                   onValueChange={field.onChange}
                   options={[...TASK_URGENCIES, 'none' as const].map((u) => ({ value: u, label: t(`tasks.urgency.${u}`) }))}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="areaId"
+              render={({ field }) => (
+                <AppSelect
+                  label={t('tasks.fields.area')}
+                  value={field.value || NO_AREA}
+                  onValueChange={(value) => field.onChange(value === NO_AREA ? '' : value)}
+                  error={errors.areaId?.message}
+                  options={[
+                    { value: NO_AREA, label: t('areas.none') },
+                    ...(areas.data ?? []).map((a) => ({ value: a.id, label: a.name })),
+                    ...(project?.area && !(areas.data ?? []).some((a) => a.id === project.area?.id) ? [{ value: project.area.id, label: project.area.name }] : []),
+                  ]}
                 />
               )}
             />

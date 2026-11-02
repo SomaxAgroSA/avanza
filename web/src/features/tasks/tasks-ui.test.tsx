@@ -104,6 +104,7 @@ const detail: TaskDetail = {
   blocked: false,
   inReport: true,
     urgency: null,
+    area: null,
   sprint: null,
   fields: bugDetail.fields,
   parent: null, forkedFrom: null, capabilities: { edit: true, delete: false, assign: true, comment: true, link: true, fork: true },

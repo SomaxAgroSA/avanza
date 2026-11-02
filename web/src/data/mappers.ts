@@ -30,7 +30,7 @@ import type { AttachmentDto, CommentDto, CustomFieldDto, LookupDto, TagDto, Task
 import { isTaskUrgency, type Tag, type TaskComment, type TaskDetail, type TaskSummary } from '@/domain/tasks'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
-import { STATUS_CATEGORIES, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
+import { STATUS_CATEGORIES, type Area, type AreaRef, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
 import { FIELD_TYPES, OPTION_COLORS, TASK_TYPE_ICONS, type CustomField, type TaskType, type TaskTypeDetail, type ContentLocale, type TypeTexts } from '@/domain/task-config'
 import type { AuditEntryDto, MeDto, PermissionDto, ProjectDto, ProjectMemberDto, RoleDto, SessionDto, UserDto, UserSummaryDto } from './dtos'
 import {
@@ -136,6 +136,7 @@ export function toProject(dto: ProjectDto): Project {
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
+    area: toAreaRef(dto.area),
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
@@ -209,6 +210,14 @@ export function toStatus(dto: LookupDto): TaskStatus {
 
 export function toPriority(dto: LookupDto): TaskPriority {
   return toLookup(dto)
+}
+
+export function toArea(dto: LookupDto): Area {
+  return toLookup(dto)
+}
+
+function toAreaRef(dto: { id: string; key: string; name: string; color: string } | null | undefined): AreaRef | null {
+  return dto ? { id: dto.id, key: dto.key, name: dto.name, color: oneOf(OPTION_COLORS, dto.color, 'gray') } : null
 }
 
 /** Versões do tipo: pt-BR (original) + en/es; servidor antigo sem traduções usa o próprio texto. */
@@ -290,6 +299,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     blocked: !!dto.blocked,
     inReport: dto.in_report ?? true,
     urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
+    area: toAreaRef(dto.area),
   }
 }
 

@@ -25,6 +25,10 @@ import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
 import { useProjectLifecycle, useProjects, useUpdateProject } from './queries'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
+import { AreaPicker } from '@/features/workflow/area-visuals'
+import { useAreaFilterOptions } from '@/features/workflow/area-options'
+import { useAreas } from '@/features/workflow/queries'
+import type { Area } from '@/domain/workflow'
 
 const EMPTY: Project[] = []
 
@@ -72,6 +76,8 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   }
 
   const urgencyOptions = useUrgencyFilterOptions()
+  const areas = useAreas(false)
+  const areaOptions = useAreaFilterOptions(areas.data)
   const columns = useMemo<DataTableColumn<Project>[]>(
     () => [
       {
@@ -116,6 +122,13 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         filter: { label: t('tasks.fields.urgency'), options: urgencyOptions },
       },
       {
+        id: 'area',
+        header: t('tasks.fields.area'),
+        size: 190,
+        cell: (project) => <ProjectAreaCell project={project} areas={areas.data ?? []} />,
+        filter: { label: t('tasks.fields.area'), options: areaOptions },
+      },
+      {
         id: 'owner',
         header: t('projects.fields.owner'),
         size: 200,
@@ -142,7 +155,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, urgencyOptions],
+    [t, locale, urgencyOptions, areas.data, areaOptions],
   )
 
   const emptyState =
@@ -254,6 +267,31 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         }
       />
     </>
+  )
+}
+
+/** Área responsável do projeto na lista: quem edita o projeto troca com um clique. */
+function ProjectAreaCell({ project, areas }: { project: Project; areas: Area[] }) {
+  const { t } = useTranslation()
+  const errorMessage = useErrorMessage()
+  const update = useUpdateProject()
+  return (
+    <AreaPicker
+      value={project.area}
+      areas={areas}
+      canEdit={project.capabilities.edit}
+      pending={update.isPending}
+      changeLabel={t('areas.change', { name: project.name, area: project.area?.name ?? t('areas.none') })}
+      onChoose={(areaId) =>
+        update.mutate(
+          { id: project.id, data: { areaId } },
+          {
+            onSuccess: (saved) => notify.success(t('areas.saved', { name: saved.name, area: saved.area?.name ?? t('areas.none') })),
+            onError: (error) => notify.error(errorMessage(error)),
+          },
+        )
+      }
+    />
   )
 }
 

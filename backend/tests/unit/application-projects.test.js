@@ -2,6 +2,7 @@ const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
 
 const { createFakeDeps, seedUser } = require('../support/fakes')
+const { createLookupService } = require('../../pb_hooks/src/application/lookups')
 const { createProjectService } = require('../../pb_hooks/src/application/projects')
 const { createPrincipal } = require('../../pb_hooks/src/domain/rbac')
 
@@ -217,5 +218,25 @@ describe('application/projects — urgência (semáforo)', () => {
     assert.deepEqual(keys('none'), ['OUT'])
     assert.throws(() => projects.updateProject(ctx.manager, a.id, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
     assert.throws(() => projects.listProjects(ctx.manager, { urgency: 'roja' }), { code: 'VALIDATION_ERROR' })
+  })
+})
+
+describe('application/projects — área responsável', () => {
+  it('nasce com a área escolhida; edita, limpa com null, registra o nome no histórico e filtra', () => {
+    const { deps, projects, ctx } = setup()
+    const areas = createLookupService(deps, 'area')
+    const ti = areas.create(ctx.admin, { key: 'TI', name: 'Dpto. TI', color: 'blue' })
+    const cred = areas.create(ctx.admin, { key: 'CRED', name: 'Créditos', color: 'red' })
+    const a = projects.createProject(ctx.manager, input({ area_id: ti.id }))
+    const b = projects.createProject(ctx.manager, input({ name: 'Outro', key: 'OUT' }))
+    assert.deepEqual([a.area.name, b.area], ['Dpto. TI', null])
+    assert.equal(projects.updateProject(ctx.manager, b.id, { area_id: cred.id }).area.name, 'Créditos')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.oldValue.area, entry.newValue.area], [null, 'Créditos'])
+    const keys = (area) => projects.listProjects(ctx.manager, { area_id: area }).items.map((p) => p.key)
+    assert.deepEqual(keys(cred.id), ['OUT'])
+    assert.equal(projects.updateProject(ctx.manager, a.id, { area_id: null }).area, null)
+    assert.deepEqual(keys('none'), ['CRM'])
+    assert.throws(() => projects.updateProject(ctx.manager, a.id, { area_id: 'nada' }), { code: 'VALIDATION_ERROR' })
   })
 })
