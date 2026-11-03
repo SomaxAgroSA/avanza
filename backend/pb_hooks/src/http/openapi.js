@@ -285,7 +285,7 @@ function build() {
         get: op('Membros do projeto', ['projects'], { 200: ok('Membros', { type: 'array', items: ref('ProjectMember') }) }, { parameters: [idParam] }),
         post: op('Adiciona membro (gestor)', ['projects'], { 201: ok('Membros atualizados', { type: 'array', items: ref('ProjectMember') }), 409: errorResponse('MEMBER_ALREADY_EXISTS') }, {
           parameters: [idParam, csrfHeader],
-          requestBody: jsonBody({ type: 'object', required: ['user_id', 'role'], properties: { user_id: { type: 'string' }, role: { type: 'string', enum: ['manager', 'member', 'viewer'] } } }),
+          requestBody: jsonBody({ type: 'object', required: ['user_id', 'role'], properties: { user_id: { type: 'string' }, role: { type: 'string', enum: ['manager', 'member', 'viewer', 'it'] } } }),
         }),
       },
       '/projects/{id}/member-candidates': {
@@ -296,7 +296,7 @@ function build() {
       '/projects/{id}/members/{userId}': {
         patch: op('Altera o papel do membro (gestor; papel do dono é fixo)', ['projects'], { 200: ok('Membros', { type: 'array', items: ref('ProjectMember') }), 409: errorResponse('OWNER_ROLE_LOCKED') }, {
           parameters: [idParam, { name: 'userId', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
-          requestBody: jsonBody({ type: 'object', required: ['role'], properties: { role: { type: 'string', enum: ['manager', 'member', 'viewer'] } } }),
+          requestBody: jsonBody({ type: 'object', required: ['role'], properties: { role: { type: 'string', enum: ['manager', 'member', 'viewer', 'it'] } } }),
         }),
         delete: op('Remove membro (gestor) ou sai do projeto (o próprio membro)', ['projects'], { 200: ok('Removido', { type: 'object' }), 409: errorResponse('CANNOT_REMOVE_OWNER') }, {
           parameters: [idParam, { name: 'userId', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
@@ -758,6 +758,9 @@ function build() {
       '/milestones/{id}': {
         patch: op('Edita marco (gestor/dono)', ['timeline'], { 200: ok('Marco', ref('Milestone')), 404: errorResponse('MILESTONE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('MilestoneInput')) }),
         delete: op('Exclui marco (gestor/dono)', ['timeline'], { 200: ok('Excluído', { type: 'object' }), 404: errorResponse('MILESTONE_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/projects/{id}/brief': {
+        get: op('Resumo do projeto para o Responsável TI: objetivo geral, as tarefas atribuídas a quem pede e os itens da ficha sob a responsabilidade dele', ['charter'], { 200: ok('Resumo', { type: 'object', properties: { objective: { type: 'string' }, tasks: { type: 'array', items: ref('Task') }, items: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, kind: { type: 'string', enum: ['feature', 'result'] }, title: { type: 'string' }, description: { type: 'string' }, unit: { type: 'string' }, target: { type: ['number', 'null'] }, due_date: { type: ['string', 'null'] } } } } } }), 404: errorResponse('PROJECT_NOT_FOUND') }, { parameters: [idParam] }),
       },
       '/projects/{id}/charter': {
         get: op(
@@ -1743,7 +1746,7 @@ function build() {
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
             member_count: { type: 'integer' },
-            my_role: { type: ['string', 'null'], enum: ['owner', 'manager', 'member', 'viewer', null] },
+            my_role: { type: ['string', 'null'], enum: ['owner', 'manager', 'member', 'viewer', 'it', null] },
             capabilities: {
               type: 'object',
               properties: { edit: { type: 'boolean' }, manage_members: { type: 'boolean' }, archive: { type: 'boolean' }, delete: { type: 'boolean' }, transfer: { type: 'boolean' } },
@@ -1769,7 +1772,7 @@ function build() {
           type: 'object',
           properties: {
             user: ref('UserSummary'),
-            role: { type: 'string', enum: ['manager', 'member', 'viewer'] },
+            role: { type: 'string', enum: ['manager', 'member', 'viewer', 'it'] },
             is_owner: { type: 'boolean' },
             joined_at: { type: 'string', format: 'date-time' },
           },

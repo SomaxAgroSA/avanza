@@ -585,3 +585,13 @@ Lista configurável em **Configurações → Áreas** (`settings.manage`), com a
 - **Kanban:** filtro "Área" e o selo da área no cartão.
 - **Filtro:** área ou "Sin área" (`area_id=none` na API).
 - Só áreas **ativas** podem ser escolhidas; a área inativa continua aparecendo onde já estava. Área em uso por tarefas ou projetos não se exclui (`AREA_IN_USE`): desative.
+
+## 24. Responsável TI
+
+Papel de membro do projeto (`it`, "Responsável TI"), escolhido em Membros ou no Controle de acesso, para quem só precisa saber **o que o projeto precisa dele**.
+
+- **Ao abrir o projeto** vê uma única tela: nome do projeto, objetivo geral da ficha, **as tarefas atribuídas a ele** e os resultados/funcionalidades da ficha sob a responsabilidade dele (`GET /projects/{id}/brief`). Qualquer aba ou endereço do projeto leva a essa tela.
+- **Não vê** as demais tarefas, a ficha completa, Kanban, Histórico, Membros, Arquivos, Informe nem a Gestão de projetos daquele projeto: a API responde como se não existissem (`PROJECT_NOT_FOUND`/`TASK_NOT_FOUND`). Na lista geral de Tarefas e nos relatórios aparecem só as tarefas dele.
+- **Nas tarefas dele** age como colaborador: muda status, comenta, anexa e preenche campos. Não exclui, não reatribui e não cria tarefas no projeto (`FORBIDDEN`).
+- Dono do projeto, gestor e quem tem permissão de ver todos os projetos nunca ficam limitados, mesmo com esse papel.
+- O menu lateral segue o perfil global da pessoa; para escondê-lo, use um perfil próprio no Controle de acesso.
