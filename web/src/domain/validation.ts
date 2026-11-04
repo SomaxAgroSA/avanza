@@ -110,6 +110,8 @@ export const projectSchema = z
     urgency: z.enum([...TASK_URGENCIES, 'none']),
     /** id da área ou '' (sem área) */
     areaId: z.string(),
+    /** id do projeto pai ou '' (sem pai) */
+    parentId: z.string(),
     /** AAAA-MM-DD ou '' */
     startDate: z.string(),
     dueDate: z.string(),

@@ -418,6 +418,7 @@ function createProjectRepository(app) {
       priority: record.getString('priority'),
       urgency: record.getString('urgency') || null,
       areaId: record.getString('area_id') || null,
+      parentId: record.getString('parent_id') || null,
       ownerId: record.getString('owner_id'),
       createdBy: record.getString('created_by'),
       startDate: toDate(record.getDateTime('start_date')),
@@ -438,6 +439,7 @@ function createProjectRepository(app) {
       else if (key === 'key') record.set('key', data.key)
       else if (key === 'urgency') record.set('urgency', data.urgency || '')
       else if (key === 'areaId') record.set('area_id', data.areaId || '')
+      else if (key === 'parentId') record.set('parent_id', data.parentId || '')
     })
   }
 
@@ -463,6 +465,7 @@ function createProjectRepository(app) {
       if (query.priority) exprs.push($dbx.hashExp({ priority: query.priority }))
       if (query.urgency) exprs.push($dbx.hashExp({ urgency: query.urgency === 'none' ? '' : query.urgency }))
       if (query.areaId) exprs.push($dbx.hashExp({ area_id: query.areaId === 'none' ? '' : query.areaId }))
+      if (query.parentId) exprs.push($dbx.hashExp({ parent_id: query.parentId === 'none' ? '' : query.parentId }))
       if (query.ownerId) exprs.push($dbx.hashExp({ owner_id: query.ownerId }))
 
       const select = app.recordQuery(COLLECTION)
@@ -496,6 +499,32 @@ function createProjectRepository(app) {
     findManyByIds(ids) {
       if (ids.length === 0) return []
       return app.findRecordsByIds(COLLECTION, ids).map(toEntity)
+    },
+
+    /** Quantidade de subprojetos (inclusive arquivados) por projeto pai. */
+    countChildren(ids) {
+      const counts = {}
+      if (ids.length === 0) return counts
+      const rows = arrayOf(new DynamicModel({ parent_id: '', total: 0 }))
+      app
+        .db()
+        .select('parent_id', 'COUNT(*) AS total')
+        .from(COLLECTION)
+        .where($dbx.in.apply(null, ['parent_id'].concat(ids)))
+        .groupBy('parent_id')
+        .all(rows)
+      rows.forEach((row) => {
+        counts[row.parent_id] = row.total
+      })
+      return counts
+    },
+
+    /** Solta os subprojetos de um pai (o pai vai ser excluído). */
+    clearParent(parentId) {
+      app.findRecordsByFilter(COLLECTION, 'parent_id = {:p}', '', 0, 0, { p: parentId }).forEach((record) => {
+        record.set('parent_id', '')
+        app.save(record)
+      })
     },
   }
 }

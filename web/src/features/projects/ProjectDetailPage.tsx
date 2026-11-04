@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArchiveRestore, ArrowLeft, BriefcaseBusiness, Copy, FolderSearch, KanbanSquare, ListTodo, Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, BriefcaseBusiness, Copy, CornerDownRight, FolderSearch, FolderTree, KanbanSquare, ListTodo, Pencil, Plus, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDateTime, formatDay } from '@/core/utils/format'
@@ -35,7 +35,7 @@ import { ProjectFormDialog } from './ProjectFormDialog'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
 import { ProjectChronology } from './ProjectChronology'
 import { ProjectBriefPage } from './ProjectBriefPage'
-import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
+import { useProject, useProjectHistory, useProjectLifecycle, useProjectMembers, useProjects } from './queries'
 
 export function ProjectDetailPage() {
   const { projectId } = useParams()
@@ -152,6 +152,16 @@ function ProjectDetail({ project }: { project: Project }) {
           <div className="flex min-w-0 items-center gap-4">
             <ProjectAvatar icon={project.icon} cover={project.cover} size="lg" className="size-12 shrink-0 shadow-float ring-2 ring-on-cover/40 [&_svg]:size-6" />
             <div className="min-w-0">
+              {project.parent && (
+                <Link
+                  to={`/projects/${project.parent.id}`}
+                  className="mb-0.5 inline-flex max-w-full items-center gap-1 truncate text-xs font-medium text-on-cover/85 hover:text-on-cover hover:underline"
+                  title={t('projects.parent.of', { name: project.parent.name })}
+                >
+                  <FolderTree className="size-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{project.parent.name}</span>
+                </Link>
+              )}
               <h1 className="truncate text-2xl font-bold tracking-tight drop-shadow-sm sm:text-3xl">{project.name}</h1>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <button
@@ -258,6 +268,7 @@ function Overview({ project }: { project: Project }) {
             <p className="text-sm text-subtle">{t('projects.noDescription')}</p>
           )}
         </AppCard>
+        <SubprojectsCard project={project} />
         <AppCard title={t('projects.workTitle')} description={t('projects.workDescription')}>
           <ul className="grid gap-3 sm:grid-cols-2">
             {modules.map((item) => {
@@ -317,6 +328,56 @@ function Overview({ project }: { project: Project }) {
         </dl>
       </AppCard>
     </div>
+  )
+}
+
+/** Subprojetos (§25): só no projeto que pode ser pai; quem edita cria um subprojeto já ligado. */
+function SubprojectsCard({ project }: { project: Project }) {
+  const { t, i18n } = useTranslation()
+  const canCreate = useCan('projects.create')
+  const [creating, setCreating] = useState(false)
+  const isParent = project.childCount > 0
+  const children = useProjects(
+    { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: project.id } },
+    isParent,
+  )
+  const canAdd = canCreate && project.capabilities.edit && !project.parent && !project.archivedAt
+  if (project.parent || (!isParent && !canAdd)) return null
+  return (
+    <AppCard
+      title={t('projects.parent.childrenTitle')}
+      description={isParent ? t('projects.parent.children', { count: project.childCount }) : t('projects.parent.emptyDescription')}
+      actions={
+        canAdd ? (
+          <AppButton size="sm" variant="secondary" leftIcon={<Plus />} onClick={() => setCreating(true)}>
+            {t('projects.parent.add')}
+          </AppButton>
+        ) : undefined
+      }
+    >
+      {isParent &&
+        (children.isPending ? (
+          <AppSkeleton className="h-24 rounded-lg" />
+        ) : (
+          <ul className="-mx-2 flex flex-col">
+            {(children.data?.items ?? []).map((child) => (
+              <li key={child.id}>
+                <Link to={`/projects/${child.id}`} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-2">
+                  <CornerDownRight className="size-4 shrink-0 text-subtle" aria-hidden />
+                  <ProjectAvatar icon={child.icon} cover={child.cover} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-fg">{child.name}</span>
+                    <span className="block font-mono text-xs text-muted">{child.key}</span>
+                  </span>
+                  <span className={cn('hidden text-xs sm:block', isOverdue(child) ? 'text-danger' : 'text-muted')}>{formatDay(child.dueDate, i18n.language)}</span>
+                  <ProjectStatusBadge status={child.status} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {canAdd && <ProjectFormDialog open={creating} onOpenChange={setCreating} parentId={project.id} />}
+    </AppCard>
   )
 }
 

@@ -138,6 +138,10 @@ export function toProject(dto: ProjectDto): Project {
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
+    parent: dto.parent
+      ? { id: dto.parent.id, key: dto.parent.key, name: dto.parent.name, icon: oneOf(PROJECT_ICONS, dto.parent.icon, 'folder'), cover: oneOf(PROJECT_COVERS, dto.parent.cover, 'green') }
+      : null,
+    childCount: dto.child_count ?? 0,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),

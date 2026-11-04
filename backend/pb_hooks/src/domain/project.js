@@ -58,6 +58,19 @@ function resolveAccess(principal, project, membership) {
 }
 
 /**
+ * Projeto pai (§25), um só nível: devolve o motivo de recusa ou null.
+ * `project` = projeto que recebe o pai (null na criação); `hasChildren` = ele já é pai de alguém.
+ */
+function parentIssue(project, parent, hasChildren) {
+  if (!parent) return 'invalid_option'
+  if (project && parent.id === project.id) return 'self'
+  if (parent.parentId) return 'parent_is_child'
+  if (hasChildren) return 'has_children'
+  if (parent.archivedAt) return 'parent_archived'
+  return null
+}
+
+/**
  * Verifica se a ação é permitida; lança o erro adequado caso contrário.
  * Ações: brief | view | edit | manage_members | archive | transfer | delete
  * (`brief` = resumo do projeto, também liberado para o Responsável TI).
@@ -120,6 +133,7 @@ module.exports = {
   normalizeKey,
   keyIssue,
   datesIssue,
+  parentIssue,
   resolveAccess,
   assertAccess,
   capabilities,

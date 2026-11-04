@@ -398,6 +398,7 @@ function createFakeRepositories(store) {
       if (query.priority) items = items.filter((p) => p.priority === query.priority)
       if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
       if (query.areaId) items = items.filter((p) => (p.areaId || 'none') === query.areaId)
+      if (query.parentId) items = items.filter((p) => (p.parentId || 'none') === query.parentId)
       if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
       const sort = query.sort[0]
       if (sort) {
@@ -417,6 +418,16 @@ function createFakeRepositories(store) {
       store.projects = store.projects.filter((p) => p.id !== id)
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
+    countChildren: (ids) => {
+      const counts = {}
+      store.projects.filter((p) => p.parentId && ids.includes(p.parentId)).forEach((p) => {
+        counts[p.parentId] = (counts[p.parentId] || 0) + 1
+      })
+      return counts
+    },
+    clearParent: (parentId) => {
+      store.projects.filter((p) => p.parentId === parentId).forEach((p) => (p.parentId = null))
+    },
   }
 
   let taskClock = 0

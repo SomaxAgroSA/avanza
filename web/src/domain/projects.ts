@@ -41,6 +41,15 @@ export interface UserSummary {
   avatarUrl: string | null
 }
 
+/** Referência curta a outro projeto (projeto pai). */
+export interface ProjectRef {
+  id: string
+  key: string
+  name: string
+  icon: ProjectIcon
+  cover: ProjectCover
+}
+
 export interface Project {
   id: string
   name: string
@@ -54,6 +63,10 @@ export interface Project {
   urgency: TaskUrgency | null
   /** Área responsável; null = sem área. */
   area: AreaRef | null
+  /** Projeto pai (§25); null = projeto sem pai. */
+  parent: ProjectRef | null
+  /** Quantidade de subprojetos. */
+  childCount: number
   owner: UserSummary | null
   startDate: Date | null
   dueDate: Date | null
@@ -110,4 +123,16 @@ export function isOverdue(project: Pick<Project, 'dueDate' | 'status'>, now: Dat
   const endOfDue = new Date(project.dueDate.getTime())
   endOfDue.setUTCHours(23, 59, 59, 999)
   return endOfDue.getTime() < now.getTime()
+}
+
+/**
+ * Projeto pai, um só nível (§25; o backend valida): quem tem subprojetos não pode ter pai, e o pai
+ * precisa ser um projeto ativo, sem pai, que a pessoa pode editar (e não o próprio projeto).
+ */
+export function canHaveParent(project: Project | null | undefined): boolean {
+  return !project || project.childCount === 0
+}
+
+export function parentCandidates(all: Project[], project: Project | null | undefined): Project[] {
+  return all.filter((p) => !p.parent && !p.archivedAt && p.capabilities.edit && p.id !== project?.id)
 }

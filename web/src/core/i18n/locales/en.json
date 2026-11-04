@@ -111,7 +111,7 @@
     "project_required": "Choose the project",
     "invalid_content": "Invalid content",
     "follows_parent": "A subtask stays in its parent task’s group",
-    "self": "Cannot be itself",
+    "self": "A project cannot be its own parent",
     "duplicate": "Already exists",
     "upload_too_large": "Upload up to 50 MB at a time",
     "needs_mixed_case": "Use upper and lower case letters",
@@ -123,7 +123,10 @@
     "blocked_host": "This address is not allowed (cloud metadata or the machine itself)",
     "not_in_project": "The task must belong to this project",
     "invalid_link": "Link only features or results from this project",
-    "in_future": "The date can’t be in the future"
+    "in_future": "The date can’t be in the future",
+    "parent_is_child": "That project is already a subproject; choose a main project",
+    "has_children": "A project with subprojects cannot have a parent",
+    "parent_archived": "The parent project is archived"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -772,7 +775,8 @@
       "frequency": "Frequency",
       "value": "Value",
       "measured_at": "Measurement date",
-      "urgency": "Urgency"
+      "urgency": "Urgency",
+      "parent_project": "Parent project"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -1179,7 +1183,20 @@
       }
     },
     "urgencyChange": "Change urgency of {{name}} (now: {{urgency}})",
-    "urgencySaved": "{{name}}: urgency {{urgency}}."
+    "urgencySaved": "{{name}}: urgency {{urgency}}.",
+    "parent": {
+      "field": "Parent project",
+      "none": "None (main project)",
+      "hint": "Link this project to a larger project it belongs to.",
+      "lockedHint_one": "This project has {{count}} subproject, so it cannot have a parent.",
+      "lockedHint_other": "This project has {{count}} subprojects, so it cannot have a parent.",
+      "of": "Part of {{name}}",
+      "children_one": "{{count}} subproject",
+      "children_other": "{{count}} subprojects",
+      "childrenTitle": "Subprojects",
+      "emptyDescription": "Smaller projects that are part of this one. Create the first one to follow everything from here.",
+      "add": "New subproject"
+    }
   },
   "calendar": {
     "open": "Open calendar",

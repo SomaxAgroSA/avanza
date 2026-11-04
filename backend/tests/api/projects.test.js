@@ -150,4 +150,16 @@ describe('API /api/v1/projects', { timeout: 120000 }, () => {
     const dates = await admin.post('/projects', { name: 'Datas', key: 'DT', start_date: '2026-05-01', due_date: '2026-04-01' })
     assert.equal(dates.body.error.details.fields.due_date, 'due_before_start')
   })
+
+  it('projeto pai: cria o subprojeto, filtra pelos filhos e recusa o segundo nível', async () => {
+    const parent = (await admin.post('/projects', { name: 'Programa CRM', key: 'PCRM' })).body.data
+    const child = await admin.post('/projects', { name: 'Força de Vendas', key: 'PFVB', parent_id: parent.id })
+    assert.equal(child.status, 201)
+    assert.equal(child.body.data.parent.key, 'PCRM')
+    assert.equal((await admin.get(`/projects/${parent.id}`)).body.data.child_count, 1)
+    assert.deepEqual((await admin.get(`/projects?parent_id=${parent.id}`)).body.data.map((p) => p.key), ['PFVB'])
+    const nested = await admin.post('/projects', { name: 'Neto', key: 'PNETO', parent_id: child.body.data.id })
+    assert.equal(nested.body.error.details.fields.parent_id, 'parent_is_child')
+    assert.equal((await admin.patch(`/projects/${child.body.data.id}`, { parent_id: null })).body.data.parent, null)
+  })
 })

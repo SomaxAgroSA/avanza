@@ -202,6 +202,8 @@ export interface ProjectData {
   urgency: TaskUrgency | null
   /** Área responsável (null limpa). */
   areaId?: string | null
+  /** Projeto pai (null solta). */
+  parentId?: string | null
   startDate: string | null
   dueDate: string | null
 }

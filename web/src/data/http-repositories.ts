@@ -381,7 +381,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -407,6 +407,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           priority: query.filters.priority,
           urgency: query.filters.urgency,
           area_id: query.filters.area,
+          parent_id: query.filters.parent,
           owner_id: query.filters.owner_id,
         },
       })

@@ -80,6 +80,8 @@ export interface ProjectDto {
   priority: string
   urgency?: string | null
   area?: { id: string; key: string; name: string; color: string } | null
+  parent?: { id: string; key: string; name: string; icon: string; cover: string } | null
+  child_count?: number
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null

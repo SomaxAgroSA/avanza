@@ -111,7 +111,7 @@
     "project_required": "Escolha o projeto",
     "invalid_content": "Conteúdo inválido",
     "follows_parent": "A subtarefa fica no grupo da tarefa pai",
-    "self": "Não pode ser ele mesmo",
+    "self": "O projeto não pode ser pai de si mesmo",
     "duplicate": "Já existe",
     "upload_too_large": "Envie até 50 MB de uma vez",
     "needs_mixed_case": "Use letras maiúsculas e minúsculas",
@@ -123,7 +123,10 @@
     "blocked_host": "Este endereço não é permitido (metadados da nuvem ou a própria máquina)",
     "not_in_project": "A tarefa precisa ser deste projeto",
     "invalid_link": "Vincule só funcionalidades ou resultados deste projeto",
-    "in_future": "A data não pode ser futura"
+    "in_future": "A data não pode ser futura",
+    "parent_is_child": "Esse projeto já é um subprojeto; escolha um projeto principal",
+    "has_children": "Um projeto com subprojetos não pode ter pai",
+    "parent_archived": "O projeto pai está arquivado"
   },
   "errors": {
     "VALIDATION_ERROR": "Verifique os campos destacados.",
@@ -772,7 +775,8 @@
       "frequency": "Frequência",
       "value": "Valor",
       "measured_at": "Data da medição",
-      "urgency": "Urgência"
+      "urgency": "Urgência",
+      "parent_project": "Projeto pai"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -1179,7 +1183,20 @@
       }
     },
     "urgencyChange": "Mudar urgência de {{name}} (agora: {{urgency}})",
-    "urgencySaved": "{{name}}: urgência {{urgency}}."
+    "urgencySaved": "{{name}}: urgência {{urgency}}.",
+    "parent": {
+      "field": "Projeto pai",
+      "none": "Nenhum (projeto principal)",
+      "hint": "Ligue este projeto a um projeto maior do qual ele faz parte.",
+      "lockedHint_one": "Este projeto tem {{count}} subprojeto, por isso não pode ter um pai.",
+      "lockedHint_other": "Este projeto tem {{count}} subprojetos, por isso não pode ter um pai.",
+      "of": "Faz parte de {{name}}",
+      "children_one": "{{count}} subprojeto",
+      "children_other": "{{count}} subprojetos",
+      "childrenTitle": "Subprojetos",
+      "emptyDescription": "Projetos menores que fazem parte deste. Crie o primeiro para acompanhar tudo daqui.",
+      "add": "Novo subprojeto"
+    }
   },
   "calendar": {
     "open": "Abrir calendário",

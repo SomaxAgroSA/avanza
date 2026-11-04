@@ -595,3 +595,14 @@ Papel de membro do projeto (`it`, "Responsável TI"), escolhido em Membros ou no
 - **Nas tarefas dele** age como colaborador: muda status, comenta, anexa e preenche campos. Não exclui, não reatribui e não cria tarefas no projeto (`FORBIDDEN`).
 - Dono do projeto, gestor e quem tem permissão de ver todos os projetos nunca ficam limitados, mesmo com esse papel.
 - O menu lateral segue o perfil global da pessoa; para escondê-lo, use um perfil próprio no Controle de acesso.
+
+## 25. Projeto pai e subprojetos
+
+Um projeto pode **fazer parte de um projeto maior** (o projeto pai), por exemplo um programa que reúne vários projetos. A ligação se escolhe no formulário do projeto (campo **Projeto pai**) ou com **Novo subprojeto**, no Resumo do pai, que já cria o projeto ligado.
+
+- **Um só nível:** o pai não pode ter pai e um projeto com subprojetos não pode virar filho. Também não vale ligar o projeto a ele mesmo nem a um pai arquivado (`parent_id`: `self`, `parent_is_child`, `has_children`, `parent_archived`).
+- **Quem liga:** só a um pai que a pessoa pode editar (gestor do pai com `projects.edit`); senão, `invalid_option`.
+- **Onde aparece:** o subprojeto mostra o nome do pai acima do título (com link) e na lista de Projetos ("↳ pai"); o pai mostra o card **Subprojetos** no Resumo, com estado e entrega de cada um, e a quantidade na lista.
+- **Independência:** cada projeto continua com seus membros, tarefas, ficha e permissões; ser membro do pai **não** dá acesso aos subprojetos.
+- **Arquivar ou excluir:** arquivar o pai não mexe nos filhos; excluir o pai solta os subprojetos (ficam sem pai).
+- **Histórico:** criação e troca de pai ficam em `project.created`/`project.updated` com o nome do projeto pai.

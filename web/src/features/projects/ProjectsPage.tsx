@@ -95,7 +95,16 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
               <Link to={`/projects/${project.id}`} className="block truncate font-medium text-fg hover:text-primary hover:underline">
                 {project.name}
               </Link>
-              <p className="font-mono text-xs text-muted">{project.key}</p>
+              <p className="truncate text-xs text-muted">
+                <span className="font-mono">{project.key}</span>
+                {project.parent && (
+                  <span title={t('projects.parent.of', { name: project.parent.name })}>
+                    {' · ↳ '}
+                    {project.parent.name}
+                  </span>
+                )}
+                {project.childCount > 0 && <span>{' · '}{t('projects.parent.children', { count: project.childCount })}</span>}
+              </p>
             </div>
           </div>
         ),

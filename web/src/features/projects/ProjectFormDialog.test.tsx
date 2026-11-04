@@ -67,6 +67,7 @@ describe('ProjectFormDialog', () => {
         priority: 'medium',
         urgency: null,
         areaId: null,
+        parentId: null,
         startDate: null,
         dueDate: null,
       }),
