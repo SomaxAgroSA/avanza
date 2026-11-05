@@ -246,7 +246,7 @@ describe('application/projects — projeto pai (§25)', () => {
     const { deps, projects, ctx } = setup()
     const crm = projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
     const fvb = projects.createProject(ctx.manager, input({ name: 'Força de Vendas Brasil', key: 'FVB', parent_id: crm.id }))
-    assert.deepEqual(fvb.parent, { id: crm.id, key: 'CRM', name: 'Portal CRM', icon: 'folder', cover: 'green' })
+    assert.deepEqual(fvb.parent, { id: crm.id, key: 'CRM', name: 'Portal CRM', icon: crm.icon, cover: crm.cover })
     assert.equal(fvb.child_count, 0)
     assert.equal(projects.getProject(ctx.manager, crm.id).child_count, 1)
     assert.equal(deps.store.audit.at(-1).newValue.parent_project, 'Portal CRM')
