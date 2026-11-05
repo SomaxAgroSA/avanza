@@ -148,7 +148,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
-      size="xl"
+      size="2xl"
       closeOnOutsideClick={false}
       title={isEdit ? t('projects.editTitle') : t('projects.createTitle')}
       description={isEdit ? `${project?.key} · ${project?.name}` : t('projects.createDescription')}
