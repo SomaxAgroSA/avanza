@@ -17,9 +17,16 @@ const browser = await launchBrowser()
 try {
   const demo = await seedDemo(app.admin)
   const p = demo.project.id
+  // nome da plataforma como na instalação da Somax (Configurações → Geral)
+  const named = await app.admin.patch('/settings/platform', { platform_name: 'Avanza' })
+  if (named.status >= 300) throw new Error(`nome da plataforma: ${named.status}`)
   fs.mkdirSync(OUT, { recursive: true })
 
   const shots = [
+    ['projeto-resumo', `/projects/${p}`, 'light'],
+    ['projeto-ficha', `/projects/${p}?tab=charter`, 'light'],
+    ['projeto-informe', `/projects/${p}?tab=report`, 'light'],
+    ['controle-acesso', '/settings/access?tab=matrix', 'light'],
     ['gestao-quadro', `/project-management/${p}`, 'light'],
     ['gestao-cronograma', `/project-management/${p}?view=timeline`, 'light'],
     ['gestao-relatorios', `/project-management/${p}?view=reports`, 'light'],

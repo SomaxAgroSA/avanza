@@ -1,124 +1,146 @@
-<p align="center"><img src="web/public/brand/logo-light.png" width="112" alt="" /></p>
+<h1 align="center">Avanza</h1>
 
-<h1 align="center">BLYD</h1>
+<p align="center"><strong>Plataforma de gestão de projetos da Somax Agro.</strong><br />Projetos, tarefas, Kanban, gestão no estilo Monday e documentação num só lugar.</p>
 
-<p align="center"><strong>Sincronize projetos, tarefas e equipes.</strong></p>
+O Avanza é a instalação da Somax do [BLYD Sync](#origem-e-licença). Os pacotes, as variáveis de ambiente e os identificadores técnicos continuam com o nome `kamban`. O nome e o logo que aparecem na tela são configurados em **Configurações → Geral**.
 
-**Plataforma open source para o time trabalhar e para o projeto ser gerido no mesmo lugar.** Tarefas, Kanban e sprints para o dia a dia; um quadro de gestão no estilo Monday (fases, cronograma com linha de base e saúde do projeto) para quem coordena; documentação no estilo Confluence para registrar o que se aprende. Um único binário, sem serviços externos, em português, inglês e espanhol.
+[English](README.en.md) · [Changelog](CHANGELOG.md) · [Implantação](docs/deployment.md) · [Regras de negócio](docs/regras-de-negocio.md)
 
-[English](README.en.md) · [Licença Apache-2.0](LICENSE) · [Changelog](CHANGELOG.md) · [Como contribuir](CONTRIBUTING.md)
-
-![Quadro da Gestão de projetos](docs/images/gestao-quadro.png)
+![Resumo do projeto com subprojetos](docs/images/projeto-resumo.png)
 
 ## Dois modelos de trabalho, lado a lado
 
 | | **Tarefas** (o time) | **Gestão de projetos** (quem coordena) |
 |---|---|---|
 | Para quê | Executar: o que fazer, quem faz, em que status está | Planejar e acompanhar: fases, entregas, prazos, riscos |
-| Onde fica | Menus **Tarefas**, **Kanban**, **Planejamento** e **Timeline** | Menu **Gestão de projetos** |
+| Onde fica | Aba **Tarefas** do projeto e menus **Tarefas**, **Kanban**, **Planejamento** e **Timeline** | Menu **Gestão de projetos** |
 | Unidade | Tarefa com tipo, campos personalizados e fluxo de status | Elemento (e subelementos) dentro de grupos numerados (1.0, 2.1…) |
 | Regras | Transições permitidas, campos obrigatórios por status, limite WIP | Etiquetas livres de status e recurso por projeto, dependências com regra configurável |
 
 Os dois ficam no mesmo **projeto** (mesmos membros e permissões), mas não se misturam: mover uma tarefa não mexe no cronograma da gestão, e vice-versa.
 
-## O que já tem
+## O que tem
+
+**O projeto**
+- Abas **Resumo, Ficha, Tarefas, Membros, Histórico, Configurações e Informe**, mostradas conforme o perfil de cada pessoa.
+- **Projeto pai e subprojetos** (um só nível): o campo "Projeto pai" no formulário liga o projeto a um programa maior, e o pai mostra o card **Subprojetos**. Para desvincular, escolha "Nenhum (projeto principal)".
+- **Ficha:** objetivo geral, objetivos, funcionalidades ligadas às tarefas (o avanço é calculado sozinho), escopo (inclui / não inclui) e resultados com meta e medições. Pode ser impressa em A4.
+- **Informe** em PDF com capa, indicadores, cronograma, avanço por fase, linha do tempo e próximos passos. Na aba Tarefas se escolhe o que entra.
+- **Histórico** como linha do tempo do diário, dos marcos e das tarefas, com a auditoria logo abaixo.
+- **Área responsável** e **urgência** (🔴 🟡 🟢) em projetos, tarefas e Kanban, com coluna, filtro e troca com um clique.
 
 **Tarefas e fluxo**
-- Tipos de tarefa com formulário próprio e **17 tipos de campo** personalizado (texto, número, data, seleção, pessoa, URL…); tipos traduzidos.
-- Fluxo de status configurável, **transições permitidas**, **campos obrigatórios por status** (pede o preenchimento ao mover) e **limite WIP** por coluna.
-- Kanban com arrastar, raias e criação rápida; Planejamento com **sprints** e backlog; Timeline das tarefas com marcos.
-- Comentários com **@menções** e **imagens coladas** (Ctrl+V), anexos com verificação do tipo real do arquivo, checklist, tags, relacionamentos (bloqueia, depende, duplica), subtarefas, fork e notificações.
+- Tipos de tarefa com formulário próprio e **17 tipos de campo** personalizado.
+- Fluxo de status configurável, **transições permitidas**, **campos obrigatórios por status** e **limite WIP** por coluna.
+- Kanban com arrastar e raias; Planejamento com **sprints** e backlog; Timeline com marcos.
+- Comentários com **@menções** e imagens coladas, anexos, checklist, tags, relacionamentos, subtarefas e notificações.
 
 **Gestão de projetos**
-- Quadro com grupos e subgrupos numerados, elementos e subelementos, edição direto na célula, arrastar, seleção em massa, filtros, agrupar e importar CSV.
-- **Colunas personalizadas** (texto, número com soma no rodapé, data, caixa, lista, pessoa, link) com troca de tipo e prévia do que se perde.
-- Painel do elemento com atualizações, @menções, imagens coladas e histórico.
-- Visões **Cronograma** (Gantt com dependências, **linha de base** e exportação), **Kanban**, **Gestão** (diário de bordo e registro de problemas) e **Relatórios** com a **saúde do projeto** (prazos, progresso, parados, esforço, problemas).
+- Quadro com grupos numerados, elementos e subelementos, edição na célula, seleção em massa, filtros e importação de CSV.
+- **Colunas personalizadas**, painel do elemento com atualizações e histórico.
+- Visões **Cronograma** (Gantt com dependências e **linha de base**), **Kanban**, **Gestão** (diário de bordo e problemas) e **Relatórios** com a **saúde do projeto**.
 
 **Documentação**
-- Espaços e páginas com editor rico (tabelas, avisos, imagens coladas), rascunho automático, versões com restauração, árvore de páginas e busca.
+- Espaços e páginas com editor rico, versões com restauração, árvore de páginas e busca.
 
-**Plataforma**
-- **RBAC configurável** (perfis e matriz de permissões, com regras contra escalonamento) e papéis por projeto (gestor, membro, leitor).
-- **Auditoria** consultável de toda mutação relevante; histórico em cada tarefa, elemento e projeto.
-- **Relatórios** com indicadores clicáveis; dashboard pessoal.
-- Sessão segura (cookie HttpOnly, proteção CSRF, CSP, bloqueio progressivo de login, sessões ativas).
-- **API REST documentada** (`/api/v1`, OpenAPI) — a mesma que a interface usa —, com **tokens de API** pessoais (`Authorization: Bearer`) para scripts e integrações.
-- **Configurador geral:** nome, logo e ícone da plataforma, política de senha, bloqueio de login e retenção do histórico.
-- **E-mail:** "Esqueci minha senha", convite de usuário e notificações por e-mail (SMTP com fila e novas tentativas).
-- **Tempo real:** quadros, tarefas e notificações se atualizam sozinhos quando alguém muda algo.
-- **Webhooks** assinados (HMAC) para avisar outros sistemas a cada evento, com novas tentativas e histórico de entregas.
-- Tema claro e escuro, celular e desktop, acessibilidade verificada (axe) em todas as telas, command palette (Ctrl/⌘+K).
+**Acesso e segurança**
+- **Controle de acesso** numa só tela, com as abas **Por pessoa**, **Perfis** e **Permissões por perfil**. Para cada perfil se escolhe também **o que ele vê dentro de cada projeto** (Ficha, Tarefas, Kanban, Gestão de projetos, Histórico, Membros e Informe).
+- Papéis por projeto: gestor, membro, leitor e **Responsável TI**. O Responsável TI vê só o resumo do projeto ("O que precisamos da TI") e as tarefas atribuídas a ele ou marcadas com o botão **Visível para TI** 💻 na aba Tarefas. Se o perfil dele tiver Ficha, também vê a ficha, só para leitura.
+- Auditoria de toda mudança relevante, sessão segura (cookie HttpOnly, CSRF, CSP) e bloqueio de login.
+
+**Integrações**
+- **API REST** documentada (`/api/v1`, OpenAPI em `/api/v1/openapi.json`) com **tokens de API** pessoais.
+- **E-mail** ("Esqueci minha senha", convites e notificações), **webhooks** assinados e **tempo real** (as telas se atualizam sozinhas).
+- Em português, espanhol e inglês; tema claro e escuro; celular e desktop.
 
 <table>
   <tr>
-    <td><img src="docs/images/gestao-cronograma.png" alt="Cronograma com linha de base" /></td>
-    <td><img src="docs/images/gestao-relatorios.png" alt="Saúde do projeto" /></td>
+    <td><img src="docs/images/projeto-ficha.png" alt="Ficha do projeto" /></td>
+    <td><img src="docs/images/projeto-informe.png" alt="Informe do projeto em PDF" /></td>
   </tr>
   <tr>
+    <td><img src="docs/images/controle-acesso.png" alt="Controle de acesso com as seções do projeto" /></td>
+    <td><img src="docs/images/gestao-quadro.png" alt="Quadro da Gestão de projetos" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/gestao-cronograma.png" alt="Cronograma com linha de base" /></td>
     <td><img src="docs/images/kanban.png" alt="Kanban das tarefas" /></td>
-    <td><img src="docs/images/documentacao.png" alt="Documentação" /></td>
   </tr>
 </table>
 
-## Experimente em 2 minutos (Docker)
+## Instalação
+
+**Com Docker** (não precisa de Node no servidor):
 
 ```bash
-git clone <url-do-repositório> kamban && cd kamban
 cp .env.docker.example .env      # defina KAMBAN_ADMIN_EMAIL e KAMBAN_ADMIN_PASSWORD
 docker compose up -d
 ```
 
-Abra http://localhost:8090 e entre com o e-mail e a senha do `.env`. Os dados ficam no volume `kamban_data`. Produção (HTTPS, backup, atualização): [docs/deployment.md](docs/deployment.md).
+Abra http://localhost:8090 e entre com o e-mail e a senha do `.env`. Os dados ficam no volume `kamban_data`.
 
-**Dados de demonstração:** com o servidor no ar, `npm run demo` (no repositório, com `backend/.env` apontando para o servidor) cria o projeto **DEMO** — tarefas, sprint, quadro de gestão completo, colunas personalizadas, diário, problemas, linha de base e um espaço de documentação — e duas pessoas de exemplo (`carla.demo@blydsync.local` e `rafael.demo@blydsync.local`, senha `DemoBlydSync2026` ou a de `KAMBAN_DEMO_PASSWORD`). Rodar de novo não duplica nada.
+**Sem Docker:** você precisa de Node.js 22 ou mais novo.
+
+```bash
+cd backend && npm ci && npm run setup && cd ..   # dependências + binário do PocketBase 0.40.4
+cd web && npm ci && cd ..
+cp backend/.env.example backend/.env             # defina KAMBAN_ADMIN_EMAIL / KAMBAN_ADMIN_PASSWORD
+npm --prefix backend run create-admin            # cria o super administrador
+npm run build                                    # compila o web em backend/pb_public
+```
+
+Depois suba o PocketBase com os parâmetros de produção de [docs/deployment.md](docs/deployment.md#produção): `--hooksPool=60`, HTTPS na frente e a pasta de dados.
+
+Por último, em **Configurações → Geral**, defina o nome "Avanza", o logo e o ícone.
+
+## Atualizar para uma versão nova
+
+1. Leia o [CHANGELOG](CHANGELOG.md).
+2. **Faça backup:** pelo painel `/_/` → Settings → Backups, ou parando o serviço e copiando a pasta `pb_data` inteira.
+3. Docker: `git pull && docker compose up -d --build`. Sem Docker: `git pull`, `npm ci` em `backend/` e `web/`, `npm run build` e reinicie o serviço.
+4. **As migrations rodam sozinhas ao subir.** Confira os logs e o `GET /api/v1/health` (200).
+
+> ⚠️ O servidor avanza.local tem funções que ainda não estão neste repositório (Arquivos, Homologação). Ao atualizar, integre o código novo **sem sobrescrever** essas funções.
+
+**Depois da versão com Responsável TI e projeto pai** (migrations `1790000036` a `1790000039`):
+- Os perfis que já viam projetos continuam vendo todas as seções.
+- Para restringir um perfil: **Controle de acesso → Perfis**.
+- Para dar o papel **Responsável TI** a alguém: **Membros** do projeto.
+- Para mostrar uma tarefa à TI: botão 💻 na aba **Tarefas**.
 
 ## Desenvolvimento
 
-Requisitos: Node.js 22 ou mais novo.
-
 ```bash
-cd backend && npm install && npm run setup && cd ..   # dependências + binário do PocketBase
+cd backend && npm install && npm run setup && cd ..
 cd web && npm install && cd ..
-cp backend/.env.example backend/.env                  # defina KAMBAN_ADMIN_EMAIL / KAMBAN_ADMIN_PASSWORD
-npm --prefix backend run create-admin                 # cria o super administrador
-npm run dev                                           # API :8090 + web :5173
+cp backend/.env.example backend/.env
+npm --prefix backend run create-admin
+npm run dev                                      # API :8090 + web :5173
 ```
-
-Abra http://localhost:5173.
 
 | Comando (raiz) | O que faz |
 |---|---|
 | `npm run dev` | API e web juntos, com recarga do web |
 | `npm run check` | lint, tipos e todos os testes (unitários, componentes e API num PocketBase isolado) |
-| `npm run e2e` | build + testes de ponta a ponta no navegador (Edge ou Chrome), com acessibilidade e responsividade |
+| `npm run e2e` | build + testes de ponta a ponta no navegador (Edge ou Chrome) |
 | `npm run build` | build do web em `backend/pb_public` (servido pelo PocketBase) |
-| `npm run demo` | dados de demonstração no servidor do `backend/.env` |
-| `npm run screenshots` | regera as imagens deste README a partir dos dados de demonstração |
+| `npm run demo` | projeto **DEMO** de exemplo no servidor do `backend/.env` (com ficha e subprojeto) |
+| `npm run screenshots` | regera as imagens deste README a partir do projeto DEMO |
 
-**Stack:** React 19 + TypeScript + Vite, TanStack Query/Table, Radix UI, Tailwind 4 e i18next no web; [PocketBase](https://pocketbase.io) 0.40 (Go + SQLite) com hooks em JavaScript no backend, organizados em Clean Architecture (domínio puro testado com `node --test`). Detalhes em [docs/architecture.md](docs/architecture.md).
-
-## Evoluções futuras
-
-- **Login corporativo (SSO):** OAuth/OIDC (Microsoft, Google) e, depois, LDAP.
-
-Ideias e prioridades são discutidas nas issues — veja [CONTRIBUTING.md](CONTRIBUTING.md).
+**Stack:** React 19 + TypeScript + Vite, TanStack Query/Table, Radix UI, Tailwind 4 e i18next no web. No backend, [PocketBase](https://pocketbase.io) 0.40 (Go + SQLite) com hooks em JavaScript, organizados em Clean Architecture. Detalhes em [docs/architecture.md](docs/architecture.md).
 
 ## Documentação
 
 | | |
 |---|---|
-| [Arquitetura](docs/architecture.md) | camadas, dependências, fluxo de requisição, estado |
-| [Regras de negócio](docs/regras-de-negocio.md) | status, transições, WIP, obrigatórios, Kanban, backlog, gestão |
-| [API](docs/api.md) | convenções, envelope, erros, endpoints (OpenAPI em `/api/v1/openapi.json`) |
-| [Banco de dados](docs/database.md) | collections, índices, auditoria |
-| [Segurança](docs/security.md) | sessão, CSRF, CSP, RBAC, rate limit |
-| [Permissões](docs/permissions.md) | catálogo, matriz, regras anti-escalonamento |
-| [Design System](docs/design-system.md) | tokens, componentes, DataTable |
-| [Testes](docs/testing.md) | estratégia e comandos |
+| [Regras de negócio](docs/regras-de-negocio.md) | status, transições, Kanban, ficha, informe, áreas, projeto pai, Responsável TI e controle de acesso |
+| [Arquitetura](docs/architecture.md) | camadas, dependências e fluxo de requisição |
+| [API](docs/api.md) | convenções, erros e endpoints |
+| [Banco de dados](docs/database.md) | collections, índices e auditoria |
+| [Segurança](docs/security.md) e [Permissões](docs/permissions.md) | sessão, RBAC, catálogo de permissões |
 | [Implantação](docs/deployment.md) | Docker, produção, backup e atualização |
-| [Decisões](docs/decisions.md) | ADRs |
+| [Testes](docs/testing.md) · [Design System](docs/design-system.md) · [Decisões](docs/decisions.md) | |
 
-## Licença
+## Origem e licença
 
-[Apache License 2.0](LICENSE) — use, modifique e distribua, inclusive comercialmente, mantendo os avisos de licença e o [NOTICE](NOTICE). Vulnerabilidades: siga a [política de segurança](SECURITY.md), sem issue pública.
+O Avanza é baseado no BLYD Sync, open source sob a [Apache License 2.0](LICENSE). Mantenha os avisos de licença e o [NOTICE](NOTICE). Vulnerabilidades: siga a [política de segurança](SECURITY.md).

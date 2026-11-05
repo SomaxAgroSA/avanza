@@ -2,7 +2,8 @@
  * Dados de demonstração (open source: avaliar a plataforma sem cadastrar tudo à mão). Tudo pela API
  * `/api/v1` — as mesmas validações da tela. Cria duas pessoas de exemplo, o projeto DEMO (tarefas,
  * sprint, comentários e relação), o quadro da Gestão de projetos (fases, elementos, subelementos,
- * recursos, colunas personalizadas, diário, problemas e linha de base) e um espaço de documentação.
+ * recursos, colunas personalizadas, diário, problemas e linha de base), a ficha do projeto, um
+ * subprojeto e um espaço de documentação.
  * Não mexe no que já existe: se o projeto DEMO já estiver lá, não faz nada.
  *
  * `api`: { get, post, patch, put } → Promise<{ status, body }> (o cliente do teste ou o do comando).
@@ -66,7 +67,7 @@ async function seedDemo(api, options) {
   const task = async (title, extra) => ok(await api.post('/tasks', Object.assign({ project_id: p, task_type_id: type, title }, extra)), `tarefa ${title}`)
   const t1 = await task('Levantar requisitos do módulo fiscal', { assignee_id: carla.id, due_date: day(-3), sprint_id: sprint.id, status_id: statusId('CONCLUIDO', 'done'), estimated_hours: 8 })
   const t2 = await task('Configurar plano de contas', { assignee_id: rafael.id, start_date: day(-2), due_date: day(4), sprint_id: sprint.id, status_id: statusId('DESENVOLVIMENTO', 'in_progress'), estimated_hours: 12 })
-  await task('Migrar cadastro de clientes', { assignee_id: rafael.id, due_date: day(10), status_id: statusId('PRIORIZADO', 'todo'), estimated_hours: 16 })
+  const t3 = await task('Migrar cadastro de clientes', { assignee_id: rafael.id, due_date: day(10), status_id: statusId('PRIORIZADO', 'todo'), estimated_hours: 16 })
   await task('Treinar a equipe financeira', { assignee_id: carla.id, due_date: day(25), estimated_hours: 6 })
   await task('Validar relatórios gerenciais', { due_date: day(30) })
   ok(await api.post(`/tasks/${t1.id}/relations`, { type: 'blocks', target_id: t2.id }), 'relação')
@@ -107,6 +108,21 @@ async function seedDemo(api, options) {
   ok(await api.post(`/projects/${p}/plan/issues`, { opened_on: day(-2), description: 'Definir o responsável pela validação dos relatórios.' }), 'problema')
   ok(await api.put(`/projects/${p}/plan/baseline`, {}), 'linha de base')
   ok(await api.post(`/plan/items/${cronograma.id}/updates`, { content: `Primeira versão do cronograma pronta, @[Rafael Lima](${rafael.id}) confira as datas da parametrização.` }), 'atualização')
+
+  // ficha do projeto: objetivo, funcionalidades ligadas às tarefas, escopo e um resultado medido
+  ok(await api.put(`/projects/${p}/charter`, { objective: 'Substituir o sistema legado pelo ERP até o fim do semestre, com o fiscal e o financeiro rodando no novo sistema.' }), 'objetivo geral')
+  const charter = async (body) => ok(await api.post(`/projects/${p}/charter/items`, body), `ficha ${body.title}`)
+  await charter({ kind: 'objective', title: 'Fechar o mês contábil no ERP' })
+  await charter({ kind: 'objective', title: 'Eliminar as planilhas paralelas do financeiro' })
+  await charter({ kind: 'feature', title: 'Módulo fiscal', task_ids: [t1.id] })
+  await charter({ kind: 'feature', title: 'Plano de contas e cadastros', task_ids: [t2.id, t3.id] })
+  await charter({ kind: 'scope_in', title: 'Fiscal, financeiro e contabilidade' })
+  await charter({ kind: 'scope_out', title: 'Folha de pagamento' })
+  const resultado = await charter({ kind: 'result', title: 'Notas fiscais emitidas no ERP', unit: '%', baseline: 0, target: 100, owner_id: carla.id, start_date: day(-20), due_date: day(60), frequency: 'weekly' })
+  ok(await api.post(`/charter-items/${resultado.id}/measurements`, { value: 35, measured_at: day(-1) }), 'medição')
+
+  // subprojeto (um só nível): aparece no card "Subprojetos" do Resumo do projeto
+  ok(await api.post('/projects', { name: 'Treinamento dos usuários (demonstração)', key: 'DEMOT', parent_id: p, start_date: day(20), due_date: day(50) }), 'subprojeto')
 
   // documentação
   const space = ok(await api.post('/docs/spaces', { key: DEMO_KEY, name: 'Manual do ERP (demonstração)', description: 'Guias de uso do projeto de exemplo.', visibility: 'company' }), 'espaço')
