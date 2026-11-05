@@ -67,7 +67,7 @@ function createCharterService(deps) {
     const project = projectId ? deps.projectRepository.findById(projectId) : null
     if (!project) throw appError('PROJECT_NOT_FOUND')
     const access = accessOf(ctx, project)
-    projectDomain.assertAccess(access, project, 'view')
+    projectDomain.assertAccess(access, project, 'charter')
     return { project, access }
   }
 
@@ -77,11 +77,33 @@ function createCharterService(deps) {
     const project = item ? deps.projectRepository.findById(item.projectId) : null
     if (!item || !project) throw appError('CHARTER_ITEM_NOT_FOUND')
     const access = accessOf(ctx, project)
-    if (!access.canView) throw appError('CHARTER_ITEM_NOT_FOUND')
+    if (!access.canView && !access.limited) throw appError('CHARTER_ITEM_NOT_FOUND')
+    projectDomain.assertAccess(access, project, 'charter')
     return { item, project, access }
   }
 
   const today = () => dayOf(deps.clock.now())
+
+  /**
+   * Resumo do projeto para quem só precisa saber o que se espera dele (Responsável TI, regras §24):
+   * objetivo geral, as tarefas atribuídas à pessoa e os itens da ficha sob a responsabilidade dela.
+   */
+  function getBrief(ctx, projectId) {
+    rbac.assertAuthenticated(ctx.principal)
+    const project = projectId ? deps.projectRepository.findById(projectId) : null
+    if (!project) throw appError('PROJECT_NOT_FOUND')
+    projectDomain.assertAccess(accessOf(ctx, project), project, 'brief')
+    const record = deps.charterRepository.findByProject(project.id)
+    const me = ctx.principal.userId
+    // as tarefas atribuídas a quem pede e as marcadas "Visível para TI"
+    const mine = deps.taskRepository.listByProject(project.id, MAX_PROJECT_TASKS).filter((t) => t.assigneeId === me || t.itVisible)
+    const own = items.listByProject(project.id).filter((i) => i.ownerId === me && (i.kind === 'feature' || i.kind === 'result'))
+    return {
+      objective: record ? record.objective || '' : '',
+      tasks: rbac.can(ctx.principal, 'tasks.view') ? taskService.summarize(mine) : [],
+      items: own.map((i) => ({ id: i.id, kind: i.kind, title: i.title, description: i.description || '', unit: i.unit || '', target: i.kind === 'result' ? i.target : null, due_date: i.dueDate || null })),
+    }
+  }
 
   function audit(repos, ctx, project, action, oldValue, newValue) {
     repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'project', entityId: project.id, action, oldValue, newValue }))
@@ -392,7 +414,7 @@ function createCharterService(deps) {
     return findItem(ctx, item.id)
   }
 
-  return { getCharter, updateCharter, createItem, updateItem, deleteItem, reorderItems, listMeasurements, addMeasurement }
+  return { getBrief, getCharter, updateCharter, createItem, updateItem, deleteItem, reorderItems, listMeasurements, addMeasurement }
 }
 
 module.exports = { createCharterService }

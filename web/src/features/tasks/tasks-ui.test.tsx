@@ -102,7 +102,7 @@ const detail: TaskDetail = {
   attachmentCount: 0,
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
-  inReport: true,
+  inReport: true, itVisible: false,
     urgency: null,
     area: null,
   sprint: null,

@@ -398,6 +398,7 @@ function createFakeRepositories(store) {
       if (query.priority) items = items.filter((p) => p.priority === query.priority)
       if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
       if (query.areaId) items = items.filter((p) => (p.areaId || 'none') === query.areaId)
+      if (query.parentId) items = items.filter((p) => (p.parentId || 'none') === query.parentId)
       if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
       const sort = query.sort[0]
       if (sort) {
@@ -417,6 +418,16 @@ function createFakeRepositories(store) {
       store.projects = store.projects.filter((p) => p.id !== id)
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
+    countChildren: (ids) => {
+      const counts = {}
+      store.projects.filter((p) => p.parentId && ids.includes(p.parentId)).forEach((p) => {
+        counts[p.parentId] = (counts[p.parentId] || 0) + 1
+      })
+      return counts
+    },
+    clearParent: (parentId) => {
+      store.projects.filter((p) => p.parentId === parentId).forEach((p) => (p.parentId = null))
+    },
   }
 
   let taskClock = 0
@@ -506,7 +517,7 @@ function createFakeRepositories(store) {
     findManyByIds: (ids) => store.tasks.filter((t) => ids.includes(t.id)),
     listForReport: (query) =>
       store.tasks
-        .filter((t) => query.scope.viewAll || store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId))
+        .filter((t) => query.scope.viewAll || store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId && m.role !== 'it'))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
         .filter((t) => !query.assigneeId || (query.assigneeId === 'none' ? !t.assigneeId : t.assigneeId === query.assigneeId))
@@ -545,7 +556,8 @@ function createFakeRepositories(store) {
       store.tasks.filter((t) => t.dueDate && t.dueDate < query.before && t.assigneeId && query.statusIds.includes(t.statusId)),
     list: (query) => {
       const visible = (t) =>
-        query.scope.viewAll || store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId)
+        query.scope.viewAll ||
+        store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId && (m.role !== 'it' || t.assigneeId === query.scope.userId || !!t.itVisible))
       let items = store.tasks.filter(visible)
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
@@ -555,6 +567,7 @@ function createFakeRepositories(store) {
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
+      if (query.itVisible !== undefined) items = items.filter((t) => !!t.itVisible === query.itVisible)
       if (query.urgency) items = items.filter((t) => (t.urgency || 'none') === query.urgency)
       if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
       if (query.search) {

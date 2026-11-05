@@ -418,6 +418,7 @@ function createProjectRepository(app) {
       priority: record.getString('priority'),
       urgency: record.getString('urgency') || null,
       areaId: record.getString('area_id') || null,
+      parentId: record.getString('parent_id') || null,
       ownerId: record.getString('owner_id'),
       createdBy: record.getString('created_by'),
       startDate: toDate(record.getDateTime('start_date')),
@@ -438,6 +439,7 @@ function createProjectRepository(app) {
       else if (key === 'key') record.set('key', data.key)
       else if (key === 'urgency') record.set('urgency', data.urgency || '')
       else if (key === 'areaId') record.set('area_id', data.areaId || '')
+      else if (key === 'parentId') record.set('parent_id', data.parentId || '')
     })
   }
 
@@ -463,6 +465,7 @@ function createProjectRepository(app) {
       if (query.priority) exprs.push($dbx.hashExp({ priority: query.priority }))
       if (query.urgency) exprs.push($dbx.hashExp({ urgency: query.urgency === 'none' ? '' : query.urgency }))
       if (query.areaId) exprs.push($dbx.hashExp({ area_id: query.areaId === 'none' ? '' : query.areaId }))
+      if (query.parentId) exprs.push($dbx.hashExp({ parent_id: query.parentId === 'none' ? '' : query.parentId }))
       if (query.ownerId) exprs.push($dbx.hashExp({ owner_id: query.ownerId }))
 
       const select = app.recordQuery(COLLECTION)
@@ -496,6 +499,32 @@ function createProjectRepository(app) {
     findManyByIds(ids) {
       if (ids.length === 0) return []
       return app.findRecordsByIds(COLLECTION, ids).map(toEntity)
+    },
+
+    /** Quantidade de subprojetos (inclusive arquivados) por projeto pai. */
+    countChildren(ids) {
+      const counts = {}
+      if (ids.length === 0) return counts
+      const rows = arrayOf(new DynamicModel({ parent_id: '', total: 0 }))
+      app
+        .db()
+        .select('parent_id', 'COUNT(*) AS total')
+        .from(COLLECTION)
+        .where($dbx.in.apply(null, ['parent_id'].concat(ids)))
+        .groupBy('parent_id')
+        .all(rows)
+      rows.forEach((row) => {
+        counts[row.parent_id] = row.total
+      })
+      return counts
+    },
+
+    /** Solta os subprojetos de um pai (o pai vai ser excluído). */
+    clearParent(parentId) {
+      app.findRecordsByFilter(COLLECTION, 'parent_id = {:p}', '', 0, 0, { p: parentId }).forEach((record) => {
+        record.set('parent_id', '')
+        app.save(record)
+      })
     },
   }
 }
@@ -880,6 +909,7 @@ function createTaskRepository(app) {
       actualHours: number('actual_hours'),
       checklist: parseJsonField(record, 'checklist') || [],
       reportExcluded: record.getBool('report_excluded'),
+      itVisible: record.getBool('it_visible'),
       urgency: record.getString('urgency') || null,
       areaId: record.getString('area_id') || null,
       position: record.getFloat('position'),
@@ -912,6 +942,7 @@ function createTaskRepository(app) {
     actual_hours: -0,
     checklist: '',
     report_excluded: false,
+    it_visible: false,
     urgency: '',
     area_id: '',
     position: -0,
@@ -955,6 +986,7 @@ function createTaskRepository(app) {
       actualHours: hours(row.actual_hours),
       checklist,
       reportExcluded: !!row.report_excluded,
+      itVisible: !!row.it_visible,
       urgency: row.urgency || null,
       areaId: row.area_id || null,
       position: row.position,
@@ -991,6 +1023,7 @@ function createTaskRepository(app) {
       else if (NUMBERS[key]) record.set(NUMBERS[key], value === null ? 0 : value)
       else if (key === 'checklist') record.set('checklist', value || [])
       else if (key === 'reportExcluded') record.set('report_excluded', !!value)
+      else if (key === 'itVisible') record.set('it_visible', !!value)
       else if (key === 'urgency') record.set('urgency', value || '')
       else if (key === 'position') record.set('position', value)
     })
@@ -1114,7 +1147,7 @@ function createTaskRepository(app) {
     /** Linhas enxutas para relatórios (só as colunas usadas nos cálculos). */
     listForReport(query) {
       const exprs = []
-      if (!query.scope.viewAll) exprs.push($dbx.exp('project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})', { uid: query.scope.userId }))
+      if (!query.scope.viewAll) exprs.push($dbx.exp("project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid} AND role != 'it')", { uid: query.scope.userId }))
       if (!query.includeArchived) exprs.push($dbx.exp("project_id IN (SELECT id FROM projects WHERE archived_at = '' OR archived_at IS NULL)"))
       if (query.projectId) exprs.push($dbx.hashExp({ project_id: query.projectId }))
       if (query.assigneeId) exprs.push($dbx.hashExp({ assignee_id: query.assigneeId === 'none' ? '' : query.assigneeId }))
@@ -1187,7 +1220,12 @@ function createTaskRepository(app) {
     list(query) {
       const exprs = []
       if (!query.scope.viewAll) {
-        exprs.push($dbx.exp('tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})', { uid: query.scope.userId }))
+        exprs.push(
+          $dbx.exp(
+            "(tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid} AND role != 'it') OR ((tasks.assignee_id = {:uid} OR tasks.it_visible = 1) AND tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})))",
+            { uid: query.scope.userId },
+          ),
+        )
       }
       if (query.projectId) exprs.push($dbx.hashExp({ 'tasks.project_id': query.projectId }))
       if (query.typeId) exprs.push($dbx.hashExp({ 'tasks.task_type_id': query.typeId }))
@@ -1196,6 +1234,7 @@ function createTaskRepository(app) {
       if (query.tagId) exprs.push($dbx.exp('tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = {:tag})', { tag: query.tagId }))
       if (query.sprintId) exprs.push($dbx.hashExp({ 'tasks.sprint_id': query.sprintId === 'none' ? '' : query.sprintId }))
       if (query.inReport !== undefined) exprs.push($dbx.exp('tasks.report_excluded = {:excluded}', { excluded: query.inReport ? 0 : 1 }))
+      if (query.itVisible !== undefined) exprs.push($dbx.exp('tasks.it_visible = {:it}', { it: query.itVisible ? 1 : 0 }))
       if (query.urgency) exprs.push($dbx.hashExp({ 'tasks.urgency': query.urgency === 'none' ? '' : query.urgency }))
       if (query.areaId) exprs.push($dbx.hashExp({ 'tasks.area_id': query.areaId === 'none' ? '' : query.areaId }))
       if (query.statusIds) {

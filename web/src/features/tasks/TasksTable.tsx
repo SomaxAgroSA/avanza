@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, FileCheck2, FileX2 } from 'lucide-react'
+import { ExternalLink, FileCheck2, FileX2, Laptop } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { TASK_URGENCIES, isClosed, type TaskSummary } from '@/domain/tasks'
@@ -60,7 +60,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
   const table = useDataTableState(tableId, {
     sort: { id: 'updated_at', direction: 'desc' },
     filters: { category: OPEN },
-    columnVisibility: { category: false, tags: false, in_report: false },
+    columnVisibility: { category: false, tags: false, in_report: false, it_visible: false },
   })
   // busca vinda de fora (command palette): aplica uma vez e avisa para limpar o endereço
   const { setSearch } = table
@@ -77,7 +77,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
   const types = useTaskTypes(true)
   const tags = useTags()
   const projects = useProjects(PROJECT_QUERY, !projectId)
-  const { remove, setInReport } = useTaskMutations()
+  const { remove, setInReport, setItVisible } = useTaskMutations()
 
   const [viewing, setViewing] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -197,6 +197,16 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
       ...(projectId
         ? [
             {
+              id: 'it_visible',
+              header: t('tasks.fields.itVisible'),
+              size: 130,
+              cell: (task: TaskSummary) => <span className="text-muted">{task.itVisible ? t('audit.yes') : t('audit.no')}</span>,
+              filter: {
+                label: t('tasks.fields.itVisible'),
+                options: REPORT_OPTIONS.map((value) => ({ value, label: value === 'true' ? t('audit.yes') : t('audit.no') })),
+              },
+            } satisfies DataTableColumn<TaskSummary>,
+            {
               id: 'in_report',
               header: t('tasks.fields.inReport'),
               size: 130,
@@ -243,6 +253,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
           // só na aba Tarefas do projeto: escolher o que sai no informe (aba Informe)
           leading: projectId
             ? (task) => (
+                <>
                 <AppIconButton
                   size="sm"
                   label={task.inReport ? t('tasks.report.remove') : t('tasks.report.add')}
@@ -260,6 +271,24 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, primar
                     )
                   }
                 />
+                <AppIconButton
+                  size="sm"
+                  label={task.itVisible ? t('tasks.itVisible.remove') : t('tasks.itVisible.add')}
+                  aria-pressed={task.itVisible}
+                  icon={<Laptop />}
+                  className={task.itVisible ? 'text-primary hover:text-primary' : 'text-subtle'}
+                  disabled={!canEdit || (setItVisible.isPending && setItVisible.variables?.id === task.id)}
+                  onClick={() =>
+                    setItVisible.mutate(
+                      { id: task.id, itVisible: !task.itVisible },
+                      {
+                        onSuccess: (saved) => notify.success(t(saved.itVisible ? 'tasks.itVisible.added' : 'tasks.itVisible.removed', { code: saved.code })),
+                        onError: (error) => notify.error(errorMessage(error)),
+                      },
+                    )
+                  }
+                />
+                </>
               )
             : undefined,
           onView: (task) => setViewing(task.id),

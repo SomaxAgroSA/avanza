@@ -585,3 +585,44 @@ Lista configurável em **Configurações → Áreas** (`settings.manage`), com a
 - **Kanban:** filtro "Área" e o selo da área no cartão.
 - **Filtro:** área ou "Sin área" (`area_id=none` na API).
 - Só áreas **ativas** podem ser escolhidas; a área inativa continua aparecendo onde já estava. Área em uso por tarefas ou projetos não se exclui (`AREA_IN_USE`): desative.
+
+## 24. Responsável TI
+
+Papel de membro do projeto (`it`, "Responsável TI"), escolhido em Membros ou no Controle de acesso, para quem só precisa saber **o que o projeto precisa dele**.
+
+- **Ao abrir o projeto** vê uma única tela: nome do projeto, objetivo geral da ficha, **as tarefas atribuídas a ele** e os resultados/funcionalidades da ficha sob a responsabilidade dele (`GET /projects/{id}/brief`). Qualquer aba ou endereço do projeto leva a essa tela.
+- **Não vê** as demais tarefas, a ficha completa, Kanban, Histórico, Membros, Arquivos, Informe nem a Gestão de projetos daquele projeto: a API responde como se não existissem (`PROJECT_NOT_FOUND`/`TASK_NOT_FOUND`). Na lista geral de Tarefas e nos relatórios aparecem só as tarefas dele.
+- **Nas tarefas dele** age como colaborador: muda status, comenta, anexa e preenche campos. Não exclui, não reatribui e não cria tarefas no projeto (`FORBIDDEN`).
+- Dono do projeto, gestor e quem tem permissão de ver todos os projetos nunca ficam limitados, mesmo com esse papel.
+- O menu lateral segue o perfil global da pessoa; para escondê-lo, use um perfil próprio no Controle de acesso.
+
+## 25. Projeto pai e subprojetos
+
+Um projeto pode **fazer parte de um projeto maior** (o projeto pai), por exemplo um programa que reúne vários projetos. A ligação se escolhe no formulário do projeto (campo **Projeto pai**) ou com **Novo subprojeto**, no Resumo do pai, que já cria o projeto ligado.
+
+- **Um só nível:** o pai não pode ter pai e um projeto com subprojetos não pode virar filho. Também não vale ligar o projeto a ele mesmo nem a um pai arquivado (`parent_id`: `self`, `parent_is_child`, `has_children`, `parent_archived`).
+- **Quem liga:** só a um pai que a pessoa pode editar (gestor do pai com `projects.edit`); senão, `invalid_option`.
+- **Onde aparece:** o subprojeto mostra o nome do pai acima do título (com link) e na lista de Projetos ("↳ pai"); o pai mostra o card **Subprojetos** no Resumo, com estado e entrega de cada um, e a quantidade na lista.
+- **Independência:** cada projeto continua com seus membros, tarefas, ficha e permissões; ser membro do pai **não** dá acesso aos subprojetos.
+- **Arquivar ou excluir:** arquivar o pai não mexe nos filhos; excluir o pai solta os subprojetos (ficam sem pai).
+- **Histórico:** criação e troca de pai ficam em `project.created`/`project.updated` com o nome do projeto pai.
+
+## 26. Seções do projeto e Controle de acesso
+
+O perfil decide **o que a pessoa vê dentro de cada projeto** em que entra, igual em todos os projetos.
+
+- **Seções:** Ficha (`projects.charter`), Histórico (`projects.history`), Membros (`projects.members`) e Informe (`projects.report`). Tarefas, Kanban e Gestão de projetos seguem `tasks.view`, `kanban.view` e `plan.view`. O **Resumo** sempre aparece.
+- **O dono do projeto vê tudo**, mesmo que o perfil dele não tenha a seção.
+- **O servidor fecha** a ficha (`/projects/{id}/charter` e itens) e o histórico (`/projects/{id}/history`) com `FORBIDDEN`. Membros e Informe só somem da tela: a lista de membros continua servindo para atribuir tarefas, e o informe usa as tarefas que a pessoa já vê.
+- `GET /projects/{id}` traz `capabilities.sections` com as seções liberadas; a tela mostra só essas abas.
+- Na migração, todo perfil que já via projetos recebeu as quatro seções: nada muda até o administrador desligar alguma.
+- **Controle de acesso** reúne num só item do menu as abas **Por pessoa** (módulos, "o que vê dentro de cada projeto", o que pode fazer e em quais projetos entra), **Perfis** e **Permissões por perfil**. Os endereços antigos `/settings/roles` e `/settings/permissions` levam para essas abas.
+
+## 27. Tarefas visíveis para TI
+
+Na aba Tarefas do projeto, o botão **Visível para TI** (ícone de notebook, ao lado do informe) marca a tarefa para o **Responsável TI** do projeto (§24).
+
+- O Responsável TI vê as tarefas **atribuídas a ele** e as **marcadas** — no resumo do projeto, na lista geral de Tarefas e ao abrir a tarefa. As demais continuam fechadas (`TASK_NOT_FOUND`).
+- Quem edita a tarefa marca e desmarca (`PUT /tasks/{id}/it-visible`); o Responsável TI não muda a marca. Não exige os campos obrigatórios do status; fica no histórico da tarefa.
+- A coluna e o filtro **Visível para TI** (escondidos por padrão) mostram o que está compartilhado.
+- Se o perfil do Responsável TI tiver **Ficha** (`projects.charter`, §26), o resumo ganha a aba **Ficha**, só para leitura.

@@ -137,6 +137,13 @@ export function useTaskMutations() {
         if (task.project) void queryClient.invalidateQueries({ queryKey: timelineKeys.detail(task.project.id) })
       },
     }),
+    setItVisible: useMutation({
+      mutationFn: ({ id, itVisible }: { id: string; itVisible: boolean }) => tasks.setItVisible(id, itVisible),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
     setUrgency: useMutation({
       mutationFn: ({ id, urgency }: { id: string; urgency: TaskUrgency | null }) => tasks.setUrgency(id, urgency),
       onSuccess: (task) => {

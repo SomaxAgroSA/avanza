@@ -240,3 +240,73 @@ describe('application/projects — área responsável', () => {
     assert.throws(() => projects.updateProject(ctx.manager, a.id, { area_id: 'nada' }), { code: 'VALIDATION_ERROR' })
   })
 })
+
+describe('application/projects — projeto pai (§25)', () => {
+  it('cria o subprojeto ligado ao pai; o pai mostra a quantidade de filhos e o histórico guarda o nome', () => {
+    const { deps, projects, ctx } = setup()
+    const crm = projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const fvb = projects.createProject(ctx.manager, input({ name: 'Força de Vendas Brasil', key: 'FVB', parent_id: crm.id }))
+    assert.deepEqual(fvb.parent, { id: crm.id, key: 'CRM', name: 'Portal CRM', icon: crm.icon, cover: crm.cover })
+    assert.equal(fvb.child_count, 0)
+    assert.equal(projects.getProject(ctx.manager, crm.id).child_count, 1)
+    assert.equal(deps.store.audit.at(-1).newValue.parent_project, 'Portal CRM')
+    const keys = (parent) => projects.listProjects(ctx.manager, { parent_id: parent }).items.map((p) => p.key)
+    assert.deepEqual(keys(crm.id), ['FVB'])
+    assert.deepEqual(keys('none'), ['CRM'])
+    assert.equal(projects.listProjects(ctx.manager, {}).items.find((p) => p.key === 'CRM').child_count, 1)
+  })
+
+  it('liga, troca e solta o pai na edição, com histórico', () => {
+    const { deps, projects, ctx } = setup()
+    const crm = projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const erp = projects.createProject(ctx.manager, input({ name: 'ERP', key: 'ERP' }))
+    const gcs = projects.createProject(ctx.manager, input({ name: 'GCS', key: 'GCS' }))
+    assert.equal(projects.updateProject(ctx.manager, gcs.id, { parent_id: crm.id }).parent.key, 'CRM')
+    assert.equal(projects.updateProject(ctx.manager, gcs.id, { parent_id: erp.id }).parent.key, 'ERP')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.oldValue.parent_project, entry.newValue.parent_project], ['Portal CRM', 'ERP'])
+    assert.equal(projects.updateProject(ctx.manager, gcs.id, { parent_id: null }).parent, null)
+  })
+
+  it('um só nível: nem ele mesmo, nem filho como pai, nem pai virando filho, nem pai arquivado', () => {
+    const { projects, ctx } = setup()
+    const crm = projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const fvb = projects.createProject(ctx.manager, input({ name: 'FVB', key: 'FVB', parent_id: crm.id }))
+    const erp = projects.createProject(ctx.manager, input({ name: 'ERP', key: 'ERP' }))
+    const issue = (fn) => {
+      try {
+        fn()
+      } catch (err) {
+        return err.details.fields.parent_id
+      }
+      return null
+    }
+    assert.equal(issue(() => projects.updateProject(ctx.manager, crm.id, { parent_id: crm.id })), 'self')
+    assert.equal(issue(() => projects.createProject(ctx.manager, input({ key: 'NETO', parent_id: fvb.id }))), 'parent_is_child')
+    assert.equal(issue(() => projects.updateProject(ctx.manager, crm.id, { parent_id: erp.id })), 'has_children')
+    assert.equal(issue(() => projects.createProject(ctx.manager, input({ key: 'X1', parent_id: 'nada' }))), 'invalid_option')
+    projects.archiveProject(ctx.manager, erp.id)
+    assert.equal(issue(() => projects.createProject(ctx.manager, input({ key: 'X2', parent_id: erp.id }))), 'parent_archived')
+  })
+
+  it('só liga a um pai que a pessoa pode editar', () => {
+    const { deps, projects, users, ctx } = setup()
+    const crm = projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    deps.projectMemberRepository.add({ projectId: crm.id, userId: users.admin.id, role: 'viewer' })
+    const outro = seedUser(deps, { name: 'Outra gestora', roleCode: 'MANAGER' })
+    const ctxOutro = ctxOf(deps, outro)
+    assert.throws(
+      () => projects.createProject(ctxOutro, input({ key: 'SUB', parent_id: crm.id })),
+      (err) => err.code === 'VALIDATION_ERROR' && err.details.fields.parent_id === 'invalid_option',
+    )
+  })
+
+  it('excluir o pai solta os subprojetos', () => {
+    const { projects, ctx } = setup()
+    const crm = projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const fvb = projects.createProject(ctx.manager, input({ name: 'FVB', key: 'FVB', parent_id: crm.id }))
+    projects.archiveProject(ctx.manager, crm.id)
+    projects.deleteProject(ctx.admin, crm.id)
+    assert.equal(projects.getProject(ctx.manager, fvb.id).parent, null)
+  })
+})

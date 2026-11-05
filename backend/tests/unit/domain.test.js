@@ -26,7 +26,9 @@ describe('domain/permissions', () => {
 
   it('VIEWER não pode editar nada', () => {
     const viewer = DEFAULT_ROLE_PERMISSIONS[ROLE_CODES.VIEWER]
-    assert.ok(viewer.every((code) => code.endsWith('.view')))
+    // seções do projeto (§26) também são só de leitura
+    const sections = ['projects.charter', 'projects.history', 'projects.members', 'projects.report']
+    assert.ok(viewer.every((code) => code.endsWith('.view') || sections.includes(code)))
   })
 })
 

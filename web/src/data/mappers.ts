@@ -38,9 +38,11 @@ import {
   PROJECT_COVERS,
   PROJECT_ICONS,
   PROJECT_PRIORITIES,
+  PROJECT_SECTIONS,
   PROJECT_STATUSES,
   type Project,
   type ProjectMember,
+  type ProjectRole,
   type UserSummary,
 } from '@/domain/projects'
 
@@ -137,6 +139,10 @@ export function toProject(dto: ProjectDto): Project {
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
+    parent: dto.parent
+      ? { id: dto.parent.id, key: dto.parent.key, name: dto.parent.name, icon: oneOf(PROJECT_ICONS, dto.parent.icon, 'folder'), cover: oneOf(PROJECT_COVERS, dto.parent.cover, 'green') }
+      : null,
+    childCount: dto.child_count ?? 0,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
@@ -144,13 +150,15 @@ export function toProject(dto: ProjectDto): Project {
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
     memberCount: dto.member_count ?? 0,
-    myRole: role === 'owner' || role === 'manager' || role === 'member' || role === 'viewer' ? role : null,
+    myRole: role === 'owner' || (MEMBER_ROLES as readonly string[]).includes(role ?? '') ? (role as ProjectRole) : null,
     capabilities: {
       edit: !!dto.capabilities?.edit,
       manageMembers: !!dto.capabilities?.manage_members,
       archive: !!dto.capabilities?.archive,
       delete: !!dto.capabilities?.delete,
       transfer: !!dto.capabilities?.transfer,
+      // servidor sem seções (versão anterior): mostra todas
+      sections: PROJECT_SECTIONS.filter((section) => (dto.capabilities?.sections ?? PROJECT_SECTIONS).includes(section)),
     },
   }
 }
@@ -298,6 +306,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
     inReport: dto.in_report ?? true,
+    itVisible: !!dto.it_visible,
     urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
   }

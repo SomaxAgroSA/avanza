@@ -6,6 +6,13 @@
 import type { UserSummary } from './projects'
 import type { TaskSummary } from './tasks'
 
+/** Resumo do projeto para o Responsável TI: objetivo, as tarefas dele e os itens da ficha sob a responsabilidade dele. */
+export interface ProjectBrief {
+  objective: string
+  tasks: TaskSummary[]
+  items: Array<{ id: string; kind: 'feature' | 'result'; title: string; description: string; unit: string; target: number | null }>
+}
+
 export const CHARTER_KINDS = ['objective', 'feature', 'scope_in', 'scope_out', 'result'] as const
 export type CharterKind = (typeof CHARTER_KINDS)[number]
 

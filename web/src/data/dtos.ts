@@ -80,6 +80,8 @@ export interface ProjectDto {
   priority: string
   urgency?: string | null
   area?: { id: string; key: string; name: string; color: string } | null
+  parent?: { id: string; key: string; name: string; icon: string; cover: string } | null
+  child_count?: number
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
@@ -88,7 +90,7 @@ export interface ProjectDto {
   updated_at: string | null
   member_count: number
   my_role: string | null
-  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean }
+  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean; sections?: string[] }
 }
 
 export interface ProjectMemberDto {
@@ -167,6 +169,7 @@ export interface TaskDto {
   subtask_progress?: { done: number; total: number }
   blocked?: boolean
   in_report?: boolean
+  it_visible?: boolean
   urgency?: string | null
   area?: { id: string; key: string; name: string; color: string } | null
 }

@@ -77,7 +77,7 @@ function card(id: string, title: string, extra: Partial<BoardCard> = {}): BoardC
     attachmentCount: 0,
     subtaskProgress: { done: 0, total: 0 },
     blocked: false,
-    inReport: true,
+    inReport: true, itVisible: false,
     urgency: null,
     area: null,
     sprint: null,

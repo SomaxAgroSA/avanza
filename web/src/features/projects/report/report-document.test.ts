@@ -17,7 +17,7 @@ const tasks = [
     assignee: { id: 'u', name: 'Douglas Martins', email: '', avatarUrl: null },
     startDate: day('2026-10-01'),
     dueDate: day('2026-10-05'),
-    inReport: true,
+    inReport: true, itVisible: false,
     urgency: null,
     area: null,
   },

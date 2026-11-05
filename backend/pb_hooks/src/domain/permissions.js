@@ -12,6 +12,11 @@ const PERMISSIONS = Object.freeze([
   { code: 'projects.edit', module: 'projects' },
   { code: 'projects.delete', module: 'projects' },
   { code: 'projects.view_all', module: 'projects' },
+  // seções do projeto (§26): o que a pessoa vê dentro de cada projeto em que entra
+  { code: 'projects.charter', module: 'projects' },
+  { code: 'projects.history', module: 'projects' },
+  { code: 'projects.members', module: 'projects' },
+  { code: 'projects.report', module: 'projects' },
 
   { code: 'tasks.view', module: 'tasks' },
   { code: 'tasks.create', module: 'tasks' },
@@ -67,7 +72,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
   SUPER_ADMIN: ALL_CODES,
   ADMIN: ALL_CODES,
   MANAGER: [
-    'projects.view', 'projects.create', 'projects.edit',
+    'projects.view', 'projects.create', 'projects.edit', 'projects.charter', 'projects.history', 'projects.members', 'projects.report',
     'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.delete', 'tasks.assign', 'tasks.fork', 'tasks.link',
     'kanban.view', 'kanban.manage',
     'users.view',
@@ -77,14 +82,14 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     'api_tokens.create',
   ],
   MEMBER: [
-    'projects.view',
+    'projects.view', 'projects.charter', 'projects.history', 'projects.members', 'projects.report',
     'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign', 'tasks.fork', 'tasks.link',
     'kanban.view',
     'reports.view',
     'docs.view', 'docs.edit',
     'plan.view', 'plan.edit',
   ],
-  VIEWER: ['projects.view', 'tasks.view', 'kanban.view', 'reports.view', 'docs.view', 'plan.view'],
+  VIEWER: ['projects.view', 'projects.charter', 'projects.history', 'projects.members', 'projects.report', 'tasks.view', 'kanban.view', 'reports.view', 'docs.view', 'plan.view'],
 })
 
 const DEFAULT_ROLES = Object.freeze([

@@ -34,7 +34,7 @@ function createCommentService(deps) {
     const project = task ? deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError('TASK_NOT_FOUND')
     const membership = deps.projectMemberRepository.find(project.id, ctx.principal.userId)
-    const access = projectDomain.resolveAccess(ctx.principal, project, membership)
+    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(ctx.principal, project, membership), task)
     taskDomain.assertTaskAccess(access, project, 'view', task)
     return { task, project, access }
   }

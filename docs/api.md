@@ -73,16 +73,16 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 
 | Método | Rota | Regra de acesso | Descrição |
 |---|---|---|---|
-| GET | `/projects` | `projects.view` | `view=all\|mine\|archived`, `search`, `status`, `priority`, `urgency` (`high`, `medium`, `low`, `none`), `area_id` (ou `none`), `owner_id`, `sort` (`name`, `key`, `created_at`, `due_date`), paginado. Sem `projects.view_all`, só projetos em que é membro |
-| POST | `/projects` | `projects.create` | `{ name, key, description?, icon?, cover?, status?, priority?, urgency?, area_id?, start_date?, due_date? }` — criador vira dono e gestor; `area_id` = área ativa de `/areas` (`null` no PATCH limpa) |
-| GET | `/projects/{id}` | ver o projeto | inclui `owner`, `member_count`, `my_role` e `capabilities` (o que o usuário pode fazer) |
+| GET | `/projects` | `projects.view` | `view=all\|mine\|archived`, `search`, `status`, `priority`, `urgency` (`high`, `medium`, `low`, `none`), `area_id` (ou `none`), `parent_id` (subprojetos de um pai, ou `none` = só projetos sem pai), `owner_id`, `sort` (`name`, `key`, `created_at`, `due_date`), paginado. Sem `projects.view_all`, só projetos em que é membro |
+| POST | `/projects` | `projects.create` | `{ name, key, description?, icon?, cover?, status?, priority?, urgency?, area_id?, parent_id?, start_date?, due_date? }` — criador vira dono e gestor; `area_id` = área ativa de `/areas` (`null` no PATCH limpa); `parent_id` = projeto pai (§25: um só nível, pai que a pessoa edita; `null` no PATCH solta). Todo projeto sai com `parent` (`{ id, key, name, icon, cover }` ou `null`) e `child_count` |
+| GET | `/projects/{id}` | ver o projeto | inclui `owner`, `member_count`, `my_role` e `capabilities` (o que o usuário pode fazer; `sections` = seções que ele vê: `charter`, `history`, `members`, `report` — §26. Sem a seção, `/charter` e `/history` respondem `FORBIDDEN`) |
 | PATCH | `/projects/{id}` | gestor + `projects.edit` | parcial; `key` é imutável; datas aceitam `null`; projeto arquivado → `PROJECT_ARCHIVED` |
 | POST | `/projects/{id}/archive` · `/unarchive` | gestor + `projects.edit` | arquivado = somente leitura |
 | DELETE | `/projects/{id}` | dono ou `projects.view_all`, + `projects.delete` | só projeto arquivado (`PROJECT_NOT_ARCHIVED`) |
 | PUT | `/projects/{id}/owner` | dono ou `projects.view_all`, + `projects.edit` | `{ user_id }` — novo dono vira gestor; o anterior continua gestor |
 | GET | `/projects/{id}/history` | ver o projeto | auditoria do projeto |
 | GET | `/projects/{id}/members` | ver o projeto | dono primeiro |
-| POST | `/projects/{id}/members` | gestor + `projects.edit` | `{ user_id, role }` (`manager`, `member`, `viewer`) |
+| POST | `/projects/{id}/members` | gestor + `projects.edit` | `{ user_id, role }` (`manager`, `member`, `viewer`, `it` — Responsável TI, §24) |
 | GET | `/projects/{id}/member-candidates` | gestor + `projects.edit` | usuários ativos que ainda não são membros (`search`) — dispensa `users.view` |
 | PATCH | `/projects/{id}/members/{userId}` | gestor + `projects.edit` | `{ role }`; papel do dono é fixo (`OWNER_ROLE_LOCKED`) |
 | DELETE | `/projects/{id}/members/{userId}` | gestor, ou o próprio membro (sair) | dono não sai (`CANNOT_REMOVE_OWNER`) |
@@ -126,6 +126,7 @@ Leitura de status/prioridades/tags: `settings.manage` ou `tasks.view`. Alteraç�
 | GET | `/tasks/{id}` | detalhe com `fields` do tipo, `custom_values` (por nome técnico), `checklist`, `tags` e `capabilities` |
 | PATCH | `/tasks/{id}` | parcial; `null` limpa responsável/relator/prazo/horas; trocar o tipo descarta valores de campos que o novo tipo não tem; `project_id` é imutável |
 | DELETE | `/tasks/{id}` | `tasks.delete` + gestor, `projects.view_all` ou autor |
+| PUT | `/tasks/{id}/it-visible` | `{ it_visible: boolean }` — marca a tarefa para o Responsável TI do projeto (§27): ele vê as atribuídas a ele e as marcadas; quem edita a tarefa; **não** exige os obrigatórios do status. Toda tarefa sai com `it_visible`; filtro `it_visible=true/false` em `GET /tasks` |
 | PUT | `/tasks/{id}/report` | `{ in_report: boolean }` — liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `in_report` (padrão `true`) |
 | PUT | `/tasks/{id}/urgency` | `{ urgency: "high" \| "medium" \| "low" \| null }` — urgência da tarefa (semáforo 🔴 alta, 🟡 média, 🟢 baixa; `null` limpa); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `urgency` (padrão `null`) |
 | PUT | `/tasks/{id}/area` | `{ area_id: "<id>" \| null }` — área responsável (área ativa de `/areas`; `null` limpa); quem edita a tarefa; **não** exige os obrigatórios do status; grava no histórico. Toda tarefa sai com `area` (`{ id, key, name, color }` ou `null`); `POST/PATCH /tasks` também aceitam `area_id` |
@@ -182,6 +183,7 @@ Subtarefas: `parent_task_id` em `POST/PATCH /tasks` (`null` solta; erros `other_
 | GET | `/projects/{id}/timeline` | acesso ao projeto + `tasks.view`; numa chamada: `project` (datas), `capabilities` (`edit` = mover barras, `manage_milestones` = gestor), `tasks` (resumos com `start_date`/`due_date`, até 2000 — `truncated`), `dependencies` (`{ id, type, from, to, conflict }` — de quem vem antes para quem vem depois; conflito = começa antes do prazo da anterior), `sprints` e `milestones` |
 | GET/POST | `/projects/{id}/milestones` | listar (quem vê o projeto) / criar (gestor ou dono): `{ name*, due_date*, description, state: pending\|done }`; auditoria no projeto (`milestone.*`) |
 | PATCH/DELETE | `/milestones/{id}` | editar/excluir (gestor ou dono); marco de projeto invisível → 404 `MILESTONE_NOT_FOUND` |
+| GET | `/projects/{id}/brief` | **resumo do Responsável TI** (§24): `{ objective, tasks (só as atribuídas a quem pede), items (funcionalidades/resultados da ficha sob a responsabilidade dele: id, kind, title, description, unit, target, due_date) }`; quem vê o projeto também pode pedir |
 | GET/PUT | `/projects/{id}/charter` | **ficha do projeto** (§21): ver (quem vê o projeto) / gravar o objetivo geral (gestor ou dono) `{ objective* }`. Resposta: `objective`, `capabilities.edit`, `completeness` (`sections`, `done`, `total`, `percent`), `summary` (funcionalidades entregues, tarefas, resultados no caminho/atrasados/sem medir) e `items` com estado calculado (`effective_state`, `progress`, `situation`, `percent`, `stale`) |
 | POST | `/projects/{id}/charter/items` | cria item (gestor ou dono): `{ kind*: objective\|feature\|scope_in\|scope_out\|result, title*, description, state, owner_id, link_ids (objetivo), task_ids (funcionalidade), unit, baseline, target* (resultado), start_date, due_date, frequency: none\|weekly\|monthly\|quarterly }` — cada tipo aceita só os seus campos; erros `not_member`, `not_in_project`, `invalid_link`, `after_due_date` |
 | PUT | `/projects/{id}/charter/order` | nova ordem de um tipo: `{ kind*, ids* }` (todos os itens do tipo) |

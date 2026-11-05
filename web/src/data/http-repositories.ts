@@ -381,7 +381,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -407,6 +407,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           priority: query.filters.priority,
           urgency: query.filters.urgency,
           area_id: query.filters.area,
+          parent_id: query.filters.parent,
           owner_id: query.filters.owner_id,
         },
       })
@@ -972,12 +973,26 @@ function charterItemBody(input: CharterItemInput): Record<string, unknown> {
   return body
 }
 
+interface ProjectBriefDto {
+  objective?: string
+  tasks?: TaskDto[]
+  items?: Array<{ id: string; kind: string; title: string; description?: string; unit?: string; target?: number | null }>
+}
+
 export function createHttpCharterRepository(api: ApiClient): CharterRepository {
   const project = (id: string) => `/projects/${encodeURIComponent(id)}/charter`
   const item = (id: string) => `/charter-items/${encodeURIComponent(id)}`
   return {
     async get(projectId) {
       return toProjectCharter((await api.get<CharterDto>(project(projectId))).data)
+    },
+    async brief(projectId) {
+      const { data } = await api.get<ProjectBriefDto>(`/projects/${encodeURIComponent(projectId)}/brief`)
+      return {
+        objective: data.objective ?? '',
+        tasks: (data.tasks ?? []).map(toTaskSummary),
+        items: (data.items ?? []).map((i) => ({ id: i.id, kind: i.kind === 'result' ? ('result' as const) : ('feature' as const), title: i.title, description: i.description ?? '', unit: i.unit ?? '', target: i.target ?? null })),
+      }
     },
     async saveObjective(projectId, objective) {
       return toProjectCharter((await api.put<CharterDto>(project(projectId), { objective })).data)
@@ -1173,6 +1188,7 @@ const TASK_FILTERS: Record<string, string> = {
   tags: 'tag_id',
   sprint: 'sprint_id',
   in_report: 'in_report',
+  it_visible: 'it_visible',
   urgency: 'urgency',
   area: 'area_id',
 }
@@ -1202,6 +1218,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setInReport(id, inReport) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/report`, { in_report: inReport })).data)
+    },
+    async setItVisible(id, itVisible) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/it-visible`, { it_visible: itVisible })).data)
     },
     async setUrgency(id, urgency) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/urgency`, { urgency })).data)

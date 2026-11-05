@@ -96,6 +96,19 @@ describe('domain/project — acesso', () => {
       archive: true,
       delete: false,
       transfer: false,
+      sections: [],
     })
+  })
+
+  it('seções do projeto (§26): o perfil decide; o dono sempre vê', () => {
+    const perms = ALL.concat(['projects.charter', 'projects.members'])
+    const member = project.resolveAccess(principal(perms), base, { role: 'member' })
+    assert.deepEqual(project.capabilities(member, base).sections, ['charter', 'members'])
+    assert.doesNotThrow(() => project.assertAccess(member, base, 'charter'))
+    assert.throws(() => project.assertAccess(member, base, 'history'), { code: 'FORBIDDEN' })
+    const owner = project.resolveAccess(principal(ALL, 'owner'), base, null)
+    assert.deepEqual(project.capabilities(owner, base).sections, ['charter', 'history', 'members', 'report'])
+    const outsider = project.resolveAccess(principal(perms), base, null)
+    assert.throws(() => project.assertAccess(outsider, base, 'charter'), { code: 'PROJECT_NOT_FOUND' })
   })
 })

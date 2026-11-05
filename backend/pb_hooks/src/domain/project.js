@@ -13,7 +13,8 @@ const rbac = require('./rbac')
 
 const PROJECT_STATUS = Object.freeze(['planning', 'active', 'paused', 'completed', 'cancelled'])
 const PROJECT_PRIORITY = Object.freeze(['low', 'medium', 'high', 'critical'])
-const MEMBER_ROLES = Object.freeze(['manager', 'member', 'viewer'])
+/** `it` = Responsável TI: só vê o resumo do projeto (nome, objetivo e o que precisamos dele) e as próprias tarefas. */
+const MEMBER_ROLES = Object.freeze(['manager', 'member', 'viewer', 'it'])
 const PROJECT_ICONS = Object.freeze([
   'folder', 'rocket', 'briefcase', 'code', 'database', 'globe', 'shield', 'users', 'chart', 'settings',
   'layers', 'zap', 'star', 'box', 'truck', 'building', 'cpu', 'headphones', 'book', 'target',
@@ -40,13 +41,16 @@ function resolveAccess(principal, project, membership) {
   const viewAll = rbac.can(principal, 'projects.view_all')
   const isOwner = !!principal && project.ownerId === principal.userId
   const memberRole = membership ? membership.role : null
+  // Responsável TI: fora de tudo por padrão (canView = false); só o resumo e as próprias tarefas
+  const limited = !viewAll && !isOwner && memberRole === 'it' && rbac.can(principal, 'projects.view')
   return {
     principal,
     viewAll,
     isOwner,
     role: isOwner ? 'owner' : memberRole,
     isManager: isOwner || memberRole === 'manager' || viewAll,
-    canView: rbac.can(principal, 'projects.view') && (viewAll || isOwner || !!membership),
+    limited,
+    canView: rbac.can(principal, 'projects.view') && (viewAll || isOwner || (!!membership && !limited)),
     get canEdit() {
       return this.canView && rbac.can(principal, 'projects.edit') && this.isManager && !project.archivedAt
     },
@@ -54,10 +58,45 @@ function resolveAccess(principal, project, membership) {
 }
 
 /**
+ * Projeto pai (§25), um só nível: devolve o motivo de recusa ou null.
+ * `project` = projeto que recebe o pai (null na criação); `hasChildren` = ele já é pai de alguém.
+ */
+function parentIssue(project, parent, hasChildren) {
+  if (!parent) return 'invalid_option'
+  if (project && parent.id === project.id) return 'self'
+  if (parent.parentId) return 'parent_is_child'
+  if (hasChildren) return 'has_children'
+  if (parent.archivedAt) return 'parent_archived'
+  return null
+}
+
+/** Seções do projeto que o perfil libera (§26); o resumo é sempre visível. */
+const PROJECT_SECTIONS = ['charter', 'history', 'members', 'report']
+
+/**
+ * Quem vê o projeto vê a seção se o perfil tem `projects.<seção>`; o dono do projeto sempre vê tudo.
+ * O Responsável TI (§24) só pode ganhar a ficha, se o perfil dele tiver `projects.charter`.
+ */
+function canSeeSection(access, section) {
+  if (access.limited) return section === 'charter' && rbac.can(access.principal, 'projects.charter')
+  return !!access.canView && (access.isOwner || rbac.can(access.principal, 'projects.' + section))
+}
+
+/**
  * Verifica se a ação é permitida; lança o erro adequado caso contrário.
- * Ações: view | edit | manage_members | archive | transfer | delete
+ * Ações: brief | view | edit | manage_members | archive | transfer | delete
+ * (`brief` = resumo do projeto, também liberado para o Responsável TI).
  */
 function assertAccess(access, project, action) {
+  if (action === 'brief') {
+    if (!access.canView && !access.limited) throw appError('PROJECT_NOT_FOUND')
+    return
+  }
+  if (PROJECT_SECTIONS.indexOf(action) >= 0) {
+    if (!access.canView && !access.limited) throw appError('PROJECT_NOT_FOUND')
+    if (!canSeeSection(access, action)) throw appError('FORBIDDEN')
+    return
+  }
   if (!access.canView) throw appError('PROJECT_NOT_FOUND')
   if (action === 'view') return
 
@@ -99,6 +138,7 @@ function capabilities(access, project) {
     archive: allowed(access, project, 'archive'),
     delete: allowed(access, project, 'delete'),
     transfer: allowed(access, project, 'transfer'),
+    sections: PROJECT_SECTIONS.filter((section) => canSeeSection(access, section)),
   }
 }
 
@@ -111,6 +151,9 @@ module.exports = {
   normalizeKey,
   keyIssue,
   datesIssue,
+  parentIssue,
+  PROJECT_SECTIONS,
+  canSeeSection,
   resolveAccess,
   assertAccess,
   capabilities,

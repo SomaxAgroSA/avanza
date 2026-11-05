@@ -10,7 +10,7 @@ import type { BacklogView } from './backlog'
 import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relations'
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
-import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectCharter } from './charter'
+import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectCharter, ProjectBrief } from './charter'
 import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type {
@@ -202,6 +202,8 @@ export interface ProjectData {
   urgency: TaskUrgency | null
   /** Área responsável (null limpa). */
   areaId?: string | null
+  /** Projeto pai (null solta). */
+  parentId?: string | null
   startDate: string | null
   dueDate: string | null
 }
@@ -317,6 +319,8 @@ export interface TaskRepository {
   update(id: string, data: TaskInput): Promise<TaskDetail>
   /** Liga/desliga a tarefa no informe do projeto (não exige os obrigatórios do status). */
   setInReport(id: string, inReport: boolean): Promise<TaskDetail>
+  /** Marca a tarefa como visível para o Responsável TI do projeto. */
+  setItVisible(id: string, itVisible: boolean): Promise<TaskDetail>
   setUrgency(id: string, urgency: TaskUrgency | null): Promise<TaskDetail>
   /** Área responsável direto da lista (não exige os obrigatórios do status); null limpa. */
   setArea(id: string, areaId: string | null): Promise<TaskDetail>
@@ -385,6 +389,8 @@ export interface MilestoneRepository {
 /** Ficha do projeto: objetivo geral, itens com o avanço calculado e medições dos resultados. */
 export interface CharterRepository {
   get(projectId: string): Promise<ProjectCharter>
+  /** Resumo do projeto (Responsável TI). */
+  brief(projectId: string): Promise<ProjectBrief>
   saveObjective(projectId: string, objective: string): Promise<ProjectCharter>
   createItem(projectId: string, input: CharterItemInput): Promise<CharterItem>
   updateItem(id: string, input: CharterItemInput): Promise<CharterItem>

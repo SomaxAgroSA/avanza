@@ -5,7 +5,7 @@ import i18n from '@/core/i18n'
 import type { Role } from '@/domain/entities'
 import type { Project, ProjectMember } from '@/domain/projects'
 import { PERMISSION_CODES } from '@/domain/permissions'
-import { fakeRepositories, makeCurrentUser, makeUser, renderWithProviders } from '@/test/utils'
+import { fakeRepositories, makeCurrentUser, makeUser, renderRoutes } from '@/test/utils'
 import { AccessControlPage } from './AccessControlPage'
 
 beforeAll(async () => {
@@ -34,7 +34,7 @@ function setup() {
       addMember,
     },
   })
-  renderWithProviders(<AccessControlPage />, repositories)
+  renderRoutes([{ path: '/settings/access', element: <AccessControlPage /> }], { repositories, initialPath: '/settings/access' })
   return { createRole, updateUser, updatePermissions, addMember }
 }
 
@@ -67,5 +67,23 @@ describe('Control de acceso', () => {
     await userEvent.click(select)
     await userEvent.click(await screen.findByRole('option', { name: 'Lector' }))
     await waitFor(() => expect(addMember).toHaveBeenCalledWith('p2', 'u2', 'viewer'))
+  })
+
+  it('secciones del proyecto: elegir qué ve dentro de cada proyecto', async () => {
+    const { createRole } = setup()
+    const charter = await screen.findByRole('button', { name: 'Ficha' })
+    expect(charter).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Resumen' })).toBeDisabled()
+    await userEvent.click(charter)
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Crear perfil propio para Douglas' }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledOnce())
+    const [data] = createRole.mock.calls[0] as unknown as [{ permissions: string[] }]
+    expect(data.permissions).toContain('projects.charter')
+  })
+
+  it('reúne perfiles y permisos en pestañas', async () => {
+    setup()
+    expect(await screen.findByRole('tab', { name: 'Perfiles' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Permisos por perfil' })).toBeInTheDocument()
   })
 })

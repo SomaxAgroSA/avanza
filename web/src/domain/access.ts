@@ -11,10 +11,17 @@ export interface AccessModule {
   /** Permissão que deixa ver o módulo (sem ela, nenhuma ação do módulo vale). */
   view: PermissionCode | null
   actions: PermissionCode[]
+  /** Partes do módulo que a pessoa vê (só Projetos: as seções de cada projeto, regras §26). */
+  sections?: PermissionCode[]
 }
 
 export const ACCESS_MODULES: AccessModule[] = [
-  { module: 'projects', view: 'projects.view', actions: ['projects.view_all', 'projects.create', 'projects.edit', 'projects.delete'] },
+  {
+    module: 'projects',
+    view: 'projects.view',
+    actions: ['projects.view_all', 'projects.create', 'projects.edit', 'projects.delete'],
+    sections: ['projects.charter', 'projects.history', 'projects.members', 'projects.report'],
+  },
   { module: 'tasks', view: 'tasks.view', actions: ['tasks.create', 'tasks.edit', 'tasks.assign', 'tasks.link', 'tasks.fork', 'tasks.delete'] },
   { module: 'kanban', view: 'kanban.view', actions: ['kanban.manage'] },
   { module: 'plan', view: 'plan.view', actions: ['plan.edit', 'plan.manage'] },
@@ -25,7 +32,22 @@ export const ACCESS_MODULES: AccessModule[] = [
   { module: 'settings', view: null, actions: ['settings.manage', 'permissions.manage', 'platform.manage', 'integrations.manage', 'api_tokens.create'] },
 ]
 
-const moduleOf = (code: PermissionCode) => ACCESS_MODULES.find((m) => m.view === code || m.actions.includes(code))
+const moduleOf = (code: PermissionCode) =>
+  ACCESS_MODULES.find((m) => m.view === code || m.actions.includes(code) || (m.sections ?? []).includes(code))
+
+/**
+ * O que a pessoa vê dentro de cada projeto, na ordem das abas: as seções próprias do projeto e os
+ * módulos que também aparecem nele (Tarefas, Kanban, Gestão de projetos). O Resumo é sempre visível.
+ */
+export const PROJECT_SECTION_CHIPS: { key: string; code: PermissionCode }[] = [
+  { key: 'charter', code: 'projects.charter' },
+  { key: 'tasks', code: 'tasks.view' },
+  { key: 'kanban', code: 'kanban.view' },
+  { key: 'plan', code: 'plan.view' },
+  { key: 'history', code: 'projects.history' },
+  { key: 'members', code: 'projects.members' },
+  { key: 'report', code: 'projects.report' },
+]
 
 /**
  * Liga ou desliga uma permissão mantendo a coerência: ligar uma ação liga também o "ver" do módulo;
@@ -39,7 +61,7 @@ export function togglePermission(current: readonly PermissionCode[], code: Permi
     if (mod?.view) set.add(mod.view)
   } else {
     set.delete(code)
-    if (mod && mod.view === code) mod.actions.forEach((a) => set.delete(a))
+    if (mod && mod.view === code) mod.actions.concat(mod.sections ?? []).forEach((a) => set.delete(a))
   }
   return [...set].sort()
 }

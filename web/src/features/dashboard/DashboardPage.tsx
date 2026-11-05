@@ -32,7 +32,7 @@ export function DashboardPage() {
     { to: '/projects', icon: FolderKanban, label: t('nav.projects'), description: t('dashboard.shortcuts.projects'), allowed: can(permissions, 'projects.view') },
     { to: '/reports', icon: BarChart3, label: t('nav.reports'), description: t('dashboard.shortcuts.reports'), allowed: can(permissions, 'reports.view') },
     { to: '/users', icon: Users, label: t('nav.users'), description: t('dashboard.shortcuts.users'), allowed: can(permissions, 'users.view') },
-    { to: '/settings/permissions', icon: ShieldCheck, label: t('nav.permissions'), description: t('dashboard.shortcuts.permissions'), allowed: can(permissions, 'permissions.manage') },
+    { to: '/settings/access', icon: ShieldCheck, label: t('nav.access'), description: t('dashboard.shortcuts.permissions'), allowed: can(permissions, 'permissions.manage') },
     { to: '/account/sessions', icon: KeyRound, label: t('account.sessions'), description: t('dashboard.shortcuts.sessions'), allowed: true },
   ].filter((s) => s.allowed)
 

@@ -187,6 +187,7 @@ export function fakeRepositories(overrides: {
       create: notImplemented,
       update: notImplemented,
       setInReport: notImplemented,
+      setItVisible: notImplemented,
       setUrgency: notImplemented,
       setArea: notImplemented,
       remove: notImplemented,
@@ -239,6 +240,7 @@ export function fakeRepositories(overrides: {
     },
     charter: {
       get: notImplemented,
+      brief: notImplemented,
       saveObjective: notImplemented,
       createItem: notImplemented,
       updateItem: notImplemented,
