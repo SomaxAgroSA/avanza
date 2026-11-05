@@ -52,6 +52,7 @@ function createProjectRepository(db) {
     priority: ['priority', 'text'],
     urgency: ['urgency', 'text'],
     areaId: ['area_id', 'relation'],
+    parentId: ['parent_id', 'relation'],
     ownerId: ['owner_id', 'relation'],
     createdBy: ['created_by', 'relation'],
     startDate: ['start_date', 'date'],
@@ -73,6 +74,7 @@ function createProjectRepository(db) {
       priority: row.priority,
       urgency: row.urgency || null,
       areaId: row.area_id || null,
+      parentId: row.parent_id || null,
       ownerId: row.owner_id,
       createdBy: row.created_by || '',
       startDate: row.start_date,
@@ -122,6 +124,8 @@ function createProjectRepository(db) {
       if (query.priority) where.push(`priority = ${param(query.priority)}`)
       if (query.urgency) where.push(`urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
       if (query.areaId) where.push(query.areaId === 'none' ? 'area_id IS NULL' : `area_id = ${param(query.areaId)}`)
+      // `none` = só projetos sem pai (§34)
+      if (query.parentId) where.push(query.parentId === 'none' ? 'parent_id IS NULL' : `parent_id = ${param(query.parentId)}`)
       if (query.ownerId) where.push(`owner_id = ${param(query.ownerId)}`)
 
       const filter = `WHERE ${where.join(' AND ')}`
@@ -177,6 +181,17 @@ function createProjectRepository(db) {
 
     async findManyByIds(ids) {
       return (await findRows(db, TABLE, ids)).map(toEntity)
+    },
+
+    /** { projetoPai: quantidade de subprojetos (inclusive arquivados) } — só os pais com filhos (§34). */
+    async countChildren(ids) {
+      const counts = {}
+      if (!ids || ids.length === 0) return counts
+      const rows = await db.query('SELECT parent_id, count(*)::int AS total FROM projects WHERE parent_id = ANY($1::text[]) GROUP BY parent_id', [ids])
+      rows.forEach((row) => {
+        counts[row.parent_id] = row.total
+      })
+      return counts
     },
   }
 }

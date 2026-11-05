@@ -36,8 +36,9 @@ function createPlanCollaborationService(deps) {
   const who = (can, project) => ({ comment: canComment(can, project), manager: can.manage })
 
   /** Pessoas ativas com acesso ao projeto (dono e membros de qualquer papel). */
+  /** Quem pode ser mencionado: dono e membros ativos — menos o Responsável TI, que não vê a Gestão (§33). */
   async function participants(project) {
-    const ids = (await deps.projectMemberRepository.listByProject(project.id)).map((m) => m.userId)
+    const ids = (await deps.projectMemberRepository.listByProject(project.id)).filter((m) => m.role !== 'it').map((m) => m.userId)
     if (ids.indexOf(project.ownerId) < 0) ids.push(project.ownerId)
     return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
   }

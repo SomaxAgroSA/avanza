@@ -66,6 +66,45 @@ describe('domain/task — acesso', () => {
   })
 })
 
+describe('domain/task — Responsável TI (§33/§36)', () => {
+  const mine = { id: 't1', assigneeId: 'ti', creatorId: 'gabi', itVisible: false }
+  const shared = { id: 't2', assigneeId: 'gabi', creatorId: 'gabi', itVisible: true }
+  const other = { id: 't3', assigneeId: 'gabi', creatorId: 'gabi', itVisible: false }
+
+  it('só as tarefas atribuídas a ele ou marcadas; nelas, colaborador sem excluir, reatribuir, criar, relacionar nem fazer fork', () => {
+    const a = access('MANAGER', 'it', { userId: 'ti' })
+    assert.equal(a.access.limited, true)
+    assert.equal(codeOf(() => task.assertTaskAccess(task.scopedAccess(a.access, other), a.project, 'view', other)), 'TASK_NOT_FOUND')
+    for (const t of [mine, shared]) {
+      const scoped = task.scopedAccess(a.access, t)
+      assert.equal(scoped.scoped, true)
+      assert.equal(codeOf(() => task.assertTaskAccess(scoped, a.project, 'view', t)), 'OK')
+      assert.equal(codeOf(() => task.assertTaskAccess(scoped, a.project, 'edit', t)), 'OK')
+      for (const action of ['delete', 'assign', 'create', 'link', 'fork']) {
+        assert.equal(codeOf(() => task.assertTaskAccess(scoped, a.project, action, t)), 'FORBIDDEN', action)
+      }
+      assert.deepEqual(task.taskCapabilities(scoped, a.project, t), { edit: true, delete: false, assign: false, link: false, fork: false, comment: true })
+    }
+    // sem tarefa (criar, quadro, backlog…) continua fora
+    assert.equal(codeOf(() => task.assertTaskAccess(a.access, a.project, 'create')), 'TASK_NOT_FOUND')
+  })
+
+  it('quem não é limitado não muda; o papel decide a visibilidade para notificações e menções', () => {
+    const m = access('MEMBER', 'member', { userId: 'u1' })
+    assert.equal(task.scopedAccess(m.access, other), m.access)
+    assert.equal(task.memberSeesTask(project, { role: 'member' }, 'u1', other), true)
+    assert.equal(task.memberSeesTask(project, { role: 'it' }, 'ti', other), false)
+    assert.equal(task.memberSeesTask(project, { role: 'it' }, 'ti', mine), true)
+    assert.equal(task.memberSeesTask(project, { role: 'it' }, 'ti', shared), true)
+    assert.equal(task.memberSeesTask(project, null, 'owner', other), true)
+    assert.equal(task.memberSeesTask(project, null, 'x', other), false)
+  })
+
+  it('o Responsável TI pode ser responsável pela tarefa', () => {
+    assert.equal(task.canBeAssignee(project, { role: 'it' }, 'ti'), true)
+  })
+})
+
 describe('domain/task — checklist, comentários e tags', () => {
   const ids = (() => {
     let n = 0

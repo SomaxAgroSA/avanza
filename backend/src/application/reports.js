@@ -2,7 +2,8 @@
  * Relatórios e indicadores (diretriz §24 e §25).
  *
  * - Acesso: `reports.view`; escopo = projetos visíveis ao usuário (membro, dono ou `projects.view_all`),
- *   sem os arquivados — a não ser que o projeto arquivado seja escolhido no filtro.
+ *   sem os arquivados — a não ser que o projeto arquivado seja escolhido no filtro. Nos projetos em que
+ *   a pessoa é Responsável TI (§33), só as tarefas visíveis a ela (atribuídas ou marcadas para TI).
  * - Período: `from`/`to` (ISO); padrão, os últimos 30 dias. Sempre devolvido na resposta.
  * - Definições devolvidas junto (transparência): tipos considerados bug (chave BUG) e a
  *   prioridade considerada crítica (a primeira da lista de prioridades).
@@ -106,7 +107,8 @@ function createReportService(deps) {
     if (params.project_id) {
       const project = await deps.projectRepository.findById(params.project_id)
       const access = project ? projectDomain.resolveAccess(ctx.principal, project, await deps.projectMemberRepository.find(project.id, ctx.principal.userId)) : null
-      if (!project || !access.canView) throw appError('PROJECT_NOT_FOUND')
+      // o Responsável TI filtra pelo projeto dele; as linhas já vêm só com as tarefas visíveis a ele
+      if (!project || !(access.canView || access.limited)) throw appError('PROJECT_NOT_FOUND')
     }
 
     const statusList = await deps.statusRepository.list({ includeInactive: true })
@@ -157,7 +159,7 @@ function createReportService(deps) {
       .sort((a, b) => a.dueDate - b.dueDate)
       .slice(0, OVERDUE_LIMIT)
     const overdueTasks = overdue.length ? byId(await tasks.findManyByIds(overdue.map((r) => r.id))) : {}
-    const overdueSummaries = await taskService.summarize(overdue.map((r) => overdueTasks[r.id]).filter(Boolean))
+    const overdueSummaries = await taskService.summarize(overdue.map((r) => overdueTasks[r.id]).filter(Boolean), ctx)
 
     return {
       period: { from: params.from.toISOString(), to: params.to.toISOString(), tz_offset: params.tzOffset },
@@ -225,7 +227,7 @@ function createReportService(deps) {
     pageItems.forEach((item) => {
       hours[item.row.id] = item.hours
     })
-    const items = (await taskService.summarize(pageItems.map((item) => found[item.row.id]).filter(Boolean))).map((summary) => Object.assign({}, summary, { metric_hours: hours[summary.id] }))
+    const items = (await taskService.summarize(pageItems.map((item) => found[item.row.id]).filter(Boolean), ctx)).map((summary) => Object.assign({}, summary, { metric_hours: hours[summary.id] }))
     return { items, meta: buildPageMeta(pagination, selected.length) }
   }
 

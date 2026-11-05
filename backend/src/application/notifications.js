@@ -11,6 +11,7 @@ const { appError } = require('../core/errors')
 const { parsePagination, buildPageMeta } = require('../core/pagination')
 const rbac = require('../domain/rbac')
 const workflow = require('../domain/workflow')
+const taskDomain = require('../domain/task')
 const notificationDomain = require('../domain/notification')
 const { iso, toUserSummary } = require('./presenters')
 const emailDomain = require('../domain/email')
@@ -18,8 +19,15 @@ const { emailContext } = require('./email')
 
 /** Gera notificações; `repos` é o conjunto de repositórios da transação atual. */
 function createNotifier(deps) {
-  async function hasAccess(project, userId) {
-    return project.ownerId === userId || !!(await deps.projectMemberRepository.find(project.id, userId))
+  /**
+   * O destinatário ainda enxerga o alvo: dono ou membro do projeto; o Responsável TI (§33) só as tarefas
+   * visíveis a ele e nunca elementos da Gestão (o e-mail leva o mesmo conteúdo, então vale para ele também).
+   */
+  async function hasAccess(project, userId, task) {
+    if (project.ownerId === userId) return true
+    const membership = await deps.projectMemberRepository.find(project.id, userId)
+    if (!membership) return false
+    return task ? taskDomain.memberSeesTask(project, membership, userId, task) : membership.role !== 'it'
   }
 
   /**
@@ -39,7 +47,7 @@ function createNotifier(deps) {
     let created = 0
     for (const recipient of list) {
       const user = users[recipient.userId]
-      if (!user || user.status !== 'active' || !(await hasAccess(event.project, user.id))) continue
+      if (!user || user.status !== 'active' || !(await hasAccess(event.project, user.id, event.task || null))) continue
       const dedupeKey = event.dedupeKey ? event.dedupeKey(recipient.type) : ''
       if (dedupeKey && (await repos.notificationRepository.existsKey(user.id, dedupeKey))) continue
       const notification = Object.assign({ userId: user.id, type: recipient.type, actorId: event.actorId || null, data: Object.assign({}, baseData, event.data || {}), dedupeKey }, target)

@@ -21,6 +21,8 @@ const nullableUrgency = () => ({ type: ['string', 'null'], enum: URGENCY_LEVELS.
 const urgencyFilter = () => oneOf(URGENCY_LEVELS.concat(['none']), 'Only items with this urgency; none = without urgency.')
 
 const AREA = 'Responsible area id (an active area from get_task_settings or list_areas).'
+const PARENT = 'Parent project id (from list_projects): one level only — the parent cannot have a parent and a project with subprojects cannot get one. Requires being a manager of the parent.'
+const MEMBER_ROLE = 'Role in the project: manager = edits the project and its members; member = works on tasks; viewer = read and comment only; it = IT owner, sees only the project brief (get_project_brief) and the tasks assigned to them or marked visible to IT.'
 const areaFilter = () => text(64, 'Only items of this responsible area id, or "none" for items without an area.')
 
 const PROJECT_FIELDS = {
@@ -117,6 +119,7 @@ function compactTask(task) {
     urgency: task.urgency || null,
     area: task.area ? { id: task.area.id, name: task.area.name } : null,
     in_report: task.in_report !== false,
+    it_visible: !!task.it_visible,
     start_date: task.start_date || null,
     due_date: task.due_date || null,
     tags: (task.tags || []).map(nameOf),
@@ -172,18 +175,20 @@ const TOOLS = [
           priority: oneOf(projectDomain.PROJECT_PRIORITY, 'Only projects with this priority.'),
           urgency: urgencyFilter(),
           area_id: areaFilter(),
+          parent_id: text(64, 'Only the subprojects of this parent project id, or "none" for main projects (without a parent).'),
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: name, key, created_at, due_date, status, priority.'),
         },
         PAGE,
       ),
     ),
     annotations: READ,
-    run: async (args, { services, ctx }) => page(await services.projects.listProjects(ctx, Object.assign(pick(args, ['search', 'view', 'status', 'priority', 'urgency', 'area_id', 'sort']), pageQuery(args)))),
+    run: async (args, { services, ctx }) => page(await services.projects.listProjects(ctx, Object.assign(pick(args, ['search', 'view', 'status', 'priority', 'urgency', 'area_id', 'parent_id', 'sort']), pageQuery(args)))),
   },
   {
     name: 'get_project',
     title: 'Get project',
-    description: 'Returns a project with its owner, member count, the user role in it and capabilities.',
+    description:
+      'Returns a project with its owner, member count, parent project and number of subprojects, the user role in it (it = IT owner: use get_project_brief) and capabilities (sections = charter, history, members, report the user sees in it).',
     inputSchema: schema({ project_id: PROJECT_ID }, ['project_id']),
     annotations: READ,
     run: (args, { services, ctx }) => services.projects.getProject(ctx, args.project_id),
@@ -200,6 +205,7 @@ const TOOLS = [
           due_date: date('Due date'),
           urgency: urgency(),
           area_id: id(AREA),
+          parent_id: id(PARENT),
         },
         PROJECT_FIELDS,
       ),
@@ -213,7 +219,10 @@ const TOOLS = [
     title: 'Update project',
     description: 'Changes a project (only the fields sent). The key cannot change; archived projects are read-only. Requires being a project manager.',
     inputSchema: schema(
-      Object.assign({ project_id: PROJECT_ID, start_date: nullableDate('Start date'), due_date: nullableDate('Due date'), urgency: nullableUrgency(), area_id: nullableId(AREA) }, PROJECT_FIELDS),
+      Object.assign(
+        { project_id: PROJECT_ID, start_date: nullableDate('Start date'), due_date: nullableDate('Due date'), urgency: nullableUrgency(), area_id: nullableId(AREA), parent_id: nullableId(`${PARENT} null detaches it.`) },
+        PROJECT_FIELDS,
+      ),
       ['project_id'],
     ),
     annotations: CHANGE,
@@ -263,9 +272,9 @@ const TOOLS = [
   {
     name: 'add_project_member',
     title: 'Add project member',
-    description: 'Adds a person to a project. manager = edits the project and its members; member = works on tasks; viewer = read and comment only. Requires being a project manager.',
+    description: 'Adds a person to a project with a role (manager, member, viewer or it). Requires being a project manager with the members section.',
     inputSchema: schema(
-      { project_id: PROJECT_ID, user_id: id('User id (from find_member_candidates).'), role: oneOf(projectDomain.MEMBER_ROLES, 'Role in the project.') },
+      { project_id: PROJECT_ID, user_id: id('User id (from find_member_candidates).'), role: oneOf(projectDomain.MEMBER_ROLES, MEMBER_ROLE) },
       ['project_id', 'user_id', 'role'],
     ),
     annotations: ADD,
@@ -275,9 +284,9 @@ const TOOLS = [
   {
     name: 'update_project_member',
     title: 'Change member role',
-    description: 'Changes the role of a person in a project (manager, member or viewer). The owner keeps managing. Requires being a project manager.',
+    description: 'Changes the role of a person in a project (manager, member, viewer or it). The owner keeps managing. Requires being a project manager with the members section.',
     inputSchema: schema(
-      { project_id: PROJECT_ID, user_id: id('User id (from list_project_members).'), role: oneOf(projectDomain.MEMBER_ROLES, 'New role in the project.') },
+      { project_id: PROJECT_ID, user_id: id('User id (from list_project_members).'), role: oneOf(projectDomain.MEMBER_ROLES, MEMBER_ROLE) },
       ['project_id', 'user_id', 'role'],
     ),
     annotations: CHANGE,
@@ -310,7 +319,7 @@ const TOOLS = [
   {
     name: 'get_project_history',
     title: 'Project history',
-    description: 'Returns the readable change history of a project (settings, members, files…), newest first, paginated.',
+    description: 'Returns the readable change history of a project (settings, members, files…), newest first, paginated. Requires the history section of the project (FORBIDDEN otherwise).',
     inputSchema: schema(Object.assign({ project_id: PROJECT_ID }, PAGE), ['project_id']),
     annotations: READ,
     run: async (args, { services, ctx }) => page(await services.audit.listEntityHistory(ctx, 'project', args.project_id, pageQuery(args))),
@@ -371,6 +380,7 @@ const TOOLS = [
           urgency: urgencyFilter(),
           area_id: areaFilter(),
           in_report: bool('true = only tasks included in the project report; false = only the excluded ones.'),
+          it_visible: bool('true = only tasks marked visible to the IT owner of the project; false = only the unmarked ones.'),
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: code, title, created_at, updated_at, due_date, priority, status. Default: code.'),
         },
         PAGE,
@@ -381,6 +391,7 @@ const TOOLS = [
       const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'sort']), pageQuery(args))
       if (args.categories && args.categories.length > 0) query.category = args.categories.join(',')
       if (args.in_report !== undefined) query.in_report = String(args.in_report)
+      if (args.it_visible !== undefined) query.it_visible = String(args.it_visible)
       const result = await services.tasks.listTasks(ctx, query)
       return { items: result.items.map(compactTask), meta: result.meta }
     },
@@ -432,10 +443,19 @@ const TOOLS = [
     name: 'set_task_in_report',
     title: 'Include task in project report',
     description:
-      'Includes (true) or excludes (false) a task from the project report (the Report tab of the project page). Every task is included by default. Does not require the fields of the status; recorded in the task history.',
+      'Includes (true) or excludes (false) a task from the project report (the Report tab of the project page). Every task is included by default. Requires editing the task and the report section of the project. Does not require the fields of the status; recorded in the task history.',
     inputSchema: schema({ task_id: TASK_ID, in_report: bool('true = included in the project report; false = left out.') }, ['task_id', 'in_report']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.tasks.setTaskReport(ctx, args.task_id, pick(args, ['in_report'])),
+  },
+  {
+    name: 'set_task_it_visible',
+    title: 'Show task to the IT owner',
+    description:
+      'Marks (true) or unmarks (false) a task as visible to the IT owner of the project (members with the role it), who otherwise only sees the tasks assigned to them. Requires editing the task; the IT owner cannot change it. Does not require the fields of the status; recorded in the task history.',
+    inputSchema: schema({ task_id: TASK_ID, it_visible: bool('true = the IT owner sees the task; false = only if assigned to them.') }, ['task_id', 'it_visible']),
+    annotations: CHANGE,
+    run: (args, { services, ctx }) => services.tasks.setTaskItVisible(ctx, args.task_id, pick(args, ['it_visible'])),
   },
   {
     name: 'delete_task',

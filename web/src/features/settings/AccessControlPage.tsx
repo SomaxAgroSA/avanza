@@ -1,10 +1,20 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { useQueries } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, FolderKanban, ShieldCheck, UserRound } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
-import { ACCESS_MODULES, accessSummary, moduleVisible, personalRoleCode, projectAccessOf, togglePermission, type ProjectAccess } from '@/domain/access'
+import {
+  ACCESS_MODULES,
+  PROJECT_SECTION_CHIPS,
+  accessSummary,
+  moduleVisible,
+  personalRoleCode,
+  projectAccessOf,
+  togglePermission,
+  type ProjectAccess,
+} from '@/domain/access'
 import type { Role, User } from '@/domain/entities'
 import { PERMISSION_CODES, SUPER_ADMIN_ROLE, type PermissionCode } from '@/domain/permissions'
 import { MEMBER_ROLES, type MemberRole, type Project } from '@/domain/projects'
@@ -16,6 +26,7 @@ import {
   AppDataTable,
   AppDialog,
   AppEmptyState,
+  AppNavTabs,
   AppSelect,
   AppSkeleton,
   AppSwitch,
@@ -24,23 +35,56 @@ import {
   type DataTableColumn,
 } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
+import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { useSession } from '@/features/auth/session'
 import { projectKeys, useMemberMutations, useProjects } from '@/features/projects/queries'
 import { useUpdateUser, useUsersList } from '@/features/users/queries'
 import { useCreateRole, useRoles, useUpdateRolePermissions } from './queries'
+import { RolesPage } from './RolesPage'
+import { PermissionsPage } from './PermissionsPage'
 
 const USERS_QUERY = { page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 const PROJECTS_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 const NONE = 'none'
 
+/** Abas do Controle de acesso (`?tab=`): por pessoa (padrão), perfis e a matriz de permissões por perfil. */
+const ACCESS_TABS = ['person', 'roles', 'matrix'] as const
+type AccessTab = (typeof ACCESS_TABS)[number]
+
 /**
- * Controle de acesso (Configurações): escolhe-se uma pessoa e se vê num só lugar o perfil, os módulos que
- * ela vê e o que pode fazer em cada um, e em quais projetos entra — com os interruptores para mudar ali.
- * Usa o sistema de perfis e de membros de projeto que já existe (o servidor valida tudo).
+ * Controle de acesso (Configurações), um só lugar para quem vê o quê (regras §35): por pessoa (perfil,
+ * módulos, o que vê dentro de cada projeto, o que pode fazer e em quais projetos entra), a lista de
+ * perfis e a matriz de permissões por perfil. Os endereços antigos /settings/roles e /settings/permissions
+ * levam às abas. Usa o sistema de perfis e de membros de projeto que já existe (o servidor valida tudo).
  */
 export function AccessControlPage() {
+  const { t } = useTranslation()
+  const [params] = useSearchParams()
+  const current = params.get('tab')
+  const tab: AccessTab = ACCESS_TABS.find((value) => value === current) ?? 'person'
+  // lugar das ações da aba aberta (Novo perfil, Salvar…), à direita da linha das abas
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
+  const pathOf = (value: AccessTab) => (value === 'person' ? '/settings/access' : `/settings/access?tab=${value}`)
+  return (
+    <>
+      <PageHeader title={t('access.title')} description={t('access.description')} />
+      <AppNavTabs
+        aria-label={t('access.title')}
+        className="mb-4"
+        replace
+        items={ACCESS_TABS.map((value) => ({ key: value, to: pathOf(value), label: t(`access.tabs.${value}`), active: value === tab }))}
+        actions={<div ref={setActionsSlot} className="flex items-center gap-2" />}
+      />
+      <TabActionsSlotContext.Provider value={actionsSlot}>
+        {tab === 'roles' ? <RolesPage /> : tab === 'matrix' ? <PermissionsPage /> : <PersonAccess />}
+      </TabActionsSlotContext.Provider>
+    </>
+  )
+}
+
+function PersonAccess() {
   const { t } = useTranslation()
   const users = useUsersList(USERS_QUERY)
   const roles = useRoles()
@@ -50,7 +94,6 @@ export function AccessControlPage() {
 
   return (
     <>
-      <PageHeader title={t('access.title')} description={t('access.description')} />
       {users.isPending || roles.isPending ? (
         <div className="flex flex-col gap-4">
           <AppSkeleton className="h-24 rounded-xl" />
@@ -244,26 +287,27 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
                   <span className="text-xs text-muted">{visible ? t('access.sees') : t('access.doesNotSee')}</span>
                 )}
               </div>
+              {mod.sections && (
+                // o que vê dentro de cada projeto (§35): as seções do projeto e os módulos que aparecem nele
+                <div className={cn('flex flex-col gap-1.5', mod.view && !perms.includes(mod.view) && 'opacity-50')}>
+                  <span className="text-xs font-medium text-muted">{t('access.sections.title')}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Chip on disabled label={t('access.sections.overview')} />
+                    {PROJECT_SECTION_CHIPS.map(({ key, code }) => (
+                      <Chip key={key} on={perms.includes(code)} disabled={locked || busy} label={t(`access.sections.${key}`)} onClick={() => change(code, !perms.includes(code))} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-subtle">{t('access.sections.hint')}</span>
+                </div>
+              )}
               {mod.actions.length > 0 && (
-                <div className={cn('flex flex-wrap gap-1.5', mod.view && !perms.includes(mod.view) && 'opacity-50')}>
-                  {mod.actions.map((code) => {
-                    const on = perms.includes(code)
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        aria-pressed={on}
-                        disabled={locked || busy}
-                        onClick={() => change(code, !on)}
-                        className={cn(
-                          'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed',
-                          on ? 'border-primary-border bg-primary-soft text-primary-soft-fg' : 'border-border bg-surface text-muted hover:border-border-strong',
-                        )}
-                      >
-                        {t(`permissions.codes.${code}`)}
-                      </button>
-                    )
-                  })}
+                <div className={cn('flex flex-col gap-1.5', mod.view && !perms.includes(mod.view) && 'opacity-50')}>
+                  {mod.sections && <span className="text-xs font-medium text-muted">{t('access.sections.actions')}</span>}
+                  <div className="flex flex-wrap gap-1.5">
+                    {mod.actions.map((code) => (
+                      <Chip key={code} on={perms.includes(code)} disabled={locked || busy} label={t(`permissions.codes.${code}`)} onClick={() => change(code, !perms.includes(code))} />
+                    ))}
+                  </div>
                 </div>
               )}
             </li>
@@ -293,6 +337,24 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
         <p className="text-sm text-muted">{t('access.shared.hint')}</p>
       </AppDialog>
     </AppCard>
+  )
+}
+
+/** Etiqueta liga/desliga (verde = pode); a desabilitada só informa. */
+function Chip({ on, disabled, label, onClick }: { on: boolean; disabled?: boolean; label: string; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed',
+        on ? 'border-primary-border bg-primary-soft text-primary-soft-fg' : 'border-border bg-surface text-muted hover:border-border-strong',
+      )}
+    >
+      {label}
+    </button>
   )
 }
 

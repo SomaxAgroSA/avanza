@@ -79,4 +79,46 @@ describe('ProjectFormDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Novo projeto' }))
     expect(await screen.findByText('Esta chave já está em uso')).toBeInTheDocument()
   })
+
+  describe('projeto pai (§34)', () => {
+    const main = (id: string, key: string, name: string, extra: Partial<Project> = {}) =>
+      ({ id, key, name, parent: null, archivedAt: null, childCount: 0, capabilities: { edit: true }, ...extra }) as unknown as Project
+    const list = vi.fn(() =>
+      Promise.resolve({ items: [main('p9', 'PRG', 'Programa Comercial'), main('p8', 'RO', 'Só leitura', { capabilities: { edit: false } } as Partial<Project>)], page: 1, perPage: 100, total: 2, totalPages: 1 }),
+    )
+
+    it('"Novo subprojeto" já vem com o pai escolhido e envia parentId', async () => {
+      const create = vi.fn().mockResolvedValue(created)
+      const repositories = fakeRepositories({ projects: { create, list } })
+      renderRoutes(
+        [
+          { path: '/projects', element: <ProjectFormDialog open onOpenChange={() => {}} parentId="p9" /> },
+          { path: '/projects/:id', element: <p>detalhe</p> },
+        ],
+        { repositories, initialPath: '/projects' },
+      )
+      await waitFor(() => expect(screen.getByRole('combobox', { name: /^Projeto pai/ })).toHaveTextContent('PRG · Programa Comercial'))
+      await userEvent.type(screen.getByLabelText(/^Nome/), 'Força de Vendas')
+      await userEvent.click(screen.getByRole('button', { name: 'Novo projeto' }))
+      await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ key: 'FDV', parentId: 'p9' })))
+    })
+
+    it('pais possíveis: só os que a pessoa edita; projeto com subprojetos não escolhe pai', async () => {
+      const repositories = fakeRepositories({ projects: { list } })
+      const withChildren = { ...main('p1', 'CRM', 'CRM'), description: '', icon: 'folder', cover: 'violet', status: 'active', priority: 'medium', urgency: null, area: null, childCount: 2 } as unknown as Project
+      renderRoutes([{ path: '/', element: <ProjectFormDialog open onOpenChange={() => {}} project={withChildren} /> }], { repositories, initialPath: '/' })
+      const select = await screen.findByRole('combobox', { name: /^Projeto pai/ })
+      expect(select).toBeDisabled()
+      expect(screen.getByText('Este projeto tem 2 subprojetos, por isso não pode ter um pai.')).toBeInTheDocument()
+    })
+
+    it('mostra no campo o erro do servidor (um só nível)', async () => {
+      const create = vi.fn().mockRejectedValue(new AppError({ code: 'VALIDATION_ERROR', message: 'x', status: 422, details: { fields: { parent_id: 'parent_is_child' } } }))
+      const repositories = fakeRepositories({ projects: { create, list } })
+      renderRoutes([{ path: '/', element: <ProjectFormDialog open onOpenChange={() => {}} parentId="p9" /> }], { repositories, initialPath: '/' })
+      await userEvent.type(await screen.findByLabelText(/^Nome/), 'Neto')
+      await userEvent.click(screen.getByRole('button', { name: 'Novo projeto' }))
+      expect(await screen.findByText('Esse projeto já é um subprojeto; escolha um projeto principal')).toBeInTheDocument()
+    })
+  })
 })

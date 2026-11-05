@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '@/presentation/layouts/AppShell'
-import { LegacyProjectRedirect, SettingsIndexRedirect } from './legacy-redirects'
+import { AccessTabRedirect, LegacyProjectRedirect, SettingsIndexRedirect } from './legacy-redirects'
 import { GuestOnly, PermissionGate, RequireAuth } from '@/features/auth/guards'
 import { NotFoundPage, RouteErrorPage } from '@/features/errors/ErrorPages'
 import { isChunkLoadError, reloadForNewVersion } from './chunk-reload'
@@ -180,8 +180,9 @@ export const routes: RouteObject[] = [
             element: <PermissionGate permission="permissions.manage" />,
             children: [
               { path: 'access', ...page(() => import('@/features/settings/AccessControlPage').then((m) => ({ default: m.AccessControlPage }))) },
-              { path: 'roles', ...page(() => import('@/features/settings/RolesPage').then((m) => ({ default: m.RolesPage }))) },
-              { path: 'permissions', ...page(() => import('@/features/settings/PermissionsPage').then((m) => ({ default: m.PermissionsPage }))) },
+              // Perfis e Permissões viraram abas do Controle de acesso
+              { path: 'roles', element: <AccessTabRedirect tab="roles" /> },
+              { path: 'permissions', element: <AccessTabRedirect tab="matrix" /> },
             ],
           },
         ],

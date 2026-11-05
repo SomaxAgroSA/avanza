@@ -6,6 +6,29 @@
 import type { UserSummary } from './projects'
 import type { TaskSummary } from './tasks'
 
+/** Item da ficha sob a responsabilidade de quem pede o resumo (funcionalidade ou resultado). */
+export interface ProjectBriefItem {
+  id: string
+  kind: 'feature' | 'result'
+  title: string
+  description: string
+  unit: string
+  /** Meta (só resultados). */
+  target: number | null
+  /** AAAA-MM-DD ou null. */
+  dueDate: string | null
+}
+
+/**
+ * Resumo do projeto para o Responsável TI (regras §33): objetivo geral, as tarefas dele (atribuídas ou
+ * marcadas "Visível para TI") e os itens da ficha sob a responsabilidade dele.
+ */
+export interface ProjectBrief {
+  objective: string
+  tasks: TaskSummary[]
+  items: ProjectBriefItem[]
+}
+
 export const CHARTER_KINDS = ['objective', 'feature', 'scope_in', 'scope_out', 'result'] as const
 export type CharterKind = (typeof CHARTER_KINDS)[number]
 

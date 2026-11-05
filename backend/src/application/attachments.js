@@ -29,7 +29,8 @@ function createAttachmentService(deps) {
     const project = task ? await deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError(notFound || 'TASK_NOT_FOUND')
     const membership = await deps.projectMemberRepository.find(project.id, ctx.principal.userId)
-    const access = projectDomain.resolveAccess(ctx.principal, project, membership)
+    // Responsável TI: anexa e baixa nas tarefas visíveis a ele (§33)
+    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(ctx.principal, project, membership), task)
     try {
       taskDomain.assertTaskAccess(access, project, 'view', task)
     } catch (err) {

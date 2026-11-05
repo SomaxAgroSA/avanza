@@ -5,7 +5,7 @@ import i18n from '@/core/i18n'
 import type { Role } from '@/domain/entities'
 import type { Project, ProjectMember } from '@/domain/projects'
 import { PERMISSION_CODES } from '@/domain/permissions'
-import { fakeRepositories, makeCurrentUser, makeUser, renderWithProviders } from '@/test/utils'
+import { fakeRepositories, makeCurrentUser, makeUser, renderRoutes } from '@/test/utils'
 import { AccessControlPage } from './AccessControlPage'
 
 beforeAll(async () => {
@@ -19,7 +19,7 @@ const douglas = makeUser({ id: 'u2', name: 'Douglas Martins', email: 'douglas@x.
 const project = (id: string, key: string, name: string) => ({ id, key, name, archivedAt: null }) as unknown as Project
 const owner: ProjectMember = { user: { id: 'u1', name: 'Ana Souza', email: 'ana@kamban.test', avatarUrl: null, status: 'active' }, role: 'manager', isOwner: true, joinedAt: null }
 
-function setup() {
+function setup(initialPath = '/settings/access') {
   const createRole = vi.fn(() => Promise.resolve(role('role-custom', 'USR_DOUGLAS_MARTINS', 'Douglas Martins (personalizado)', [], 0)))
   const updateUser = vi.fn(() => Promise.resolve(douglas))
   const updatePermissions = vi.fn(() => Promise.resolve(memberRole))
@@ -34,8 +34,8 @@ function setup() {
       addMember,
     },
   })
-  renderWithProviders(<AccessControlPage />, repositories)
-  return { createRole, updateUser, updatePermissions, addMember }
+  const utils = renderRoutes([{ path: '/settings/access', element: <AccessControlPage /> }], { repositories, initialPath })
+  return { createRole, updateUser, updatePermissions, addMember, ...utils }
 }
 
 describe('Control de acceso', () => {
@@ -67,5 +67,34 @@ describe('Control de acceso', () => {
     await userEvent.click(select)
     await userEvent.click(await screen.findByRole('option', { name: 'Lector' }))
     await waitFor(() => expect(addMember).toHaveBeenCalledWith('p2', 'u2', 'viewer'))
+  })
+
+  it('qué ve dentro de cada proyecto (§35): las secciones son etiquetas; el Resumen siempre se ve', async () => {
+    const { createRole } = setup()
+    const charter = await screen.findByRole('button', { name: 'Ficha' })
+    expect(charter).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Resumen' })).toBeDisabled()
+    // Tareas ya está en el perfil (tasks.view); Kanban no
+    expect(screen.getByRole('button', { name: 'Tareas' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(charter)
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Crear perfil propio para Douglas' }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledOnce())
+    const [data] = createRole.mock.calls[0] as unknown as [{ permissions: string[] }]
+    expect(data.permissions).toContain('projects.charter')
+  })
+
+  it('el papel Responsable TI está entre los accesos al proyecto', async () => {
+    const { addMember } = setup()
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Acceso a Aplicación del productor' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Responsable TI' }))
+    await waitFor(() => expect(addMember).toHaveBeenCalledWith('p2', 'u2', 'it'))
+  })
+
+  it('reúne perfiles y permisos en pestañas con dirección propia (?tab=)', async () => {
+    setup('/settings/access?tab=roles')
+    const tabs = await screen.findByRole('navigation', { name: 'Control de acceso' })
+    expect(within(tabs).getByRole('link', { name: 'Perfiles' })).toHaveAttribute('aria-current', 'page')
+    expect(within(tabs).getByRole('link', { name: 'Permisos por perfil' })).toHaveAttribute('href', '/settings/access?tab=matrix')
+    expect(await screen.findByRole('button', { name: i18n.t('roles.create') })).toBeInTheDocument()
   })
 })

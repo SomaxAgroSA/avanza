@@ -60,7 +60,7 @@ describe('mcp/catalog/charter — catálogo', () => {
     const names = main.map((t) => t.name)
     TOOLS.forEach((tool) => assert.equal(names.filter((name) => name === tool.name).length, 1, tool.name))
     ;[
-      'get_project_charter', 'update_project_charter', 'create_charter_item', 'update_charter_item', 'reorder_charter_items', 'delete_charter_item',
+      'get_project_brief', 'get_project_charter', 'update_project_charter', 'create_charter_item', 'update_charter_item', 'reorder_charter_items', 'delete_charter_item',
       'list_charter_measurements', 'add_charter_measurement',
     ].forEach((name) => assert.ok(byName(name), name))
   })
@@ -94,6 +94,16 @@ describe('mcp/catalog/charter — delegação', () => {
 
     const updated = await run('update_charter_item', { item_id: 'r1', target: 90, owner_id: null }, { 'charter.updateItem': { id: 'r1', kind: 'result' } })
     assert.deepEqual(updated.calls[0].args, ['r1', { target: 90, owner_id: null }])
+  })
+
+  it('resumo do Responsável TI: objetivo, tarefas enxutas e itens dele', async () => {
+    const brief = { objective: 'Portal', tasks: FEATURE.tasks, items: [{ id: 'r1', kind: 'result', title: 'Disponibilidade', description: '', unit: '%', target: 99.5, due_date: null }] }
+    const got = await run('get_project_brief', { project_id: 'p1' }, { 'charter.getBrief': brief })
+    assert.deepEqual(got.calls[0], { service: 'charter', method: 'getBrief', args: ['p1'] })
+    assert.equal(got.out.objective, 'Portal')
+    assert.equal(got.out.tasks[0].project, 'CRM')
+    assert.equal(got.out.tasks[0].card_fields, undefined)
+    assert.deepEqual(got.out.items, brief.items)
   })
 
   it('ordem, exclusão e medições', async () => {

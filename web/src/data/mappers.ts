@@ -34,8 +34,8 @@ import { toIcon } from '@/domain/icons'
 import type { AreaRefDto, AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { isUrgency } from '@/domain/urgency'
-import type { CharterDto, CharterItemDto, CharterMeasurementDto } from './dtos'
-import { CHARTER_SECTIONS, FEATURE_STATES, MEASURE_FREQUENCIES, OBJECTIVE_STATES, RESULT_SITUATIONS, type CharterItem, type CharterMeasurement, type ProjectCharter } from '@/domain/charter'
+import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
+import { CHARTER_SECTIONS, FEATURE_STATES, MEASURE_FREQUENCIES, OBJECTIVE_STATES, RESULT_SITUATIONS, type CharterItem, type CharterMeasurement, type ProjectBrief, type ProjectCharter } from '@/domain/charter'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
 import type { BacklogView } from '@/domain/backlog'
 import { STATUS_CATEGORIES, type Area, type AreaRef, type LookupItem, type TaskPriority, type TaskStatus } from '@/domain/workflow'
@@ -47,9 +47,11 @@ import {
   PROJECT_COVERS,
   PROJECT_ICONS,
   PROJECT_PRIORITIES,
+  PROJECT_PROFILE_SECTIONS,
   PROJECT_STATUSES,
   type Project,
   type ProjectMember,
+  type ProjectRole,
   type ProjectStatus,
   type UserSummary,
 } from '@/domain/projects'
@@ -147,6 +149,10 @@ export function toProject(dto: ProjectDto): Project {
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
+    parent: dto.parent
+      ? { id: dto.parent.id, key: dto.parent.key, name: dto.parent.name, icon: toIcon(PROJECT_ICONS, dto.parent.icon, 'folder'), cover: toColor(PROJECT_COVERS, dto.parent.cover, 'violet') }
+      : null,
+    childCount: dto.child_count ?? 0,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
@@ -154,7 +160,7 @@ export function toProject(dto: ProjectDto): Project {
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
     memberCount: dto.member_count ?? 0,
-    myRole: role === 'owner' || role === 'manager' || role === 'member' || role === 'viewer' ? role : null,
+    myRole: role === 'owner' || (MEMBER_ROLES as readonly string[]).includes(role ?? '') ? (role as ProjectRole) : null,
     capabilities: {
       edit: !!dto.capabilities?.edit,
       manageMembers: !!dto.capabilities?.manage_members,
@@ -162,6 +168,8 @@ export function toProject(dto: ProjectDto): Project {
       delete: !!dto.capabilities?.delete,
       transfer: !!dto.capabilities?.transfer,
       uploadFiles: !!dto.capabilities?.upload_files,
+      // servidor sem seções (versão anterior): mostra todas
+      sections: PROJECT_PROFILE_SECTIONS.filter((section) => (dto.capabilities?.sections ?? PROJECT_PROFILE_SECTIONS).includes(section)),
     },
   }
 }
@@ -315,6 +323,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     blocked: !!dto.blocked,
     planItem: dto.plan_item ? { id: dto.plan_item.id, name: dto.plan_item.name } : null,
     inReport: dto.in_report ?? true,
+    itVisible: !!dto.it_visible,
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
   }
@@ -1211,4 +1220,21 @@ export function toProjectFilterSettings(dto: ProjectFilterDto | null | undefined
 
 export function fromProjectFilterSettings(settings: ProjectFilterSettings | null): ProjectFilterDto | null {
   return settings ? { statuses: [...settings.statuses], members_only: settings.membersOnly } : null
+}
+
+/** Resumo do projeto para o Responsável TI (regras §33). */
+export function toProjectBrief(dto: ProjectBriefDto): ProjectBrief {
+  return {
+    objective: dto.objective ?? '',
+    tasks: (dto.tasks ?? []).map(toTaskSummary),
+    items: (dto.items ?? []).map((i) => ({
+      id: i.id,
+      kind: i.kind === 'result' ? 'result' : 'feature',
+      title: i.title,
+      description: i.description ?? '',
+      unit: i.unit ?? '',
+      target: typeof i.target === 'number' ? i.target : null,
+      dueDate: i.due_date ? i.due_date.slice(0, 10) : null,
+    })),
+  }
 }

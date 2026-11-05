@@ -69,8 +69,6 @@ export const NAV_ITEMS: NavItem[] = [
       { id: 'icons', labelKey: 'nav.icons', to: '/settings/icons', anyOf: ['settings.manage'] },
       // num só lugar, por pessoa: perfil, módulos e projetos
       { id: 'access', labelKey: 'nav.access', to: '/settings/access', anyOf: ['permissions.manage'] },
-      { id: 'roles', labelKey: 'nav.roles', to: '/settings/roles', anyOf: ['permissions.manage'] },
-      { id: 'permissions', labelKey: 'nav.permissions', to: '/settings/permissions', anyOf: ['permissions.manage'] },
       { id: 'audit', labelKey: 'nav.audit', to: '/settings/audit', anyOf: ['audit.view'] },
     ],
   },

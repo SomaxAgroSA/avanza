@@ -35,7 +35,8 @@ export function TaskQuickFields({ task, className }: { task: TaskDetail; classNa
   const { update } = useTaskMutations()
   const statuses = useStatuses(false)
   const priorities = usePriorities(false)
-  const members = useProjectMembers(task.project?.id)
+  // a lista de pessoas só serve para trocar o responsável (o Responsável TI não reatribui nem vê os membros)
+  const members = useProjectMembers(task.capabilities.assign ? task.project?.id : undefined)
   const assignable = (members.data ?? []).filter((m) => m.user.status === 'active' && (m.role !== 'viewer' || m.isOwner))
 
   const [required, setRequired] = useState<RequiredFieldsRequest | null>(null)

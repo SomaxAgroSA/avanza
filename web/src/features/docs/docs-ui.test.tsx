@@ -211,12 +211,19 @@ describe('Documentação — espaço e página', () => {
 
 describe('Documentação — editor', () => {
   it('abre o rascunho e publica título e conteúdo; volta para a leitura', async () => {
-    const publish = vi.fn(async () => docPage('agenda', 'Agenda nova', { version: 3 }))
+    // como o servidor real: depois de publicar, buscar a página devolve a versão publicada
+    // (sem isso, a nova busca da leitura disputava com o cache e o título voltava a "Agenda")
+    let published = false
+    const publish = vi.fn(async () => {
+      published = true
+      return docPage('agenda', 'Agenda nova', { version: 3 })
+    })
     const success = vi.spyOn(notify, 'success')
     setup(
       ['docs.view', 'docs.edit'],
       {
         getDraft: async () => ({ title: 'Agenda', content: CONTENT, savedAt: null, by: null }),
+        getPage: async (id) => (published ? docPage(id, 'Agenda nova', { version: 3 }) : docPage(id, 'Agenda')),
         publish,
       },
       '/docs/MANUAL/agenda/edit',

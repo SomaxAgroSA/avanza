@@ -209,6 +209,7 @@ const FIELD_ORDER = [
   'task_status',
   'task_priority',
   'area',
+  'parent_project',
   'sprint',
   'parent',
   'forked_from',

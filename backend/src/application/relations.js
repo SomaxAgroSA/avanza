@@ -1,7 +1,8 @@
 /**
  * Relacionamentos, subtarefas (consulta) e fork de tarefas (diretriz §12 e §13).
  *
- * - Ver: quem vê a tarefa; relações com tarefas que a pessoa não enxerga ficam ocultas.
+ * - Ver: quem vê a tarefa; relações com tarefas que a pessoa não enxerga ficam ocultas (o Responsável TI,
+ *   §33, vê as relações das tarefas visíveis a ele e só com outras visíveis a ele; não relaciona nem faz fork).
  * - Relacionar/desfazer: `tasks.link` + colaborador no projeto da tarefa (o outro lado precisa
  *   estar visível). Bloqueios e dependências não podem formar ciclo.
  * - Fork: `tasks.fork` + colaborador na origem e permissão de criar no projeto destino; copia o
@@ -45,7 +46,7 @@ function createRelationService(deps) {
     const { project, access } = await accessTo(ctx, task)
     if (!project) return false
     try {
-      taskDomain.assertTaskAccess(access, project, action, task)
+      taskDomain.assertTaskAccess(taskDomain.scopedAccess(access, task), project, action, task)
       return true
     } catch (_) {
       return false
@@ -57,10 +58,11 @@ function createRelationService(deps) {
     rbac.assertAuthenticated(ctx.principal)
     const task = id ? await tasks.findById(id) : null
     if (!task) throw appError('TASK_NOT_FOUND')
-    const { project, access } = await accessTo(ctx, task)
-    if (!project) throw appError('TASK_NOT_FOUND')
-    taskDomain.assertTaskAccess(access, project, 'view', task)
-    return { task, project, access }
+    const found = await accessTo(ctx, task)
+    if (!found.project) throw appError('TASK_NOT_FOUND')
+    const access = taskDomain.scopedAccess(found.access, task)
+    taskDomain.assertTaskAccess(access, found.project, 'view', task)
+    return { task, project: found.project, access }
   }
 
   async function audit(repos, ctx, taskId, action, oldValue, newValue) {
@@ -74,7 +76,7 @@ function createRelationService(deps) {
       if (await canDo(ctx, t, 'view')) visible.push(t)
     }
     const map = {}
-    ;(await taskService.summarize(visible)).forEach((summary) => {
+    ;(await taskService.summarize(visible, ctx)).forEach((summary) => {
       map[summary.id] = summary
     })
     return map

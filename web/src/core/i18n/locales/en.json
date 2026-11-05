@@ -124,7 +124,10 @@
     "blocked_host": "This address is not allowed (cloud metadata or the machine itself)",
     "not_in_project": "The task must belong to this project",
     "invalid_link": "Link only features or results from this project",
-    "in_future": "The date can’t be in the future"
+    "in_future": "The date can’t be in the future",
+    "parent_is_child": "That project is already a subproject; choose a main project",
+    "has_children": "A project with subprojects cannot have a parent",
+    "parent_archived": "The parent project is archived"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -591,7 +594,11 @@
       "plan.manage": "Manage board groups and labels",
       "platform.manage": "Configure the platform (security and branding)",
       "integrations.manage": "Configure integrations (email, webhooks and tokens)",
-      "api_tokens.create": "Create own API tokens"
+      "api_tokens.create": "Create own API tokens",
+      "projects.charter": "View charter",
+      "projects.history": "View history",
+      "projects.members": "View members",
+      "projects.report": "View report"
     }
   },
   "audit": {
@@ -787,7 +794,9 @@
       "frequency": "Frequency",
       "value": "Value",
       "measured_at": "Measurement date",
-      "urgency": "Urgency"
+      "urgency": "Urgency",
+      "parent_project": "Parent project",
+      "it_visible": "Visible to IT"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -956,7 +965,8 @@
       "owner": "Owner",
       "manager": "Manager",
       "member": "Member",
-      "viewer": "Viewer"
+      "viewer": "Viewer",
+      "it": "IT owner"
     },
     "icons": {
       "folder": "Folder",
@@ -1086,7 +1096,7 @@
     "roleChanged": "{{name}}'s role updated.",
     "leave": "Leave project",
     "removeMember": "Remove from project",
-    "rolesHint": "Managers edit the project and manage members; members work on tasks; viewers only view. Access-role permissions also apply.",
+    "rolesHint": "Managers edit the project and manage members; members work on tasks; viewers only view; the IT owner only sees the project brief and their tasks (assigned or flagged for IT). Access-role permissions also apply.",
     "leaveTitle": "Leave the project {{name}}?",
     "removeMemberTitle": "Remove {{name}} from the project?",
     "removeMemberDescription": "They lose access to the project and can be added again later.",
@@ -1226,7 +1236,21 @@
       }
     },
     "urgencyChange": "Change urgency of {{name}} (now: {{urgency}})",
-    "urgencySaved": "{{name}}: urgency {{urgency}}."
+    "urgencySaved": "{{name}}: urgency {{urgency}}.",
+    "parent": {
+      "field": "Parent project",
+      "none": "None (main project)",
+      "hint": "Link this project to a larger project it belongs to.",
+      "lockedHint_one": "This project has {{count}} subproject, so it cannot have a parent.",
+      "lockedHint_other": "This project has {{count}} subprojects, so it cannot have a parent.",
+      "of": "Part of {{name}}",
+      "children_one": "{{count}} subproject",
+      "children_other": "{{count}} subprojects",
+      "childrenTitle": "Subprojects",
+      "emptyDescription": "Smaller projects that are part of this one. Create the first one to follow everything from here.",
+      "add": "New subproject",
+      "onlyMain": "Main projects only"
+    }
   },
   "calendar": {
     "open": "Open calendar",
@@ -1680,7 +1704,8 @@
       "startDate": "Planned start",
       "inReport": "In report",
       "urgency": "Urgency",
-      "area": "Area"
+      "area": "Area",
+      "itVisible": "Visible to IT"
     },
     "tagsPlaceholder": "Choose tags…",
     "markdownHint": "Supports **bold**, *italic*, `code`, \"-\" lists and links.",
@@ -1713,6 +1738,12 @@
       "none": "No urgency",
       "change": "Change urgency of {{code}} (now: {{urgency}})",
       "saved": "{{code}}: urgency {{urgency}}."
+    },
+    "itVisible": {
+      "add": "Show to the IT owner",
+      "remove": "Hide from the IT owner",
+      "added": "{{code}} is now visible to the IT owner.",
+      "removed": "{{code}} is no longer visible to the IT owner."
     }
   },
   "tags": {
@@ -3906,7 +3937,7 @@
   },
   "access": {
     "title": "Access control",
-    "description": "Pick a person and set in one place which modules they see, what they can do and which projects they join.",
+    "description": "Pick a person and set in one place which modules they see, what they see inside each project, what they can do and which projects they join. The other tabs hold the roles and the permission matrix.",
     "noUsers": "No users.",
     "user": "User",
     "role": "Role",
@@ -3954,6 +3985,40 @@
       "none": "No access",
       "search": "Search project",
       "changed": "{{name}} · {{project}}: {{access}}."
+    },
+    "tabs": {
+      "person": "By person",
+      "roles": "Roles",
+      "matrix": "Permissions by role"
+    },
+    "sections": {
+      "title": "What they see inside each project",
+      "hint": "Overview is always visible. The project owner sees everything; the IT owner only sees the brief and, with Charter on, the charter.",
+      "actions": "What they can do",
+      "overview": "Overview",
+      "charter": "Charter",
+      "plan": "Management",
+      "tasks": "Tasks",
+      "kanban": "Kanban",
+      "report": "Report",
+      "members": "Members",
+      "history": "History"
     }
+  },
+  "brief": {
+    "subtitle": "What the project needs from IT",
+    "aboutTitle": "About the project",
+    "aboutDescription": "Why it exists and what it must achieve.",
+    "noObjective": "The project team has not written the objective yet.",
+    "needsTitle": "What we need from IT",
+    "needsDescription_one": "{{count}} task assigned to you or flagged for IT. Open it to see details, comment or update the status.",
+    "needsDescription_other": "{{count}} tasks assigned to you or flagged for IT. Open them to see details, comment or update the status.",
+    "noTasksTitle": "Nothing pending for now",
+    "noTasksDescription": "When the team assigns you a task or flags one for IT, it will show up here.",
+    "noDueDate": "No due date",
+    "itemsTitle": "Indicators you own",
+    "itemsDescription": "Project charter targets that depend on IT.",
+    "target": "target: {{value}} {{unit}}",
+    "due": "due: {{date}}"
   }
 }

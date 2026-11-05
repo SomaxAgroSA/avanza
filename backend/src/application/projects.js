@@ -1,5 +1,8 @@
 /**
  * Casos de uso de projetos e membros. Área responsável (§32): só área ativa de /areas; `null` limpa.
+ * Responsável TI (§33): abre o projeto (`brief`) e vê o resumo; o resto fica fechado. Projeto pai (§34):
+ * um só nível, só a um pai que a pessoa edita; excluir o pai solta os filhos (FK SET NULL). Seções (§35):
+ * `capabilities.sections`; gerenciar membros também exige a seção Membros.
  */
 
 const { appError } = require('../core/errors')
@@ -29,6 +32,8 @@ const FIELD_RULES = {
   // urgência (semáforo, §31): null limpa
   urgency: [rules.oneOf(URGENCY_LEVELS)],
   area_id: [idRule],
+  // projeto pai (§34): null solta
+  parent_id: [idRule],
   start_date: [rules.isoDate()],
   due_date: [rules.isoDate()],
 }
@@ -44,6 +49,8 @@ const LIST_SCHEMA = {
   urgency: [rules.oneOf(URGENCY_LEVELS.concat(['none']))],
   // `none` = sem área
   area_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  // `none` = só projetos sem pai
+  parent_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   owner_id: [rules.maxLength(40)],
 }
 
@@ -54,8 +61,11 @@ const MEMBER_SCHEMA = {
 
 const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority' }
 
-/** Campos auditáveis no formato público (`areas` = áreas por id, para mostrar o nome no histórico). */
-function auditView(project, areas) {
+/**
+ * Campos auditáveis no formato público (`areas` = áreas por id, para mostrar o nome no histórico;
+ * `parents` = projetos pai por id, para o nome do pai).
+ */
+function auditView(project, areas, parents) {
   return {
     name: project.name,
     description: project.description,
@@ -65,6 +75,7 @@ function auditView(project, areas) {
     priority: project.priority,
     urgency: project.urgency || null,
     area: project.areaId && areas[project.areaId] ? areas[project.areaId].name : null,
+    parent_project: project.parentId ? (parents[project.parentId] ? parents[project.parentId].name : project.parentId) : null,
     start_date: iso(project.startDate),
     due_date: iso(project.dueDate),
   }
@@ -72,6 +83,10 @@ function auditView(project, areas) {
 
 function presentArea(area) {
   return area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null
+}
+
+function presentParent(parent) {
+  return parent ? { id: parent.id, key: parent.key, name: parent.name, icon: parent.icon || 'folder', cover: parent.cover || 'violet' } : null
 }
 
 function createProjectService(deps) {
@@ -93,6 +108,24 @@ function createProjectService(deps) {
     return area
   }
 
+  /**
+   * Projeto pai escolhido (§34): precisa existir, a pessoa precisa poder editá-lo (gestor do pai com
+   * `projects.edit`; o arquivado é recusado depois, com motivo próprio) e a regra de um só nível tem de
+   * valer. `project` = quem recebe o pai (null na criação). Pai invisível = `invalid_option` (anti-IDOR).
+   */
+  async function resolveParent(ctx, parentId, project) {
+    const parent = await projects.findById(parentId)
+    let editable = false
+    if (parent) {
+      const access = projectDomain.resolveAccess(ctx.principal, parent, await members.find(parent.id, ctx.principal.userId))
+      editable = access.canView && access.isManager && rbac.can(ctx.principal, 'projects.edit')
+    }
+    const hasChildren = project ? ((await projects.countChildren([project.id]))[project.id] || 0) > 0 : false
+    const issue = projectDomain.parentIssue(project, editable ? parent : null, hasChildren)
+    if (issue) throw appError('VALIDATION_ERROR', undefined, { fields: { parent_id: issue } })
+    return parent
+  }
+
   async function load(ctx, id) {
     rbac.assertAuthenticated(ctx.principal)
     const project = id ? await projects.findById(id) : null
@@ -109,6 +142,8 @@ function createProjectService(deps) {
     const access = projectDomain.resolveAccess(ctx.principal, project, role ? { role } : null)
     // listas passam as áreas lidas de uma vez; um projeto só busca a sua
     const area = !project.areaId ? null : info.areas ? info.areas[project.areaId] : await deps.areaRepository.findById(project.areaId)
+    const parent = !project.parentId ? null : info.parents ? info.parents[project.parentId] : await projects.findById(project.parentId)
+    const childCount = info.childCounts ? info.childCounts[project.id] || 0 : (await projects.countChildren([project.id]))[project.id] || 0
     return {
       id: project.id,
       name: project.name,
@@ -120,6 +155,8 @@ function createProjectService(deps) {
       priority: project.priority,
       urgency: project.urgency || null,
       area: presentArea(area),
+      parent: presentParent(parent),
+      child_count: childCount,
       owner: owner ? toUserSummary(owner) : null,
       start_date: iso(project.startDate),
       due_date: iso(project.dueDate),
@@ -145,7 +182,16 @@ function createProjectService(deps) {
     const q = query || {}
     const pick = (key) => (q[key] === undefined || q[key] === '' ? undefined : q[key])
     const filters = assertValid(
-      { view: pick('view'), search: pick('search'), status: pick('status'), priority: pick('priority'), urgency: pick('urgency'), area_id: pick('area_id'), owner_id: pick('owner_id') },
+      {
+        view: pick('view'),
+        search: pick('search'),
+        status: pick('status'),
+        priority: pick('priority'),
+        urgency: pick('urgency'),
+        area_id: pick('area_id'),
+        parent_id: pick('parent_id'),
+        owner_id: pick('owner_id'),
+      },
       LIST_SCHEMA,
     )
     const pagination = parsePagination(q)
@@ -157,6 +203,7 @@ function createProjectService(deps) {
       priority: filters.priority,
       urgency: filters.urgency,
       areaId: filters.area_id,
+      parentId: filters.parent_id,
       ownerId: filters.owner_id,
       sort: parseSort(q.sort, SORTABLE, 'name'),
       pagination,
@@ -170,19 +217,26 @@ function createProjectService(deps) {
     ;(await deps.userRepository.findManyByIds(result.items.map((p) => p.ownerId))).forEach((u) => {
       owners[u.id] = u
     })
+    const parentIds = result.items.map((p) => p.parentId).filter((id, i, all) => id && all.indexOf(id) === i)
+    const parents = {}
+    ;(parentIds.length ? await projects.findManyByIds(parentIds) : []).forEach((p) => {
+      parents[p.id] = p
+    })
+    const childCounts = await projects.countChildren(ids)
     return {
       items: await Promise.all(
         result.items.map((p) =>
-          present(ctx, p, { owner: owners[p.ownerId] || null, memberCount: counts[p.id] || 0, role: roles[p.id] || null, areas }),
+          present(ctx, p, { owner: owners[p.ownerId] || null, memberCount: counts[p.id] || 0, role: roles[p.id] || null, areas, parents, childCounts }),
         ),
       ),
       meta: buildPageMeta(pagination, result.total),
     }
   }
 
+  /** Também o Responsável TI abre o projeto (`brief`): é por aqui que a tela sabe o papel e as seções. */
   async function getProject(ctx, id) {
     const { project, access } = await load(ctx, id)
-    projectDomain.assertAccess(access, project, 'view')
+    projectDomain.assertAccess(access, project, 'brief')
     return present(ctx, project)
   }
 
@@ -195,6 +249,7 @@ function createProjectService(deps) {
     if (datesIssue) throw appError('VALIDATION_ERROR', undefined, { fields: { due_date: datesIssue } })
     if (await projects.findByKey(key)) throw appError('PROJECT_KEY_IN_USE')
     const area = data.area_id ? activeArea(data.area_id, await areasById()) : null
+    const parent = data.parent_id ? await resolveParent(ctx, data.parent_id, null) : null
 
     const project = await deps.unitOfWork.run(async (repos) => {
       const created = await repos.projectRepository.create({
@@ -207,16 +262,19 @@ function createProjectService(deps) {
         priority: data.priority || 'medium',
         urgency: data.urgency || null,
         areaId: area ? area.id : null,
+        parentId: parent ? parent.id : null,
         ownerId: ctx.principal.userId,
         createdBy: ctx.principal.userId,
         startDate: data.start_date || null,
         dueDate: data.due_date || null,
       })
       await repos.projectMemberRepository.add({ projectId: created.id, userId: ctx.principal.userId, role: 'manager' })
-      await audit(repos, ctx, created, 'project.created', null, { name: created.name, key, status: created.status, priority: created.priority })
+      const value = { name: created.name, key, status: created.status, priority: created.priority }
+      if (parent) value.parent_project = parent.name
+      await audit(repos, ctx, created, 'project.created', null, value)
       return created
     })
-    return present(ctx, project, { memberCount: 1, role: 'manager' })
+    return present(ctx, project, { memberCount: 1, role: 'manager', childCounts: {} })
   }
 
   async function updateProject(ctx, id, input) {
@@ -237,6 +295,13 @@ function createProjectService(deps) {
     let areaId = project.areaId || null
     if (source.area_id === null) areaId = null
     else if (data.area_id !== undefined && data.area_id !== areaId) areaId = activeArea(data.area_id, areas).id
+    let parentId = project.parentId || null
+    if (source.parent_id === null) parentId = null
+    else if (data.parent_id !== undefined && data.parent_id !== parentId) parentId = (await resolveParent(ctx, data.parent_id, project)).id
+    const parents = {}
+    ;(await projects.findManyByIds([project.parentId, parentId].filter(Boolean))).forEach((p) => {
+      parents[p.id] = p
+    })
 
     // Datas podem ser limpas com null; a validação do intervalo considera os valores já salvos.
     const pickDate = (field, current) => (source[field] === null ? null : data[field] !== undefined ? data[field] : current)
@@ -254,10 +319,12 @@ function createProjectService(deps) {
       priority: data.priority || project.priority,
       urgency: source.urgency === null ? null : data.urgency !== undefined ? data.urgency : project.urgency || null,
       areaId,
+      parentId,
       startDate,
       dueDate,
     })
-    const changes = diff(auditView(project, areas), auditView(next, areas), Object.keys(auditView(project, areas)))
+    const before = auditView(project, areas, parents)
+    const changes = diff(before, auditView(next, areas, parents), Object.keys(before))
     if (!changes) return present(ctx, project)
 
     const saved = await deps.unitOfWork.run(async (repos) => {
@@ -270,6 +337,7 @@ function createProjectService(deps) {
         priority: next.priority,
         urgency: next.urgency,
         areaId: next.areaId,
+        parentId: next.parentId,
         startDate: next.startDate,
         dueDate: next.dueDate,
       })
@@ -296,6 +364,7 @@ function createProjectService(deps) {
     projectDomain.assertAccess(access, project, 'delete')
     await deps.unitOfWork.run(async (repos) => {
       await repos.projectMemberRepository.removeAllForProject(project.id)
+      // os subprojetos continuam, agora sem pai (FK ON DELETE SET NULL)
       await repos.projectRepository.delete(project.id)
       await audit(repos, ctx, project, 'project.deleted', { name: project.name, key: project.key }, null)
     })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toArea, toBoard, toCurrentUser, toRole, toTaskSummary, toUser } from './mappers'
-import type { BoardDto, TaskDto, UserDto } from './dtos'
+import { toArea, toBoard, toCurrentUser, toProject, toProjectBrief, toRole, toTaskSummary, toUser } from './mappers'
+import type { BoardDto, ProjectDto, TaskDto, UserDto } from './dtos'
 
 const userDto: UserDto = {
   id: 'u1',
@@ -81,5 +81,50 @@ describe('data/mappers', () => {
     expect(toTaskSummary(task).area).toBeNull()
     const area = toArea({ id: 'a1', key: 'TI', name: 'Dpto. TI', description: '', color: 'blue', order: 1, is_active: true, is_default: false, created_at: null, updated_at: null })
     expect([area.name, area.isDefault, area.isActive]).toEqual(['Dpto. TI', false, true])
+  })
+
+  describe('Responsável TI, projeto pai e seções (PR #3)', () => {
+    const project: ProjectDto = {
+      id: 'p1', name: 'FVB', key: 'FVB', description: '', icon: 'folder', cover: 'blue', status: 'active', priority: 'medium',
+      owner: null, start_date: null, due_date: null, archived_at: null, created_at: null, updated_at: null, member_count: 2, my_role: 'it',
+      capabilities: { edit: false, manage_members: false, archive: false, delete: false, transfer: false, sections: ['charter', 'xyz'] },
+      parent: { id: 'p0', key: 'CRM', name: 'Portal CRM', icon: 'rocket', cover: 'nada' },
+      child_count: 0,
+    }
+
+    it('projeto: papel it, pai, subprojetos e seções conhecidas (servidor antigo = todas)', () => {
+      const p = toProject(project)
+      expect(p.myRole).toBe('it')
+      expect(p.parent).toEqual({ id: 'p0', key: 'CRM', name: 'Portal CRM', icon: 'rocket', cover: 'violet' })
+      expect(p.childCount).toBe(0)
+      expect(p.capabilities.sections).toEqual(['charter'])
+      const old = toProject({ ...project, my_role: 'weird', parent: undefined, child_count: undefined, capabilities: { edit: true, manage_members: true, archive: true, delete: true, transfer: true } })
+      expect(old.myRole).toBeNull()
+      expect(old.parent).toBeNull()
+      expect(old.childCount).toBe(0)
+      expect(old.capabilities.sections).toEqual(['charter', 'history', 'members', 'report'])
+    })
+
+    it('tarefa visível para TI e resumo do projeto', () => {
+      const task: TaskDto = {
+        id: 't1', code: 'FVB-1', number: 1, title: 'Liberar acesso', project: { id: 'p1', key: 'FVB', name: 'FVB' }, type: null, status: null, priority: null,
+        creator: null, assignee: null, reporter: null, parent_task_id: null, due_date: null, estimated_hours: null, actual_hours: null,
+        started_at: null, completed_at: null, created_at: null, updated_at: null,
+      }
+      expect(toTaskSummary(task).itVisible).toBe(false)
+      expect(toTaskSummary({ ...task, it_visible: true }).itVisible).toBe(true)
+      const brief = toProjectBrief({
+        objective: 'Portal comercial',
+        tasks: [{ ...task, it_visible: true }],
+        items: [{ id: 'i1', kind: 'result', title: 'Disponibilidade', target: 99.5, unit: '%', due_date: '2026-12-31T00:00:00.000Z' }, { id: 'i2', kind: 'outro', title: 'Tela' }],
+      })
+      expect(brief.objective).toBe('Portal comercial')
+      expect(brief.tasks.map((t) => t.code)).toEqual(['FVB-1'])
+      expect(brief.items).toEqual([
+        { id: 'i1', kind: 'result', title: 'Disponibilidade', description: '', unit: '%', target: 99.5, dueDate: '2026-12-31' },
+        { id: 'i2', kind: 'feature', title: 'Tela', description: '', unit: '', target: null, dueDate: null },
+      ])
+      expect(toProjectBrief({}).items).toEqual([])
+    })
   })
 })

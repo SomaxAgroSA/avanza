@@ -31,6 +31,8 @@
 - Ordem de verificação: usuário autenticado → permissão → existência → regras de domínio.
 - Recursos de outros usuários (ex.: sessões) respondem **404**, não 403 (não confirmam existência).
 - Anti-escalonamento: ninguém concede permissões que não tem, atribui perfil com permissões que não tem, altera o próprio perfil ou mexe no SUPER_ADMIN (sem ser SUPER_ADMIN). Ver [permissions.md](permissions.md).
+- **Membro limitado (Responsável TI, regras §33) falha fechado:** o papel `it` deixa `canView` falso, então toda leitura do projeto responde 404 sem precisar de um filtro em cada rota; só abrem o resumo, a ficha (com a seção) e as tarefas visíveis a ele (`scopedAccess`). A mesma regra está no SQL da lista geral e dos relatórios, nas notificações, nas menções e no tempo real. A varredura `tests/api/it-owner.test.js` confere rota por rota e ferramenta por ferramenta do MCP (ADR-051).
+- **Seções do projeto (§35):** ficha, histórico, gerenciamento de membros e o "no informe" respondem `FORBIDDEN` sem a seção — a tela também bloqueia pelo endereço.
 
 ## Entrada e saída
 - Validação declarativa em todas as rotas; campos desconhecidos são ignorados (lista explícita de campos aceitos).

@@ -22,6 +22,23 @@ describe('migrations', () => {
     assert.deepEqual(counts, { permissions: PERMISSIONS.length, roles: 5, types: 8 })
   })
 
+  it('seções do projeto (§35): todo perfil que via projetos recebeu as quatro; os padrões batem com o catálogo', async () => {
+    const { DEFAULT_ROLE_PERMISSIONS } = require('../../src/domain/permissions')
+    const sections = ['projects.charter', 'projects.history', 'projects.members', 'projects.report']
+    const rows = await t.db.query(
+      `SELECT r.code, array_agg(p.code ORDER BY p.code) AS codes FROM roles r
+       JOIN role_permissions rp ON rp.role_id = r.id JOIN permissions p ON p.id = rp.permission_id
+       GROUP BY r.code`,
+    )
+    rows.forEach((row) => {
+      const seesProjects = row.codes.includes('projects.view')
+      sections.forEach((code) => assert.equal(row.codes.includes(code), seesProjects, `${row.code}: ${code}`))
+      if (DEFAULT_ROLE_PERMISSIONS[row.code] && row.code !== 'SUPER_ADMIN') {
+        sections.forEach((code) => assert.equal(DEFAULT_ROLE_PERMISSIONS[row.code].includes(code), seesProjects, `padrão ${row.code}: ${code}`))
+      }
+    })
+  })
+
   it('não reaplicam o que já rodou', async () => {
     assert.deepEqual(await migrate(t.db), [])
   })

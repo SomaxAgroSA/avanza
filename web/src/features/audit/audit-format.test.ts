@@ -61,6 +61,17 @@ describe('audit-format', () => {
     expect(after('kind', 'scope_out')).toBe(i18n.t('charter.kinds.scope_out'))
   })
 
+  it('projeto pai, tarefa visível para TI e o papel Responsável TI (PR #3)', () => {
+    const [parent] = describeChanges(t, entry({ oldValue: { parent_project: 'Portal CRM' }, newValue: { parent_project: 'ERP' } }))
+    expect(parent).toMatchObject({ label: 'Projeto pai', before: 'Portal CRM', after: 'ERP' })
+    const [it] = describeChanges(t, entry({ oldValue: { it_visible: false }, newValue: { it_visible: true } }))
+    expect(it).toMatchObject({ label: 'Visível para TI', before: 'Não', after: 'Sim' })
+    const [role] = describeChanges(t, entry({ newValue: { role: 'it' } }))
+    expect(role?.after).toBe('Responsável TI')
+    const [section] = describeChanges(t, entry({ newValue: { permissions: ['projects.history'] } }))
+    expect(section?.after).toBe('Ver histórico')
+  })
+
   it('traduz listas de permissões', () => {
     const [change] = describeChanges(t, entry({ newValue: { permissions: ['tasks.view'] } }))
     expect(change).toMatchObject({ label: 'Permissões', before: '', after: 'Ver tarefas' })

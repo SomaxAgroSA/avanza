@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import type { JournalEntry } from '@/domain/plan-management'
 import type { PermissionCode } from '@/domain/permissions'
-import type { Project } from '@/domain/projects'
+import { PROJECT_PROFILE_SECTIONS, type Project } from '@/domain/projects'
 import type { ProjectRepository, TaskRepository } from '@/domain/repositories'
 import type { TaskSummary } from '@/domain/tasks'
 import type { Milestone, Timeline } from '@/domain/timeline'
@@ -19,7 +19,7 @@ beforeAll(async () => {
 beforeEach(() => window.localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 
-const EDIT = { edit: true, manageMembers: true, archive: true, delete: false, transfer: true, uploadFiles: true }
+const EDIT = { edit: true, manageMembers: true, archive: true, delete: false, transfer: true, uploadFiles: true, sections: [...PROJECT_PROFILE_SECTIONS] }
 
 const project = (overrides: Partial<Project> = {}): Project => ({
   id: 'p1',
@@ -32,6 +32,8 @@ const project = (overrides: Partial<Project> = {}): Project => ({
   priority: 'medium',
   urgency: null,
   area: null,
+  parent: null,
+  childCount: 0,
   owner: null,
   startDate: new Date('2026-09-22T00:00:00.000Z'),
   dueDate: null,
@@ -56,6 +58,7 @@ const task = (n: number, start: string | null, extra: Partial<TaskSummary> = {})
     startDate: start ? day(start) : null,
     dueDate: start ? day(start) : null,
     inReport: true,
+    itVisible: false,
     urgency: null,
     area: null,
     ...extra,
@@ -123,6 +126,33 @@ describe('Projetos — área responsável na lista', () => {
     const row = (await screen.findByRole('link', { name: 'CRM Corporativo' })).closest('tr') as HTMLElement
     expect(within(row).getByText('Dpto. TI')).toBeInTheDocument()
     expect(within(row).queryByRole('button', { name: /Mudar área/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('Projetos — projeto pai e subprojetos na lista (§34)', () => {
+  const ref = { id: 'p9', key: 'PRG', name: 'Programa Comercial', icon: 'folder' as const, cover: 'blue' as const }
+
+  it('a linha mostra o pai (↳) e a quantidade de subprojetos; o filtro "Projeto pai" pede parent_id à API', async () => {
+    const list = vi.fn<ProjectRepository['list']>((query) =>
+      Promise.resolve({
+        items: query.filters.parent === 'none' ? [project({ id: 'p9', key: 'PRG', name: 'Programa Comercial', childCount: 2 })] : [project({ parent: ref }), project({ id: 'p9', key: 'PRG', name: 'Programa Comercial', childCount: 2 })],
+        page: 1,
+        perPage: 20,
+        total: 2,
+        totalPages: 1,
+      }),
+    )
+    const repositories = fakeRepositories({ auth: { me: async () => makeCurrentUser(['projects.view']) }, projects: { list } })
+    renderRoutes([{ path: '/', element: <AllProjectsPage /> }], { repositories, initialPath: '/' })
+    const row = (await screen.findByRole('link', { name: 'CRM Corporativo' })).closest('tr') as HTMLElement
+    expect(within(row).getByText(/Programa Comercial/)).toHaveAttribute('title', 'Faz parte de Programa Comercial')
+    const parentRow = screen.getByRole('link', { name: 'Programa Comercial' }).closest('tr') as HTMLElement
+    expect(within(parentRow).getByText(/2 subprojetos/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mais filtros' }))
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Projeto pai' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'PRG · Programa Comercial' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { parent: 'p9' } })))
   })
 })
 

@@ -7,6 +7,9 @@
  *   o papel "leitor" do projeto só consulta;
  * - excluir: `tasks.delete` + gestor do projeto (ou `projects.view_all`) ou o autor da tarefa.
  * Projeto arquivado fica somente leitura.
+ * - Responsável TI (§33/§36): só as tarefas atribuídas a ele ou marcadas "Visível para TI", como
+ *   colaborador daquela tarefa (`scopedAccess`): vê, edita, muda o status, comenta e anexa; não exclui,
+ *   não reatribui, não cria, não relaciona nem faz fork.
  */
 
 const { extractMentions, plainText } = require('./mentions')
@@ -33,11 +36,40 @@ function isContributor(access) {
   return access.viewAll || access.isOwner || access.role === 'manager' || access.role === 'member'
 }
 
+/** Ações que o Responsável TI nunca faz, nem nas tarefas dele (§33). */
+const SCOPED_DENIED = ['delete', 'assign', 'create', 'link', 'fork']
+
+/** O Responsável TI (`userId`) enxerga a tarefa: atribuída a ele ou marcada "Visível para TI" (§36). */
+function visibleToIt(task, userId) {
+  return !!task && !!userId && (task.assigneeId === userId || !!task.itVisible)
+}
+
+/**
+ * Acesso do Responsável TI a uma tarefa: só às visíveis a ele, como contribuidor daquela tarefa
+ * (`scoped`); para as demais (e para quem não é limitado) devolve o acesso como veio.
+ */
+function scopedAccess(access, task) {
+  if (!access || !access.limited || !task || !access.principal) return access
+  if (!visibleToIt(task, access.principal.userId)) return access
+  return Object.assign({}, access, { canView: true, limited: false, scoped: true, role: 'member' })
+}
+
+/**
+ * Pelo papel no projeto (sem o perfil): a pessoa com esse vínculo enxerga a tarefa? Usado onde só há o
+ * destinatário (notificações, menções). `membership` = { role } ou null; dono sempre.
+ */
+function memberSeesTask(project, membership, userId, task) {
+  if (project.ownerId === userId) return true
+  if (!membership) return false
+  return membership.role !== 'it' || visibleToIt(task, userId)
+}
+
 /** `task` só é necessário para `delete` ({ creatorId }). */
 function assertTaskAccess(access, project, action, task) {
   const principal = access.principal
   if (!access.canView || !rbac.can(principal, 'tasks.view')) throw appError('TASK_NOT_FOUND')
   if (action === 'view') return
+  if (access.scoped && SCOPED_DENIED.indexOf(action) >= 0) throw appError('FORBIDDEN')
   const permission = ACTION_PERMISSION[action]
   if (!permission || !rbac.can(principal, permission) || !isContributor(access)) throw appError('FORBIDDEN')
   if (action === 'delete' && !(access.isManager || (task && principal && task.creatorId === principal.userId))) throw appError('FORBIDDEN')
@@ -256,6 +288,9 @@ module.exports = {
   tagKey,
   tagNameIssue,
   assertTaskAccess,
+  scopedAccess,
+  visibleToIt,
+  memberSeesTask,
   taskCapabilities,
   canBeAssignee,
   taskCode,

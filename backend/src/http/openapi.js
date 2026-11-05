@@ -277,6 +277,7 @@ function build() {
             { name: 'priority', in: 'query', schema: { type: 'string' } },
             { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência do projeto; none = sem urgência' },
             { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
+            { name: 'parent_id', in: 'query', schema: { type: 'string' }, description: 'subprojetos deste pai; none = só projetos sem pai (§34)' },
             { name: 'owner_id', in: 'query', schema: { type: 'string' } },
           ],
         }),
@@ -286,7 +287,7 @@ function build() {
         }),
       },
       '/projects/{id}': {
-        get: op('Detalhe do projeto (404 se sem acesso)', ['projects'], { 200: ok('Projeto', ref('Project')), 404: errorResponse('PROJECT_NOT_FOUND') }, { parameters: [idParam] }),
+        get: op('Detalhe do projeto (404 se sem acesso; o Responsável TI também abre: my_role = it, §33)', ['projects'], { 200: ok('Projeto', ref('Project')), 404: errorResponse('PROJECT_NOT_FOUND') }, { parameters: [idParam] }),
         patch: op('Atualiza projeto (gestor + projects.edit); a chave é imutável', ['projects'], { 200: ok('Atualizado', ref('Project')), 409: errorResponse('PROJECT_ARCHIVED') }, {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody(ref('ProjectInput')),
@@ -304,24 +305,24 @@ function build() {
         }),
       },
       '/projects/{id}/history': {
-        get: op('Histórico de auditoria do projeto', ['projects'], { 200: ok('Registros', { type: 'array', items: ref('AuditEntry') }, true) }, { parameters: [idParam] }),
+        get: op('Histórico de auditoria do projeto (seção Histórico, projects.history — §35)', ['projects'], { 200: ok('Registros', { type: 'array', items: ref('AuditEntry') }, true), 403: errorResponse('FORBIDDEN') }, { parameters: [idParam] }),
       },
       '/projects/{id}/members': {
         get: op('Membros do projeto', ['projects'], { 200: ok('Membros', { type: 'array', items: ref('ProjectMember') }) }, { parameters: [idParam] }),
-        post: op('Adiciona membro (gestor)', ['projects'], { 201: ok('Membros atualizados', { type: 'array', items: ref('ProjectMember') }), 409: errorResponse('MEMBER_ALREADY_EXISTS') }, {
+        post: op('Adiciona membro (gestor + seção Membros); role it = Responsável TI (§33)', ['projects'], { 201: ok('Membros atualizados', { type: 'array', items: ref('ProjectMember') }), 409: errorResponse('MEMBER_ALREADY_EXISTS') }, {
           parameters: [idParam, csrfHeader],
-          requestBody: jsonBody({ type: 'object', required: ['user_id', 'role'], properties: { user_id: { type: 'string' }, role: { type: 'string', enum: ['manager', 'member', 'viewer'] } } }),
+          requestBody: jsonBody({ type: 'object', required: ['user_id', 'role'], properties: { user_id: { type: 'string' }, role: { type: 'string', enum: ['manager', 'member', 'viewer', 'it'] } } }),
         }),
       },
       '/projects/{id}/member-candidates': {
-        get: op('Usuários ativos que podem ser adicionados (gestor)', ['projects'], { 200: ok('Candidatos', { type: 'array', items: ref('UserSummary') }) }, {
+        get: op('Usuários ativos que podem ser adicionados (gestor + seção Membros)', ['projects'], { 200: ok('Candidatos', { type: 'array', items: ref('UserSummary') }) }, {
           parameters: [idParam, { name: 'search', in: 'query', schema: { type: 'string' } }],
         }),
       },
       '/projects/{id}/members/{userId}': {
-        patch: op('Altera o papel do membro (gestor; papel do dono é fixo)', ['projects'], { 200: ok('Membros', { type: 'array', items: ref('ProjectMember') }), 409: errorResponse('OWNER_ROLE_LOCKED') }, {
+        patch: op('Altera o papel do membro (gestor + seção Membros; papel do dono é fixo)', ['projects'], { 200: ok('Membros', { type: 'array', items: ref('ProjectMember') }), 409: errorResponse('OWNER_ROLE_LOCKED') }, {
           parameters: [idParam, { name: 'userId', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
-          requestBody: jsonBody({ type: 'object', required: ['role'], properties: { role: { type: 'string', enum: ['manager', 'member', 'viewer'] } } }),
+          requestBody: jsonBody({ type: 'object', required: ['role'], properties: { role: { type: 'string', enum: ['manager', 'member', 'viewer', 'it'] } } }),
         }),
         delete: op('Remove membro (gestor) ou sai do projeto (o próprio membro)', ['projects'], { 200: ok('Removido', { type: 'object' }), 409: errorResponse('CANNOT_REMOVE_OWNER') }, {
           parameters: [idParam, { name: 'userId', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
@@ -427,6 +428,7 @@ function build() {
             { name: 'sprint_id', in: 'query', schema: { type: 'string' }, description: 'id da sprint ou `none` (sem sprint)' },
             { name: 'plan_item_id', in: 'query', schema: { type: 'string' }, description: 'tarefas ligadas a um elemento da Gestão de projetos' },
             { name: 'in_report', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'entra (true) ou não (false) no informe do projeto' },
+            { name: 'it_visible', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'marcada (true) ou não (false) como visível para o Responsável TI (§36)' },
             { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência (semáforo); none = sem urgência' },
             { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
@@ -450,9 +452,20 @@ function build() {
         }),
         delete: op('Exclui (tasks.delete + gestor do projeto ou autor)', ['tasks'], { 200: ok('Excluída', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
-      '/tasks/{id}/report': {
-        put: op('Liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+      '/tasks/{id}/it-visible': {
+        put: op('Marca a tarefa como visível para o Responsável TI do projeto (§36); quem edita a tarefa (não o próprio Responsável TI); não exige os obrigatórios do status', ['tasks'], {
           200: ok('Tarefa', ref('TaskDetail')),
+          403: errorResponse('FORBIDDEN'),
+          404: errorResponse('TASK_NOT_FOUND'),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['it_visible'], properties: { it_visible: { type: 'boolean' } } }),
+        }),
+      },
+      '/tasks/{id}/report': {
+        put: op('Liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa e tem a seção Informe (projects.report, §35); não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+          403: errorResponse('FORBIDDEN'),
           404: errorResponse('TASK_NOT_FOUND'),
         }, {
           parameters: [idParam, csrfHeader],
@@ -839,9 +852,41 @@ function build() {
         patch: op('Edita marco (gestor/dono)', ['timeline'], { 200: ok('Marco', ref('Milestone')), 404: errorResponse('MILESTONE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('MilestoneInput')) }),
         delete: op('Exclui marco (gestor/dono)', ['timeline'], { 200: ok('Excluído', { type: 'object' }), 404: errorResponse('MILESTONE_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
       },
+      '/projects/{id}/brief': {
+        get: op(
+          'Resumo do projeto para o Responsável TI (§33): objetivo geral, as tarefas atribuídas a quem pede ou marcadas para TI e os itens da ficha sob a responsabilidade dele; quem vê o projeto também pode pedir',
+          ['charter'],
+          {
+            200: ok('Resumo', {
+              type: 'object',
+              properties: {
+                objective: { type: 'string' },
+                tasks: { type: 'array', items: ref('Task') },
+                items: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      kind: { type: 'string', enum: ['feature', 'result'] },
+                      title: { type: 'string' },
+                      description: { type: 'string' },
+                      unit: { type: 'string' },
+                      target: { type: ['number', 'null'] },
+                      due_date: { type: ['string', 'null'] },
+                    },
+                  },
+                },
+              },
+            }),
+            404: errorResponse('PROJECT_NOT_FOUND'),
+          },
+          { parameters: [idParam] },
+        ),
+      },
       '/projects/{id}/charter': {
         get: op(
-          'Ficha do projeto (quem vê o projeto): objetivo geral, itens com estado calculado (funcionalidades pelas tarefas vinculadas, objetivos pelos vínculos, resultados pela meta e o prazo), completude e resumo',
+          'Ficha do projeto (quem vê o projeto e tem a seção Ficha, projects.charter — §35; sem ela, 403): objetivo geral, itens com estado calculado (funcionalidades pelas tarefas vinculadas, objetivos pelos vínculos, resultados pela meta e o prazo), completude e resumo',
           ['charter'],
           { 200: ok('Ficha', ref('Charter')), 404: errorResponse('PROJECT_NOT_FOUND') },
           { parameters: [idParam] },
@@ -1264,6 +1309,7 @@ function build() {
             subtask_progress: { type: 'object', properties: { done: { type: 'integer' }, total: { type: 'integer' } } },
             blocked: { type: 'boolean', description: 'algum bloqueador (bloqueia/depende de) ainda aberto' },
             in_report: { type: 'boolean', description: 'entra no informe do projeto (padrão: true)' },
+            it_visible: { type: 'boolean', description: 'visível para o Responsável TI do projeto (§36; padrão: false)' },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo): alta = vermelho, média = amarelo, baixa = verde; null = sem urgência' },
             area: AREA_REF,
             start_date: { type: ['string', 'null'], format: 'date-time', description: 'início planejado (timeline)' },
@@ -1919,6 +1965,14 @@ function build() {
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null = sem urgência' },
             area: AREA_REF,
+            parent: {
+              oneOf: [
+                { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, icon: { type: 'string' }, cover: { type: 'string' } } },
+                { type: 'null' },
+              ],
+              description: 'projeto pai (§34)',
+            },
+            child_count: { type: 'integer', description: 'quantidade de subprojetos (inclusive arquivados)' },
             owner: ref('UserSummary'),
             start_date: { type: ['string', 'null'], format: 'date-time' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
@@ -1926,10 +1980,18 @@ function build() {
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
             member_count: { type: 'integer' },
-            my_role: { type: ['string', 'null'], enum: ['owner', 'manager', 'member', 'viewer', null] },
+            my_role: { type: ['string', 'null'], enum: ['owner', 'manager', 'member', 'viewer', 'it', null], description: 'it = Responsável TI (§33)' },
             capabilities: {
               type: 'object',
-              properties: { edit: { type: 'boolean' }, manage_members: { type: 'boolean' }, archive: { type: 'boolean' }, delete: { type: 'boolean' }, transfer: { type: 'boolean' }, upload_files: { type: 'boolean' } },
+              properties: {
+                edit: { type: 'boolean' },
+                manage_members: { type: 'boolean' },
+                archive: { type: 'boolean' },
+                delete: { type: 'boolean' },
+                transfer: { type: 'boolean' },
+                upload_files: { type: 'boolean' },
+                sections: { type: 'array', items: { type: 'string', enum: ['charter', 'history', 'members', 'report'] }, description: 'seções do projeto que o usuário vê (§35)' },
+              },
             },
           },
         },
@@ -1946,6 +2008,7 @@ function build() {
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null limpa' },
             area_id: { type: ['string', 'null'], description: 'área responsável ativa de /areas; null limpa' },
+            parent_id: { type: ['string', 'null'], description: 'projeto pai (§34: um só nível, pai que a pessoa edita); null solta' },
             start_date: { type: ['string', 'null'], format: 'date', description: 'AAAA-MM-DD; null limpa' },
             due_date: { type: ['string', 'null'], format: 'date', description: 'AAAA-MM-DD; null limpa' },
           },
@@ -1954,7 +2017,7 @@ function build() {
           type: 'object',
           properties: {
             user: ref('UserSummary'),
-            role: { type: 'string', enum: ['manager', 'member', 'viewer'] },
+            role: { type: 'string', enum: ['manager', 'member', 'viewer', 'it'] },
             is_owner: { type: 'boolean' },
             joined_at: { type: 'string', format: 'date-time' },
           },

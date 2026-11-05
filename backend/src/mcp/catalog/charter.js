@@ -35,10 +35,22 @@ const compactCharter = (result) => Object.assign({}, result, { items: result.ite
 
 const TOOLS = [
   {
+    name: 'get_project_brief',
+    title: 'Project brief',
+    description:
+      'Returns what the project needs from the user: the general objective, the tasks assigned to them or marked visible to IT, and the charter features and expected results they own. It is the only project view of an IT owner (role it); anyone who sees the project can also ask for it.',
+    inputSchema: schema({ project_id: PROJECT_ID }, ['project_id']),
+    annotations: READ,
+    run: async (args, { services, ctx }) => {
+      const brief = await services.charter.getBrief(ctx, args.project_id)
+      return Object.assign({}, brief, { tasks: brief.tasks.map(compactTask) })
+    },
+  },
+  {
     name: 'get_project_charter',
     title: 'Project charter',
     description:
-      'Returns the charter of a project: general objective, specific objectives, features (with linked tasks and progress), scope (included / not included) and expected results (baseline, target, current value, situation on_track/late/achieved/no_data, stale = not measured in time), plus completeness and a summary. States marked auto are computed from the links.',
+      'Returns the charter of a project (requires the charter section of the project; FORBIDDEN otherwise): general objective, specific objectives, features (with linked tasks and progress), scope (included / not included) and expected results (baseline, target, current value, situation on_track/late/achieved/no_data, stale = not measured in time), plus completeness and a summary. States marked auto are computed from the links.',
     inputSchema: schema({ project_id: PROJECT_ID }, ['project_id']),
     annotations: READ,
     run: async (args, { services, ctx }) => compactCharter(await services.charter.getCharter(ctx, args.project_id)),

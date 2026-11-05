@@ -11,7 +11,8 @@ export type ProjectStatus = (typeof PROJECT_STATUSES)[number]
 export const PROJECT_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const
 export type ProjectPriority = (typeof PROJECT_PRIORITIES)[number]
 
-export const MEMBER_ROLES = ['manager', 'member', 'viewer'] as const
+/** `it` = Responsável TI (regras §33): só vê o resumo do projeto e as tarefas dele (atribuídas ou marcadas para TI). */
+export const MEMBER_ROLES = ['manager', 'member', 'viewer', 'it'] as const
 export type MemberRole = (typeof MEMBER_ROLES)[number]
 export type ProjectRole = MemberRole | 'owner'
 
@@ -30,6 +31,14 @@ export type ProjectCover = PaletteCover | HexColor
 
 export type ProjectView = 'all' | 'mine' | 'archived'
 
+/**
+ * Seções do projeto que o perfil libera (regras §35: `projects.charter`, `projects.history`,
+ * `projects.members`, `projects.report`); a Visão geral sempre aparece e o dono do projeto vê todas.
+ * O servidor decide e manda em `capabilities.sections`.
+ */
+export const PROJECT_PROFILE_SECTIONS = ['charter', 'history', 'members', 'report'] as const
+export type ProjectProfileSection = (typeof PROJECT_PROFILE_SECTIONS)[number]
+
 export interface ProjectCapabilities {
   edit: boolean
   manageMembers: boolean
@@ -38,6 +47,8 @@ export interface ProjectCapabilities {
   transfer: boolean
   /** Enviar arquivos ao projeto (aba Arquivos). */
   uploadFiles: boolean
+  /** Seções que a pessoa vê neste projeto (o servidor decide pelo perfil; o dono vê todas). */
+  sections: ProjectProfileSection[]
 }
 
 export interface UserSummary {
@@ -45,6 +56,15 @@ export interface UserSummary {
   name: string
   email: string
   avatarUrl: string | null
+}
+
+/** Referência curta a outro projeto (o projeto pai). */
+export interface ProjectRef {
+  id: string
+  key: string
+  name: string
+  icon: ProjectIcon
+  cover: ProjectCover
 }
 
 export interface Project {
@@ -60,6 +80,10 @@ export interface Project {
   urgency: Urgency | null
   /** Área responsável; null = sem área. */
   area: AreaRef | null
+  /** Projeto pai (regras §34); null = projeto sem pai. */
+  parent: ProjectRef | null
+  /** Quantidade de subprojetos. */
+  childCount: number
   owner: UserSummary | null
   startDate: Date | null
   dueDate: Date | null
@@ -116,4 +140,32 @@ export function isOverdue(project: Pick<Project, 'dueDate' | 'status'>, now: Dat
   const endOfDue = new Date(project.dueDate.getTime())
   endOfDue.setUTCHours(23, 59, 59, 999)
   return endOfDue.getTime() < now.getTime()
+}
+
+/** A pessoa vê a seção do projeto (Ficha, Histórico, Membros ou Informe)? */
+export function seesSection(project: Pick<Project, 'capabilities'>, section: ProjectProfileSection): boolean {
+  return project.capabilities.sections.includes(section)
+}
+
+/** Responsável TI (regras §33): o projeto abre só o resumo do que precisam dele. */
+export function isItRole(project: Pick<Project, 'myRole'>): boolean {
+  return project.myRole === 'it'
+}
+
+/**
+ * Projeto pai, um só nível (regras §34; o servidor valida): quem já tem subprojetos não pode ter pai.
+ * Sem projeto (criação), pode.
+ */
+export function canHaveParent(project: Pick<Project, 'childCount'> | null | undefined): boolean {
+  return !project || project.childCount === 0
+}
+
+/** Pais possíveis: projetos sem pai, não arquivados, que a pessoa edita, e nunca o próprio projeto. */
+export function parentCandidates(all: readonly Project[], project: Pick<Project, 'id'> | null | undefined): Project[] {
+  return all.filter((p) => !p.parent && !p.archivedAt && p.capabilities.edit && p.id !== project?.id)
+}
+
+/** Pode criar um subprojeto a partir deste: quem cria projetos e edita este, que não é subprojeto nem arquivado. */
+export function canAddSubproject(project: Project, canCreateProjects: boolean): boolean {
+  return canCreateProjects && project.capabilities.edit && !project.parent && !project.archivedAt
 }

@@ -20,3 +20,14 @@ export function SettingsIndexRedirect() {
   const settings = visibleNavItems(current?.permissions ?? []).find((item) => item.id === 'settings')
   return <Navigate to={settings?.children?.[0]?.to ?? '/dashboard'} replace />
 }
+
+/**
+ * /settings/roles e /settings/permissions viraram abas do Controle de acesso (regras §35): leva à aba,
+ * com o resto da query (`?role=` destaca o perfil na matriz).
+ */
+export function AccessTabRedirect({ tab }: { tab: 'roles' | 'matrix' }) {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  params.set('tab', tab)
+  return <Navigate to={`/settings/access?${params.toString()}`} replace />
+}

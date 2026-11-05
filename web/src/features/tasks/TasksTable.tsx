@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, FileCheck2, FileX2 } from 'lucide-react'
+import { ExternalLink, FileCheck2, FileX2, Laptop } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { isClosed, type TaskSummary } from '@/domain/tasks'
@@ -46,10 +46,15 @@ export interface TasksTableProps {
   onSearchApplied?: () => void
   /** Onde ficam "Colunas" (ex.: a linha das visões da aba Tarefas do projeto); sem ele, na barra de filtros. */
   actionsSlot?: HTMLElement | null
+  /**
+   * Aba Tarefas do projeto: o que a pessoa pode marcar em cada linha — o que sai no informe (só com a
+   * seção Informe, §35) e o que o Responsável TI vê (§36; nunca o próprio Responsável TI).
+   */
+  marks?: { report: boolean; itVisible: boolean }
 }
 
 /** Listagem padrão de tarefas (página Tarefas e aba do projeto). */
-export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot }: TasksTableProps) {
+export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot, marks }: TasksTableProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const navigate = useNavigate()
@@ -61,7 +66,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const table = useDataTableState(tableId, {
     sort: { id: 'updated_at', direction: 'desc' },
     filters: { category: OPEN },
-    columnVisibility: { category: false, tags: false, plan_item: false, in_report: false },
+    columnVisibility: { category: false, tags: false, plan_item: false, in_report: false, it_visible: false },
   })
   // busca vinda de fora (command palette): aplica uma vez e avisa para limpar o endereço
   const { setSearch } = table
@@ -78,7 +83,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   // configurador do filtro de projetos (por pessoa): restringe as opções; o projeto escolhido não some
   const chosenProject = table.state.filters.project
   const projects = useScreenProjects('tasks', chosenProject ? [chosenProject] : [], !projectId)
-  const { remove, setInReport } = useTaskMutations()
+  const { remove, setInReport, setItVisible } = useTaskMutations()
+  const markReport = !!projectId && !!marks?.report
+  const markIt = !!projectId && !!marks?.itVisible
   const urgencyOptions = useUrgencyFilterOptions()
   // áreas ativas: opções do clique e do filtro (uma consulta só para a lista inteira)
   const areas = useAreas(false)
@@ -217,9 +224,19 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
           ],
         },
       },
-      // na aba do projeto: o que entra no informe (oculta por padrão; o botão da linha liga/desliga)
+      // na aba do projeto: o que entra no informe e o que o Responsável TI vê (ocultas por padrão; os botões da linha ligam/desligam)
       ...(projectId
         ? [
+            {
+              id: 'it_visible',
+              header: t('tasks.fields.itVisible'),
+              size: 140,
+              cell: (task: TaskSummary) => <span className="text-muted">{task.itVisible ? t('audit.yes') : t('audit.no')}</span>,
+              filter: {
+                label: t('tasks.fields.itVisible'),
+                options: REPORT_OPTIONS.map((value) => ({ value, label: value === 'true' ? t('audit.yes') : t('audit.no') })),
+              },
+            } satisfies DataTableColumn<TaskSummary>,
             {
               id: 'in_report',
               header: t('tasks.fields.inReport'),
@@ -263,28 +280,52 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         searchPlaceholder={t('tasks.searchPlaceholder')}
         actionsSlot={actionsSlot}
         actions={{
-          // só na aba Tarefas do projeto: escolher o que sai no informe (aba Informe)
-          leading: projectId
-            ? (task) => (
-                <AppIconButton
-                  size="sm"
-                  label={task.inReport ? t('tasks.report.remove') : t('tasks.report.add')}
-                  aria-pressed={task.inReport}
-                  icon={task.inReport ? <FileCheck2 /> : <FileX2 />}
-                  className={task.inReport ? 'text-primary-text hover:text-primary-text' : 'text-subtle'}
-                  disabled={!canEdit || (setInReport.isPending && setInReport.variables?.id === task.id)}
-                  onClick={() =>
-                    setInReport.mutate(
-                      { id: task.id, inReport: !task.inReport },
-                      {
-                        onSuccess: (saved) => notify.success(t(saved.inReport ? 'tasks.report.added' : 'tasks.report.removed', { code: saved.code })),
-                        onError: (error) => notify.error(errorMessage(error)),
-                      },
-                    )
-                  }
-                />
-              )
-            : undefined,
+          // só na aba Tarefas do projeto: o que sai no informe (aba Informe) e o que o Responsável TI vê
+          leading:
+            markReport || markIt
+              ? (task) => (
+                  <>
+                    {markReport && (
+                      <AppIconButton
+                        size="sm"
+                        label={task.inReport ? t('tasks.report.remove') : t('tasks.report.add')}
+                        aria-pressed={task.inReport}
+                        icon={task.inReport ? <FileCheck2 /> : <FileX2 />}
+                        className={task.inReport ? 'text-primary-text hover:text-primary-text' : 'text-subtle'}
+                        disabled={!canEdit || (setInReport.isPending && setInReport.variables?.id === task.id)}
+                        onClick={() =>
+                          setInReport.mutate(
+                            { id: task.id, inReport: !task.inReport },
+                            {
+                              onSuccess: (saved) => notify.success(t(saved.inReport ? 'tasks.report.added' : 'tasks.report.removed', { code: saved.code })),
+                              onError: (error) => notify.error(errorMessage(error)),
+                            },
+                          )
+                        }
+                      />
+                    )}
+                    {markIt && (
+                      <AppIconButton
+                        size="sm"
+                        label={task.itVisible ? t('tasks.itVisible.remove') : t('tasks.itVisible.add')}
+                        aria-pressed={task.itVisible}
+                        icon={<Laptop />}
+                        className={task.itVisible ? 'text-primary-text hover:text-primary-text' : 'text-subtle'}
+                        disabled={!canEdit || (setItVisible.isPending && setItVisible.variables?.id === task.id)}
+                        onClick={() =>
+                          setItVisible.mutate(
+                            { id: task.id, itVisible: !task.itVisible },
+                            {
+                              onSuccess: (saved) => notify.success(t(saved.itVisible ? 'tasks.itVisible.added' : 'tasks.itVisible.removed', { code: saved.code })),
+                              onError: (error) => notify.error(errorMessage(error)),
+                            },
+                          )
+                        }
+                      />
+                    )}
+                  </>
+                )
+              : undefined,
           onView: (task) => setViewing(task.id),
           onOpen: (task) => void navigate(`/tasks/${task.id}`),
           onEdit: (task) => setEditing(task.id),

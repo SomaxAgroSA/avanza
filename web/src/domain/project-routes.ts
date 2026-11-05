@@ -4,6 +4,7 @@
  * do menu lateral). O menu global fica só com as visões de todos os projetos.
  */
 import { can, type PermissionCode } from './permissions'
+import type { ProjectProfileSection } from './projects'
 
 /**
  * Abas da página do projeto, na ordem da tela: Visão geral, Ficha (para que o projeto existe e como se
@@ -94,25 +95,37 @@ export function visibleTaskViews(permissions: readonly string[]): ProjectTaskVie
 export interface ProjectTabAccess {
   /** Pode transferir, arquivar ou excluir o projeto (aba Configurações). */
   manage: boolean
+  /** Seções que o perfil libera neste projeto (`capabilities.sections`, regras §35). */
+  sections: readonly ProjectProfileSection[]
+  /** Responsável TI do projeto (regras §33): só o resumo e, se o perfil liberar, a Ficha. */
+  it?: boolean
+}
+
+/** Abas do Responsável TI: o resumo (na Visão geral) e a Ficha, só leitura, se o perfil tiver a seção. */
+export function itProjectTabs(sections: readonly ProjectProfileSection[]): ProjectTab[] {
+  return sections.includes('charter') ? ['overview', 'charter'] : ['overview']
 }
 
 /**
- * Abas que a pessoa vê: Gestão com `plan.view`, Tarefas com alguma visão, Informe com `tasks.view` (é
- * montado com as tarefas escolhidas), Configurações para quem administra; Ficha para todos do projeto.
+ * Abas que a pessoa vê: Gestão com `plan.view`, Tarefas com alguma visão, Configurações para quem
+ * administra; Ficha, Histórico e Membros com a seção do perfil, e Informe com a seção e `tasks.view` (é
+ * montado com as tarefas escolhidas). Visão geral e Arquivos, para todos do projeto.
  */
 export function visibleProjectTabs(permissions: readonly string[], access: ProjectTabAccess): ProjectTab[] {
+  if (access.it) return itProjectTabs(access.sections)
   return PROJECT_TABS.filter((tab) => {
     if (tab === 'management') return can(permissions, 'plan.view')
     if (tab === 'tasks') return visibleTaskViews(permissions).length > 0
-    if (tab === 'report') return can(permissions, 'tasks.view')
+    if (tab === 'report') return can(permissions, 'tasks.view') && access.sections.includes('report')
+    if (tab === 'charter' || tab === 'history' || tab === 'members') return access.sections.includes(tab)
     if (tab === 'settings') return access.manage
     return true
   })
 }
 
-/** A pessoa pode abrir a seção? */
+/** A pessoa pode abrir a seção? (aba escondida também fica fechada pelo endereço) */
 export function canOpenSection(section: ProjectSection, permissions: readonly string[], access: ProjectTabAccess): boolean {
   const tab = tabOfSection(section)
-  if (tab === 'tasks') return visibleTaskViews(permissions).includes(section as ProjectTaskView)
+  if (tab === 'tasks') return !access.it && visibleTaskViews(permissions).includes(section as ProjectTaskView)
   return visibleProjectTabs(permissions, access).includes(tab)
 }

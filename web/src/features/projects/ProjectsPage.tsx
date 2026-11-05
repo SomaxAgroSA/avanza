@@ -6,6 +6,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
 import { PROJECT_PRIORITIES, PROJECT_STATUSES, isOverdue, type Project, type ProjectView } from '@/domain/projects'
+import type { ProjectListQuery } from '@/domain/repositories'
 import {
   AppAvatar,
   AppButton,
@@ -35,6 +36,9 @@ const EMPTY: Project[] = []
 
 const TITLES: Record<ProjectView, string> = { all: 'nav.projects', mine: 'nav.projectsMine', archived: 'nav.projectsArchived' }
 
+/** Projetos principais (sem pai), para o filtro "Projeto pai" (§34): os que têm subprojetos viram opção. */
+const MAIN_PROJECTS: ProjectListQuery = { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: 'none' } }
+
 export const AllProjectsPage = () => <ProjectsPage view="all" />
 export const MyProjectsPage = () => <ProjectsPage view="mine" />
 export const ArchivedProjectsPage = () => <ProjectsPage view="archived" />
@@ -48,7 +52,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const canCreate = useCan('projects.create')
   const [params, setParams] = useSearchParams()
 
-  const table = useDataTableState(`projects-${view}`, { sort: { id: 'name', direction: 'asc' } })
+  const table = useDataTableState(`projects-${view}`, { sort: { id: 'name', direction: 'asc' }, columnVisibility: { parent: false } })
   const projects = useProjects({ ...table.query, view })
   const lifecycle = useProjectLifecycle()
 
@@ -78,6 +82,14 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   }
 
   const urgencyOptions = useUrgencyFilterOptions()
+  const mainProjects = useProjects(MAIN_PROJECTS)
+  const parentOptions = useMemo(
+    () => [
+      { value: 'none', label: t('projects.parent.onlyMain') },
+      ...(mainProjects.data?.items ?? []).filter((p) => p.childCount > 0).map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
+    ],
+    [mainProjects.data, t],
+  )
   const areas = useAreas(false)
   const areaOptions = useAreaFilterOptions(areas.data)
   const columns = useMemo<DataTableColumn<Project>[]>(
@@ -97,7 +109,21 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
               <Link to={`/projects/${project.id}`} className="block truncate font-medium text-fg hover:text-primary-text hover:underline">
                 {project.name}
               </Link>
-              <p className="font-mono text-xs text-muted">{project.key}</p>
+              <p className="truncate text-xs text-muted">
+                <span className="font-mono">{project.key}</span>
+                {project.parent && (
+                  <span title={t('projects.parent.of', { name: project.parent.name })}>
+                    {' · ↳ '}
+                    {project.parent.name}
+                  </span>
+                )}
+                {project.childCount > 0 && (
+                  <span>
+                    {' · '}
+                    {t('projects.parent.children', { count: project.childCount })}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         ),
@@ -133,6 +159,21 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         filter: { label: t('tasks.fields.area'), options: areaOptions },
       },
       {
+        // projeto pai (§34): filtra os subprojetos de um pai ou só os projetos principais
+        id: 'parent',
+        header: t('projects.parent.field'),
+        size: 200,
+        cell: (project) =>
+          project.parent ? (
+            <Link to={`/projects/${project.parent.id}`} className="block truncate text-muted hover:text-primary-text hover:underline">
+              {project.parent.name}
+            </Link>
+          ) : (
+            <span className="text-subtle">—</span>
+          ),
+        filter: { label: t('projects.parent.field'), options: parentOptions },
+      },
+      {
         id: 'owner',
         header: t('projects.fields.owner'),
         size: 200,
@@ -159,7 +200,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, urgencyOptions, areas.data, areaOptions],
+    [t, locale, urgencyOptions, areas.data, areaOptions, parentOptions],
   )
 
   const emptyState =

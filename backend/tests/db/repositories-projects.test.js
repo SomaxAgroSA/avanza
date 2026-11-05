@@ -200,6 +200,35 @@ describe('repositórios de projetos e membros', () => {
     assert.equal(await members.find(extra.id, users.ana.id), null)
   })
 
+  it('projeto pai (§34): grava, filtra (none = sem pai), conta os filhos e solta os filhos quando o pai sai', async () => {
+    const pai = await projects.create({ name: 'Programa', key: 'PRG', status: 'active', priority: 'medium', ownerId: users.ana.id, createdBy: users.ana.id })
+    const filho = await projects.create({ name: 'Filho', key: 'FIL', status: 'active', priority: 'medium', ownerId: users.ana.id, createdBy: users.ana.id, parentId: pai.id })
+    const outro = await projects.create({ name: 'Outro filho', key: 'OFI', status: 'active', priority: 'medium', ownerId: users.ana.id, createdBy: users.ana.id })
+    await projects.update(outro.id, { parentId: pai.id })
+    assert.equal((await projects.findById(filho.id)).parentId, pai.id)
+    assert.equal((await projects.findById(pai.id)).parentId, null)
+    assert.deepEqual(await t.db.one('SELECT parent_id FROM projects WHERE id = $1', [p.alpha.id]), { parent_id: null })
+    const all = { view: 'all', scope: { viewAll: true, userId: users.ana.id }, sort: [{ column: 'key', direction: 'ASC' }], pagination: page() }
+    assert.deepEqual(ids(await projects.list(Object.assign({}, all, { parentId: pai.id }))), ['FIL', 'OFI'])
+    assert.ok(!ids(await projects.list(Object.assign({}, all, { parentId: 'none' }))).includes('FIL'))
+    assert.ok(ids(await projects.list(Object.assign({}, all, { parentId: 'none' }))).includes('PRG'))
+    assert.deepEqual(await projects.countChildren([pai.id, filho.id]), { [pai.id]: 2 })
+    assert.deepEqual(await projects.countChildren([]), {})
+    // o banco não aceita o projeto como pai de si mesmo
+    await assert.rejects(projects.update(pai.id, { parentId: pai.id }), (err) => err.code === '23514')
+    await projects.update(outro.id, { parentId: null })
+    assert.equal((await projects.findById(outro.id)).parentId, null)
+    await projects.delete(pai.id)
+    assert.equal((await projects.findById(filho.id)).parentId, null)
+  })
+
+  it('papel Responsável TI (§33) gravado como os demais', async () => {
+    const extra = await projects.create({ name: 'TI', key: 'TIP', status: 'active', priority: 'medium', ownerId: users.ana.id, createdBy: users.ana.id })
+    await members.add({ projectId: extra.id, userId: users.caio.id, role: 'it' })
+    assert.equal((await members.find(extra.id, users.caio.id)).role, 'it')
+    assert.deepEqual(await members.rolesForUser(users.caio.id, [extra.id]), { [extra.id]: 'it' })
+  })
+
   describe('arquivos do projeto', () => {
     let storage
     let files

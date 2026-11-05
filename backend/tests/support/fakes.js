@@ -421,6 +421,7 @@ function createFakeRepositories(store) {
       if (query.priority) items = items.filter((p) => p.priority === query.priority)
       if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
       if (query.areaId) items = items.filter((p) => (p.areaId || 'none') === query.areaId)
+      if (query.parentId) items = items.filter((p) => (p.parentId || 'none') === query.parentId)
       if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
       const sort = query.sort[0]
       if (sort) {
@@ -438,8 +439,21 @@ function createFakeRepositories(store) {
     update: (id, patch) => Object.assign(projectRepository.findById(id), patch, { updatedAt: new Date() }),
     delete: (id) => {
       store.projects = store.projects.filter((p) => p.id !== id)
+      // como a FK (ON DELETE SET NULL): os subprojetos ficam sem pai
+      store.projects.filter((p) => p.parentId === id).forEach((p) => {
+        p.parentId = null
+      })
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
+    countChildren: (ids) => {
+      const counts = {}
+      store.projects
+        .filter((p) => p.parentId && ids.includes(p.parentId))
+        .forEach((p) => {
+          counts[p.parentId] = (counts[p.parentId] || 0) + 1
+        })
+      return counts
+    },
     /** Abertos que a pessoa enxerga (dono, membro ou viewAll), pela chave; `ids` restringe. */
     listVisible: (query) =>
       store.projects
@@ -449,6 +463,10 @@ function createFakeRepositories(store) {
         .slice()
         .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)),
   }
+
+  /** Mesma regra de visibleTasksClause (repositories/tasks.js): Responsável TI só vê as dele e as marcadas. */
+  const seesTask = (t, userId) =>
+    store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === userId && (m.role !== 'it' || t.assigneeId === userId || !!t.itVisible))
 
   let taskClock = 0
   const TASK_SORT = {
@@ -553,7 +571,7 @@ function createFakeRepositories(store) {
     findManyByIds: (ids) => store.tasks.filter((t) => ids.includes(t.id)),
     listForReport: (query) =>
       store.tasks
-        .filter((t) => query.scope.viewAll || store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId))
+        .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
         .filter((t) => !query.assigneeId || (query.assigneeId === 'none' ? !t.assigneeId : t.assigneeId === query.assigneeId))
@@ -602,8 +620,7 @@ function createFakeRepositories(store) {
     listForReminders: (query) =>
       store.tasks.filter((t) => t.dueDate && t.dueDate < query.before && t.assigneeId && query.statusIds.includes(t.statusId)),
     list: (query) => {
-      const visible = (t) =>
-        query.scope.viewAll || store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId)
+      const visible = (t) => query.scope.viewAll || seesTask(t, query.scope.userId)
       let items = store.tasks.filter(visible)
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
@@ -614,6 +631,7 @@ function createFakeRepositories(store) {
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.planItemId) items = items.filter((t) => t.planItemId === query.planItemId)
       if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
+      if (query.itVisible !== undefined) items = items.filter((t) => !!t.itVisible === query.itVisible)
       if (query.urgency) items = items.filter((t) => (t.urgency || 'none') === query.urgency)
       if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
       if (query.search) {

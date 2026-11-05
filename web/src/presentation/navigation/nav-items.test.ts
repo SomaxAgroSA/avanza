@@ -22,7 +22,8 @@ describe('navegação', () => {
 
   it('mostra apenas os filhos permitidos de configurações', () => {
     const settings = visibleNavItems(['permissions.manage']).find((i) => i.id === 'settings')
-    expect(settings?.children?.map((c) => c.id)).toEqual(['access', 'roles', 'permissions'])
+    // Perfis e Permissões são abas do Controle de acesso
+    expect(settings?.children?.map((c) => c.id)).toEqual(['access'])
   })
 
   it('auditoria aparece só com audit.view', () => {
@@ -31,7 +32,7 @@ describe('navegação', () => {
   })
 
   it('resolve a trilha do breadcrumb', () => {
-    expect(findNavTrail('/settings/roles').map((i) => i.id)).toEqual(['settings', 'roles'])
+    expect(findNavTrail('/settings/access').map((i) => i.id)).toEqual(['settings', 'access'])
     expect(findNavTrail('/users').map((i) => i.id)).toEqual(['users'])
     expect(findNavTrail('/projects/mine').map((i) => i.id)).toEqual(['projects', 'projects-mine'])
     expect(findNavTrail('/projects').map((i) => i.id)).toEqual(['projects'])

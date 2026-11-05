@@ -11,6 +11,10 @@
  * - Informe do projeto (§29), urgência (§31) e área responsável (§32): ligar/desligar a tarefa no
  *   informe e trocar a urgência ou a área têm casos de uso próprios, que não exigem os campos
  *   obrigatórios do status (um clique na lista).
+ * - Responsável TI (§33/§36): vê e atualiza só as tarefas atribuídas a ele ou marcadas "Visível para TI"
+ *   (domain/task.js#scopedAccess); nelas, referências a módulos e tarefas que ele não vê (elemento da
+ *   Gestão, tarefa pai ou de origem) saem vazias. Marcar "Visível para TI" é de quem edita a tarefa, não
+ *   do Responsável TI; ligar/desligar no informe exige a seção Informe (§35).
  */
 
 const { appError } = require('../core/errors')
@@ -86,6 +90,7 @@ const LIST_SCHEMA = {
   plan_item_id: [idRule],
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
+  it_visible: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   // `none` = sem urgência
   urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
   // `none` = sem área
@@ -137,10 +142,12 @@ function createTaskService(deps) {
     rbac.assertAuthenticated(ctx.principal)
     const task = id ? await tasks.findById(id) : null
     if (!task) throw appError('TASK_NOT_FOUND')
-    const { project, access } = await projectAccess(ctx.principal, task.projectId)
-    if (!project) throw appError('TASK_NOT_FOUND')
-    taskDomain.assertTaskAccess(access, project, 'view', task)
-    return { task, project, access }
+    const found = await projectAccess(ctx.principal, task.projectId)
+    if (!found.project) throw appError('TASK_NOT_FOUND')
+    // Responsável TI: a tarefa visível a ele abre como colaborador daquela tarefa (§33)
+    const access = taskDomain.scopedAccess(found.access, task)
+    taskDomain.assertTaskAccess(access, found.project, 'view', task)
+    return { task, project: found.project, access }
   }
 
   /** Campos configurados no tipo, com a definição completa (mesmo formato do formulário). */
@@ -323,7 +330,9 @@ function createTaskService(deps) {
       .sort((a, b) => a.name.localeCompare(b.name))
   }
 
+  /** `refs.scoped`: { projectId: true } dos projetos em que a pessoa é Responsável TI (referências ocultas). */
   function presentSummary(task, refs) {
+    const scoped = !!(refs.scoped && refs.scoped[task.projectId])
     const project = refs.projects[task.projectId]
     const type = refs.types[task.typeId]
     const status = refs.statuses[task.statusId]
@@ -342,7 +351,8 @@ function createTaskService(deps) {
       status: status ? { id: status.id, key: status.key, name: status.name, color: status.color, category: status.category } : null,
       priority: priority ? { id: priority.id, key: priority.key, name: priority.name, color: priority.color } : null,
       sprint: sprint ? { id: sprint.id, name: sprint.name, state: sprint.state } : null,
-      plan_item: task.planItemId && refs.planItems[task.planItemId] ? { id: task.planItemId, name: refs.planItems[task.planItemId].name } : null,
+      // a Gestão de projetos fica fechada para o Responsável TI
+      plan_item: !scoped && task.planItemId && refs.planItems[task.planItemId] ? { id: task.planItemId, name: refs.planItems[task.planItemId].name } : null,
       creator: user(task.creatorId),
       assignee: user(task.assigneeId),
       reporter: user(task.reporterId),
@@ -362,6 +372,7 @@ function createTaskService(deps) {
       subtask_progress: refs.subtasks[task.id] || { done: 0, total: 0 },
       blocked: !!refs.blocked[task.id],
       in_report: !task.reportExcluded,
+      it_visible: !!task.itVisible,
       urgency: task.urgency || null,
       area: area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null,
     }
@@ -370,8 +381,15 @@ function createTaskService(deps) {
   const taskRef = (t) => (t ? { id: t.id, code: t.code, title: t.title } : null)
   const taskLabel = (t) => (t ? `${t.code} · ${t.title}` : null)
 
+  /** Tarefa relacionada que a pessoa enxerga (para o Responsável TI, só as visíveis a ele no mesmo projeto). */
+  function relatedRef(access, task, related) {
+    if (!related) return null
+    if (access.scoped && (related.projectId !== task.projectId || !taskDomain.visibleToIt(related, access.principal.userId))) return null
+    return taskRef(related)
+  }
+
   async function presentDetail(ctx, task, project, access) {
-    const refs = await refsFor([task])
+    const refs = Object.assign(await refsFor([task]), access.scoped ? { scoped: { [task.projectId]: true } } : {})
     const links = await typeLinks(task.typeId)
     const saved = (await values.listByTasks([task.id]))[task.id] || {}
     const customValues = {}
@@ -382,8 +400,8 @@ function createTaskService(deps) {
       description: task.description || '',
       custom_values: customValues,
       checklist: task.checklist || [],
-      parent: taskRef(refs.related[task.parentTaskId]),
-      forked_from: taskRef(refs.related[task.forkedFromTaskId]),
+      parent: relatedRef(access, task, refs.related[task.parentTaskId]),
+      forked_from: relatedRef(access, task, refs.related[task.forkedFromTaskId]),
       fields: links,
       capabilities: taskDomain.taskCapabilities(access, project, task),
     })
@@ -519,6 +537,7 @@ function createTaskService(deps) {
         sprint_id: pick('sprint_id'),
         plan_item_id: pick('plan_item_id'),
         in_report: pick('in_report'),
+        it_visible: pick('it_visible'),
         urgency: pick('urgency'),
         area_id: pick('area_id'),
       },
@@ -555,14 +574,28 @@ function createTaskService(deps) {
       sprintId: filters.sprint_id,
       planItemId: filters.plan_item_id,
       inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
+      itVisible: filters.it_visible === undefined ? undefined : filters.it_visible === 'true',
       urgency: filters.urgency,
       areaId: filters.area_id,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       pagination,
     })
-    const refs = await refsFor(result.items)
+    const refs = Object.assign(await refsFor(result.items), { scoped: await itProjects(ctx, result.items) })
     return { items: result.items.map((t) => presentSummary(t, refs)), meta: buildPageMeta(pagination, result.total) }
+  }
+
+  /** { projectId: true } dos projetos (das tarefas) em que a pessoa é Responsável TI limitado (§33). */
+  async function itProjects(ctx, list) {
+    const scoped = {}
+    if (rbac.can(ctx.principal, 'projects.view_all') || list.length === 0) return scoped
+    const ids = list.map((t) => t.projectId).filter((id, i, all) => all.indexOf(id) === i)
+    const roles = await deps.projectMemberRepository.rolesForUser(ctx.principal.userId, ids)
+    const projects = byId(await deps.projectRepository.findManyByIds(ids.filter((id) => roles[id] === 'it')))
+    Object.keys(projects).forEach((id) => {
+      if (projectDomain.resolveAccess(ctx.principal, projects[id], { role: 'it' }).limited) scoped[id] = true
+    })
+    return scoped
   }
 
   async function getTask(ctx, id) {
@@ -805,12 +838,33 @@ function createTaskService(deps) {
   async function setTaskReport(ctx, id, input) {
     const { task, project, access } = await loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'edit', task)
+    // o que sai no informe é da seção Informe (§35); o Responsável TI não tem a seção
+    if (access.scoped || !projectDomain.canSeeSection(access, 'report')) throw appError('FORBIDDEN')
     const value = (input || {}).in_report
     if (typeof value !== 'boolean') throw invalid({ in_report: 'invalid_type' })
     if (value === !task.reportExcluded) return presentDetail(ctx, task, project, access)
     const updated = await deps.unitOfWork.run(async (repos) => {
       const result = await repos.taskRepository.update(task.id, { reportExcluded: !value })
       await audit(repos, ctx, task, 'task.updated', { in_report: !value }, { in_report: value })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
+  /**
+   * Marca a tarefa como visível para o Responsável TI do projeto (§36), direto da lista: quem edita a
+   * tarefa (não o próprio Responsável TI); não exige os obrigatórios do status; grava no histórico.
+   */
+  async function setTaskItVisible(ctx, id, input) {
+    const { task, project, access } = await loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    if (access.scoped) throw appError('FORBIDDEN')
+    const value = (input || {}).it_visible
+    if (typeof value !== 'boolean') throw invalid({ it_visible: 'invalid_type' })
+    if (value === !!task.itVisible) return presentDetail(ctx, task, project, access)
+    const updated = await deps.unitOfWork.run(async (repos) => {
+      const result = await repos.taskRepository.update(task.id, { itVisible: value })
+      await audit(repos, ctx, task, 'task.updated', { it_visible: !value }, { it_visible: value })
       return result
     })
     return presentDetail(ctx, updated, project, access)
@@ -907,13 +961,17 @@ function createTaskService(deps) {
     return presentDetail(ctx, moved, project, access)
   }
 
-  /** Resumos de tarefas (usado pelo quadro Kanban). */
-  async function summarize(list) {
+  /**
+   * Resumos de tarefas (quadro Kanban, backlog, ficha…). `ctx` (opcional) esconde as referências fechadas
+   * ao Responsável TI nos projetos em que a pessoa é limitada (resumo do projeto, §33).
+   */
+  async function summarize(list, ctx) {
     const refs = await refsFor(list)
+    if (ctx) refs.scoped = await itProjects(ctx, list)
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

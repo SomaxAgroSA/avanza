@@ -237,6 +237,34 @@ describe('repositórios de tarefas (Postgres)', () => {
     })
   })
 
+  it('Responsável TI (§33/§36): a lista e os relatórios trazem só as tarefas dele e as marcadas; it_visible grava e filtra', async () => {
+    const project = await seedProject({ member: false })
+    await insertRow(t.db, 'project_members', { project_id: project.id, user_id: member.id, role: 'it' })
+    const mine = await seedTask(project, { assigneeId: member.id })
+    const shared = await seedTask(project, { itVisible: true })
+    const closed = await seedTask(project, { assigneeId: owner.id })
+    // projeto em que é membro comum: vê tudo
+    const common = await seedProject()
+    const open = await seedTask(common)
+    assert.deepEqual(await t.db.one('SELECT it_visible FROM tasks WHERE id = $1', [closed.id]), { it_visible: false })
+    assert.equal((await r.tasks.findById(shared.id)).itVisible, true)
+    assert.equal((await r.tasks.listForBoard(project.id, status.BACKLOG, { closed: false, limit: 50 })).find((task) => task.id === shared.id).itVisible, true)
+
+    const ours = [mine.id, shared.id, closed.id, open.id]
+    const seen = (list) => list.map((row) => row.id).filter((id) => ours.indexOf(id) >= 0).sort()
+    const base = { sort: [{ column: 'code', direction: 'ASC' }], pagination: { perPage: 200, offset: 0 } }
+    const scoped = await r.tasks.list(Object.assign({ scope: { viewAll: false, userId: member.id } }, base))
+    assert.deepEqual(seen(scoped.items), [mine.id, shared.id, open.id].sort())
+    assert.deepEqual(seen(await r.tasks.listForReport({ scope: { viewAll: false, userId: member.id }, includeArchived: true })), [mine.id, shared.id, open.id].sort())
+    // quem vê tudo (ou é membro comum) continua vendo todas
+    assert.deepEqual(seen((await r.tasks.list(Object.assign({ scope: { viewAll: false, userId: owner.id } }, base))).items), ours.slice().sort())
+    // filtro "Visível para TI"
+    assert.deepEqual(seen((await r.tasks.list(Object.assign({ scope: { viewAll: true }, projectId: project.id, itVisible: true }, base))).items), [shared.id])
+    assert.deepEqual(seen((await r.tasks.list(Object.assign({ scope: { viewAll: true }, projectId: project.id, itVisible: false }, base))).items), [mine.id, closed.id].sort())
+    await r.tasks.update(shared.id, { itVisible: false })
+    assert.deepEqual(seen((await r.tasks.list(Object.assign({ scope: { viewAll: false, userId: member.id } }, base))).items), [mine.id, open.id].sort())
+  })
+
   it('quadro e backlog: consulta enxuta, ordem manual, encerradas mais recentes e renumeração', async () => {
     const project = await seedProject()
     const dev = status.DESENVOLVIMENTO

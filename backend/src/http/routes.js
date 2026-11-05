@@ -301,6 +301,7 @@ const getTask = taskAction((s, ctx, r) => s.getTask(ctx, r.id))
 const createTask = taskAction((s, ctx, r) => s.createTask(ctx, r.body()), 201)
 const updateTask = taskAction((s, ctx, r) => s.updateTask(ctx, r.id, r.body()))
 const setTaskReport = taskAction((s, ctx, r) => s.setTaskReport(ctx, r.id, r.body()))
+const setTaskItVisible = taskAction((s, ctx, r) => s.setTaskItVisible(ctx, r.id, r.body()))
 const setTaskUrgency = taskAction((s, ctx, r) => s.setTaskUrgency(ctx, r.id, r.body()))
 const setTaskArea = taskAction((s, ctx, r) => s.setTaskArea(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
@@ -446,6 +447,7 @@ const updateMilestone = configAction('milestones', (s, ctx, r) => s.updateMilest
 const deleteMilestone = configAction('milestones', (s, ctx, r) => s.deleteMilestone(ctx, r.id))
 // ficha do projeto (objetivos, funcionalidades, escopo e resultados esperados)
 const getCharter = configAction('charter', (s, ctx, r) => s.getCharter(ctx, r.id))
+const getProjectBrief = configAction('charter', (s, ctx, r) => s.getBrief(ctx, r.id))
 const updateCharter = configAction('charter', (s, ctx, r) => s.updateCharter(ctx, r.id, r.body()))
 const createCharterItem = configAction('charter', (s, ctx, r) => s.createItem(ctx, r.id, r.body()), 201)
 const reorderCharterItems = configAction('charter', (s, ctx, r) => s.reorderItems(ctx, r.id, r.body()))
@@ -720,6 +722,7 @@ module.exports = {
   createTask,
   updateTask,
   setTaskReport,
+  setTaskItVisible,
   setTaskUrgency,
   setTaskArea,
   deleteTask,
@@ -824,6 +827,7 @@ module.exports = {
   updateMilestone,
   deleteMilestone,
   getCharter,
+  getProjectBrief,
   updateCharter,
   createCharterItem,
   reorderCharterItems,

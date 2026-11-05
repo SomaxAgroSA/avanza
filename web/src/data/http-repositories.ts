@@ -20,8 +20,8 @@ import type { BacklogDto, BoardDto, MilestoneDto, ReportDto, ReportTaskDto, Spri
 import type { MilestoneInput } from '@/domain/timeline'
 import type { CharterItemInput } from '@/domain/charter'
 import type { Urgency } from '@/domain/urgency'
-import type { CharterDto, CharterItemDto, CharterMeasurementDto } from './dtos'
-import { toCharterItem, toCharterMeasurement, toProjectCharter } from './mappers'
+import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
+import { toCharterItem, toCharterMeasurement, toProjectBrief, toProjectCharter } from './mappers'
 import { toDocPage, toDocSpace, toDocTreePage, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
@@ -422,7 +422,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -448,6 +448,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           priority: query.filters.priority,
           urgency: query.filters.urgency,
           area_id: query.filters.area,
+          parent_id: query.filters.parent,
           owner_id: query.filters.owner_id,
         },
       })
@@ -1081,6 +1082,9 @@ export function createHttpCharterRepository(api: ApiClient): CharterRepository {
     async get(projectId) {
       return toProjectCharter((await api.get<CharterDto>(project(projectId))).data)
     },
+    async brief(projectId) {
+      return toProjectBrief((await api.get<ProjectBriefDto>(`/projects/${encodeURIComponent(projectId)}/brief`)).data)
+    },
     async saveObjective(projectId, objective) {
       return toProjectCharter((await api.put<CharterDto>(project(projectId), { objective })).data)
     },
@@ -1275,6 +1279,7 @@ const TASK_FILTERS: Record<string, string> = {
   tags: 'tag_id',
   sprint: 'sprint_id',
   in_report: 'in_report',
+  it_visible: 'it_visible',
   urgency: 'urgency',
   area: 'area_id',
 }
@@ -1305,6 +1310,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setInReport(id, inReport) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/report`, { in_report: inReport })).data)
+    },
+    async setItVisible(id, itVisible) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/it-visible`, { it_visible: itVisible })).data)
     },
     async setUrgency(id, urgency: Urgency | null) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/urgency`, { urgency })).data)

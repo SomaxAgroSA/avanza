@@ -20,7 +20,7 @@ import {
   useDataTableState,
   type DataTableColumn,
 } from '@/presentation/components'
-import { PageHeader } from '@/presentation/layouts/PageHeader'
+import { SectionHeader } from '@/presentation/layouts/SectionHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from './queries'
 
@@ -91,15 +91,15 @@ export function RolesPage() {
 
   return (
     <>
-      <PageHeader
-        title={t('roles.title')}
-        description={t('roles.description')}
+      {/* aba Perfis do Controle de acesso: "Novo perfil" na linha das abas */}
+      <SectionHeader
         actions={
           <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
             {t('roles.create')}
           </AppButton>
         }
       />
+      <p className="mb-3 text-sm text-muted">{t('roles.description')}</p>
       <AppDataTable
         caption={t('roles.title')}
         columns={columns}
@@ -124,7 +124,7 @@ export function RolesPage() {
               key: 'permissions',
               label: t('roles.editPermissions'),
               icon: <ShieldCheck />,
-              onSelect: () => navigate(`/settings/permissions?role=${encodeURIComponent(role.id)}`),
+              onSelect: () => navigate(`/settings/access?tab=matrix&role=${encodeURIComponent(role.id)}`),
             },
           ],
         }}

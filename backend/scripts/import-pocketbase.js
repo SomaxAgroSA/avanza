@@ -20,8 +20,11 @@ const { loadEnv } = require('./env')
 
 // colunas internas da collection de autenticação que não existem no Postgres
 const SKIP_AUTH = new Set(['tokenKey', 'emailVisibility', 'verified'])
-// campos de texto no PocketBase que no Postgres são relação (vazio = NULL): a área responsável (§32)
-const TEXT_RELATIONS = new Set(['area_id'])
+// campos de texto no PocketBase que no Postgres são relação (vazio = NULL): a área responsável (§32) e o
+// projeto pai (§34)
+const TEXT_RELATIONS = new Set(['area_id', 'parent_id'])
+// seções do projeto (§35): dados de antes delas não trazem as permissões; o mesmo SQL (idempotente) da migração
+const SECTIONS_SQL = path.join(__dirname, '..', 'db', 'migrations', '0020_project_sections.sql')
 const MIME = {
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', ico: 'image/x-icon',
   pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', json: 'application/json', zip: 'application/zip',
@@ -203,6 +206,8 @@ async function main() {
     console.log(`Arquivos copiados: ${copied}${missing.length ? ` (${missing.length} não encontrados na origem)` : ''}`)
     missing.slice(0, 20).forEach((key) => console.warn(`  sem arquivo: ${key}`))
     if (diffs.length > 0) throw new Error(`Contagens diferentes:\n- ${diffs.join('\n- ')}`)
+    // depois da conferência: perfis que viam projetos e vieram sem as seções ganham as quatro (nada muda para eles)
+    await db.exec(fs.readFileSync(SECTIONS_SQL, 'utf8'))
     console.log(`Pronto: ${plan.length} tabelas conferidas.`)
   } finally {
     await db.close()

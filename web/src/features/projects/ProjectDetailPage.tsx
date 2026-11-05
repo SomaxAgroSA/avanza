@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArchiveRestore, ArrowLeft, Copy, FolderSearch, Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, Copy, FolderSearch, FolderTree, Pencil, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import {
   canOpenSection,
@@ -14,7 +14,7 @@ import {
   type ProjectSection,
   type ProjectTab,
 } from '@/domain/project-routes'
-import type { Project } from '@/domain/projects'
+import { isItRole, type Project } from '@/domain/projects'
 import { AppBadge, AppButton, AppConfirmDialog, AppEmptyState, AppErrorState, AppIcon, AppIconButton, AppNavTabs, AppSkeleton, notify } from '@/presentation/components'
 import { useLiveProject } from '@/presentation/common/use-live'
 import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
@@ -38,7 +38,8 @@ export function ProjectDetailPage() {
   const { projectId } = useParams()
   const { t } = useTranslation()
   const project = useProject(projectId)
-  useLiveProject(project.data?.id)
+  // Responsável TI não assina o projeto (o servidor recusa; o resumo dele se atualiza pelas tarefas)
+  useLiveProject(project.data && !isItRole(project.data) ? project.data.id : undefined)
 
   if (project.isPending) {
     return (
@@ -84,9 +85,11 @@ function ProjectDetail({ project }: { project: Project }) {
   const archived = !!project.archivedAt
   const caps = project.capabilities
   const permissions = current?.permissions ?? []
-  const access = { manage: caps.transfer || caps.archive || caps.delete }
+  // Responsável TI (§33): só o resumo e, se o perfil liberar, a Ficha; os demais, as seções do perfil (§35)
+  const it = isItRole(project)
+  const access = { manage: caps.transfer || caps.archive || caps.delete, sections: caps.sections, it }
   const section = sectionFromPath(pathname, project.id) ?? 'overview'
-  const label = sectionLabel(section, project, t)
+  const label = sectionLabel(section, project, t, it)
   useDocumentTitle(label ? `${label} · ${project.name}` : project.name)
 
   function setArchived(value: boolean) {
@@ -133,50 +136,65 @@ function ProjectDetail({ project }: { project: Project }) {
         <ArrowLeft className="size-4" aria-hidden /> {t('projects.backToList')}
       </Link>
 
-      {/* cabeçalho compacto em destaque: a capa do projeto (mais escura) ao fundo, nome grande e o ícone do projeto em marca-d'água */}
-      <section className="relative mb-4 overflow-hidden rounded-2xl text-on-cover shadow-card" style={coverHeroStyle(project.cover)}>
-        <ProjectWatermark icon={project.icon} />
-        <div className="relative flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            <ProjectAvatar icon={project.icon} cover={project.cover} size="lg" className="size-12 shrink-0 shadow-float ring-2 ring-on-cover/40 [&_svg]:size-6" />
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-bold tracking-tight drop-shadow-sm sm:text-3xl">{project.name}</h1>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void copy(project.key)}
-                  className="inline-flex items-center gap-1 rounded-full bg-on-cover/15 px-2 py-0.5 font-mono text-xs font-semibold text-on-cover ring-1 ring-on-cover/25 hover:bg-on-cover/25 focus-visible:outline-2 focus-visible:outline-on-cover"
-                  title={t('projects.copyKey')}
-                >
-                  {project.key} <Copy className="size-3" aria-hidden />
-                </button>
-                <ProjectStatusBadge status={project.status} />
-                {archived && <AppBadge>{t('projects.archivedBadge')}</AppBadge>}
-                {project.myRole && <AppBadge tone="primary">{t(`projects.roles.${project.myRole}`)}</AppBadge>}
+      {it ? (
+        <BriefHero project={project} />
+      ) : (
+        /* cabeçalho compacto em destaque: a capa do projeto (mais escura) ao fundo, nome grande e o ícone do projeto em marca-d'água */
+        <section className="relative mb-4 overflow-hidden rounded-2xl text-on-cover shadow-card" style={coverHeroStyle(project.cover)}>
+          <ProjectWatermark icon={project.icon} />
+          <div className="relative flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <ProjectAvatar icon={project.icon} cover={project.cover} size="lg" className="size-12 shrink-0 shadow-float ring-2 ring-on-cover/40 [&_svg]:size-6" />
+              <div className="min-w-0">
+                {project.parent && (
+                  <Link
+                    to={projectPath(project.parent.id)}
+                    className="mb-0.5 inline-flex max-w-full items-center gap-1 truncate text-xs font-medium text-on-cover/85 hover:text-on-cover hover:underline focus-visible:outline-2 focus-visible:outline-on-cover"
+                    title={t('projects.parent.of', { name: project.parent.name })}
+                    aria-label={t('projects.parent.of', { name: project.parent.name })}
+                  >
+                    <FolderTree className="size-3.5 shrink-0" aria-hidden />
+                    <span className="truncate">{project.parent.name}</span>
+                  </Link>
+                )}
+                <h1 className="truncate text-2xl font-bold tracking-tight drop-shadow-sm sm:text-3xl">{project.name}</h1>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void copy(project.key)}
+                    className="inline-flex items-center gap-1 rounded-full bg-on-cover/15 px-2 py-0.5 font-mono text-xs font-semibold text-on-cover ring-1 ring-on-cover/25 hover:bg-on-cover/25 focus-visible:outline-2 focus-visible:outline-on-cover"
+                    title={t('projects.copyKey')}
+                  >
+                    {project.key} <Copy className="size-3" aria-hidden />
+                  </button>
+                  <ProjectStatusBadge status={project.status} />
+                  {archived && <AppBadge>{t('projects.archivedBadge')}</AppBadge>}
+                  {project.myRole && <AppBadge tone="primary">{t(`projects.roles.${project.myRole}`)}</AppBadge>}
+                </div>
               </div>
             </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {caps.edit && (
+                <AppButton variant="secondary" size="sm" leftIcon={<Pencil />} onClick={() => setEditing(true)}>
+                  {t('common.edit')}
+                </AppButton>
+              )}
+              {caps.archive && (
+                <AppButton
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={archived ? <ArchiveRestore /> : <Archive />}
+                  loading={lifecycle.archive.isPending || lifecycle.unarchive.isPending}
+                  onClick={() => setArchived(!archived)}
+                >
+                  {archived ? t('projects.unarchive') : t('projects.archive')}
+                </AppButton>
+              )}
+              {caps.delete && <AppIconButton size="sm" variant="secondary" label={t('common.delete')} icon={<Trash2 />} onClick={() => setDeleting(true)} />}
+            </div>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            {caps.edit && (
-              <AppButton variant="secondary" size="sm" leftIcon={<Pencil />} onClick={() => setEditing(true)}>
-                {t('common.edit')}
-              </AppButton>
-            )}
-            {caps.archive && (
-              <AppButton
-                variant="secondary"
-                size="sm"
-                leftIcon={archived ? <ArchiveRestore /> : <Archive />}
-                loading={lifecycle.archive.isPending || lifecycle.unarchive.isPending}
-                onClick={() => setArchived(!archived)}
-              >
-                {archived ? t('projects.unarchive') : t('projects.archive')}
-              </AppButton>
-            )}
-            {caps.delete && <AppIconButton size="sm" variant="secondary" label={t('common.delete')} icon={<Trash2 />} onClick={() => setDeleting(true)} />}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {archived && (
         <div role="status" className="mb-4 rounded-lg border border-border bg-warning-soft px-4 py-2 text-sm text-warning-soft-fg">
@@ -187,7 +205,7 @@ function ProjectDetail({ project }: { project: Project }) {
       <AppNavTabs
         aria-label={project.name}
         className="mb-4"
-        items={visibleProjectTabs(permissions, access).map((tab) => ({ key: tab, to: tabPath[tab], label: tabLabel(tab, project, t), active: tab === activeTab }))}
+        items={visibleProjectTabs(permissions, access).map((tab) => ({ key: tab, to: tabPath[tab], label: tabLabel(tab, project, t, it), active: tab === activeTab }))}
         actions={<div ref={setActionsSlot} className="flex items-center gap-2" />}
       />
       <TabActionsSlotContext.Provider value={actionsSlot}>
@@ -218,16 +236,38 @@ function ProjectDetail({ project }: { project: Project }) {
 
 type Translate = ReturnType<typeof useTranslation>['t']
 
-function tabLabel(tab: ProjectTab, project: Project, t: Translate): string {
+/** Rótulo da aba; para o Responsável TI, a Visão geral é "O que precisamos da TI". */
+function tabLabel(tab: ProjectTab, project: Project, t: Translate, it = false): string {
+  if (it && tab === 'overview') return t('brief.needsTitle')
   return tab === 'members' ? t('projects.tabs.members', { count: project.memberCount }) : t(`projects.tabs.${tab}`)
 }
 
 /** Nome da seção no título da aba do navegador ("Kanban · Projeto"); a visão geral é só o projeto. */
-function sectionLabel(section: ProjectSection, project: Project, t: Translate): string {
+function sectionLabel(section: ProjectSection, project: Project, t: Translate, it = false): string {
   if (section === 'overview') return ''
   if (section === 'list') return t('projects.tabs.tasks')
   if (section === 'kanban' || section === 'planning' || section === 'timeline') return t(`projects.taskViews.${section}`)
-  return tabLabel(section, project, t)
+  return tabLabel(section, project, t, it)
+}
+
+/**
+ * Cabeçalho do Responsável TI (regras §33): só o nome do projeto e para que ele está ali — sem chave,
+ * estado, papel nem ações (nada disso é dele), e sem o projeto pai (que ele não vê).
+ */
+function BriefHero({ project }: { project: Project }) {
+  const { t } = useTranslation()
+  return (
+    <section className="relative mb-4 overflow-hidden rounded-2xl text-on-cover shadow-card" style={coverHeroStyle(project.cover)}>
+      <ProjectWatermark icon={project.icon} />
+      <div className="relative flex items-center gap-4 px-5 py-4">
+        <ProjectAvatar icon={project.icon} cover={project.cover} size="lg" className="size-12 shrink-0 shadow-float ring-2 ring-on-cover/40 [&_svg]:size-6" />
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold tracking-tight drop-shadow-sm sm:text-3xl">{project.name}</h1>
+          <p className="mt-1 text-sm text-on-cover/85">{t('brief.subtitle')}</p>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 /** Ícone do projeto grande e translúcido no canto do cabeçalho (decorativo). */

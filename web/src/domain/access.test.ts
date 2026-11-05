@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACCESS_MODULES, accessSummary, moduleVisible, personalRoleCode, projectAccessOf, togglePermission } from './access'
+import { ACCESS_MODULES, PROJECT_SECTION_CHIPS, accessSummary, moduleVisible, personalRoleCode, projectAccessOf, togglePermission } from './access'
 import type { ProjectMember } from './projects'
 
 const member = (id: string, role: ProjectMember['role'], isOwner = false): ProjectMember => ({
@@ -16,6 +16,21 @@ describe('domain/access', () => {
     expect(togglePermission(['tasks.view', 'tasks.edit'], 'tasks.edit', false)).toEqual(['tasks.view'])
     // Configurações não têm "ver": cada permissão vale sozinha
     expect(togglePermission([], 'settings.manage', true)).toEqual(['settings.manage'])
+  })
+
+  it('seções do projeto (§35): ligar uma liga "ver projetos"; desligar "ver projetos" desliga as seções', () => {
+    expect(togglePermission([], 'projects.charter', true)).toEqual(['projects.charter', 'projects.view'])
+    expect(togglePermission(['projects.view', 'projects.charter', 'projects.history', 'tasks.view'], 'projects.view', false)).toEqual(['tasks.view'])
+    expect(togglePermission(['projects.view', 'projects.charter'], 'projects.charter', false)).toEqual(['projects.view'])
+  })
+
+  it('o que vê dentro do projeto, na ordem das abas: seções próprias e módulos que aparecem nele', () => {
+    expect(PROJECT_SECTION_CHIPS.map((c) => c.key)).toEqual(['charter', 'plan', 'tasks', 'kanban', 'report', 'members', 'history'])
+    expect(PROJECT_SECTION_CHIPS.find((c) => c.key === 'kanban')?.code).toBe('kanban.view')
+  })
+
+  it('Responsável TI é um papel de membro como os outros', () => {
+    expect(projectAccessOf([member('tito', 'it')], 'tito')).toBe('it')
   })
 
   it('módulo visível pelo "ver" ou, sem ele, por qualquer ação', () => {

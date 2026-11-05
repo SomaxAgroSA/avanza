@@ -7,7 +7,8 @@ import { Check } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
-import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, suggestKey, type Project } from '@/domain/projects'
+import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, canHaveParent, parentCandidates, suggestKey, type Project } from '@/domain/projects'
+import type { ProjectListQuery } from '@/domain/repositories'
 import { projectSchema, type ProjectInput } from '@/domain/validation'
 import { NO_URGENCY } from '@/domain/urgency'
 import { AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
@@ -17,17 +18,20 @@ import { ProjectAvatar } from './project-visuals'
 import { CustomColorSwatch } from '@/features/task-config/config-visuals'
 import { isHexColor } from '@/domain/colors'
 import { IconPicker } from '@/features/icons/IconPicker'
-import { useCreateProject, useUpdateProject } from './queries'
+import { useCreateProject, useProjects, useUpdateProject } from './queries'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useAreas } from '@/features/workflow/queries'
 import { AreaBadge } from '@/features/workflow/area-visuals'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId' }
 
-/** Valor do select para "sem área" (o select não aceita texto vazio). */
+/** Valor do select para "sem área" / "sem pai" (o select não aceita texto vazio). */
 const NO_AREA = '__none__'
 
-function defaults(project?: Project | null): ProjectInput {
+/** Projetos que podem ser pai (sem pai, ativos): até 100, pelo nome (a regra final é do servidor, §34). */
+const PARENT_QUERY: ProjectListQuery = { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: 'none' } }
+
+function defaults(project?: Project | null, parentId?: string): ProjectInput {
   return {
     name: project?.name ?? '',
     key: project?.key ?? '',
@@ -38,6 +42,7 @@ function defaults(project?: Project | null): ProjectInput {
     priority: project?.priority ?? 'medium',
     urgency: project?.urgency ?? NO_URGENCY,
     areaId: project?.area?.id ?? '',
+    parentId: project ? (project.parent?.id ?? '') : (parentId ?? ''),
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -48,9 +53,11 @@ export interface ProjectFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** Ausente = criação. */
   project?: Project | null
+  /** Criação de subprojeto ("Novo subprojeto"): o pai já vem escolhido. */
+  parentId?: string
 }
 
-export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDialogProps) {
+export function ProjectFormDialog({ open, onOpenChange, project, parentId }: ProjectFormDialogProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const urgencyOptions = useUrgencyFilterOptions()
@@ -60,16 +67,19 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
   const create = useCreateProject()
   const update = useUpdateProject()
   const pending = create.isPending || update.isPending
+  const parents = useProjects(PARENT_QUERY, open)
+  const parentOptions = parentCandidates(parents.data?.items ?? [], project)
+  const lockedParent = !canHaveParent(project)
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<ProjectInput>({
     resolver: zodResolver(projectSchema),
-    defaultValues: defaults(project),
+    defaultValues: defaults(project, parentId),
   })
 
   useEffect(() => {
     if (!open) return
-    reset(defaults(project))
-  }, [open, project, reset])
+    reset(defaults(project, parentId))
+  }, [open, project, parentId, reset])
 
   const [name, key, icon, cover] = useWatch({ control, name: ['name', 'key', 'icon', 'cover'] })
 
@@ -84,6 +94,8 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
       urgency: values.urgency === NO_URGENCY ? null : values.urgency,
       // só quando mudou: a área inativa que o projeto já tem continua valendo
       areaId: values.areaId !== (project?.area?.id ?? '') ? values.areaId || null : undefined,
+      // só quando mudou (null solta): o pai que ficou arquivado depois continua valendo
+      parentId: values.parentId !== (project?.parent?.id ?? '') ? values.parentId || null : undefined,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -201,7 +213,7 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
               render={({ field }) => <AppSelect label={t('tasks.fields.urgency')} value={field.value} onValueChange={field.onChange} options={urgencyOptions} />}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={control}
               name="areaId"
@@ -222,6 +234,31 @@ export function ProjectFormDialog({ open, onOpenChange, project }: ProjectFormDi
                 />
               )}
             />
+            <Controller
+              control={control}
+              name="parentId"
+              render={({ field }) => {
+                const current = project?.parent ?? null
+                const options = [{ value: NO_AREA, label: t('projects.parent.none') }, ...parentOptions.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` }))]
+                // o pai atual (arquivado ou fora da lista) continua aparecendo
+                if (current && !options.some((o) => o.value === current.id)) options.push({ value: current.id, label: `${current.key} · ${current.name}` })
+                if (field.value && !options.some((o) => o.value === field.value)) options.push({ value: field.value, label: field.value })
+                return (
+                  <AppSelect
+                    label={t('projects.parent.field')}
+                    searchable
+                    value={field.value || NO_AREA}
+                    onValueChange={(value) => field.onChange(value === NO_AREA ? '' : value)}
+                    disabled={lockedParent}
+                    hint={lockedParent ? t('projects.parent.lockedHint', { count: project?.childCount ?? 0 }) : t('projects.parent.hint')}
+                    error={errors.parentId?.message}
+                    options={options}
+                  />
+                )
+              }}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={control}
               name="startDate"

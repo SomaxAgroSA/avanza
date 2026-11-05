@@ -4,13 +4,13 @@
 
 ## Modelo
 - **Catálogo** (definido pelo sistema): `backend/src/domain/permissions.js`, espelhado em `web/src/domain/permissions.ts`.
-- **Matriz perfil × permissão** (configurável): collection `role_permissions`, editada em *Configurações → Permissões*.
-- **Perfis**: 5 de sistema (não excluíveis) + perfis personalizados (*Configurações → Perfis*).
+- **Matriz perfil × permissão** (configurável): tabela `role_permissions`, editada em *Configurações → Controle de acesso* (abas Por pessoa, Perfis e Permissões por perfil — regras §35; `/settings/roles` e `/settings/permissions` redirecionam).
+- **Perfis**: 5 de sistema (não excluíveis) + perfis personalizados (*Controle de acesso → Perfis*).
 
 ## Catálogo
 | Módulo | Permissões |
 |---|---|
-| projects | `projects.view`, `projects.create`, `projects.edit`, `projects.delete`, `projects.view_all` (desde a migration 1790000003) |
+| projects | `projects.view`, `projects.create`, `projects.edit`, `projects.delete`, `projects.view_all` (desde a migration 1790000003); seções do projeto `projects.charter`, `projects.history`, `projects.members`, `projects.report` (regras §35, migration `0020_project_sections.sql`) |
 | tasks | `tasks.view`, `tasks.create`, `tasks.edit`, `tasks.delete`, `tasks.assign`, `tasks.fork`, `tasks.link` |
 | kanban | `kanban.view`, `kanban.manage` |
 | users | `users.view`, `users.create`, `users.edit`, `users.disable` |
@@ -26,6 +26,7 @@
 | projects.create / edit | ✓ | ✓ | ✓ | | |
 | projects.delete | ✓ | ✓ | | | |
 | projects.view_all | ✓ | ✓ | | | |
+| projects.charter / history / members / report (seções) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | tasks.view | ✓ | ✓ | ✓ | ✓ | ✓ |
 | tasks.create / edit / assign / fork / link | ✓ | ✓ | ✓ | ✓ | |
 | tasks.delete | ✓ | ✓ | ✓ | | |
@@ -64,8 +65,11 @@ A permissão global é necessária, mas não suficiente: também conta o víncul
 
 | Ação | Exige |
 |---|---|
-| Ver projeto | `projects.view` **e** (membro, dono ou `projects.view_all`) — caso contrário 404 |
-| Editar, gerenciar membros, arquivar | `projects.edit` **e** (gestor do projeto, dono ou `projects.view_all`) |
+| Ver projeto | `projects.view` **e** (membro, dono ou `projects.view_all`) — caso contrário 404; o **Responsável TI** só abre o projeto e o resumo (`/brief`) — o resto do projeto é 404 para ele (§33) |
+| Ver as seções Ficha, Histórico, Membros, Informe | ver o projeto **e** `projects.charter` / `projects.history` / `projects.members` / `projects.report` (o dono sempre) — sem a seção, a ficha e o histórico respondem `FORBIDDEN` (§35); o Responsável TI só pode ganhar a Ficha (leitura) |
+| Editar, arquivar | `projects.edit` **e** (gestor do projeto, dono ou `projects.view_all`) |
+| Gerenciar membros (adicionar, trocar papel, remover, candidatos) | o acima **e** a seção Membros (`projects.members`; o dono sempre) |
+| Ligar a um projeto pai | poder editar o projeto pai (gestor do pai com `projects.edit`); senão `invalid_option` (§34) |
 | Transferir posse | `projects.edit` **e** (dono ou `projects.view_all`) |
 | Excluir | `projects.delete` **e** (dono ou `projects.view_all`) **e** projeto arquivado |
 | Sair do projeto | ser membro (o dono não sai sem transferir a posse) |
@@ -73,7 +77,7 @@ A permissão global é necessária, mas não suficiente: também conta o víncul
 | Enviar arquivos ao projeto | `tasks.edit` **e** (dono, gestor, membro ou `projects.view_all`) **e** projeto não arquivado |
 | Excluir arquivo do projeto | o acima **e** (quem enviou ou gestor) |
 
-Papéis no projeto: **gestor** (administra o projeto), **membro** (trabalha nas tarefas), **leitor** (consulta e comenta; não edita). A API devolve `capabilities` em cada projeto para a interface habilitar só o que é permitido. Regras em `backend/src/domain/project.js`.
+Papéis no projeto: **gestor** (administra o projeto), **membro** (trabalha nas tarefas), **leitor** (consulta e comenta; não edita), **Responsável TI** (`it`: só o resumo do projeto e as tarefas atribuídas a ele ou marcadas "Visível para TI", onde age como colaborador sem excluir, reatribuir, criar, relacionar nem fazer fork — §33/§36; dono, gestor e `projects.view_all` nunca ficam limitados). A API devolve `capabilities` em cada projeto (inclusive `sections`) para a interface habilitar só o que é permitido. Regras em `backend/src/domain/project.js` (`resolveAccess`, `assertAccess`, `canSeeSection`) e `backend/src/domain/task.js` (`scopedAccess`).
 
 ## Tarefas, comentários e configurações (Fase 4)
 Regras em `backend/src/domain/task.js`.
@@ -88,7 +92,9 @@ Regras em `backend/src/domain/task.js`.
 | Editar comentário | ser o autor |
 | Excluir comentário | ser o autor **ou** gestor do projeto / `projects.view_all` (exclusão lógica) |
 | Anexar arquivo no comentário | ser o autor do comentário (vale para o leitor); remover: autor ou gestor |
-| Mencionar (@) | a pessoa mencionada precisa ter acesso ao projeto e estar ativa |
+| Mencionar (@) | a pessoa mencionada precisa ter acesso ao projeto e estar ativa (o Responsável TI só nas tarefas visíveis a ele; quando é ele quem escreve, só quem já aparece na tarefa — §33) |
+| Marcar "Visível para TI" (`PUT /tasks/{id}/it-visible`) | regra de editar a tarefa (o Responsável TI não marca) — §36 |
+| Ligar/desligar no informe (`PUT /tasks/{id}/report`) | regra de editar a tarefa **e** a seção Informe (`projects.report`) — §35 |
 | Status, prioridades, áreas, tags, tipos e campos | ler: `settings.manage` ou `tasks.view`; alterar: `settings.manage` |
 | Área responsável da tarefa (`PUT /tasks/{id}/area`) / do projeto | regra de editar a tarefa / o projeto (não exige os obrigatórios do status) |
 | Biblioteca de ícones | ver: qualquer autenticado (os seletores de ícone usam); importar e remover: `settings.manage` |

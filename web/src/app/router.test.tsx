@@ -3,9 +3,9 @@ import { screen, waitFor, within } from '@testing-library/react'
 import i18n from '@/core/i18n'
 import type { PermissionCode } from '@/domain/permissions'
 import type { PlanReport } from '@/domain/plan-management'
-import type { ProjectCharter } from '@/domain/charter'
-import type { Project } from '@/domain/projects'
-import type { PlanRepository } from '@/domain/repositories'
+import type { ProjectBrief, ProjectCharter } from '@/domain/charter'
+import { PROJECT_PROFILE_SECTIONS, type Project } from '@/domain/projects'
+import type { PlanRepository, ProjectRepository } from '@/domain/repositories'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { routes } from './router'
 
@@ -18,8 +18,8 @@ afterEach(() => {
 })
 
 const ALL: PermissionCode[] = ['projects.view', 'plan.view', 'tasks.view', 'kanban.view']
-const MANAGER = { edit: true, manageMembers: true, archive: true, delete: false, transfer: true, uploadFiles: true }
-const READER = { edit: false, manageMembers: false, archive: false, delete: false, transfer: false, uploadFiles: false }
+const MANAGER = { edit: true, manageMembers: true, archive: true, delete: false, transfer: true, uploadFiles: true, sections: [...PROJECT_PROFILE_SECTIONS] }
+const READER = { edit: false, manageMembers: false, archive: false, delete: false, transfer: false, uploadFiles: false, sections: [...PROJECT_PROFILE_SECTIONS] }
 
 function project(capabilities = MANAGER): Project {
   return {
@@ -33,6 +33,8 @@ function project(capabilities = MANAGER): Project {
     priority: 'medium',
     urgency: null,
     area: null,
+    parent: null,
+    childCount: 0,
     owner: null,
     startDate: null,
     dueDate: null,
@@ -257,5 +259,128 @@ describe('Página do projeto — saúde na visão geral', () => {
     expect(await screen.findByText('Implantação do CRM')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Saúde do projeto' })).not.toBeInTheDocument()
     expect(planReport).not.toHaveBeenCalled()
+  })
+})
+
+describe('Controle de acesso — Perfis e Permissões viraram abas', () => {
+  it.each([
+    ['/settings/roles', '/settings/access', '?tab=roles'],
+    ['/settings/permissions?role=r1', '/settings/access', '?role=r1&tab=matrix'],
+  ])('%s → %s%s', async (from, pathname, search) => {
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(['permissions.manage', 'users.view']) },
+      roles: { list: () => Promise.resolve([]) },
+    })
+    const { router } = renderRoutes(routes, { repositories, initialPath: from })
+    await waitFor(() => expect(router.state.location.pathname).toBe(pathname))
+    expect(router.state.location.search).toBe(search)
+  })
+})
+
+describe('Página do projeto — seções por perfil (§35)', () => {
+  const NONE: Project['capabilities'] = { ...READER, sections: [] }
+
+  it('sem as seções, Ficha, Informe, Membros e Histórico somem das abas', async () => {
+    setup('/projects/p1', { capabilities: NONE })
+    const nav = await projectTabs()
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral', 'Gestão', 'Tarefas', 'Arquivos'])
+  })
+
+  it.each(['charter', 'report', 'members', 'history'])('a seção escondida %s também fecha pelo endereço', async (segment) => {
+    const { router } = setup(`/projects/p1/${segment}`, { capabilities: NONE })
+    await waitFor(() => expect(router.state.location.pathname).toBe('/projects/p1'))
+  })
+
+  it.each(['charter', 'report', 'members', 'history'])('?tab=%s (endereço antigo) sem a seção fica na visão geral', async (tab) => {
+    const { router } = setup(`/projects/p1?tab=${tab}`, { capabilities: NONE })
+    await waitFor(() => expect(router.state.location.search).toBe(''))
+    expect(router.state.location.pathname).toBe('/projects/p1')
+  })
+})
+
+describe('Página do projeto — Responsável TI (§33)', () => {
+  const brief: ProjectBrief = {
+    objective: 'Vender mais pelo portal',
+    tasks: [
+      {
+        id: 't1', code: 'CRM-7', number: 7, title: 'Liberar acesso ao banco', project: { id: 'p1', key: 'CRM', name: 'CRM Corporativo' },
+        type: null, status: null, priority: null, sprint: null, creator: null, assignee: null, reporter: null, parentTaskId: null,
+        startDate: null, dueDate: null, estimatedHours: null, actualHours: null, startedAt: null, completedAt: null, createdAt: null, updatedAt: null,
+        tags: [], checklistProgress: { done: 0, total: 0 }, commentCount: 0, attachmentCount: 0, subtaskProgress: { done: 0, total: 0 },
+        blocked: false, inReport: true, itVisible: true, urgency: null, area: null,
+      },
+    ],
+    items: [{ id: 'i1', kind: 'result', title: 'Disponibilidade do banco', description: '', unit: '%', target: 99.5, dueDate: null }],
+  }
+  const itProject = (sections: Project['capabilities']['sections']): Project => ({ ...project({ ...READER, sections }), myRole: 'it', memberCount: 4 })
+
+  function setupIt(path: string, sections: Project['capabilities']['sections'] = []) {
+    const listMembers = vi.fn(() => Promise.resolve([]))
+    const getBrief = vi.fn(() => Promise.resolve(brief))
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(ALL) },
+      projects: { get: () => Promise.resolve(itProject(sections)), listMembers },
+      charter: { brief: getBrief, get: () => Promise.resolve({ ...charter, capabilities: { edit: false } }) },
+      plan: { report: () => Promise.resolve(report(3)) },
+    })
+    return { ...renderRoutes(routes, { repositories, initialPath: path }), listMembers, getBrief }
+  }
+
+  it('abre o resumo: objetivo, o que precisamos dele e os indicadores; sem as outras abas', async () => {
+    const { listMembers } = setupIt('/projects/p1')
+    const nav = await projectTabs()
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['O que precisamos da TI'])
+    expect(await screen.findByText('Vender mais pelo portal')).toBeInTheDocument()
+    expect(screen.getByText('Liberar acesso ao banco')).toBeInTheDocument()
+    expect(screen.getByText('Disponibilidade do banco')).toBeInTheDocument()
+    expect(screen.getByText('O que o projeto precisa da TI')).toBeInTheDocument()
+    // nada do projeto que o servidor fecha para ele: saúde da gestão, membros, chave e ações
+    expect(screen.queryByRole('region', { name: 'Saúde do projeto' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
+    expect(listMembers).not.toHaveBeenCalled()
+  })
+
+  it.each(['tasks', 'kanban', 'management', 'files', 'members', 'history', 'report', 'charter'])('qualquer outra aba (%s) volta ao resumo', async (segment) => {
+    const { router } = setupIt(`/projects/p1/${segment}`)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/projects/p1'))
+  })
+
+  it('com a seção Ficha no perfil, ganha a aba Ficha (só leitura)', async () => {
+    const { router } = setupIt('/projects/p1/charter', ['charter'])
+    const nav = await projectTabs()
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['O que precisamos da TI', 'Ficha'])
+    expect(within(nav).getByRole('link', { name: 'Ficha' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByText('Centralizar o relacionamento com os clientes')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/projects/p1/charter')
+  })
+})
+
+describe('Página do projeto — projeto pai e subprojetos (§34)', () => {
+  const child = (id: string, key: string, name: string): Project => ({ ...project(), id, key, name, parent: { id: 'p1', key: 'CRM', name: 'CRM Corporativo', icon: 'folder', cover: 'blue' } })
+
+  it('o pai mostra os subprojetos na visão geral, com "Novo subprojeto" para quem cria projetos', async () => {
+    const list = vi.fn<ProjectRepository['list']>(() => Promise.resolve({ items: [child('c1', 'FVB', 'Força de Vendas')], page: 1, perPage: 100, total: 1, totalPages: 1 }))
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser([...ALL, 'projects.create']) },
+      projects: { get: () => Promise.resolve({ ...project(), childCount: 1 }), list, listMembers: () => Promise.resolve([]) },
+      plan: { report: () => Promise.resolve(report(0)) },
+    })
+    renderRoutes(routes, { repositories, initialPath: '/projects/p1' })
+    expect(await screen.findByRole('link', { name: /Força de Vendas/ })).toHaveAttribute('href', '/projects/c1')
+    expect(screen.getByText('1 subprojeto')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Novo subprojeto' })).toBeInTheDocument()
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ filters: { parent: 'p1' } }))
+  })
+
+  it('o subprojeto mostra o pai acima do nome, com link', async () => {
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(ALL) },
+      projects: { get: () => Promise.resolve(child('p1', 'FVB', 'Força de Vendas')), listMembers: () => Promise.resolve([]) },
+      plan: { report: () => Promise.resolve(report(0)) },
+    })
+    renderRoutes(routes, { repositories, initialPath: '/projects/p1' })
+    expect(await screen.findByRole('link', { name: 'Faz parte de CRM Corporativo' })).toHaveAttribute('href', '/projects/p1')
+    // subprojeto não tem o card de subprojetos
+    expect(screen.queryByText('Subprojetos')).not.toBeInTheDocument()
   })
 })

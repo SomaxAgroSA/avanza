@@ -8,6 +8,11 @@ export const PERMISSION_CODES = [
   'projects.edit',
   'projects.delete',
   'projects.view_all',
+  // seções do projeto (regras §35): o que a pessoa vê dentro de cada projeto em que entra
+  'projects.charter',
+  'projects.history',
+  'projects.members',
+  'projects.report',
   'tasks.view',
   'tasks.create',
   'tasks.edit',

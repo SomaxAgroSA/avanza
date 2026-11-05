@@ -160,6 +160,14 @@ export function useTaskMutations() {
         invalidate()
       },
     }),
+    // Visível para TI (§36): o Responsável TI do projeto passa a ver a tarefa
+    setItVisible: useMutation({
+      mutationFn: ({ id, itVisible }: { id: string; itVisible: boolean }) => tasks.setItVisible(id, itVisible),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        invalidate()
+      },
+    }),
     setUrgency: useMutation({
       mutationFn: ({ id, urgency }: { id: string; urgency: Urgency | null }) => tasks.setUrgency(id, urgency),
       onSuccess: (task) => {

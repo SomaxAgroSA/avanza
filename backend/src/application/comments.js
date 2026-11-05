@@ -34,15 +34,27 @@ function createCommentService(deps) {
     const project = task ? await deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError('TASK_NOT_FOUND')
     const membership = await deps.projectMemberRepository.find(project.id, ctx.principal.userId)
-    const access = projectDomain.resolveAccess(ctx.principal, project, membership)
+    // Responsável TI: comenta nas tarefas visíveis a ele (§33)
+    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(ctx.principal, project, membership), task)
     taskDomain.assertTaskAccess(access, project, 'view', task)
     return { task, project, access }
   }
 
-  /** Pessoas ativas com acesso ao projeto (dono e membros de qualquer papel). */
-  async function participants(project) {
-    const ids = (await deps.projectMemberRepository.listByProject(project.id)).map((m) => m.userId)
+  /**
+   * Pessoas ativas que enxergam a tarefa (dono e membros de qualquer papel; o Responsável TI só nas
+   * tarefas visíveis a ele, §33). Quem pede como Responsável TI (\`access.scoped\`) não vê a lista de
+   * membros: menciona só quem já aparece na tarefa (dono do projeto, autor, responsável, relator e quem
+   * comentou).
+   */
+  async function participants(project, task, access) {
+    let ids = (await deps.projectMemberRepository.listByProject(project.id))
+      .filter((m) => taskDomain.memberSeesTask(project, m, m.userId, task))
+      .map((m) => m.userId)
     if (ids.indexOf(project.ownerId) < 0) ids.push(project.ownerId)
+    if (access && access.scoped) {
+      const involved = [project.ownerId, task.creatorId, task.assigneeId, task.reporterId].concat((await comments.listByTask(task.id)).map((c) => c.userId))
+      ids = ids.filter((id) => involved.indexOf(id) >= 0)
+    }
     return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
   }
 
@@ -52,11 +64,11 @@ function createCommentService(deps) {
   }
 
   /** Valida as menções do texto contra quem tem acesso ao projeto. */
-  async function resolveMentions(project, content) {
+  async function resolveMentions(project, task, access, content) {
     const ids = taskDomain.extractMentions(content)
     if (ids.length > MAX_MENTIONS) throw invalid('content', 'too_many_mentions')
     if (ids.length === 0) return []
-    const allowed = await participants(project)
+    const allowed = await participants(project, task, access)
     const found = ids.map((id) => allowed.find((u) => u.id === id))
     if (found.some((u) => !u)) throw invalid('content', 'invalid_mention')
     return found
@@ -122,8 +134,8 @@ function createCommentService(deps) {
   }
 
   async function mentionCandidates(ctx, taskId) {
-    const { project } = await loadTask(ctx, taskId)
-    return (await participants(project))
+    const { task, project, access } = await loadTask(ctx, taskId)
+    return (await participants(project, task, access))
       .map(toUserSummary)
       .sort((a, b) => a.name.localeCompare(b.name))
   }
@@ -132,7 +144,7 @@ function createCommentService(deps) {
     const { task, project, access } = await loadTask(ctx, taskId)
     taskDomain.assertCommentAccess(access, project, 'create')
     const content = parseContent(input)
-    const mentioned = await resolveMentions(project, content)
+    const mentioned = await resolveMentions(project, task, access, content)
     const created = await deps.unitOfWork.run(async (repos) => {
       const comment = await repos.commentRepository.create({ taskId: task.id, userId: ctx.principal.userId, content, mentions: mentioned.map((u) => u.id) })
       await audit(repos, ctx, task, 'comment.added', null, auditValue(content, mentioned))
@@ -160,7 +172,7 @@ function createCommentService(deps) {
     taskDomain.assertCommentAccess(access, project, 'edit', comment)
     const content = parseContent(input)
     if (content === comment.content) return present(comment, ctx, access, project, await usersFor([comment]), await deps.attachmentRepository.listByComments([comment.id]))
-    const mentioned = await resolveMentions(project, content)
+    const mentioned = await resolveMentions(project, task, access, content)
     const previous = comment.content
     const previousMentions = await deps.userRepository.findManyByIds(comment.mentions || [])
     const saved = await deps.unitOfWork.run(async (repos) => {

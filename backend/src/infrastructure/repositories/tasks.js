@@ -66,6 +66,19 @@ function dayToDb(value) {
   return value ? toDbDate(`${String(value).slice(0, 10)}T00:00:00.000Z`) : null
 }
 
+/**
+ * Tarefas que a pessoa enxerga sem `projects.view_all` (regras §33 e §36): as dos projetos em que é membro
+ * sem ser Responsável TI e, nos projetos em que é Responsável TI, só as atribuídas a ela ou marcadas
+ * "Visível para TI". `user` é o marcador do parâmetro ($n); `alias` o prefixo da tabela ('' ou 'tasks.').
+ */
+function visibleTasksClause(user, alias) {
+  const t = alias || ''
+  return (
+    `(${t}project_id IN (SELECT project_id FROM project_members WHERE user_id = ${user} AND role <> 'it')` +
+    ` OR ((${t}assignee_id = ${user} OR ${t}it_visible) AND ${t}project_id IN (SELECT project_id FROM project_members WHERE user_id = ${user} AND role = 'it')))`
+  )
+}
+
 function createTaskRepository(db) {
   // horas: 0 = não informado (a coluna numérica não aceita nulo, como no PocketBase)
   const hours = (value) => (value > 0 ? value : null)
@@ -98,6 +111,7 @@ function createTaskRepository(db) {
       actualHours: hours(row.actual_hours),
       checklist: row.checklist || [],
       reportExcluded: !!row.report_excluded,
+      itVisible: !!row.it_visible,
       urgency: row.urgency || null,
       position: row.position,
       createdAt: row.created,
@@ -109,7 +123,7 @@ function createTaskRepository(db) {
   const CARD_COLUMNS = [
     'id', 'project_id', 'number', 'code', 'title', 'task_type_id', 'status_id', 'priority_id', 'creator_id', 'assignee_id',
     'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'area_id', 'start_date', 'due_date', 'started_at', 'completed_at',
-    'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'urgency', 'position', 'created', 'updated',
+    'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'it_visible', 'urgency', 'position', 'created', 'updated',
   ]
     .map(ident)
     .join(', ')
@@ -147,6 +161,7 @@ function createTaskRepository(db) {
       else if (NUMBERS[key]) values[NUMBERS[key]] = value === null ? 0 : value
       else if (key === 'checklist') values.checklist = toJson(value || [])
       else if (key === 'reportExcluded') values.report_excluded = !!value
+      else if (key === 'itVisible') values.it_visible = !!value
       // urgência vazia = '' (texto vazio, nunca NULL)
       else if (key === 'urgency') values.urgency = value || ''
       else if (key === 'position') values.position = value
@@ -174,7 +189,7 @@ function createTaskRepository(db) {
       params.push(value)
       return `$${params.length}`
     }
-    if (!query.scope.viewAll) where.push(`tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
+    if (!query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), 'tasks.'))
     if (query.projectId) where.push(`tasks.project_id = ${param(query.projectId)}`)
     if (query.typeId) where.push(`tasks.task_type_id = ${param(query.typeId)}`)
     if (query.priorityId) where.push(`tasks.priority_id = ${param(query.priorityId)}`)
@@ -183,6 +198,7 @@ function createTaskRepository(db) {
     if (query.sprintId) where.push(query.sprintId === 'none' ? 'tasks.sprint_id IS NULL' : `tasks.sprint_id = ${param(query.sprintId)}`)
     if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)
     if (query.inReport !== undefined) where.push(`tasks.report_excluded = ${param(!query.inReport)}`)
+    if (query.itVisible !== undefined) where.push(`tasks.it_visible = ${param(!!query.itVisible)}`)
     if (query.urgency) where.push(`tasks.urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
     if (query.areaId) where.push(query.areaId === 'none' ? 'tasks.area_id IS NULL' : `tasks.area_id = ${param(query.areaId)}`)
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
@@ -309,7 +325,7 @@ function createTaskRepository(db) {
         params.push(value)
         return `$${params.length}`
       }
-      if (query.scope && !query.scope.viewAll) where.push(`project_id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
+      if (query.scope && !query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), ''))
       if (!query.includeArchived) where.push('project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)')
       if (query.projectId) where.push(`project_id = ${param(query.projectId)}`)
       if (query.projectIds) where.push(`project_id = ANY(${param(query.projectIds)}::text[])`)

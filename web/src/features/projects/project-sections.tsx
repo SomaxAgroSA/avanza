@@ -1,11 +1,12 @@
 import { type ReactNode, useState } from 'react'
-import { Navigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { Link, Navigate } from 'react-router'
+import { Archive, ArchiveRestore, CornerDownRight, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatDateTime, formatDay } from '@/core/utils/format'
 import { projectPath } from '@/domain/project-routes'
-import { isOverdue, type Project } from '@/domain/projects'
+import { canAddSubproject, isItRole, isOverdue, type Project } from '@/domain/projects'
+import type { ProjectListQuery } from '@/domain/repositories'
 import { AppAvatar, AppButton, AppCard, AppConfirmDialog, AppErrorState, AppSelect, AppSkeleton, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { AuditTimeline } from '@/features/audit/AuditTimeline'
@@ -15,12 +16,14 @@ import { ProjectTasksPanel } from '@/features/tasks/ProjectTasksPanel'
 import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
 import { AreaBadge } from '@/features/workflow/area-visuals'
 import { useProjectOutlet } from './project-context'
+import { ProjectBrief } from './ProjectBrief'
+import { ProjectFormDialog } from './ProjectFormDialog'
 import { ProjectChronology } from './ProjectChronology'
 import { ProjectFilesPanel } from './ProjectFilesPanel'
 import { ProjectMembersPanel } from './ProjectMembersPanel'
 import { ProjectTaskViewsNav } from './ProjectTaskViewsNav'
-import { ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
-import { useProjectHistory, useProjectLifecycle, useProjectMembers } from './queries'
+import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
+import { useProjectHistory, useProjectLifecycle, useProjectMembers, useProjects } from './queries'
 
 /*
  * Abas da página do projeto (rotas filhas de `/projects/:projectId`). O projeto vem da página
@@ -28,9 +31,13 @@ import { useProjectHistory, useProjectLifecycle, useProjectMembers } from './que
  * (charter/) e Informe (report/) ficam nos módulos delas (cada uma no seu pedaço do código).
  */
 
-/** Visão geral: saúde do projeto (quando há quadro de gestão), descrição e detalhes. */
+/**
+ * Visão geral: saúde do projeto (quando há quadro de gestão), descrição, subprojetos e detalhes. Para o
+ * Responsável TI (regras §33), o resumo do que o projeto precisa dele.
+ */
 export function ProjectOverviewTab() {
-  return <Overview project={useProjectOutlet().project} />
+  const { project } = useProjectOutlet()
+  return isItRole(project) ? <ProjectBrief project={project} /> : <Overview project={project} />
 }
 
 /** Aba Tarefas, visão Lista (`/projects/:projectId/tasks`). */
@@ -78,14 +85,17 @@ function Overview({ project }: { project: Project }) {
     <div className="flex flex-col gap-4">
       {/* saúde do quadro de gestão (só quando o projeto tem quadro com elementos) */}
       {canViewPlan && <ProjectHealth projectId={project.id} />}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <AppCard title={t('projects.fields.description')} className="lg:col-span-2">
-          {project.description ? (
-            <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{project.description}</p>
-          ) : (
-            <p className="text-sm text-subtle">{t('projects.noDescription')}</p>
-          )}
-        </AppCard>
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
+          <AppCard title={t('projects.fields.description')}>
+            {project.description ? (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{project.description}</p>
+            ) : (
+              <p className="text-sm text-subtle">{t('projects.noDescription')}</p>
+            )}
+          </AppCard>
+          <SubprojectsCard project={project} />
+        </div>
         <AppCard title={t('projects.details')}>
           <dl className="divide-y divide-border">
             <Detail label={t('projects.fields.status')}>
@@ -123,6 +133,60 @@ function Overview({ project }: { project: Project }) {
         </AppCard>
       </div>
     </div>
+  )
+}
+
+/** Subprojetos ativos do projeto que a pessoa vê, pelo nome. */
+const childrenQuery = (parentId: string): ProjectListQuery => ({ view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: parentId } })
+
+/**
+ * Subprojetos (regras §34): só num projeto que pode ser pai (não é subprojeto). Lista os filhos que a
+ * pessoa vê e, para quem edita o projeto e cria projetos, "Novo subprojeto" já ligado a ele.
+ */
+function SubprojectsCard({ project }: { project: Project }) {
+  const { t, i18n } = useTranslation()
+  const canCreate = useCan('projects.create')
+  const [creating, setCreating] = useState(false)
+  const isParent = project.childCount > 0
+  const children = useProjects(childrenQuery(project.id), isParent)
+  const canAdd = canAddSubproject(project, canCreate)
+  if (project.parent || (!isParent && !canAdd)) return null
+  const visible = children.data?.items ?? []
+  return (
+    <AppCard
+      title={t('projects.parent.childrenTitle')}
+      description={isParent ? t('projects.parent.children', { count: project.childCount }) : t('projects.parent.emptyDescription')}
+      actions={
+        canAdd ? (
+          <AppButton size="sm" variant="secondary" leftIcon={<Plus />} onClick={() => setCreating(true)}>
+            {t('projects.parent.add')}
+          </AppButton>
+        ) : undefined
+      }
+    >
+      {isParent &&
+        (children.isPending ? (
+          <AppSkeleton className="h-24 rounded-lg" />
+        ) : (
+          <ul className="-mx-2 flex flex-col">
+            {visible.map((child) => (
+              <li key={child.id}>
+                <Link to={projectPath(child.id)} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-ring">
+                  <CornerDownRight className="size-4 shrink-0 text-subtle" aria-hidden />
+                  <ProjectAvatar icon={child.icon} cover={child.cover} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-fg">{child.name}</span>
+                    <span className="block font-mono text-xs text-muted">{child.key}</span>
+                  </span>
+                  <span className={cn('hidden text-xs sm:block', isOverdue(child) ? 'text-danger' : 'text-muted')}>{formatDay(child.dueDate, i18n.language)}</span>
+                  <ProjectStatusBadge status={child.status} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {canAdd && <ProjectFormDialog open={creating} onOpenChange={setCreating} parentId={project.id} />}
+    </AppCard>
   )
 }
 

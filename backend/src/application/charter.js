@@ -2,7 +2,11 @@
  * Ficha do projeto (regras de negócio §30): objetivo geral, objetivos, funcionalidades, escopo e
  * resultados esperados, com o avanço calculado em domain/charter.js.
  *
- * - Ver: quem vê o projeto (os dados das tarefas vinculadas só com `tasks.view`).
+ * - Ver: quem vê o projeto e tem a seção Ficha (`projects.charter`, §35; sem ela, FORBIDDEN); o dono sempre.
+ *   Os dados das tarefas vinculadas só com `tasks.view` — e, para o Responsável TI (§33), só as tarefas
+ *   visíveis a ele (o avanço da funcionalidade continua contando todas).
+ * - Resumo (`getBrief`, §33): objetivo geral, as tarefas visíveis a quem pede e os itens da ficha sob a
+ *   responsabilidade dele — para o Responsável TI e para quem vê o projeto.
  * - Editar a estrutura: gestor ou dono (`projects.edit` + gestor, projeto não arquivado), como os marcos.
  * - Registrar medição de um resultado: quem edita ou o responsável pelo resultado.
  * - Anti-IDOR: item de projeto que a pessoa não vê responde CHARTER_ITEM_NOT_FOUND.
@@ -10,6 +14,7 @@
  */
 
 const { appError } = require('../core/errors')
+const taskDomain = require('../domain/task')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
@@ -19,6 +24,8 @@ const { iso, toUserSummary } = require('./presenters')
 const { createTaskService } = require('./tasks')
 
 const MAX_MEASUREMENTS = 500
+/** Tarefas lidas para o resumo do Responsável TI (as dele e as marcadas, dentro do projeto). */
+const MAX_BRIEF_TASKS = 2000
 
 const number = () => (value) => (typeof value === 'number' && isFinite(value) ? { value } : { error: 'invalid_type' })
 const dayOf = (date) => date.toISOString().slice(0, 10)
@@ -66,7 +73,7 @@ function createCharterService(deps) {
     const project = projectId ? await deps.projectRepository.findById(projectId) : null
     if (!project) throw appError('PROJECT_NOT_FOUND')
     const access = await accessOf(ctx, project)
-    projectDomain.assertAccess(access, project, 'view')
+    projectDomain.assertAccess(access, project, 'charter')
     return { project, access }
   }
 
@@ -76,11 +83,43 @@ function createCharterService(deps) {
     const project = item ? await deps.projectRepository.findById(item.projectId) : null
     if (!item || !project) throw appError('CHARTER_ITEM_NOT_FOUND')
     const access = await accessOf(ctx, project)
-    if (!access.canView) throw appError('CHARTER_ITEM_NOT_FOUND')
+    if (!access.canView && !access.limited) throw appError('CHARTER_ITEM_NOT_FOUND')
+    projectDomain.assertAccess(access, project, 'charter')
     return { item, project, access }
   }
 
   const today = () => dayOf(deps.clock.now())
+
+  /**
+   * Resumo do projeto para quem só precisa saber o que se espera dele (Responsável TI, §33): objetivo
+   * geral, as tarefas atribuídas à pessoa ou marcadas "Visível para TI" e os itens da ficha
+   * (funcionalidades e resultados) sob a responsabilidade dela.
+   */
+  async function getBrief(ctx, projectId) {
+    rbac.assertAuthenticated(ctx.principal)
+    const project = projectId ? await deps.projectRepository.findById(projectId) : null
+    if (!project) throw appError('PROJECT_NOT_FOUND')
+    projectDomain.assertAccess(await accessOf(ctx, project), project, 'brief')
+    const record = await deps.charterRepository.findByProject(project.id)
+    const me = ctx.principal.userId
+    const mine = rbac.can(ctx.principal, 'tasks.view')
+      ? (await deps.taskRepository.listByProject(project.id, MAX_BRIEF_TASKS)).filter((t) => taskDomain.visibleToIt(t, me))
+      : []
+    const own = (await items.listByProject(project.id)).filter((i) => i.ownerId === me && (i.kind === 'feature' || i.kind === 'result'))
+    return {
+      objective: record ? record.objective || '' : '',
+      tasks: await taskService.summarize(mine, ctx),
+      items: own.map((i) => ({
+        id: i.id,
+        kind: i.kind,
+        title: i.title,
+        description: i.description || '',
+        unit: i.unit || '',
+        target: i.kind === 'result' ? i.target : null,
+        due_date: i.dueDate || null,
+      })),
+    }
+  }
 
   async function audit(repos, ctx, project, action, oldValue, newValue) {
     await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'project', entityId: project.id, action, oldValue, newValue }))
@@ -193,7 +232,7 @@ function createCharterService(deps) {
       base.state = item.state || 'auto'
       base.effective_state = item.effectiveState
       base.progress = { done: item.progress.done, total: item.progress.total }
-      base.task_ids = (item.taskIds || []).filter((id) => refs.tasks[id])
+      base.task_ids = (item.taskIds || []).filter((id) => refs.tasks[id] && refs.seesTask(id))
       base.tasks = refs.canViewTasks ? base.task_ids.map((id) => refs.tasks[id].summary) : []
     }
     if (item.kind === 'result') {
@@ -222,9 +261,11 @@ function createCharterService(deps) {
     // tarefas vinculadas que ainda existem no projeto, lidas de uma vez (as demais ficam de fora)
     const linkedIds = unique([].concat(...list.map((item) => item.taskIds || [])))
     const tasks = {}
+    const found = new Map()
     if (linkedIds.length) {
-      const found = (await deps.taskRepository.findManyByIds(linkedIds)).filter((t) => t.projectId === project.id)
-      ;(await taskService.summarize(found)).forEach((summary) => {
+      const linked = (await deps.taskRepository.findManyByIds(linkedIds)).filter((t) => t.projectId === project.id)
+      linked.forEach((t) => found.set(t.id, t))
+      ;(await taskService.summarize(linked, access.limited ? ctx : undefined)).forEach((summary) => {
         tasks[summary.id] = { summary, category: summary.status ? summary.status.category : null, due: summary.due_date ? summary.due_date.slice(0, 10) : null }
       })
     }
@@ -244,7 +285,9 @@ function createCharterService(deps) {
     list.forEach((i) => {
       if (i.kind === 'feature' || i.kind === 'result') itemIds[i.id] = true
     })
-    const refs = { users, tasks, itemIds, canViewTasks: rbac.can(ctx.principal, 'tasks.view') }
+    // Responsável TI (§33): na lista de tarefas da funcionalidade, só as visíveis a ele
+    const seesTask = (id) => !access.limited || taskDomain.visibleToIt(found.get(id), ctx.principal.userId)
+    const refs = { users, tasks, itemIds, seesTask, canViewTasks: rbac.can(ctx.principal, 'tasks.view') }
     const updatedBy = record && record.updatedBy ? users[record.updatedBy] : null
     const lastChange = [record ? record.updatedAt : null]
       .concat(list.map((i) => i.updatedAt))
@@ -404,7 +447,7 @@ function createCharterService(deps) {
     return findItem(ctx, item.id)
   }
 
-  return { getCharter, updateCharter, createItem, updateItem, deleteItem, reorderItems, listMeasurements, addMeasurement }
+  return { getBrief, getCharter, updateCharter, createItem, updateItem, deleteItem, reorderItems, listMeasurements, addMeasurement }
 }
 
 module.exports = { createCharterService }

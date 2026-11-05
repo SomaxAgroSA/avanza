@@ -107,6 +107,7 @@ const detail: TaskDetail = {
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
   inReport: true,
+  itVisible: false,
   urgency: null,
   area: null,
   sprint: null,
@@ -420,11 +421,28 @@ describe('TasksTable: escolher o que sai no informe do projeto', () => {
   it('o botão da linha liga/desliga a tarefa no informe (só na aba do projeto)', async () => {
     const setInReport = vi.fn<TaskRepository['setInReport']>(() => Promise.resolve({ ...detail, inReport: false }))
     const list = vi.fn<TaskRepository['list']>(() => Promise.resolve(page))
-    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test" projectId="p1" /> }], { repositories: repositories({ list, setInReport }), initialPath: '/' })
+    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test" projectId="p1" marks={{ report: true, itVisible: true }} /> }], { repositories: repositories({ list, setInReport }), initialPath: '/' })
     const toggle = await screen.findByRole('button', { name: i18n.t('tasks.report.remove') })
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(toggle)
     await waitFor(() => expect(setInReport).toHaveBeenCalledWith(detail.id, false))
+  })
+
+  it('sem a seção Informe no perfil (§35), não há o botão do informe', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve(page))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="report-test-3" projectId="p1" marks={{ report: false, itVisible: true }} /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByRole('button', { name: i18n.t('tasks.itVisible.add') })
+    expect(screen.queryByRole('button', { name: i18n.t('tasks.report.remove') })).not.toBeInTheDocument()
+  })
+
+  it('Visível para TI (§36): o botão da linha mostra a tarefa ao Responsável TI do projeto', async () => {
+    const setItVisible = vi.fn<TaskRepository['setItVisible']>(() => Promise.resolve({ ...detail, itVisible: true }))
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve(page))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="it-test" projectId="p1" marks={{ report: true, itVisible: true }} /> }], { repositories: repositories({ list, setItVisible }), initialPath: '/' })
+    const toggle = await screen.findByRole('button', { name: i18n.t('tasks.itVisible.add') })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(toggle)
+    await waitFor(() => expect(setItVisible).toHaveBeenCalledWith(detail.id, true))
   })
 
   it('fora do projeto (página Tarefas), não há o botão', async () => {
@@ -432,6 +450,7 @@ describe('TasksTable: escolher o que sai no informe do projeto', () => {
     renderRoutes([{ path: '/', element: <TasksTable tableId="report-test-2" /> }], { repositories: repositories({ list }), initialPath: '/' })
     await screen.findByText(detail.title)
     expect(screen.queryByRole('button', { name: i18n.t('tasks.report.remove') })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: i18n.t('tasks.itVisible.add') })).not.toBeInTheDocument()
   })
 })
 

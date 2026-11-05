@@ -254,3 +254,102 @@ describe('application/projects — área responsável (§32)', () => {
     await assert.rejects(() => projects.createProject(ctx.manager, input({ name: 'X', key: 'XYZ', area_id: ti.id })), { code: 'VALIDATION_ERROR' })
   })
 })
+
+describe('application/projects — projeto pai (§34)', () => {
+  it('cria o subprojeto ligado ao pai; o pai mostra a quantidade de filhos e o histórico guarda o nome', async () => {
+    const { deps, projects, ctx } = await setup()
+    const crm = await projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const fvb = await projects.createProject(ctx.manager, input({ name: 'Força de Vendas Brasil', key: 'FVB', parent_id: crm.id }))
+    assert.deepEqual(fvb.parent, { id: crm.id, key: 'CRM', name: 'Portal CRM', icon: crm.icon, cover: crm.cover })
+    assert.equal(fvb.child_count, 0)
+    assert.equal(crm.parent, null)
+    assert.equal((await projects.getProject(ctx.manager, crm.id)).child_count, 1)
+    assert.equal(deps.store.audit.at(-1).newValue.parent_project, 'Portal CRM')
+    const keys = async (parent) => (await projects.listProjects(ctx.manager, { parent_id: parent })).items.map((p) => p.key)
+    assert.deepEqual(await keys(crm.id), ['FVB'])
+    assert.deepEqual(await keys('none'), ['CRM'])
+    assert.equal((await projects.listProjects(ctx.manager, {})).items.find((p) => p.key === 'CRM').child_count, 1)
+    await assert.rejects(() => projects.listProjects(ctx.manager, { parent_id: 'x;y' }), { code: 'VALIDATION_ERROR' })
+  })
+
+  it('liga, troca e solta o pai na edição, com histórico', async () => {
+    const { deps, projects, ctx } = await setup()
+    const crm = await projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const erp = await projects.createProject(ctx.manager, input({ name: 'ERP', key: 'ERP' }))
+    const gcs = await projects.createProject(ctx.manager, input({ name: 'GCS', key: 'GCS' }))
+    assert.equal((await projects.updateProject(ctx.manager, gcs.id, { parent_id: crm.id })).parent.key, 'CRM')
+    assert.equal((await projects.updateProject(ctx.manager, gcs.id, { parent_id: erp.id })).parent.key, 'ERP')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.oldValue.parent_project, entry.newValue.parent_project], ['Portal CRM', 'ERP'])
+    assert.equal((await projects.updateProject(ctx.manager, gcs.id, { parent_id: null })).parent, null)
+    assert.deepEqual([deps.store.audit.at(-1).oldValue.parent_project, deps.store.audit.at(-1).newValue.parent_project], ['ERP', null])
+  })
+
+  it('um só nível: nem ele mesmo, nem filho como pai, nem pai virando filho, nem pai arquivado', async () => {
+    const { projects, ctx } = await setup()
+    const crm = await projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const fvb = await projects.createProject(ctx.manager, input({ name: 'FVB', key: 'FVB', parent_id: crm.id }))
+    const erp = await projects.createProject(ctx.manager, input({ name: 'ERP', key: 'ERP' }))
+    const issue = async (fn) => {
+      try {
+        await fn()
+      } catch (err) {
+        return err.details.fields.parent_id
+      }
+      return null
+    }
+    assert.equal(await issue(() => projects.updateProject(ctx.manager, crm.id, { parent_id: crm.id })), 'self')
+    assert.equal(await issue(() => projects.createProject(ctx.manager, input({ key: 'NETO', parent_id: fvb.id }))), 'parent_is_child')
+    assert.equal(await issue(() => projects.updateProject(ctx.manager, crm.id, { parent_id: erp.id })), 'has_children')
+    assert.equal(await issue(() => projects.createProject(ctx.manager, input({ key: 'X1', parent_id: 'nada' }))), 'invalid_option')
+    await projects.archiveProject(ctx.manager, erp.id)
+    assert.equal(await issue(() => projects.createProject(ctx.manager, input({ key: 'X2', parent_id: erp.id }))), 'parent_archived')
+  })
+
+  it('só liga a um pai que a pessoa pode editar (o pai invisível é opção inválida)', async () => {
+    const { deps, projects, users, ctx } = await setup()
+    const crm = await projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    await deps.projectMemberRepository.add({ projectId: crm.id, userId: users.member.id, role: 'viewer' })
+    const outra = await seedUser(deps, { name: 'Outra gestora', roleCode: 'MANAGER' })
+    const ctxOutra = await ctxOf(deps, outra)
+    await assert.rejects(
+      () => projects.createProject(ctxOutra, input({ key: 'SUB', parent_id: crm.id })),
+      (err) => err.code === 'VALIDATION_ERROR' && err.details.fields.parent_id === 'invalid_option',
+    )
+    // leitora do pai também não liga
+    await deps.projectMemberRepository.add({ projectId: crm.id, userId: outra.id, role: 'viewer' })
+    await assert.rejects(() => projects.createProject(ctxOutra, input({ key: 'SUB', parent_id: crm.id })), (err) => err.details.fields.parent_id === 'invalid_option')
+  })
+
+  it('excluir o pai solta os subprojetos; ser membro do pai não dá acesso ao filho', async () => {
+    const { deps, projects, users, ctx } = await setup()
+    const crm = await projects.createProject(ctx.manager, input({ name: 'Portal CRM', key: 'CRM' }))
+    const fvb = await projects.createProject(ctx.manager, input({ name: 'FVB', key: 'FVB', parent_id: crm.id }))
+    await deps.projectMemberRepository.add({ projectId: crm.id, userId: users.member.id, role: 'member' })
+    await assert.rejects(() => projects.getProject(ctx.member, fvb.id), { code: 'PROJECT_NOT_FOUND' })
+    await projects.archiveProject(ctx.manager, crm.id)
+    await projects.deleteProject(ctx.admin, crm.id)
+    assert.equal((await projects.getProject(ctx.manager, fvb.id)).parent, null)
+  })
+})
+
+describe('application/projects — seções do projeto (§35)', () => {
+  it('o perfil decide as seções; sem a seção Membros, não gerencia membros', async () => {
+    const { deps, projects, users, ctx } = await setup()
+    const crm = await projects.createProject(ctx.admin, input({ name: 'Portal CRM', key: 'CRM' }))
+    const role = await deps.roleRepository.create({ code: 'SEM_MEMBROS', name: 'Gestor sem membros', isSystem: false })
+    await deps.roleRepository.setPermissionCodes(role.id, ['projects.view', 'projects.edit', 'projects.charter'])
+    const limited = await seedUser(deps, { name: 'Gestor restrito', roleCode: 'SEM_MEMBROS' })
+    await deps.projectMemberRepository.add({ projectId: crm.id, userId: limited.id, role: 'manager' })
+    const ctxLimited = await ctxOf(deps, limited)
+    const seen = await projects.getProject(ctxLimited, crm.id)
+    assert.deepEqual(seen.capabilities.sections, ['charter'])
+    assert.equal(seen.capabilities.manage_members, false)
+    assert.equal(seen.capabilities.edit, true)
+    await assert.rejects(() => projects.addMember(ctxLimited, crm.id, { user_id: users.member.id, role: 'member' }), { code: 'FORBIDDEN' })
+    await assert.rejects(() => projects.memberCandidates(ctxLimited, crm.id, {}), { code: 'FORBIDDEN' })
+    // a lista continua servindo para escolher pessoas (responsável, filtros)
+    assert.ok((await projects.listMembers(ctxLimited, crm.id)).length >= 2)
+    assert.deepEqual((await projects.getProject(ctx.admin, crm.id)).capabilities.sections, ['charter', 'history', 'members', 'report'])
+  })
+})

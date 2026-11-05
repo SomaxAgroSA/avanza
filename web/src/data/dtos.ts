@@ -82,6 +82,10 @@ export interface ProjectDto {
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */
   area?: AreaRefDto | null
+  /** Projeto pai (regras §34); null = sem pai. */
+  parent?: { id: string; key: string; name: string; icon: string; cover: string } | null
+  /** Quantidade de subprojetos. */
+  child_count?: number
   owner: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
@@ -90,7 +94,7 @@ export interface ProjectDto {
   updated_at: string | null
   member_count: number
   my_role: string | null
-  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean; upload_files?: boolean }
+  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean; upload_files?: boolean; sections?: string[] }
 }
 
 export interface ProjectMemberDto {
@@ -171,6 +175,8 @@ export interface TaskDto {
   plan_item?: { id: string; name: string } | null
   /** Entra no informe do projeto (padrão: sim). */
   in_report?: boolean
+  /** Visível para o Responsável TI do projeto (regras §36). */
+  it_visible?: boolean
   /** 'high' | 'medium' | 'low' | null */
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */
@@ -434,6 +440,13 @@ export interface CharterDto {
     results_stale: number
   }
   items: CharterItemDto[]
+}
+
+/** Resumo do projeto para o Responsável TI (GET /projects/{id}/brief). */
+export interface ProjectBriefDto {
+  objective?: string
+  tasks?: TaskDto[]
+  items?: Array<{ id: string; kind: string; title: string; description?: string; unit?: string; target?: number | null; due_date?: string | null }>
 }
 
 export interface CharterMeasurementDto {

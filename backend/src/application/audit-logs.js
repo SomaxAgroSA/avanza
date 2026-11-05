@@ -40,7 +40,8 @@ const ENTITY_HISTORY = {
     const project = id ? await deps.projectRepository.findById(id) : null
     if (!project) throw appError('PROJECT_NOT_FOUND')
     const membership = await deps.projectMemberRepository.find(project.id, principal.userId)
-    projectDomain.assertAccess(projectDomain.resolveAccess(principal, project, membership), project, 'view')
+    // seção Histórico do projeto (§35): sem ela, FORBIDDEN; o Responsável TI não tem a seção
+    projectDomain.assertAccess(projectDomain.resolveAccess(principal, project, membership), project, 'history')
   },
   // elemento do quadro (GP-3): quem vê o quadro do projeto
   plan_item: async (deps, principal, id) => {
@@ -55,7 +56,8 @@ const ENTITY_HISTORY = {
     const project = task ? await deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError('TASK_NOT_FOUND')
     const membership = await deps.projectMemberRepository.find(project.id, principal.userId)
-    taskDomain.assertTaskAccess(projectDomain.resolveAccess(principal, project, membership), project, 'view', task)
+    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(principal, project, membership), task)
+    taskDomain.assertTaskAccess(access, project, 'view', task)
   },
 }
 

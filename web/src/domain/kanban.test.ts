@@ -56,6 +56,7 @@ function card(id: string, extra: Partial<BoardCard> = {}): BoardCard {
     subtaskProgress: { done: 0, total: 0 },
     blocked: false,
     inReport: true,
+    itVisible: false,
     urgency: null,
     area: null,
     sprint: null,

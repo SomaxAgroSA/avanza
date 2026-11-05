@@ -89,6 +89,8 @@ export interface TaskSummary {
   planItem?: PlanItemRef | null
   /** Entra no informe do projeto (aba Informe); padrão: sim. */
   inReport: boolean
+  /** O Responsável TI do projeto vê a tarefa (regras §36), além das atribuídas a ele. */
+  itVisible: boolean
   /** Urgência (semáforo); null = sem urgência. */
   urgency: Urgency | null
   /** Área responsável; null = sem área. */

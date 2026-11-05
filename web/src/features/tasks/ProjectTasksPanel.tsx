@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import type { Project } from '@/domain/projects'
+import { isItRole, seesSection, type Project } from '@/domain/projects'
 import { AppButton } from '@/presentation/components'
 import { SectionHeader } from '@/presentation/layouts/SectionHeader'
 import { useCan } from '@/features/auth/session'
@@ -32,7 +32,12 @@ export function ProjectTasksPanel({ project, nav }: { project: Project; nav?: Re
           </>
         }
       />
-      <TasksTable tableId="project-tasks" projectId={project.id} actionsSlot={tableActions} />
+      <TasksTable
+        tableId="project-tasks"
+        projectId={project.id}
+        actionsSlot={tableActions}
+        marks={{ report: seesSection(project, 'report'), itVisible: !isItRole(project) }}
+      />
       <TaskFormDialog open={creating} onOpenChange={setCreating} projectId={project.id} />
     </div>
   )

@@ -39,7 +39,7 @@ import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, Pla
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
 import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
 import type { Urgency } from './urgency'
-import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectCharter } from './charter'
+import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectBrief, ProjectCharter } from './charter'
 import type {
   MemberRole,
   Project,
@@ -221,6 +221,8 @@ export interface ProjectData {
   urgency: Urgency | null
   /** Área responsável ativa (null limpa; ausente = não muda). */
   areaId?: string | null
+  /** Projeto pai (regras §34; null solta; ausente = não muda). */
+  parentId?: string | null
   startDate: string | null
   dueDate: string | null
 }
@@ -340,6 +342,8 @@ export interface TaskRepository {
   update(id: string, data: TaskInput): Promise<TaskDetail>
   /** Liga/desliga a tarefa no informe do projeto (não exige os obrigatórios do status). */
   setInReport(id: string, inReport: boolean): Promise<TaskDetail>
+  /** Marca a tarefa como visível para o Responsável TI do projeto (regras §36). */
+  setItVisible(id: string, itVisible: boolean): Promise<TaskDetail>
   /** Troca a urgência (semáforo; null = sem urgência), sem exigir os obrigatórios do status. */
   setUrgency(id: string, urgency: Urgency | null): Promise<TaskDetail>
   /** Área responsável direto da lista (não exige os obrigatórios do status); null limpa. */
@@ -432,6 +436,8 @@ export interface MilestoneRepository {
 /** Ficha do projeto: objetivo geral, itens com o avanço calculado e medições dos resultados. */
 export interface CharterRepository {
   get(projectId: string): Promise<ProjectCharter>
+  /** Resumo do projeto para o Responsável TI (regras §33). */
+  brief(projectId: string): Promise<ProjectBrief>
   saveObjective(projectId: string, objective: string): Promise<ProjectCharter>
   createItem(projectId: string, input: CharterItemInput): Promise<CharterItem>
   updateItem(id: string, input: CharterItemInput): Promise<CharterItem>

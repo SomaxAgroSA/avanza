@@ -15,7 +15,7 @@ import {
   AppTooltip,
   notify,
 } from '@/presentation/components'
-import { PageHeader } from '@/presentation/layouts/PageHeader'
+import { SectionHeader } from '@/presentation/layouts/SectionHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { cn } from '@/core/utils/cn'
@@ -98,9 +98,8 @@ export function PermissionsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t('permissions.title')}
-        description={t('permissions.description')}
+      {/* aba Permissões por perfil do Controle de acesso: Descartar e Salvar na linha das abas */}
+      <SectionHeader
         actions={
           <>
             <AppButton variant="secondary" leftIcon={<RotateCcw />} disabled={dirtyRoles.length === 0 || saving} onClick={() => setDraft({})}>
@@ -112,6 +111,7 @@ export function PermissionsPage() {
           </>
         }
       />
+      <p className="mb-3 text-sm text-muted">{t('permissions.description')}</p>
 
       <AppCard padded={false}>
         <div className="overflow-x-auto">

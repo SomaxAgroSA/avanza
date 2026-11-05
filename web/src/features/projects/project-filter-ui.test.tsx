@@ -34,6 +34,8 @@ function project(id: string, key: string, status: ProjectStatus, myRole: Project
     priority: 'medium',
     urgency: null,
     area: null,
+    parent: null,
+    childCount: 0,
     owner: null,
     startDate: null,
     dueDate: null,
@@ -42,7 +44,7 @@ function project(id: string, key: string, status: ProjectStatus, myRole: Project
     updatedAt: null,
     memberCount: 1,
     myRole,
-    capabilities: { edit: false, manageMembers: false, archive: false, delete: false, transfer: false, uploadFiles: false },
+    capabilities: { edit: false, manageMembers: false, archive: false, delete: false, transfer: false, uploadFiles: false, sections: [] },
   }
 }
 

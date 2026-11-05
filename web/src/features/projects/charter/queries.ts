@@ -8,6 +8,12 @@ export const charterKeys = {
   measurements: (itemId: string) => ['tasks', 'charter-measurements', itemId] as const,
 }
 
+/** Resumo do projeto para o Responsável TI (regras §33); sob `tasks` para atualizar quando ele mexe numa tarefa. */
+export function useProjectBrief(projectId: string) {
+  const { charter } = useRepositories()
+  return useQuery({ queryKey: ['tasks', 'brief', projectId] as const, queryFn: () => charter.brief(projectId) })
+}
+
 export function useCharter(projectId: string) {
   const { charter } = useRepositories()
   return useQuery({ queryKey: charterKeys.detail(projectId), queryFn: () => charter.get(projectId) })

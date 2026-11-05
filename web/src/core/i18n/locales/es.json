@@ -124,7 +124,10 @@
     "blocked_host": "Esta dirección no está permitida (metadatos de la nube o la propia máquina)",
     "not_in_project": "La tarea debe ser de este proyecto",
     "invalid_link": "Vincule solo funcionalidades o resultados de este proyecto",
-    "in_future": "La fecha no puede ser futura"
+    "in_future": "La fecha no puede ser futura",
+    "parent_is_child": "Ese proyecto ya es un subproyecto; elija un proyecto principal",
+    "has_children": "Un proyecto con subproyectos no puede tener padre",
+    "parent_archived": "El proyecto padre está archivado"
   },
   "errors": {
     "VALIDATION_ERROR": "Revise los campos destacados.",
@@ -591,7 +594,11 @@
       "plan.manage": "Gestionar grupos y etiquetas del tablero",
       "platform.manage": "Configurar la plataforma (seguridad e identidad)",
       "integrations.manage": "Configurar integraciones (correo, webhooks y tokens)",
-      "api_tokens.create": "Crear tokens de API propios"
+      "api_tokens.create": "Crear tokens de API propios",
+      "projects.charter": "Ver ficha",
+      "projects.history": "Ver historial",
+      "projects.members": "Ver miembros",
+      "projects.report": "Ver informe"
     }
   },
   "audit": {
@@ -787,7 +794,9 @@
       "frequency": "Frecuencia",
       "value": "Valor",
       "measured_at": "Fecha de la medición",
-      "urgency": "Urgencia"
+      "urgency": "Urgencia",
+      "parent_project": "Proyecto padre",
+      "it_visible": "Visible para TI"
     },
     "actions": {
       "auth.login": "Inició sesión",
@@ -956,7 +965,8 @@
       "owner": "Dueño",
       "manager": "Gestor",
       "member": "Miembro",
-      "viewer": "Lector"
+      "viewer": "Lector",
+      "it": "Responsable TI"
     },
     "icons": {
       "folder": "Carpeta",
@@ -1086,7 +1096,7 @@
     "roleChanged": "Rol de {{name}} actualizado.",
     "leave": "Salir del proyecto",
     "removeMember": "Quitar del proyecto",
-    "rolesHint": "Los gestores editan el proyecto y gestionan miembros; los miembros trabajan en las tareas; los lectores solo visualizan. También se aplican los permisos del perfil de acceso.",
+    "rolesHint": "Los gestores editan el proyecto y gestionan miembros; los miembros trabajan en las tareas; los lectores solo visualizan; el Responsable TI solo ve el resumen del proyecto y sus tareas (asignadas o marcadas para TI). También se aplican los permisos del perfil de acceso.",
     "leaveTitle": "¿Salir del proyecto {{name}}?",
     "removeMemberTitle": "¿Quitar a {{name}} del proyecto?",
     "removeMemberDescription": "La persona pierde el acceso al proyecto. Se puede agregar de nuevo después.",
@@ -1226,7 +1236,21 @@
       }
     },
     "urgencyChange": "Cambiar urgencia de {{name}} (ahora: {{urgency}})",
-    "urgencySaved": "{{name}}: urgencia {{urgency}}."
+    "urgencySaved": "{{name}}: urgencia {{urgency}}.",
+    "parent": {
+      "field": "Proyecto padre",
+      "none": "Ninguno (proyecto principal)",
+      "hint": "Vincule este proyecto a un proyecto mayor del que forma parte.",
+      "lockedHint_one": "Este proyecto tiene {{count}} subproyecto, por eso no puede tener un padre.",
+      "lockedHint_other": "Este proyecto tiene {{count}} subproyectos, por eso no puede tener un padre.",
+      "of": "Forma parte de {{name}}",
+      "children_one": "{{count}} subproyecto",
+      "children_other": "{{count}} subproyectos",
+      "childrenTitle": "Subproyectos",
+      "emptyDescription": "Proyectos más chicos que forman parte de este. Cree el primero para seguir todo desde aquí.",
+      "add": "Nuevo subproyecto",
+      "onlyMain": "Solo proyectos principales"
+    }
   },
   "calendar": {
     "open": "Abrir calendario",
@@ -1680,7 +1704,8 @@
       "startDate": "Inicio planificado",
       "inReport": "En el informe",
       "urgency": "Urgencia",
-      "area": "Área"
+      "area": "Área",
+      "itVisible": "Visible para TI"
     },
     "tagsPlaceholder": "Elegir etiquetas…",
     "markdownHint": "Acepta **negrita**, *cursiva*, `código`, listas con \"-\" y enlaces.",
@@ -1713,6 +1738,12 @@
       "none": "Sin urgencia",
       "change": "Cambiar urgencia de {{code}} (ahora: {{urgency}})",
       "saved": "{{code}}: urgencia {{urgency}}."
+    },
+    "itVisible": {
+      "add": "Mostrar al Responsable TI",
+      "remove": "Ocultar al Responsable TI",
+      "added": "{{code}} ahora la ve el Responsable TI.",
+      "removed": "{{code}} ya no la ve el Responsable TI."
     }
   },
   "tags": {
@@ -3906,7 +3937,7 @@
   },
   "access": {
     "title": "Control de acceso",
-    "description": "Elige una persona y define en un solo lugar qué módulos ve, qué puede hacer y en qué proyectos entra.",
+    "description": "Elige una persona y define en un solo lugar qué módulos ve, qué ve dentro de cada proyecto, qué puede hacer y en qué proyectos entra. En las otras pestañas, los perfiles y la matriz de permisos.",
     "noUsers": "No hay usuarios.",
     "user": "Usuario",
     "role": "Perfil",
@@ -3954,6 +3985,40 @@
       "none": "Sin acceso",
       "search": "Buscar proyecto",
       "changed": "{{name}} · {{project}}: {{access}}."
+    },
+    "tabs": {
+      "person": "Por persona",
+      "roles": "Perfiles",
+      "matrix": "Permisos por perfil"
+    },
+    "sections": {
+      "title": "Qué ve dentro de cada proyecto",
+      "hint": "El Resumen siempre se ve. El dueño del proyecto ve todo; el Responsable TI solo ve el resumen y, con la Ficha activada, la ficha.",
+      "actions": "Qué puede hacer",
+      "overview": "Resumen",
+      "charter": "Ficha",
+      "plan": "Gestión",
+      "tasks": "Tareas",
+      "kanban": "Kanban",
+      "report": "Informe",
+      "members": "Miembros",
+      "history": "Historial"
     }
+  },
+  "brief": {
+    "subtitle": "Lo que el proyecto necesita de TI",
+    "aboutTitle": "Sobre el proyecto",
+    "aboutDescription": "Para qué existe y qué tiene que lograr.",
+    "noObjective": "El equipo del proyecto todavía no escribió el objetivo.",
+    "needsTitle": "Lo que necesitamos de TI",
+    "needsDescription_one": "{{count}} tarea asignada a usted o marcada para TI. Ábrala para ver el detalle, comentar o actualizar el estado.",
+    "needsDescription_other": "{{count}} tareas asignadas a usted o marcadas para TI. Ábralas para ver el detalle, comentar o actualizar el estado.",
+    "noTasksTitle": "Nada pendiente por ahora",
+    "noTasksDescription": "Cuando el equipo le asigne una tarea o la marque para TI, aparecerá aquí.",
+    "noDueDate": "Sin plazo",
+    "itemsTitle": "Indicadores bajo su responsabilidad",
+    "itemsDescription": "Metas de la ficha del proyecto que dependen de TI.",
+    "target": "meta: {{value}} {{unit}}",
+    "due": "plazo: {{date}}"
   }
 }

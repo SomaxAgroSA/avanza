@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, Crown, Pencil } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatDay } from '@/core/utils/format'
-import type { Project } from '@/domain/projects'
+import { seesSection, type Project } from '@/domain/projects'
 import { AppAvatar, AppBadge, AppButton, AppDrawer, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { useProjectMembers } from './queries'
 import { coverStyle } from './project-theme'
@@ -123,6 +123,8 @@ export function ProjectPreviewDrawer({
             <Row label={t('tasks.fields.area')}>
               <AreaBadge area={project.area} />
             </Row>
+            {project.parent && <Row label={t('projects.parent.field')}>{project.parent.name}</Row>}
+            {project.childCount > 0 && <Row label={t('projects.parent.childrenTitle')}>{project.childCount}</Row>}
             <Row label={t('projects.fields.owner')}>
               {project.owner ? (
                 <span className="inline-flex items-center gap-2">
@@ -138,7 +140,8 @@ export function ProjectPreviewDrawer({
             <Row label={t('projects.fields.dueDate')}>{formatDay(project.dueDate, locale)}</Row>
             <Row label={t('users.fields.createdAt')}>{formatDateTime(project.createdAt, locale)}</Row>
           </dl>
-          <MembersSection projectId={project.id} />
+          {/* sem a seção Membros (§35) — e para o Responsável TI — a lista de membros não aparece */}
+          {seesSection(project, 'members') && <MembersSection projectId={project.id} />}
         </div>
       )}
     </AppDrawer>

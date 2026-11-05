@@ -47,6 +47,7 @@ function summary(id: string, title: string, extra: Partial<TaskSummary> = {}): T
     subtaskProgress: { done: 0, total: 0 },
     blocked: false,
     inReport: true,
+    itVisible: false,
     urgency: null,
     area: null,
     ...extra,

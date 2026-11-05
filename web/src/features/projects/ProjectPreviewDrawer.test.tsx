@@ -27,7 +27,7 @@ const project = {
   dueDate: null,
   archivedAt: null,
   createdAt: null,
-  capabilities: { edit: true },
+  capabilities: { edit: true, sections: ['charter', 'history', 'members', 'report'] },
 } as unknown as Project
 
 const member = (id: string, name: string, role: ProjectMember['role'], extra: Partial<ProjectMember> = {}): ProjectMember => ({

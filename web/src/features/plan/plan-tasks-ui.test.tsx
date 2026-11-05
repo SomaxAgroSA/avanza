@@ -105,6 +105,7 @@ const summary = (id: string, number: number, title: string, extra: Partial<TaskS
   subtaskProgress: { done: 0, total: 0 },
   blocked: false,
   inReport: true,
+  itVisible: false,
   urgency: null,
   area: null,
   planItem: null,
