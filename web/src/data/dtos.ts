@@ -90,7 +90,7 @@ export interface ProjectDto {
   updated_at: string | null
   member_count: number
   my_role: string | null
-  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean }
+  capabilities: { edit: boolean; manage_members: boolean; archive: boolean; delete: boolean; transfer: boolean; sections?: string[] }
 }
 
 export interface ProjectMemberDto {

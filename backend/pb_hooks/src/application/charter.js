@@ -67,7 +67,7 @@ function createCharterService(deps) {
     const project = projectId ? deps.projectRepository.findById(projectId) : null
     if (!project) throw appError('PROJECT_NOT_FOUND')
     const access = accessOf(ctx, project)
-    projectDomain.assertAccess(access, project, 'view')
+    projectDomain.assertAccess(access, project, 'charter')
     return { project, access }
   }
 
@@ -78,6 +78,7 @@ function createCharterService(deps) {
     if (!item || !project) throw appError('CHARTER_ITEM_NOT_FOUND')
     const access = accessOf(ctx, project)
     if (!access.canView) throw appError('CHARTER_ITEM_NOT_FOUND')
+    projectDomain.assertAccess(access, project, 'charter')
     return { item, project, access }
   }
 

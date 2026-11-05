@@ -6,6 +6,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 
 ### Adicionado
 - **Responsável TI** (papel de membro do projeto): quem tem esse papel, ao abrir o projeto, vê só o nome, o objetivo e "O que precisamos da TI" — as tarefas atribuídas a ele e os indicadores da ficha sob a responsabilidade dele. O resto do projeto fica fechado também na API; nas tarefas dele pode mudar status, comentar e anexar (`GET /projects/{id}/brief`).
+- **O que cada pessoa vê dentro dos projetos:** no Controle de acesso, o módulo Projetos ganhou "O que vê dentro de cada projeto" (Ficha, Tarefas, Kanban, Gestão de projetos, Histórico, Membros e Informe). Vale para todos os projetos da pessoa; o Resumo sempre aparece e o dono do projeto vê tudo. Ficha e histórico ficam fechados também na API (permissões `projects.charter`, `projects.history`, `projects.members`, `projects.report`; `capabilities.sections`).
 - **Projeto pai e subprojetos:** no formulário do projeto, o campo "Projeto pai" liga o projeto a um projeto maior (um só nível). O subprojeto mostra o pai acima do título e na lista; o pai ganha o card "Subprojetos" no Resumo, com o botão "Novo subprojeto". Cada projeto mantém seus membros e permissões (`parent_id` em `POST/PATCH /projects` e filtro em `GET /projects`).
 - **Área responsável** (Configurações → Áreas, `settings.manage`): lista editável que já vem com Inteligencia Estratégica, Dpto. TI, Desarrollo e Innovación, Marketing, Contabilidad, Administración, Fertilizantes, Logística, Supply, Comex e Créditos. Coluna e filtro de área nas Tarefas (troca com um clique, `PUT /tasks/{id}/area`) e nos Projetos, campo nos formulários, filtro no Kanban e o nome da área no cartão.
 - **Funcionalidade atrasada** (aba Ficha): novo estado *Atrasada*, escolhido à mão ou calculado quando alguma tarefa vinculada aberta passou do prazo; o objetivo ligado a ela fica *Em risco*.
@@ -24,6 +25,9 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 - Pacote de publicação open source: licença Apache-2.0, NOTICE, guia de contribuição, código de conduta, política de segurança, integração contínua (GitHub Actions), imagem Docker com docker-compose e dados de demonstração (`npm run demo`).
 
 ### Alterado
+- **Controle de acesso unificado:** Perfis e Permissões viraram abas do Controle de acesso (Por pessoa, Perfis, Permissões por perfil); saíram do menu lateral e os endereços antigos redirecionam.
+- **Identidade Avanza em toda a plataforma:** verde Somax nos botões, abas, menu e destaques (claro e escuro), fonte Figtree, nome e símbolo Avanza no menu, na aba do navegador e como marca padrão; projetos novos nascem com capa verde.
+- **Abas do projeto** na ordem: Resumo, Ficha, Tarefas, Histórico, Membros, Informe e Configurações.
 - **A plataforma agora se chama BLYD Sync** — "Sincronize projetos, tarefas e equipes." — com logos novos (tema claro, tema escuro e ícone do navegador). Identificadores técnicos (`kb_session`, `KAMBAN_*`, `X-Kamban-*`, tokens `kb_pat_`) foram mantidos para não quebrar instalações e integrações.
 - A Gestão de projetos virou item próprio do menu lateral (`/project-management`), fora da página do projeto; links antigos (`?tab=plan`) redirecionam.
 - **Tela de login remodelada:** painel com a proposta do produto e uma prévia do quadro; "Esqueci minha senha" sempre visível — sem e-mail configurado, orienta a falar com o administrador.

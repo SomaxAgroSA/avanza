@@ -38,6 +38,7 @@ import {
   PROJECT_COVERS,
   PROJECT_ICONS,
   PROJECT_PRIORITIES,
+  PROJECT_SECTIONS,
   PROJECT_STATUSES,
   type Project,
   type ProjectMember,
@@ -156,6 +157,8 @@ export function toProject(dto: ProjectDto): Project {
       archive: !!dto.capabilities?.archive,
       delete: !!dto.capabilities?.delete,
       transfer: !!dto.capabilities?.transfer,
+      // servidor sem seções (versão anterior): mostra todas
+      sections: PROJECT_SECTIONS.filter((section) => (dto.capabilities?.sections ?? PROJECT_SECTIONS).includes(section)),
     },
   }
 }

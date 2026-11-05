@@ -26,12 +26,18 @@ export type ProjectCover = (typeof PROJECT_COVERS)[number]
 
 export type ProjectView = 'all' | 'mine' | 'archived'
 
+/** Seções do projeto que o perfil libera (regras §26); o Resumo é sempre visível. */
+export const PROJECT_SECTIONS = ['charter', 'history', 'members', 'report'] as const
+export type ProjectSection = (typeof PROJECT_SECTIONS)[number]
+
 export interface ProjectCapabilities {
   edit: boolean
   manageMembers: boolean
   archive: boolean
   delete: boolean
   transfer: boolean
+  /** Seções que a pessoa vê neste projeto (o servidor decide pelo perfil; o dono vê todas). */
+  sections: ProjectSection[]
 }
 
 export interface UserSummary {

@@ -15,7 +15,7 @@ import {
   AppTooltip,
   notify,
 } from '@/presentation/components'
-import { PageHeader } from '@/presentation/layouts/PageHeader'
+import { AccessTabActions } from './AccessControlPage'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useSession } from '@/features/auth/session'
 import { cn } from '@/core/utils/cn'
@@ -98,20 +98,15 @@ export function PermissionsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t('permissions.title')}
-        description={t('permissions.description')}
-        actions={
-          <>
-            <AppButton variant="secondary" leftIcon={<RotateCcw />} disabled={dirtyRoles.length === 0 || saving} onClick={() => setDraft({})}>
-              {t('common.discard')}
-            </AppButton>
-            <AppButton leftIcon={<Save />} disabled={dirtyRoles.length === 0} loading={saving} onClick={() => void save()}>
-              {dirtyRoles.length > 0 ? t('permissions.saveCount', { count: dirtyRoles.length }) : t('common.save')}
-            </AppButton>
-          </>
-        }
-      />
+      <AccessTabActions>
+        <AppButton variant="secondary" leftIcon={<RotateCcw />} disabled={dirtyRoles.length === 0 || saving} onClick={() => setDraft({})}>
+          {t('common.discard')}
+        </AppButton>
+        <AppButton leftIcon={<Save />} disabled={dirtyRoles.length === 0} loading={saving} onClick={() => void save()}>
+          {dirtyRoles.length > 0 ? t('permissions.saveCount', { count: dirtyRoles.length }) : t('common.save')}
+        </AppButton>
+      </AccessTabActions>
+      <p className="mb-3 text-sm text-muted">{t('permissions.description')}</p>
 
       <AppCard padded={false}>
         <div className="overflow-x-auto">

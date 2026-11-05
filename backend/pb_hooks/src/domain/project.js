@@ -70,6 +70,14 @@ function parentIssue(project, parent, hasChildren) {
   return null
 }
 
+/** Seções do projeto que o perfil libera (§26); o resumo é sempre visível. */
+const PROJECT_SECTIONS = ['charter', 'history', 'members', 'report']
+
+/** Quem vê o projeto vê a seção se o perfil tem `projects.<seção>`; o dono do projeto sempre vê tudo. */
+function canSeeSection(access, section) {
+  return !!access.canView && (access.isOwner || rbac.can(access.principal, 'projects.' + section))
+}
+
 /**
  * Verifica se a ação é permitida; lança o erro adequado caso contrário.
  * Ações: brief | view | edit | manage_members | archive | transfer | delete
@@ -82,6 +90,10 @@ function assertAccess(access, project, action) {
   }
   if (!access.canView) throw appError('PROJECT_NOT_FOUND')
   if (action === 'view') return
+  if (PROJECT_SECTIONS.indexOf(action) >= 0) {
+    if (!canSeeSection(access, action)) throw appError('FORBIDDEN')
+    return
+  }
 
   const principal = access.principal
   const archived = !!project.archivedAt
@@ -121,6 +133,7 @@ function capabilities(access, project) {
     archive: allowed(access, project, 'archive'),
     delete: allowed(access, project, 'delete'),
     transfer: allowed(access, project, 'transfer'),
+    sections: PROJECT_SECTIONS.filter((section) => canSeeSection(access, section)),
   }
 }
 
@@ -134,6 +147,8 @@ module.exports = {
   keyIssue,
   datesIssue,
   parentIssue,
+  PROJECT_SECTIONS,
+  canSeeSection,
   resolveAccess,
   assertAccess,
   capabilities,

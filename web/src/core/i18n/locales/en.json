@@ -576,6 +576,10 @@
       "permissions.manage": "Manage roles and permissions",
       "audit.view": "View audit log",
       "projects.view_all": "View all projects (without membership)",
+      "projects.charter": "View charter",
+      "projects.history": "View history",
+      "projects.members": "View members",
+      "projects.report": "View report",
       "docs.view": "View documentation",
       "docs.edit": "Write and publish pages",
       "docs.manage": "Manage documentation spaces",
@@ -3614,7 +3618,7 @@
   },
   "access": {
     "title": "Access control",
-    "description": "Pick a person and set in one place which modules they see, what they can do and which projects they join.",
+    "description": "Pick a person and set in one place which modules they see, what they see inside each project, what they can do and which projects they join. The other tabs hold the roles and the permission matrix.",
     "noUsers": "No users.",
     "user": "User",
     "role": "Role",
@@ -3662,6 +3666,24 @@
       "none": "No access",
       "search": "Search project",
       "changed": "{{name}} · {{project}}: {{access}}."
+    },
+    "tabs": {
+      "person": "By person",
+      "roles": "Roles",
+      "matrix": "Permissions by role"
+    },
+    "sections": {
+      "title": "What they see inside each project",
+      "hint": "Overview is always visible. The project owner sees everything.",
+      "actions": "What they can do",
+      "overview": "Overview",
+      "charter": "Charter",
+      "tasks": "Tasks",
+      "kanban": "Kanban",
+      "plan": "Project management",
+      "history": "History",
+      "members": "Members",
+      "report": "Report"
     }
   }
 }

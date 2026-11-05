@@ -162,4 +162,18 @@ describe('API /api/v1/projects', { timeout: 120000 }, () => {
     assert.equal(nested.body.error.details.fields.parent_id, 'parent_is_child')
     assert.equal((await admin.patch(`/projects/${child.body.data.id}`, { parent_id: null })).body.data.parent, null)
   })
+
+  it('seções do projeto: sem projects.charter/history o servidor fecha a ficha e o histórico', async () => {
+    const role = (await admin.post('/roles', { code: 'SO_FICHA', name: 'Só ficha', permissions: ['projects.view', 'projects.charter'] })).body.data
+    const res = await admin.post('/users', { name: 'ti', email: 'ti@kamban.test', password: 'SenhaTeste123', role_id: role.id })
+    const ti = createClient(pb.api)
+    await ti.login('ti@kamban.test', 'SenhaTeste123')
+    const project = (await admin.post('/projects', { name: 'Seções', key: 'SEC' })).body.data
+    await admin.post(`/projects/${project.id}/members`, { user_id: res.body.data.id, role: 'viewer' })
+
+    assert.deepEqual((await ti.get(`/projects/${project.id}`)).body.data.capabilities.sections, ['charter'])
+    assert.equal((await ti.get(`/projects/${project.id}/charter`)).status, 200)
+    assert.equal((await ti.get(`/projects/${project.id}/history`)).body.error.code, 'FORBIDDEN')
+    assert.deepEqual((await admin.get(`/projects/${project.id}`)).body.data.capabilities.sections, ['charter', 'history', 'members', 'report'])
+  })
 })

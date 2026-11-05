@@ -5,7 +5,7 @@ import { Archive, ArchiveRestore, ArrowLeft, BriefcaseBusiness, Copy, CornerDown
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDateTime, formatDay } from '@/core/utils/format'
-import { isOverdue, type Project } from '@/domain/projects'
+import { isOverdue, type Project, type ProjectSection } from '@/domain/projects'
 import {
   AppAvatar,
   AppBadge,
@@ -106,14 +106,17 @@ function ProjectDetail({ project }: { project: Project }) {
     })
   }
 
+  // seções que o perfil libera neste projeto (regras §26); o Resumo sempre aparece
+  const sees = (section: ProjectSection) => project.capabilities.sections.includes(section)
   const tabs = [
     { value: 'overview', label: t('projects.tabs.overview'), content: <Overview project={project} /> },
     // para que o projeto existe, o que entrega e como se mede (objetivos, funcionalidades, alcance e resultados)
-    { value: 'charter', label: t('projects.tabs.charter'), content: <ProjectCharterPanel project={project} /> },
+    ...(sees('charter') ? [{ value: 'charter', label: t('projects.tabs.charter'), content: <ProjectCharterPanel project={project} /> }] : []),
     ...(canViewTasks ? [{ value: 'tasks', label: t('projects.tabs.tasks'), content: <ProjectTasksPanel project={project} /> }] : []),
-    // quadro de gestão do projeto (Gerenciamento de Projetos — módulo à parte das tarefas)
-    { value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> },
-    { value: 'history', label: t('projects.tabs.history'), content: <ProjectHistory projectId={project.id} /> },
+    ...(sees('members')
+      ? [{ value: 'members', label: t('projects.tabs.members', { count: project.memberCount }), content: <ProjectMembersPanel project={project} /> }]
+      : []),
+    ...(sees('history') ? [{ value: 'history', label: t('projects.tabs.history'), content: <ProjectHistory projectId={project.id} /> }] : []),
   ]
   if (caps.transfer || caps.archive || caps.delete) {
     tabs.push({
@@ -124,7 +127,7 @@ function ProjectDetail({ project }: { project: Project }) {
   }
 
   // por último, onde o informe é montado e baixado (escolha das tarefas na aba Tarefas)
-  if (canViewTasks) {
+  if (canViewTasks && sees('report')) {
     tabs.push({
       value: 'report',
       label: t('projects.tabs.report'),

@@ -606,3 +606,14 @@ Um projeto pode **fazer parte de um projeto maior** (o projeto pai), por exemplo
 - **Independência:** cada projeto continua com seus membros, tarefas, ficha e permissões; ser membro do pai **não** dá acesso aos subprojetos.
 - **Arquivar ou excluir:** arquivar o pai não mexe nos filhos; excluir o pai solta os subprojetos (ficam sem pai).
 - **Histórico:** criação e troca de pai ficam em `project.created`/`project.updated` com o nome do projeto pai.
+
+## 26. Seções do projeto e Controle de acesso
+
+O perfil decide **o que a pessoa vê dentro de cada projeto** em que entra, igual em todos os projetos.
+
+- **Seções:** Ficha (`projects.charter`), Histórico (`projects.history`), Membros (`projects.members`) e Informe (`projects.report`). Tarefas, Kanban e Gestão de projetos seguem `tasks.view`, `kanban.view` e `plan.view`. O **Resumo** sempre aparece.
+- **O dono do projeto vê tudo**, mesmo que o perfil dele não tenha a seção.
+- **O servidor fecha** a ficha (`/projects/{id}/charter` e itens) e o histórico (`/projects/{id}/history`) com `FORBIDDEN`. Membros e Informe só somem da tela: a lista de membros continua servindo para atribuir tarefas, e o informe usa as tarefas que a pessoa já vê.
+- `GET /projects/{id}` traz `capabilities.sections` com as seções liberadas; a tela mostra só essas abas.
+- Na migração, todo perfil que já via projetos recebeu as quatro seções: nada muda até o administrador desligar alguma.
+- **Controle de acesso** reúne num só item do menu as abas **Por pessoa** (módulos, "o que vê dentro de cada projeto", o que pode fazer e em quais projetos entra), **Perfis** e **Permissões por perfil**. Os endereços antigos `/settings/roles` e `/settings/permissions` levam para essas abas.

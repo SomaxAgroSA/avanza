@@ -576,6 +576,10 @@
       "permissions.manage": "Gerenciar perfis e permissões",
       "audit.view": "Consultar auditoria",
       "projects.view_all": "Ver todos os projetos (sem ser membro)",
+      "projects.charter": "Ver ficha",
+      "projects.history": "Ver histórico",
+      "projects.members": "Ver membros",
+      "projects.report": "Ver informe",
       "docs.view": "Ver documentação",
       "docs.edit": "Escrever e publicar páginas",
       "docs.manage": "Gerenciar espaços de documentação",
@@ -3614,7 +3618,7 @@
   },
   "access": {
     "title": "Controle de acesso",
-    "description": "Escolha uma pessoa e defina num só lugar quais módulos ela vê, o que pode fazer e em quais projetos entra.",
+    "description": "Escolha uma pessoa e defina num só lugar quais módulos ela vê, o que vê dentro de cada projeto, o que pode fazer e em quais projetos entra. Nas outras abas, os perfis e a matriz de permissões.",
     "noUsers": "Não há usuários.",
     "user": "Usuário",
     "role": "Perfil",
@@ -3662,6 +3666,24 @@
       "none": "Sem acesso",
       "search": "Buscar projeto",
       "changed": "{{name}} · {{project}}: {{access}}."
+    },
+    "tabs": {
+      "person": "Por pessoa",
+      "roles": "Perfis",
+      "matrix": "Permissões por perfil"
+    },
+    "sections": {
+      "title": "O que vê dentro de cada projeto",
+      "hint": "O Resumo sempre aparece. O dono do projeto vê tudo.",
+      "actions": "O que pode fazer",
+      "overview": "Resumo",
+      "charter": "Ficha",
+      "tasks": "Tarefas",
+      "kanban": "Kanban",
+      "plan": "Gestão de projetos",
+      "history": "Histórico",
+      "members": "Membros",
+      "report": "Informe"
     }
   }
 }

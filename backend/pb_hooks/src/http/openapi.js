@@ -1752,7 +1752,7 @@ function build() {
             my_role: { type: ['string', 'null'], enum: ['owner', 'manager', 'member', 'viewer', 'it', null] },
             capabilities: {
               type: 'object',
-              properties: { edit: { type: 'boolean' }, manage_members: { type: 'boolean' }, archive: { type: 'boolean' }, delete: { type: 'boolean' }, transfer: { type: 'boolean' } },
+              properties: { edit: { type: 'boolean' }, manage_members: { type: 'boolean' }, archive: { type: 'boolean' }, delete: { type: 'boolean' }, transfer: { type: 'boolean' }, sections: { type: 'array', items: { type: 'string', enum: ['charter', 'history', 'members', 'report'] }, description: 'seções do projeto que o usuário vê (§26)' } },
             },
           },
         },

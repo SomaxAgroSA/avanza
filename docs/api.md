@@ -75,7 +75,7 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 |---|---|---|---|
 | GET | `/projects` | `projects.view` | `view=all\|mine\|archived`, `search`, `status`, `priority`, `urgency` (`high`, `medium`, `low`, `none`), `area_id` (ou `none`), `parent_id` (subprojetos de um pai, ou `none` = só projetos sem pai), `owner_id`, `sort` (`name`, `key`, `created_at`, `due_date`), paginado. Sem `projects.view_all`, só projetos em que é membro |
 | POST | `/projects` | `projects.create` | `{ name, key, description?, icon?, cover?, status?, priority?, urgency?, area_id?, parent_id?, start_date?, due_date? }` — criador vira dono e gestor; `area_id` = área ativa de `/areas` (`null` no PATCH limpa); `parent_id` = projeto pai (§25: um só nível, pai que a pessoa edita; `null` no PATCH solta). Todo projeto sai com `parent` (`{ id, key, name, icon, cover }` ou `null`) e `child_count` |
-| GET | `/projects/{id}` | ver o projeto | inclui `owner`, `member_count`, `my_role` e `capabilities` (o que o usuário pode fazer) |
+| GET | `/projects/{id}` | ver o projeto | inclui `owner`, `member_count`, `my_role` e `capabilities` (o que o usuário pode fazer; `sections` = seções que ele vê: `charter`, `history`, `members`, `report` — §26. Sem a seção, `/charter` e `/history` respondem `FORBIDDEN`) |
 | PATCH | `/projects/{id}` | gestor + `projects.edit` | parcial; `key` é imutável; datas aceitam `null`; projeto arquivado → `PROJECT_ARCHIVED` |
 | POST | `/projects/{id}/archive` · `/unarchive` | gestor + `projects.edit` | arquivado = somente leitura |
 | DELETE | `/projects/{id}` | dono ou `projects.view_all`, + `projects.delete` | só projeto arquivado (`PROJECT_NOT_ARCHIVED`) |
