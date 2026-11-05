@@ -273,6 +273,7 @@ const getTask = taskAction((s, ctx, r) => s.getTask(ctx, r.id))
 const createTask = taskAction((s, ctx, r) => s.createTask(ctx, r.body()), 201)
 const updateTask = taskAction((s, ctx, r) => s.updateTask(ctx, r.id, r.body()))
 const setTaskReport = taskAction((s, ctx, r) => s.setTaskReport(ctx, r.id, r.body()))
+const setTaskItVisible = taskAction((s, ctx, r) => s.setTaskItVisible(ctx, r.id, r.body()))
 const setTaskUrgency = taskAction((s, ctx, r) => s.setTaskUrgency(ctx, r.id, r.body()))
 const setTaskArea = taskAction((s, ctx, r) => s.setTaskArea(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
@@ -783,6 +784,7 @@ module.exports = {
   createTask,
   updateTask,
   setTaskReport,
+  setTaskItVisible,
   setTaskUrgency,
   setTaskArea,
   deleteTask,

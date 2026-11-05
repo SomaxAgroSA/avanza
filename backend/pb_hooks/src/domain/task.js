@@ -38,7 +38,9 @@ function isContributor(access) {
  * (vê, edita, comenta e anexa; não exclui, não reatribui e não cria tarefas no projeto).
  */
 function scopedAccess(access, task) {
-  if (!access || !access.limited || !task || !access.principal || task.assigneeId !== access.principal.userId) return access
+  if (!access || !access.limited || !task || !access.principal) return access
+  // Responsável TI (§24): as tarefas atribuídas a ele e as marcadas "Visível para TI"
+  if (task.assigneeId !== access.principal.userId && !task.itVisible) return access
   return Object.assign({}, access, { canView: true, limited: false, scoped: true, role: 'member' })
 }
 

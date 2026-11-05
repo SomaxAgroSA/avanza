@@ -557,7 +557,7 @@ function createFakeRepositories(store) {
     list: (query) => {
       const visible = (t) =>
         query.scope.viewAll ||
-        store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId && (m.role !== 'it' || t.assigneeId === query.scope.userId))
+        store.projectMembers.some((m) => m.projectId === t.projectId && m.userId === query.scope.userId && (m.role !== 'it' || t.assigneeId === query.scope.userId || !!t.itVisible))
       let items = store.tasks.filter(visible)
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
@@ -567,6 +567,7 @@ function createFakeRepositories(store) {
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
+      if (query.itVisible !== undefined) items = items.filter((t) => !!t.itVisible === query.itVisible)
       if (query.urgency) items = items.filter((t) => (t.urgency || 'none') === query.urgency)
       if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
       if (query.search) {

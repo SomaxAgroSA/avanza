@@ -909,6 +909,7 @@ function createTaskRepository(app) {
       actualHours: number('actual_hours'),
       checklist: parseJsonField(record, 'checklist') || [],
       reportExcluded: record.getBool('report_excluded'),
+      itVisible: record.getBool('it_visible'),
       urgency: record.getString('urgency') || null,
       areaId: record.getString('area_id') || null,
       position: record.getFloat('position'),
@@ -941,6 +942,7 @@ function createTaskRepository(app) {
     actual_hours: -0,
     checklist: '',
     report_excluded: false,
+    it_visible: false,
     urgency: '',
     area_id: '',
     position: -0,
@@ -984,6 +986,7 @@ function createTaskRepository(app) {
       actualHours: hours(row.actual_hours),
       checklist,
       reportExcluded: !!row.report_excluded,
+      itVisible: !!row.it_visible,
       urgency: row.urgency || null,
       areaId: row.area_id || null,
       position: row.position,
@@ -1020,6 +1023,7 @@ function createTaskRepository(app) {
       else if (NUMBERS[key]) record.set(NUMBERS[key], value === null ? 0 : value)
       else if (key === 'checklist') record.set('checklist', value || [])
       else if (key === 'reportExcluded') record.set('report_excluded', !!value)
+      else if (key === 'itVisible') record.set('it_visible', !!value)
       else if (key === 'urgency') record.set('urgency', value || '')
       else if (key === 'position') record.set('position', value)
     })
@@ -1218,7 +1222,7 @@ function createTaskRepository(app) {
       if (!query.scope.viewAll) {
         exprs.push(
           $dbx.exp(
-            "(tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid} AND role != 'it') OR (tasks.assignee_id = {:uid} AND tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})))",
+            "(tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid} AND role != 'it') OR ((tasks.assignee_id = {:uid} OR tasks.it_visible = 1) AND tasks.project_id IN (SELECT project_id FROM project_members WHERE user_id = {:uid})))",
             { uid: query.scope.userId },
           ),
         )
@@ -1230,6 +1234,7 @@ function createTaskRepository(app) {
       if (query.tagId) exprs.push($dbx.exp('tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = {:tag})', { tag: query.tagId }))
       if (query.sprintId) exprs.push($dbx.hashExp({ 'tasks.sprint_id': query.sprintId === 'none' ? '' : query.sprintId }))
       if (query.inReport !== undefined) exprs.push($dbx.exp('tasks.report_excluded = {:excluded}', { excluded: query.inReport ? 0 : 1 }))
+      if (query.itVisible !== undefined) exprs.push($dbx.exp('tasks.it_visible = {:it}', { it: query.itVisible ? 1 : 0 }))
       if (query.urgency) exprs.push($dbx.hashExp({ 'tasks.urgency': query.urgency === 'none' ? '' : query.urgency }))
       if (query.areaId) exprs.push($dbx.hashExp({ 'tasks.area_id': query.areaId === 'none' ? '' : query.areaId }))
       if (query.statusIds) {

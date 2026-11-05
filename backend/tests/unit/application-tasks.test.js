@@ -467,7 +467,7 @@ describe('Responsável TI: só o resumo do projeto e as próprias tarefas', () =
     assert.equal(codeOf(() => s.tasks.createTask(ti, newBug(s))), 'PROJECT_NOT_FOUND')
   })
 
-  it('o resumo traz objetivo, tarefas e itens da ficha dele; a ficha completa e o histórico ficam fechados', () => {
+  it('o resumo traz objetivo, tarefas e itens da ficha dele; a ficha só abre se o perfil tiver projects.charter (§26)', () => {
     const s = setup()
     const { tito, ti, mine } = withTi(s)
     const charter = createCharterService(s.deps)
@@ -480,8 +480,19 @@ describe('Responsável TI: só o resumo do projeto e as próprias tarefas', () =
     assert.deepEqual(brief.tasks.map((t) => t.code), [mine.code])
     assert.deepEqual(brief.items.map((i) => i.title), ['Disponibilidade do banco'])
     assert.equal(projects.getProject(ti, s.project.id).my_role, 'it')
-    assert.equal(codeOf(() => charter.getCharter(ti, s.project.id)), 'PROJECT_NOT_FOUND')
+    assert.equal(charter.getCharter(ti, s.project.id).objective, 'Portal comercial')
     assert.equal(codeOf(() => projects.listMembers(ti, s.project.id)), 'PROJECT_NOT_FOUND')
     assert.equal(codeOf(() => charter.getBrief(s.ctx.outsider, s.project.id)), 'PROJECT_NOT_FOUND')
+  })
+
+  it('tarefa marcada Visível para TI aparece para ele; só a equipe marca', () => {
+    const s = setup()
+    const { ti, mine, other } = withTi(s)
+    assert.equal(codeOf(() => s.tasks.setTaskItVisible(ti, mine.id, { it_visible: true })), 'FORBIDDEN')
+    assert.equal(s.tasks.setTaskItVisible(s.ctx.gabi, other.id, { it_visible: true }).it_visible, true)
+    assert.deepEqual(s.tasks.listTasks(ti, { project_id: s.project.id }).items.map((t) => t.code).sort(), [mine.code, other.code].sort())
+    assert.equal(s.tasks.getTask(ti, other.id).code, other.code)
+    assert.deepEqual(createCharterService(s.deps).getBrief(ti, s.project.id).tasks.map((t) => t.code).sort(), [mine.code, other.code].sort())
+    assert.deepEqual(s.tasks.listTasks(s.ctx.gabi, { project_id: s.project.id, it_visible: 'true' }).items.map((t) => t.code), [other.code])
   })
 })

@@ -73,8 +73,12 @@ function parentIssue(project, parent, hasChildren) {
 /** Seções do projeto que o perfil libera (§26); o resumo é sempre visível. */
 const PROJECT_SECTIONS = ['charter', 'history', 'members', 'report']
 
-/** Quem vê o projeto vê a seção se o perfil tem `projects.<seção>`; o dono do projeto sempre vê tudo. */
+/**
+ * Quem vê o projeto vê a seção se o perfil tem `projects.<seção>`; o dono do projeto sempre vê tudo.
+ * O Responsável TI (§24) só pode ganhar a ficha, se o perfil dele tiver `projects.charter`.
+ */
 function canSeeSection(access, section) {
+  if (access.limited) return section === 'charter' && rbac.can(access.principal, 'projects.charter')
   return !!access.canView && (access.isOwner || rbac.can(access.principal, 'projects.' + section))
 }
 
@@ -88,12 +92,13 @@ function assertAccess(access, project, action) {
     if (!access.canView && !access.limited) throw appError('PROJECT_NOT_FOUND')
     return
   }
-  if (!access.canView) throw appError('PROJECT_NOT_FOUND')
-  if (action === 'view') return
   if (PROJECT_SECTIONS.indexOf(action) >= 0) {
+    if (!access.canView && !access.limited) throw appError('PROJECT_NOT_FOUND')
     if (!canSeeSection(access, action)) throw appError('FORBIDDEN')
     return
   }
+  if (!access.canView) throw appError('PROJECT_NOT_FOUND')
+  if (action === 'view') return
 
   const principal = access.principal
   const archived = !!project.archivedAt

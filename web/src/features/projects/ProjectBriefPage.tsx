@@ -3,13 +3,14 @@ import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ChevronRight, ClipboardList, Gauge, Target } from 'lucide-react'
 import type { Project } from '@/domain/projects'
-import { AppCard, AppEmptyState, AppErrorState, AppSkeleton } from '@/presentation/components'
+import { AppCard, AppEmptyState, AppErrorState, AppSkeleton, AppTabs } from '@/presentation/components'
 import { DueDate, TaskCode, TaskStatusBadge } from '@/features/tasks/task-visuals'
 import { UrgencyLight } from '@/features/tasks/TaskUrgency'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
 import { coverHeroStyle } from './project-theme'
 import { ProjectAvatar } from './project-visuals'
 import { useProjectBrief } from './charter/queries'
+import { ProjectCharterPanel } from './charter/ProjectCharterPanel'
 
 /**
  * Vista do Responsável TI (regras de negócio §24): só o nome do projeto, para que ele existe e
@@ -19,23 +20,11 @@ export function ProjectBriefPage({ project }: { project: Project }) {
   const { t } = useTranslation()
   const brief = useProjectBrief(project.id)
   const [openId, setOpenId] = useState<string | null>(null)
+  // o perfil pode liberar a ficha completa (regras §26), só para leitura
+  const seesCharter = project.capabilities.sections.includes('charter')
 
-  return (
+  const needs = (
     <>
-      <Link to="/projects" className="mb-2 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
-        <ArrowLeft className="size-4" aria-hidden /> {t('projects.backToList')}
-      </Link>
-
-      <section className="mb-4 overflow-hidden rounded-2xl text-on-cover shadow-card" style={coverHeroStyle(project.cover)}>
-        <div className="flex items-center gap-4 px-5 py-4">
-          <ProjectAvatar icon={project.icon} cover={project.cover} size="lg" className="size-12 shrink-0 ring-2 ring-on-cover/40 [&_svg]:size-6" />
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{project.name}</h1>
-            <p className="mt-1 text-sm text-on-cover/85">{t('brief.subtitle')}</p>
-          </div>
-        </div>
-      </section>
-
       {brief.isPending ? (
         <div className="flex flex-col gap-4">
           <AppSkeleton className="h-28 rounded-xl" />
@@ -100,6 +89,38 @@ export function ProjectBriefPage({ project }: { project: Project }) {
             </AppCard>
           )}
         </div>
+      )}
+
+    </>
+  )
+
+  return (
+    <>
+      <Link to="/projects" className="mb-2 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
+        <ArrowLeft className="size-4" aria-hidden /> {t('projects.backToList')}
+      </Link>
+
+      <section className="mb-4 overflow-hidden rounded-2xl text-on-cover shadow-card" style={coverHeroStyle(project.cover)}>
+        <div className="flex items-center gap-4 px-5 py-4">
+          <ProjectAvatar icon={project.icon} cover={project.cover} size="lg" className="size-12 shrink-0 ring-2 ring-on-cover/40 [&_svg]:size-6" />
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{project.name}</h1>
+            <p className="mt-1 text-sm text-on-cover/85">{t('brief.subtitle')}</p>
+          </div>
+        </div>
+      </section>
+
+      {seesCharter ? (
+        <AppTabs
+          actionsSlot
+          aria-label={project.name}
+          tabs={[
+            { value: 'needs', label: t('brief.needsTitle'), content: needs },
+            { value: 'charter', label: t('projects.tabs.charter'), content: <ProjectCharterPanel project={project} /> },
+          ]}
+        />
+      ) : (
+        needs
       )}
 
       <TaskPreviewDrawer taskId={openId} onOpenChange={(open) => !open && setOpenId(null)} />

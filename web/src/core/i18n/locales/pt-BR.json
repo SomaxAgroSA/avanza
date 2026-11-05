@@ -780,7 +780,8 @@
       "value": "Valor",
       "measured_at": "Data da medição",
       "urgency": "Urgência",
-      "parent_project": "Projeto pai"
+      "parent_project": "Projeto pai",
+      "it_visible": "Visível para TI"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -1579,8 +1580,8 @@
     "aboutDescription": "Para que ele existe e o que precisa alcançar.",
     "noObjective": "A equipe do projeto ainda não escreveu o objetivo.",
     "needsTitle": "O que precisamos da TI",
-    "needsDescription_one": "{{count}} tarefa atribuída a você. Abra para ver o detalhe, comentar ou atualizar o status.",
-    "needsDescription_other": "{{count}} tarefas atribuídas a você. Abra para ver o detalhe, comentar ou atualizar o status.",
+    "needsDescription_one": "{{count}} tarefa atribuída a você ou marcada para TI. Abra para ver o detalhe, comentar ou atualizar o status.",
+    "needsDescription_other": "{{count}} tarefas atribuídas a você ou marcadas para TI. Abra para ver o detalhe, comentar ou atualizar o status.",
     "noTasksTitle": "Nada pendente por enquanto",
     "noTasksDescription": "Quando a equipe atribuir uma tarefa a você, ela aparecerá aqui.",
     "noDueDate": "Sem prazo",
@@ -1648,7 +1649,8 @@
       "startDate": "Início planejado",
       "inReport": "No informe",
       "urgency": "Urgência",
-      "area": "Área"
+      "area": "Área",
+      "itVisible": "Visível para TI"
     },
     "tagsPlaceholder": "Escolher tags…",
     "markdownHint": "Aceita **negrito**, *itálico*, `código`, listas com \"-\" e links.",
@@ -1673,6 +1675,12 @@
       "none": "Sem urgência",
       "change": "Mudar urgência de {{code}} (agora: {{urgency}})",
       "saved": "{{code}}: urgência {{urgency}}."
+    },
+    "itVisible": {
+      "add": "Mostrar ao Responsável TI",
+      "remove": "Esconder do Responsável TI",
+      "added": "{{code}} agora aparece para o Responsável TI.",
+      "removed": "{{code}} não aparece mais para o Responsável TI."
     }
   },
   "tags": {

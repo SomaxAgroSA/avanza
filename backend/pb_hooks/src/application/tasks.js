@@ -79,6 +79,7 @@ const LIST_SCHEMA = {
   // `none` = sem sprint
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
+  it_visible: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
   // `none` = sem área
   area_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
@@ -340,6 +341,7 @@ function createTaskService(deps) {
       subtask_progress: refs.subtasks[task.id] || { done: 0, total: 0 },
       blocked: !!refs.blocked[task.id],
       in_report: !task.reportExcluded,
+      it_visible: !!task.itVisible,
       urgency: task.urgency || null,
       area: area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null,
     }
@@ -494,6 +496,7 @@ function createTaskService(deps) {
         tag_id: pick('tag_id'),
         sprint_id: pick('sprint_id'),
         in_report: pick('in_report'),
+        it_visible: pick('it_visible'),
         urgency: pick('urgency'),
         area_id: pick('area_id'),
       },
@@ -531,6 +534,7 @@ function createTaskService(deps) {
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
       inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
+      itVisible: filters.it_visible === undefined ? undefined : filters.it_visible === 'true',
       urgency: filters.urgency,
       areaId: filters.area_id,
       search,
@@ -798,6 +802,22 @@ function createTaskService(deps) {
     return presentDetail(ctx, updated, project, access)
   }
 
+  /** Marca a tarefa como visível para o Responsável TI do projeto (§24), direto da lista. */
+  function setTaskItVisible(ctx, id, input) {
+    const { task, project, access } = loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    if (access.scoped) throw appError('FORBIDDEN')
+    const value = (input || {}).it_visible
+    if (typeof value !== 'boolean') throw invalid({ it_visible: 'invalid_type' })
+    if (value === !!task.itVisible) return presentDetail(ctx, task, project, access)
+    const updated = deps.unitOfWork.run((repos) => {
+      const result = repos.taskRepository.update(task.id, { itVisible: value })
+      audit(repos, ctx, task, 'task.updated', { it_visible: !value }, { it_visible: value })
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
   /** Área responsável: muda direto da lista (como a urgência), sem exigir os campos do status; `null` limpa. */
   function setTaskArea(ctx, id, input) {
     const { task, project, access } = loadTask(ctx, id)
@@ -876,7 +896,7 @@ function createTaskService(deps) {
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

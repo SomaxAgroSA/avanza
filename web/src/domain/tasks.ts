@@ -85,6 +85,8 @@ export interface TaskSummary {
   blocked: boolean
   /** Entra no informe do projeto (aba Informe); padrão: sim. */
   inReport: boolean
+  /** O Responsável TI do projeto vê a tarefa (regras §24). */
+  itVisible: boolean
   /** Urgência (semáforo); null = sem urgência. */
   urgency: TaskUrgency | null
   /** Área responsável; null = sem área. */

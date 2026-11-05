@@ -169,6 +169,7 @@ export interface TaskDto {
   subtask_progress?: { done: number; total: number }
   blocked?: boolean
   in_report?: boolean
+  it_visible?: boolean
   urgency?: string | null
   area?: { id: string; key: string; name: string; color: string } | null
 }

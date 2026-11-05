@@ -1188,6 +1188,7 @@ const TASK_FILTERS: Record<string, string> = {
   tags: 'tag_id',
   sprint: 'sprint_id',
   in_report: 'in_report',
+  it_visible: 'it_visible',
   urgency: 'urgency',
   area: 'area_id',
 }
@@ -1217,6 +1218,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setInReport(id, inReport) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/report`, { in_report: inReport })).data)
+    },
+    async setItVisible(id, itVisible) {
+      return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/it-visible`, { it_visible: itVisible })).data)
     },
     async setUrgency(id, urgency) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/urgency`, { urgency })).data)

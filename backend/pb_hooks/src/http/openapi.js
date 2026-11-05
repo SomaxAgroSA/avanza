@@ -408,6 +408,14 @@ function build() {
         }),
         delete: op('Exclui (tasks.delete + gestor do projeto ou autor)', ['tasks'], { 200: ok('Excluída', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
+      '/tasks/{id}/it-visible': {
+        put: op('Marca a tarefa como visível para o Responsável TI do projeto (§27); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
+          200: ok('Tarefa', ref('TaskDetail')),
+        }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['it_visible'], properties: { it_visible: { type: 'boolean' } } }),
+        }),
+      },
       '/tasks/{id}/report': {
         put: op('Liga/desliga a tarefa no informe do projeto (aba Informe); quem edita a tarefa; não exige os obrigatórios do status', ['tasks'], {
           200: ok('Tarefa', ref('TaskDetail')),

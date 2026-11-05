@@ -18,7 +18,7 @@ function task(n: number, category: StatusCategory, start: string | null, extra: 
     assignee: null,
     startDate: start ? day(start) : null,
     dueDate: start ? day(start) : null,
-    inReport: true,
+    inReport: true, itVisible: false,
     urgency: null,
     area: null,
     ...extra,

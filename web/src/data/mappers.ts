@@ -306,6 +306,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     subtaskProgress: dto.subtask_progress ?? { done: 0, total: 0 },
     blocked: !!dto.blocked,
     inReport: dto.in_report ?? true,
+    itVisible: !!dto.it_visible,
     urgency: isTaskUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
   }

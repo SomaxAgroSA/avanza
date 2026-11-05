@@ -77,7 +77,7 @@ function createCharterService(deps) {
     const project = item ? deps.projectRepository.findById(item.projectId) : null
     if (!item || !project) throw appError('CHARTER_ITEM_NOT_FOUND')
     const access = accessOf(ctx, project)
-    if (!access.canView) throw appError('CHARTER_ITEM_NOT_FOUND')
+    if (!access.canView && !access.limited) throw appError('CHARTER_ITEM_NOT_FOUND')
     projectDomain.assertAccess(access, project, 'charter')
     return { item, project, access }
   }
@@ -95,7 +95,8 @@ function createCharterService(deps) {
     projectDomain.assertAccess(accessOf(ctx, project), project, 'brief')
     const record = deps.charterRepository.findByProject(project.id)
     const me = ctx.principal.userId
-    const mine = deps.taskRepository.listByProject(project.id, MAX_PROJECT_TASKS).filter((t) => t.assigneeId === me)
+    // as tarefas atribuídas a quem pede e as marcadas "Visível para TI"
+    const mine = deps.taskRepository.listByProject(project.id, MAX_PROJECT_TASKS).filter((t) => t.assigneeId === me || t.itVisible)
     const own = items.listByProject(project.id).filter((i) => i.ownerId === me && (i.kind === 'feature' || i.kind === 'result'))
     return {
       objective: record ? record.objective || '' : '',

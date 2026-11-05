@@ -319,6 +319,8 @@ export interface TaskRepository {
   update(id: string, data: TaskInput): Promise<TaskDetail>
   /** Liga/desliga a tarefa no informe do projeto (não exige os obrigatórios do status). */
   setInReport(id: string, inReport: boolean): Promise<TaskDetail>
+  /** Marca a tarefa como visível para o Responsável TI do projeto. */
+  setItVisible(id: string, itVisible: boolean): Promise<TaskDetail>
   setUrgency(id: string, urgency: TaskUrgency | null): Promise<TaskDetail>
   /** Área responsável direto da lista (não exige os obrigatórios do status); null limpa. */
   setArea(id: string, areaId: string | null): Promise<TaskDetail>

@@ -617,3 +617,12 @@ O perfil decide **o que a pessoa vê dentro de cada projeto** em que entra, igua
 - `GET /projects/{id}` traz `capabilities.sections` com as seções liberadas; a tela mostra só essas abas.
 - Na migração, todo perfil que já via projetos recebeu as quatro seções: nada muda até o administrador desligar alguma.
 - **Controle de acesso** reúne num só item do menu as abas **Por pessoa** (módulos, "o que vê dentro de cada projeto", o que pode fazer e em quais projetos entra), **Perfis** e **Permissões por perfil**. Os endereços antigos `/settings/roles` e `/settings/permissions` levam para essas abas.
+
+## 27. Tarefas visíveis para TI
+
+Na aba Tarefas do projeto, o botão **Visível para TI** (ícone de notebook, ao lado do informe) marca a tarefa para o **Responsável TI** do projeto (§24).
+
+- O Responsável TI vê as tarefas **atribuídas a ele** e as **marcadas** — no resumo do projeto, na lista geral de Tarefas e ao abrir a tarefa. As demais continuam fechadas (`TASK_NOT_FOUND`).
+- Quem edita a tarefa marca e desmarca (`PUT /tasks/{id}/it-visible`); o Responsável TI não muda a marca. Não exige os campos obrigatórios do status; fica no histórico da tarefa.
+- A coluna e o filtro **Visível para TI** (escondidos por padrão) mostram o que está compartilhado.
+- Se o perfil do Responsável TI tiver **Ficha** (`projects.charter`, §26), o resumo ganha a aba **Ficha**, só para leitura.
