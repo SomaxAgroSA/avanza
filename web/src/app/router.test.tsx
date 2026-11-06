@@ -326,14 +326,14 @@ describe('Página do projeto — Responsável TI (§33)', () => {
     return { ...renderRoutes(routes, { repositories, initialPath: path }), listMembers, getBrief }
   }
 
-  it('abre o resumo: objetivo, o que precisamos dele e os indicadores; sem as outras abas', async () => {
+  it('abre o resumo: objetivo, as tarefas compartilhadas e os indicadores; sem as outras abas', async () => {
     const { listMembers } = setupIt('/projects/p1')
     const nav = await projectTabs()
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['O que precisamos da TI'])
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral'])
     expect(await screen.findByText('Vender mais pelo portal')).toBeInTheDocument()
     expect(screen.getByText('Liberar acesso ao banco')).toBeInTheDocument()
     expect(screen.getByText('Disponibilidade do banco')).toBeInTheDocument()
-    expect(screen.getByText('O que o projeto precisa da TI')).toBeInTheDocument()
+    expect(screen.getByText('Sua participação neste projeto')).toBeInTheDocument()
     // nada do projeto que o servidor fecha para ele: saúde da gestão, membros, chave e ações
     expect(screen.queryByRole('region', { name: 'Saúde do projeto' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
@@ -348,7 +348,7 @@ describe('Página do projeto — Responsável TI (§33)', () => {
   it('com a seção Ficha no perfil, ganha a aba Ficha (só leitura)', async () => {
     const { router } = setupIt('/projects/p1/charter', ['charter'])
     const nav = await projectTabs()
-    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['O que precisamos da TI', 'Ficha'])
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Visão geral', 'Ficha'])
     expect(within(nav).getByRole('link', { name: 'Ficha' })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByText('Centralizar o relacionamento com os clientes')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/projects/p1/charter')

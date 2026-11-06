@@ -4006,18 +4006,18 @@
     }
   },
   "brief": {
-    "subtitle": "Lo que el proyecto necesita de TI",
+    "subtitle": "Su participación en este proyecto",
     "aboutTitle": "Sobre el proyecto",
     "aboutDescription": "Para qué existe y qué tiene que lograr.",
     "noObjective": "El equipo del proyecto todavía no escribió el objetivo.",
-    "needsTitle": "Lo que necesitamos de TI",
-    "needsDescription_one": "{{count}} tarea asignada a usted o marcada para TI. Ábrala para ver el detalle, comentar o actualizar el estado.",
-    "needsDescription_other": "{{count}} tareas asignadas a usted o marcadas para TI. Ábralas para ver el detalle, comentar o actualizar el estado.",
+    "needsTitle": "Tareas compartidas con TI",
+    "needsDescription_one": "{{count}} tarea compartida con usted. Ábrala para ver el detalle, comentar o actualizar el estado.",
+    "needsDescription_other": "{{count}} tareas compartidas con usted. Ábralas para ver el detalle, comentar o actualizar el estado.",
     "noTasksTitle": "Nada pendiente por ahora",
-    "noTasksDescription": "Cuando el equipo le asigne una tarea o la marque para TI, aparecerá aquí.",
+    "noTasksDescription": "Cuando el equipo comparta una tarea con usted, aparecerá aquí.",
     "noDueDate": "Sin plazo",
-    "itemsTitle": "Indicadores bajo su responsabilidad",
-    "itemsDescription": "Metas de la ficha del proyecto que dependen de TI.",
+    "itemsTitle": "Indicadores en los que colabora",
+    "itemsDescription": "Metas de la ficha del proyecto en las que participa TI.",
     "target": "meta: {{value}} {{unit}}",
     "due": "plazo: {{date}}"
   }
