@@ -4006,18 +4006,18 @@
     }
   },
   "brief": {
-    "subtitle": "What the project needs from IT",
+    "subtitle": "Your part in this project",
     "aboutTitle": "About the project",
     "aboutDescription": "Why it exists and what it must achieve.",
     "noObjective": "The project team has not written the objective yet.",
-    "needsTitle": "What we need from IT",
-    "needsDescription_one": "{{count}} task assigned to you or flagged for IT. Open it to see details, comment or update the status.",
-    "needsDescription_other": "{{count}} tasks assigned to you or flagged for IT. Open them to see details, comment or update the status.",
+    "needsTitle": "Tasks shared with IT",
+    "needsDescription_one": "{{count}} task shared with you. Open it to see details, comment or update the status.",
+    "needsDescription_other": "{{count}} tasks shared with you. Open them to see details, comment or update the status.",
     "noTasksTitle": "Nothing pending for now",
-    "noTasksDescription": "When the team assigns you a task or flags one for IT, it will show up here.",
+    "noTasksDescription": "When the team shares a task with you, it will show up here.",
     "noDueDate": "No due date",
-    "itemsTitle": "Indicators you own",
-    "itemsDescription": "Project charter targets that depend on IT.",
+    "itemsTitle": "Indicators you help with",
+    "itemsDescription": "Project charter targets IT takes part in.",
     "target": "target: {{value}} {{unit}}",
     "due": "due: {{date}}"
   }

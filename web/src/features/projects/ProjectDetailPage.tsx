@@ -89,7 +89,7 @@ function ProjectDetail({ project }: { project: Project }) {
   const it = isItRole(project)
   const access = { manage: caps.transfer || caps.archive || caps.delete, sections: caps.sections, it }
   const section = sectionFromPath(pathname, project.id) ?? 'overview'
-  const label = sectionLabel(section, project, t, it)
+  const label = sectionLabel(section, project, t)
   useDocumentTitle(label ? `${label} · ${project.name}` : project.name)
 
   function setArchived(value: boolean) {
@@ -205,7 +205,7 @@ function ProjectDetail({ project }: { project: Project }) {
       <AppNavTabs
         aria-label={project.name}
         className="mb-4"
-        items={visibleProjectTabs(permissions, access).map((tab) => ({ key: tab, to: tabPath[tab], label: tabLabel(tab, project, t, it), active: tab === activeTab }))}
+        items={visibleProjectTabs(permissions, access).map((tab) => ({ key: tab, to: tabPath[tab], label: tabLabel(tab, project, t), active: tab === activeTab }))}
         actions={<div ref={setActionsSlot} className="flex items-center gap-2" />}
       />
       <TabActionsSlotContext.Provider value={actionsSlot}>
@@ -236,18 +236,17 @@ function ProjectDetail({ project }: { project: Project }) {
 
 type Translate = ReturnType<typeof useTranslation>['t']
 
-/** Rótulo da aba; para o Responsável TI, a Visão geral é "O que precisamos da TI". */
-function tabLabel(tab: ProjectTab, project: Project, t: Translate, it = false): string {
-  if (it && tab === 'overview') return t('brief.needsTitle')
+/** Rótulo da aba (o Responsável TI também vê "Visão geral", com o resumo dele). */
+function tabLabel(tab: ProjectTab, project: Project, t: Translate): string {
   return tab === 'members' ? t('projects.tabs.members', { count: project.memberCount }) : t(`projects.tabs.${tab}`)
 }
 
 /** Nome da seção no título da aba do navegador ("Kanban · Projeto"); a visão geral é só o projeto. */
-function sectionLabel(section: ProjectSection, project: Project, t: Translate, it = false): string {
+function sectionLabel(section: ProjectSection, project: Project, t: Translate): string {
   if (section === 'overview') return ''
   if (section === 'list') return t('projects.tabs.tasks')
   if (section === 'kanban' || section === 'planning' || section === 'timeline') return t(`projects.taskViews.${section}`)
-  return tabLabel(section, project, t, it)
+  return tabLabel(section, project, t)
 }
 
 /**
