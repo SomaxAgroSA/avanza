@@ -239,6 +239,161 @@ export function AppTrendChart({ points, seriesA, seriesB, seriesC: thirdSeries, 
   )
 }
 
+/* ------------------------------------------------------------------ linhas (evolução de várias séries) */
+
+export interface AppLineSeries {
+  label: string
+  tone: AppChartTone
+}
+
+export interface AppLinePoint {
+  key: string
+  /** Rótulo do eixo (ex.: "03/11"). */
+  label: string
+  /** Um valor por série, na ordem de `series`. */
+  values: number[]
+}
+
+export interface AppLineChartProps {
+  points: AppLinePoint[]
+  series: AppLineSeries[]
+  /** Descrição acessível (ex.: "Tarefas por semana"). */
+  title: string
+  height?: number
+  className?: string
+}
+
+/** Passo "redondo" do eixo (1, 2, 5 × 10ⁿ) para no máximo 4 divisões. */
+function niceStep(max: number): number {
+  const raw = Math.max(1, max) / 4
+  const power = 10 ** Math.floor(Math.log10(raw))
+  const unit = [1, 2, 5, 10].find((m) => m * power >= raw) ?? 10
+  return unit * power
+}
+
+/**
+ * Linhas de 2px, uma por série, num eixo só (contagens da mesma unidade). Legenda com o último valor de
+ * cada série, ponto no fim de cada linha e, ao passar o mouse, uma guia com os valores da coluna; a
+ * tabela sr-only cobre leitores de tela.
+ */
+export function AppLineChart({ points, series, title, height = 180, className }: AppLineChartProps) {
+  const highest = Math.max(1, ...points.flatMap((p) => p.values))
+  const step = niceStep(highest)
+  const top = Math.ceil(highest / step) * step
+  const ticks = Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step)
+  const n = points.length
+  const x = (i: number) => ((i + 0.5) / Math.max(1, n)) * 100
+  const y = (v: number) => 100 - (v / top) * 100
+  const last = points.at(-1)
+  const every = Math.max(1, Math.ceil(n / 12))
+  return (
+    <figure className={cn('relative flex flex-col gap-3', className)}>
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted" aria-hidden>
+        {series.map((s, si) => (
+          <span key={s.label} className="inline-flex items-center gap-1.5">
+            <span className={cn('size-2.5 rounded-full', CHART_TONES[s.tone].bg)} />
+            {s.label}
+            {last && <span className="font-semibold text-fg tabular-nums">{last.values[si] ?? 0}</span>}
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2" aria-hidden>
+        <div className="relative w-7 shrink-0 text-[10px] text-subtle tabular-nums" style={{ height }}>
+          {ticks.map((tick) => (
+            <span key={tick} className="absolute right-0 -translate-y-1/2" style={{ top: `${y(tick)}%` }}>
+              {tick}
+            </span>
+          ))}
+        </div>
+        <div className="relative min-w-0 flex-1" style={{ height }}>
+          <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {ticks.map((tick) => (
+              <line key={tick} x1="0" x2="100" y1={y(tick)} y2={y(tick)} className="text-border" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            ))}
+            {series.map((s, si) => (
+              <polyline
+                key={s.label}
+                className={CHART_TONES[s.tone].text}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                points={points.map((p, i) => `${x(i)},${y(p.values[si] ?? 0)}`).join(' ')}
+              />
+            ))}
+          </svg>
+          {/* ponto no fim de cada linha */}
+          {last &&
+            series.map((s, si) => (
+              <span
+                key={s.label}
+                className={cn('absolute size-2 -translate-x-1/2 translate-y-1/2 rounded-full ring-2 ring-surface', CHART_TONES[s.tone].bg)}
+                style={{ left: `${x(n - 1)}%`, bottom: `${100 - y(last.values[si] ?? 0)}%` }}
+              />
+            ))}
+          {/* colunas de leitura: guia e valores ao passar o mouse */}
+          <div className="absolute inset-0 flex">
+            {points.map((p, i) => (
+              <div key={p.key} className="group relative h-full flex-1">
+                <span className="absolute inset-y-0 left-1/2 hidden w-px border-l border-dashed border-border-strong group-hover:block" />
+                {series.map((s, si) => (
+                  <span
+                    key={s.label}
+                    className={cn('absolute left-1/2 hidden size-2 -translate-x-1/2 translate-y-1/2 rounded-full ring-2 ring-surface group-hover:block', CHART_TONES[s.tone].bg)}
+                    style={{ bottom: `${100 - y(p.values[si] ?? 0)}%` }}
+                  />
+                ))}
+                <AppChartTooltip
+                  className={cn('top-0 hidden group-hover:flex', i < n / 3 ? 'left-1/2' : i > (n * 2) / 3 ? 'right-1/2' : 'left-1/2 -translate-x-1/2')}
+                  title={p.label}
+                  rows={series.map((s, si) => ({ key: s.label, label: s.label, value: p.values[si] ?? 0, tone: s.tone }))}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2 text-[10px] text-subtle" aria-hidden>
+        <span className="w-7 shrink-0" />
+        <div className="flex min-w-0 flex-1">
+          {points.map((p, i) => (
+            <span key={p.key} className="flex-1 overflow-hidden text-center whitespace-nowrap">
+              {i % every === 0 ? p.label : ''}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="sr-only">
+        <table>
+          <caption>{title}</caption>
+          <thead>
+            <tr>
+              <th scope="col">—</th>
+              {series.map((s) => (
+                <th key={s.label} scope="col">
+                  {s.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {points.map((p) => (
+              <tr key={p.key}>
+                <th scope="row">{p.label}</th>
+                {series.map((s, si) => (
+                  <td key={s.label}>{p.values[si] ?? 0}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </figure>
+  )
+}
+
 /* ------------------------------------------------------------------ tons dos gráficos */
 
 export interface AppChartSegment {

@@ -101,6 +101,8 @@ export interface PortfolioRow {
     icon: ProjectIcon
     status: ProjectStatus
     priority: ProjectPriority
+    /** Departamento (área do projeto); null = sem área. */
+    area: { id: string; name: string } | null
     /** AAAA-MM-DD */
     startDate: string | null
     dueDate: string | null
@@ -110,7 +112,7 @@ export interface PortfolioRow {
   /** null = sem elementos nem tarefas para medir. */
   progress: { value: number; source: ProgressSourceKind } | null
   plan: { total: number; done: number; open: number; overdue: number; stuck: number } | null
-  tasks: { total: number; open: number; overdue: number; done: number }
+  tasks: { total: number; open: number; inProgress: number; blocked: number; overdue: number; done: number }
   nextMilestone: { id: string; name: string; dueDate: string } | null
   openIssues: number
 }
@@ -171,6 +173,10 @@ export interface ExecutiveTimelinePoint {
   tasksCreated: number
   tasksCompleted: number
   planItemsCompleted: number
+  /** Tarefas em andamento no fim do balde (projetos ativos). */
+  tasksInProgress: number
+  /** Tarefas vencidas e abertas no fim do balde (projetos ativos). */
+  tasksOverdue: number
 }
 
 export interface ExecutiveCompletion {

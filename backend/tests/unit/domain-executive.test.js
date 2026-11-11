@@ -92,6 +92,52 @@ describe('domain/executive', () => {
     assert.equal(monthly.points[0].plan_items_completed, 1)
   })
 
+  it('portfólio traz área, urgência, tarefas em andamento e bloqueadas', () => {
+    const out = executive.buildDashboard(
+      input({
+        projects: [{ id: 'a', key: 'AAA', name: 'A', ownerId: null, archivedAt: null, areaId: 'ar1', urgency: 'high', status: 'active', priority: 'high' }],
+        areas: { ar1: { id: 'ar1', name: 'Comercial', color: null } },
+        statuses: { open: { category: 'todo' }, doing: { category: 'in_progress' }, done: { category: 'done' } },
+        taskRows: [
+          { id: 't1', projectId: 'a', statusId: 'doing', createdAt: day('2026-10-01'), blocked: true },
+          { id: 't2', projectId: 'a', statusId: 'doing', createdAt: day('2026-10-01') },
+          { id: 't3', projectId: 'a', statusId: 'open', createdAt: day('2026-10-01') },
+        ],
+      }),
+    )
+    const row = out.portfolio[0]
+    assert.deepEqual(row.project.area, { id: 'ar1', name: 'Comercial', color: null })
+    assert.equal(row.project.urgency, 'high')
+    assert.equal(row.tasks.in_progress, 2)
+    assert.equal(row.tasks.blocked, 1)
+    assert.equal(row.tasks.open, 3)
+  })
+
+  it('série: em andamento e vencidas no fim de cada semana, pelas datas; canceladas e arquivados fora', () => {
+    const out = executive.buildDashboard(
+      input({
+        statuses: { open: { category: 'todo' }, doing: { category: 'in_progress' }, done: { category: 'done' }, gone: { category: 'cancelled' } },
+        period: { from: day('2026-10-05'), to: day('2026-10-18') },
+        today: '2026-10-18',
+        taskRows: [
+          // começou na 1ª semana e concluiu na 2ª: em andamento só no fim da 1ª
+          { id: 't1', projectId: 'a', statusId: 'done', createdAt: day('2026-10-01'), startedAt: day('2026-10-06'), completedAt: day('2026-10-14') },
+          // prazo 08/10, ainda aberta: vencida nas duas semanas, em andamento desde 13/10
+          { id: 't2', projectId: 'a', statusId: 'doing', createdAt: day('2026-10-01'), startedAt: day('2026-10-13'), dueDate: day('2026-10-08') },
+          // criada na 2ª semana: não conta na 1ª
+          { id: 't3', projectId: 'b', statusId: 'open', createdAt: day('2026-10-15'), dueDate: day('2026-10-16') },
+          // cancelada e projeto arquivado: fora do estoque
+          { id: 't4', projectId: 'a', statusId: 'gone', createdAt: day('2026-10-01'), startedAt: day('2026-10-06') },
+          { id: 't5', projectId: 'z', statusId: 'doing', createdAt: day('2026-10-01'), startedAt: day('2026-10-06') },
+        ],
+      }),
+    )
+    const points = out.timeline.points
+    assert.deepEqual(points.map((p) => p.start), ['2026-10-05', '2026-10-12'])
+    assert.deepEqual(points.map((p) => p.tasks_in_progress), [1, 1])
+    assert.deepEqual(points.map((p) => p.tasks_overdue), [1, 2])
+  })
+
   it('nada no escopo: tudo zerado, sem erro', () => {
     const out = executive.buildDashboard(input({ projects: [] }))
     assert.equal(out.summary.active_projects, 0)

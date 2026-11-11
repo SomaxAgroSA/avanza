@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   BookOpen,
   CheckSquare,
   FolderKanban,
@@ -32,8 +31,9 @@ export interface NavItem {
 /** Estrutura de navegação (diretriz §36). Fonte única para sidebar, breadcrumb e command palette. */
 export const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard },
-  // visão consolidada para a diretoria (Gestão de projetos + Kanban de atividades)
-  { id: 'executive', labelKey: 'nav.executive', to: '/executive', icon: Gauge, anyOf: ['executive.view'] },
+  // Seguimento de projetos: a tela única da gerência (juntou o Painel executivo e os Relatórios);
+  // sem executive.view, leva aos Relatórios das tarefas
+  { id: 'tracking', labelKey: 'nav.tracking', to: '/tracking', icon: Gauge, anyOf: ['executive.view', 'reports.view'] },
   {
     id: 'projects',
     labelKey: 'nav.projects',
@@ -41,20 +41,18 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FolderKanban,
     anyOf: ['projects.view'],
     children: [
-      // no menu: todos, ativos e terminados; "Meus projetos" (card do Dashboard) e "Arquivados"
-      // (link em Terminados) ficam fora do menu
+      // no menu: todos, em andamento, concluídos e arquivados; "Meus projetos" segue pelo card do Dashboard
       { id: 'projects-all', labelKey: 'nav.projectsAll', to: '/projects', end: true },
       { id: 'projects-ongoing', labelKey: 'nav.projectsOngoing', to: '/projects/ongoing' },
       { id: 'projects-finished', labelKey: 'nav.projectsFinished', to: '/projects/finished' },
+      { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived' },
       { id: 'projects-mine', labelKey: 'nav.projectsMine', to: '/projects/mine', hidden: true },
-      { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived', hidden: true },
     ],
   },
   // só visões de todos os projetos: as de um projeto (Gestão, Planejamento, Kanban do projeto, Cronograma)
   // ficam nas abas da página do projeto
   { id: 'kanban', labelKey: 'nav.kanban', to: '/kanban', icon: KanbanSquare, anyOf: ['kanban.view'] },
   { id: 'tasks', labelKey: 'nav.tasks', to: '/tasks', icon: CheckSquare, anyOf: ['tasks.view'] },
-  { id: 'reports', labelKey: 'nav.reports', to: '/reports', icon: BarChart3, anyOf: ['reports.view'] },
   { id: 'docs', labelKey: 'nav.docs', to: '/docs', icon: BookOpen, anyOf: ['docs.view'] },
   { id: 'users', labelKey: 'nav.users', to: '/users', icon: Users, anyOf: ['users.view'] },
   {

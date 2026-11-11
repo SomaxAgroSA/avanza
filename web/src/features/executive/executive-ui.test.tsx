@@ -48,7 +48,7 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     },
     portfolio: [
       {
-        project: { ...crm, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', startDate: '2026-01-10', dueDate: '2026-12-15', owner: { id: 'u1', name: 'Ana', avatarUrl: null } },
+        project: { ...crm, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', area: null, startDate: '2026-01-10', dueDate: '2026-12-15', owner: { id: 'u1', name: 'Ana', avatarUrl: null } },
         health: {
           level: 'critical',
           factors: [
@@ -59,16 +59,16 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
         },
         progress: { value: 72, source: 'plan' },
         plan: { total: 25, done: 12, open: 13, overdue: 7, stuck: 0 },
-        tasks: { total: 80, open: 30, overdue: 4, done: 48 },
+        tasks: { total: 80, open: 30, inProgress: 0, blocked: 0, overdue: 4, done: 48 },
         nextMilestone: { id: 'm1', name: 'Go-live', dueDate: '2026-12-01' },
         openIssues: 2,
       },
       {
-        project: { id: 'p3', key: 'FIN', name: 'Financeiro', cover: 'green', icon: 'folder', status: 'active', priority: 'medium', startDate: null, dueDate: '2027-02-01', owner: null },
+        project: { id: 'p3', key: 'FIN', name: 'Financeiro', cover: 'green', icon: 'folder', status: 'active', priority: 'medium', area: null, startDate: null, dueDate: '2027-02-01', owner: null },
         health: { level: 'ok', factors: [] },
         progress: { value: 40, source: 'tasks' },
         plan: null,
-        tasks: { total: 10, open: 6, overdue: 0, done: 4 },
+        tasks: { total: 10, open: 6, inProgress: 0, blocked: 0, overdue: 0, done: 4 },
         nextMilestone: null,
         openIssues: 0,
       },
@@ -99,8 +99,8 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     timeline: {
       bucket: 'month',
       points: [
-        { start: '2026-09-01', tasksCreated: 30, tasksCompleted: 25, planItemsCompleted: 6 },
-        { start: '2026-10-01', tasksCreated: 12, tasksCompleted: 9, planItemsCompleted: 2 },
+        { start: '2026-09-01', tasksCreated: 30, tasksCompleted: 25, planItemsCompleted: 6, tasksInProgress: 0, tasksOverdue: 0 },
+        { start: '2026-10-01', tasksCreated: 12, tasksCompleted: 9, planItemsCompleted: 2, tasksInProgress: 0, tasksOverdue: 0 },
       ],
     },
     achievements: [
@@ -389,13 +389,14 @@ describe('Painel executivo — menu', () => {
   it('aparece com executive.view', async () => {
     shell(['executive.view'])
     expect(await screen.findByText('Início')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Painel executivo/ })).toHaveAttribute('href', '/executive')
+    // o Painel executivo virou o Acompanhamento de projetos
+    expect(screen.getByRole('link', { name: /Acompanhamento/ })).toHaveAttribute('href', '/tracking')
   })
 
   it('fica escondido sem a permissão', async () => {
-    shell(['reports.view', 'plan.view'])
+    shell(['plan.view'])
     expect(await screen.findByText('Início')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Painel executivo/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Acompanhamento/ })).not.toBeInTheDocument()
   })
 })
 

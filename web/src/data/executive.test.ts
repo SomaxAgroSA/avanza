@@ -95,7 +95,7 @@ describe('repositório do painel executivo', () => {
     expect(data.plan).toBeNull()
     expect(data.kanban.cycleTime).toEqual({ hours: null, count: 0 })
     expect(data.kanban.overdueTasks[0]?.status).toEqual({ id: 's1', name: 'Em andamento', color: 'gray', category: 'in_progress' })
-    expect(data.timeline).toEqual({ bucket: 'week', points: [{ start: '2026-09-01', tasksCreated: 30, tasksCompleted: 25, planItemsCompleted: 6 }] })
+    expect(data.timeline).toEqual({ bucket: 'week', points: [{ start: '2026-09-01', tasksCreated: 30, tasksCompleted: 25, planItemsCompleted: 6, tasksInProgress: 0, tasksOverdue: 0 }] })
     expect(data.achievements[0]?.recent[0]).toEqual({ kind: 'plan_item', id: 'e3', code: null, title: 'Levantamento', completedAt: new Date('2026-10-20T10:00:00.000Z') })
   })
 })

@@ -13,10 +13,10 @@ describe('navegação', () => {
 
   it('menu global só com visões de todos os projetos, nesta ordem; as de um projeto são abas do projeto', () => {
     const all = visibleNavItems(['executive.view', 'projects.view', 'kanban.view', 'tasks.view', 'reports.view', 'docs.view', 'users.view', 'plan.view', 'settings.manage'])
-    expect(all.map((i) => i.id)).toEqual(['dashboard', 'executive', 'projects', 'kanban', 'tasks', 'reports', 'docs', 'users', 'settings'])
-    expect(all.find((i) => i.id === 'projects')?.children?.map((c) => c.id)).toEqual(['projects-all', 'projects-ongoing', 'projects-finished', 'projects-mine', 'projects-archived'])
-    // no menu lateral só Todos, Ativos e Terminados; Meus projetos e Arquivados seguem como páginas
-    expect(all.find((i) => i.id === 'projects')?.children?.filter((c) => !c.hidden).map((c) => c.id)).toEqual(['projects-all', 'projects-ongoing', 'projects-finished'])
+    expect(all.map((i) => i.id)).toEqual(['dashboard', 'tracking', 'projects', 'kanban', 'tasks', 'docs', 'users', 'settings'])
+    expect(all.find((i) => i.id === 'projects')?.children?.map((c) => c.id)).toEqual(['projects-all', 'projects-ongoing', 'projects-finished', 'projects-archived', 'projects-mine'])
+    // no menu lateral: Todos, Em andamento, Concluídos e Arquivados; Meus projetos segue como página
+    expect(all.find((i) => i.id === 'projects')?.children?.filter((c) => !c.hidden).map((c) => c.id)).toEqual(['projects-all', 'projects-ongoing', 'projects-finished', 'projects-archived'])
     expect(all.find((i) => i.id === 'kanban')?.to).toBe('/kanban')
     const paths = all.flatMap((i) => [i.to, ...(i.children ?? []).map((c) => c.to)])
     expect(paths.some((to) => /project-management|planning|timeline/.test(to))).toBe(false)

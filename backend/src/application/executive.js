@@ -177,6 +177,13 @@ function createExecutiveService(deps) {
     const priorities = (await deps.priorityRepository.list({ includeInactive: false })).slice().sort((a, b) => a.order - b.order)
 
     const milestones = await deps.milestoneRepository.listByProjects(ids)
+    // área (departamento) de cada projeto, para o Seguimento de projetos
+    const areas = {}
+    if (deps.areaRepository) {
+      ;(await deps.areaRepository.list({ includeInactive: true })).forEach((area) => {
+        areas[area.id] = { id: area.id, name: area.name, color: area.color || null }
+      })
+    }
     const ownerIds = projects
       .map((p) => p.ownerId)
       .concat(issues.map((i) => i.ownerId))
@@ -191,6 +198,7 @@ function createExecutiveService(deps) {
     const dashboard = executive.buildDashboard({
       projects,
       owners,
+      areas,
       plans,
       planItems,
       planCategoryOf,

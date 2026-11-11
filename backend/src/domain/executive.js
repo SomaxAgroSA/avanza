@@ -10,6 +10,9 @@
  *   concluídas (sem as canceladas). Sem nenhum dos dois, nulo.
  * - Período: `from` nulo = desde o início. Conta como entrega a tarefa concluída e o elemento (de
  *   primeiro nível) concluído no período; o marco "feito" conta pela data dele.
+ * - Série no tempo (Seguimento de projetos): além do que foi criado e concluído em cada balde, quantas
+ *   tarefas dos projetos ativos estavam em andamento e vencidas no fim dele, reconstruído pelas datas
+ *   (início, conclusão, prazo e criação) — sem foto semanal, o prazo é o atual da tarefa.
  */
 
 const report = require('./report')
@@ -59,6 +62,7 @@ function nextBucket(start, bucket) {
  */
 function timeline(input) {
   const { taskRows, isTaskDone, planDone, period, tzOffset } = input
+  const stockRows = input.stockRows || []
   const toDay = (date) => report.localDay(date, tzOffset)
   const dates = []
   taskRows.forEach((row) => {
@@ -75,7 +79,7 @@ function timeline(input) {
   const index = {}
   for (let start = bucketStart(startDay, bucket); start <= endDay; start = nextBucket(start, bucket)) {
     index[start] = points.length
-    points.push({ start, tasks_created: 0, tasks_completed: 0, plan_items_completed: 0 })
+    points.push({ start, tasks_created: 0, tasks_completed: 0, plan_items_completed: 0, tasks_in_progress: 0, tasks_overdue: 0 })
   }
   const add = (date, key) => {
     if (!inPeriod(date, { from: first, to: period.to })) return
@@ -87,6 +91,28 @@ function timeline(input) {
     if (isTaskDone(row)) add(row.completedAt, 'tasks_completed')
   })
   planDone.forEach((item) => add(item.completedAt, 'plan_items_completed'))
+
+  // estoque no fim de cada balde (o último termina hoje): em andamento = começou e não fechou;
+  // vencida = prazo antes do fim do balde e ainda aberta nele
+  const dayOrNull = (date) => (date ? toDay(date) : null)
+  const stock = stockRows.map((row) => ({
+    created: dayOrNull(row.createdAt),
+    started: dayOrNull(row.startedAt),
+    closed: dayOrNull(row.completedAt),
+    due: row.dueDate ? dayOf(row.dueDate) : null,
+  }))
+  points.forEach((point, i) => {
+    const next = i + 1 < points.length ? points[i + 1].start : nextBucket(point.start, bucket)
+    const lastDay = addDays(next, -1)
+    const end = lastDay < endDay ? lastDay : endDay
+    stock.forEach((t) => {
+      if (t.created && t.created > end) return
+      const open = !t.closed || t.closed > end
+      if (!open) return
+      if (t.started && t.started <= end) point.tasks_in_progress += 1
+      if (t.due && t.due < end) point.tasks_overdue += 1
+    })
+  })
   return { bucket, points }
 }
 
@@ -158,6 +184,8 @@ function buildDashboard(input) {
         icon: project.icon || null,
         status: project.status,
         priority: project.priority,
+        urgency: project.urgency || null,
+        area: (project.areaId && input.areas && input.areas[project.areaId]) || null,
         start_date: dayOf(project.startDate),
         due_date: dayOf(project.dueDate),
         owner: (project.ownerId && owners[project.ownerId]) || null,
@@ -165,7 +193,14 @@ function buildDashboard(input) {
       health: plan ? plan.health : { level: 'none', factors: [] },
       progress,
       plan: plan ? { total: plan.summary.total, done: plan.summary.done, open: plan.summary.open, overdue: plan.summary.overdue, stuck: plan.summary.stuck } : null,
-      tasks: { total: rows.length, open: rows.filter(isTaskOpen).length, overdue: rows.filter(isTaskOverdue).length, done: rows.filter((r) => isTaskDone(r) && inPeriod(r.completedAt, period)).length },
+      tasks: {
+        total: rows.length,
+        open: rows.filter(isTaskOpen).length,
+        in_progress: rows.filter((r) => categoryOfTask(r) === 'in_progress').length,
+        blocked: rows.filter((r) => isTaskOpen(r) && r.blocked).length,
+        overdue: rows.filter(isTaskOverdue).length,
+        done: rows.filter((r) => isTaskDone(r) && inPeriod(r.completedAt, period)).length,
+      },
       next_milestone: next ? { id: next.id, name: next.name, due_date: next.dueDate } : null,
       open_issues: (issuesByProject[project.id] || []).length,
     }
@@ -313,7 +348,14 @@ function buildDashboard(input) {
     portfolio,
     plan: planSection,
     kanban,
-    timeline: timeline({ taskRows: input.taskRows, isTaskDone, planDone: topItems.filter((i) => planCategoryOf(i) === 'done' && i.completedAt), period, tzOffset: input.tzOffset }),
+    timeline: timeline({
+      taskRows: input.taskRows,
+      stockRows: input.taskRows.filter((r) => activeIds[r.projectId] && categoryOfTask(r) !== 'cancelled'),
+      isTaskDone,
+      planDone: topItems.filter((i) => planCategoryOf(i) === 'done' && i.completedAt),
+      period,
+      tzOffset: input.tzOffset,
+    }),
     achievements,
   }
 }

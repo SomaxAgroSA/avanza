@@ -129,9 +129,11 @@ export const routes: RouteObject[] = [
         children: [{ path: 'reports', ...page(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))) }],
       },
       {
-        element: <PermissionGate permission="executive.view" />,
-        children: [{ path: 'executive', ...page(() => import('@/features/executive/ExecutivePage').then((m) => ({ default: m.ExecutivePage }))) }],
+        // Seguimento de projetos (juntou o Painel executivo); o endereço antigo leva para ele
+        element: <PermissionGate anyOf={['executive.view', 'reports.view']} />,
+        children: [{ path: 'tracking', ...page(() => import('@/features/tracking/TrackingPage').then((m) => ({ default: m.TrackingEntry }))) }],
       },
+      { path: 'executive', element: <Navigate to="/tracking" replace /> },
       {
         element: <PermissionGate permission="docs.view" />,
         children: [

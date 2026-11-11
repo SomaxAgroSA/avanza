@@ -829,6 +829,8 @@ export interface ExecutiveDto {
       icon: string | null
       status: string
       priority: string
+      urgency?: string | null
+      area?: { id: string; name: string; color: string | null } | null
       start_date: string | null
       due_date: string | null
       owner: ExecutivePersonDto | null
@@ -836,7 +838,7 @@ export interface ExecutiveDto {
     health: { level: string; factors: Array<{ key: string; level: string; value: number | null; count?: number; of?: number; planned?: number | null; actual?: number | null; hours?: number | null }> }
     progress: { value: number | null; source: string | null } | null
     plan: { total: number; done: number; open: number; overdue: number; stuck: number } | null
-    tasks: { total: number; open: number; overdue: number; done: number }
+    tasks: { total: number; open: number; in_progress?: number; blocked?: number; overdue: number; done: number }
     next_milestone: { id: string; name: string; due_date: string } | null
     open_issues: number
   }>
@@ -867,7 +869,7 @@ export interface ExecutiveDto {
       status: { id: string; name: string; color: string | null; category: string | null }
     }>
   }
-  timeline: { bucket: string; points: Array<{ start: string; tasks_created: number; tasks_completed: number; plan_items_completed: number }> }
+  timeline: { bucket: string; points: Array<{ start: string; tasks_created: number; tasks_completed: number; plan_items_completed: number; tasks_in_progress?: number; tasks_overdue?: number }> }
   achievements: Array<{
     project: ExecutiveProjectRefDto & { archived: boolean }
     tasks_done: number
