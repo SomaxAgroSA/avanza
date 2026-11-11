@@ -235,7 +235,7 @@
   "nav": {
     "main": "Main navigation",
     "dashboard": "Dashboard",
-    "tracking": "Tracking",
+    "tracking": "Overview",
     "projects": "Projects",
     "projectsAll": "All my projects",
     "projectsMine": "My projects",
@@ -4029,14 +4029,14 @@
     "due": "due: {{date}}"
   },
   "tracking": {
-    "title": "Project tracking",
+    "title": "Overview",
     "loading": "Loading tracking…",
     "loadError": "Could not load tracking",
     "asOf": "Status as of {{time}}",
     "scope": {
-      "all": "All departments",
-      "filtered_one": "{{count}} project in the filter",
-      "filtered_other": "{{count}} projects in the filter"
+      "all": "Scope: whole portfolio",
+      "filtered_one": "Scope: {{count}} project",
+      "filtered_other": "Scope: {{count}} projects"
     },
     "filters": {
       "area": "Department",
@@ -4053,11 +4053,7 @@
     "empty": "No projects in progress",
     "emptyHint": "Projects in planning, in progress or paused show up here.",
     "sections": {
-      "today": "How is the portfolio today?",
-      "decision": "What needs a decision?",
-      "upcoming": "What is due in the next 30 days?",
-      "portfolio": "Project portfolio",
-      "period": "How is the team’s work going?"
+      "upcoming": "What is due in the next 30 days?"
     },
     "kpi": {
       "active": "Projects in progress",
@@ -4065,9 +4061,6 @@
       "blocked": "Blocked",
       "risk": "At risk",
       "help": "Late: target date passed. Blocked: paused or with blocked tasks. At risk: the project plan (schedule, progress or open issues) is off track. Click a number to see those projects in the portfolio."
-    },
-    "decision": {
-      "none": "No project is late, blocked or at risk."
     },
     "reasons": {
       "late_one": "Target date passed {{count}} day ago",
@@ -4154,6 +4147,53 @@
       "overdue": "Overdue tasks",
       "issues": "Open issues",
       "openProject": "Open project"
+    },
+    "periodLine": "Period: {{from}} to {{to}}",
+    "hero": {
+      "label": "Summary",
+      "today": "Today",
+      "period": "In the period",
+      "health": "Portfolio health",
+      "progress": "Average progress",
+      "noProgress": "No measured progress in these projects yet.",
+      "late": "Late",
+      "lateHint_one": "projects · {{count}} overdue task",
+      "lateHint_other": "projects · {{count}} overdue tasks",
+      "blocked": "Blocked",
+      "blockedHint_one": "projects · {{count}} blocked task",
+      "blockedHint_other": "projects · {{count}} blocked tasks",
+      "deliveries": "Deliveries",
+      "deliveriesHint_one": "tasks completed · {{count}} milestone",
+      "deliveriesHint_other": "tasks completed · {{count}} milestones"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "more": "Show more ({{count}})",
+      "less": "Show less",
+      "none": "Nothing needs attention: no project is late, blocked or at risk, and nothing is due in the next 7 days.",
+      "kinds": {
+        "risk": "At risk",
+        "late": "Late",
+        "paused": "Paused",
+        "blocked": "Blocked tasks",
+        "soon_one": "Due in {{count}} day",
+        "soon_other": "Due in {{count}} days",
+        "soonToday": "Due today"
+      }
+    },
+    "tabs": {
+      "label": "Overview views",
+      "portfolio": "Portfolio",
+      "portfolioHint": "leadership",
+      "team": "Team and tasks",
+      "teamHint": "coordination",
+      "deliveries": "Deliveries",
+      "deliveriesHint": "what is done"
+    },
+    "done": {
+      "title": "What was done in the period",
+      "row": "{{tasks}} deliveries · {{milestones}} milestones",
+      "none": "No deliveries in the period yet."
     }
   }
 }

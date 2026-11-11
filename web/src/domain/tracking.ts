@@ -207,3 +207,51 @@ export function upcomingDeliveries(data: Pick<ExecutiveDashboard, 'plan' | 'port
 
 /** Hoje como AAAA-MM-DD (local). */
 export const todayOf = (now: Date) => toDay(now)
+
+/* ------------------------------------------------------------------ Panorama: faixa de destaque e "requer atenção" */
+
+/** Média do avanço dos projetos que têm como medir (null = nenhum). */
+export function averageProgress(rows: PortfolioRow[]): number | null {
+  const values = rows.map((r) => r.progress?.value).filter((v): v is number => typeof v === 'number')
+  return values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null
+}
+
+/** Quantos projetos em cada situação (para a rosca). */
+export function situationCounts(rows: PortfolioRow[]): Record<TrackingSituation, number> {
+  const out: Record<TrackingSituation, number> = { risk: 0, watch: 0, ok: 0, none: 0 }
+  rows.forEach((r) => {
+    out[situationOf(r)] += 1
+  })
+  return out
+}
+
+export type AttentionKind = 'risk' | 'late' | 'paused' | 'blocked' | 'soon'
+
+export interface PanoramaAttention {
+  kind: AttentionKind
+  row: PortfolioRow
+  /** Motivos do projeto (vazio para entregas próximas). */
+  reasons: DecisionReason[]
+  /** Entrega próxima: em quantos dias e o que é. */
+  soon?: UpcomingDelivery & { days: number }
+}
+
+const ATTENTION_KIND: Record<DecisionReason['kind'], AttentionKind> = { risk: 'risk', late: 'late', paused: 'paused', blockedTasks: 'blocked' }
+
+/**
+ * Exceções da carteira, só projetos: primeiro os que pedem decisão (o rótulo é o motivo mais grave —
+ * em risco, atrasado, pausado, tarefas bloqueadas); depois as entregas dos próximos `soonDays` dias de
+ * projetos que ainda não estão na lista.
+ */
+export function panoramaAttention(data: Pick<ExecutiveDashboard, 'plan' | 'portfolio'>, rows: PortfolioRow[], today: string, soonDays = 7): PanoramaAttention[] {
+  const severity: DecisionReason['kind'][] = ['risk', 'late', 'paused', 'blockedTasks']
+  const decisions = decisionItems(rows, today, rows.length).map((item) => {
+    const main = severity.find((kind) => item.reasons.some((r) => r.kind === kind)) ?? 'risk'
+    return { kind: ATTENTION_KIND[main], row: item.row, reasons: item.reasons }
+  })
+  const listed = new Set(decisions.map((d) => d.row.project.id))
+  const soon = upcomingDeliveries(data, rows, today, soonDays)
+    .filter((d) => !listed.has(d.row.project.id))
+    .map((d) => ({ kind: 'soon' as const, row: d.row, reasons: [], soon: { ...d, days: dayNumber(d.date) - dayNumber(today) } }))
+  return [...decisions, ...soon]
+}

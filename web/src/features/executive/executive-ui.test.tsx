@@ -389,14 +389,14 @@ describe('Painel executivo — menu', () => {
   it('aparece com executive.view', async () => {
     shell(['executive.view'])
     expect(await screen.findByText('Início')).toBeInTheDocument()
-    // o Painel executivo virou o Acompanhamento de projetos
-    expect(screen.getByRole('link', { name: /Acompanhamento/ })).toHaveAttribute('href', '/tracking')
+    // o Painel executivo virou o Panorama
+    expect(screen.getByRole('link', { name: /Panorama/ })).toHaveAttribute('href', '/tracking')
   })
 
   it('fica escondido sem a permissão', async () => {
     shell(['plan.view'])
     expect(await screen.findByText('Início')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Acompanhamento/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Panorama/ })).not.toBeInTheDocument()
   })
 })
 

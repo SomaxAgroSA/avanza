@@ -1,42 +1,52 @@
-import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, FolderKanban, Printer } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { isAppError } from '@/core/errors/app-error'
-import type { ExecutiveQuery, PortfolioRow } from '@/domain/executive'
+import type { ExecutiveDashboard, ExecutiveQuery, PortfolioRow } from '@/domain/executive'
 import {
   DEFAULT_TRACKING_PERIOD,
   TRACKED_STATUSES,
   TRACKING_GROUPS,
   TRACKING_PERIODS,
   applyTrackingFilter,
-  decisionItems,
+  averageProgress,
   groupPortfolio,
+  isBlocked,
   isTrackingPeriod,
   lateDays,
+  panoramaAttention,
   scopeOptions,
   scopeRows,
+  situationCounts,
   situationOf,
   todayOf,
   trackingPeriodRange,
   trackingSummary,
   upcomingDeliveries,
+  type AttentionKind,
   type DecisionReason,
   type TrackingFilter,
   type TrackingGroup,
   type TrackingSituation,
 } from '@/domain/tracking'
 import {
+  AppDonut,
   AppDrawer,
   AppEmptyState,
   AppErrorState,
   AppIconButton,
   AppLineChart,
   AppLoading,
+  AppMeter,
   AppSegmentedControl,
   AppSelect,
+  AppSparkline,
+  AppTabs,
   AppTrendChart,
+  chartToneBg,
+  type AppChartTone,
 } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useCan } from '@/features/auth/session'
@@ -45,15 +55,18 @@ import { useExecutiveDashboard } from '@/features/executive/queries'
 import { ProjectKey } from '@/features/executive/executive-visuals'
 import { useDayText, useHealthReason } from '@/features/executive/use-executive-format'
 
-/** Entrada do menu: a gerência (executive.view) vê o Seguimento; quem só tem reports.view, os Relatórios. */
+/** Entrada do menu: a gerência (executive.view) vê o Panorama; quem só tem reports.view, os Relatórios. */
 export function TrackingEntry() {
   return useCan('executive.view') ? <TrackingPage /> : <Navigate to="/reports" replace />
 }
 
+const TABS = ['portfolio', 'team', 'deliveries'] as const
+type PanoramaTab = (typeof TABS)[number]
+
 /**
- * Seguimento de projetos (junta o Painel executivo e os Relatórios): uma coluna, de cima para baixo, na
- * ordem das perguntas da gerência — como está a carteira hoje, o que pede decisão, o que se entrega nos
- * próximos 30 dias, a carteira agrupável e, separado no fim, o trabalho da equipe no período.
+ * Panorama (junta o Painel executivo e os Relatórios): faixa de destaque (hoje · no período), o que
+ * requer atenção e três abas — Portfólio (a carteira agrupável), Equipe e tarefas (o trabalho no
+ * período, com os dois gráficos) e Entregas (próximos 30 dias e o que já foi feito).
  */
 export function TrackingPage() {
   const { t, i18n } = useTranslation()
@@ -75,12 +88,13 @@ export function TrackingPage() {
   const areaId = params.get('area') ?? ''
   const ownerId = params.get('owner') ?? ''
   const group: TrackingGroup = (TRACKING_GROUPS as readonly string[]).includes(params.get('group') ?? '') ? (params.get('group') as TrackingGroup) : 'priority'
+  const tab: PanoramaTab = (TABS as readonly string[]).includes(params.get('tab') ?? '') ? (params.get('tab') as PanoramaTab) : 'portfolio'
   const rawPeriod = params.get('period') ?? ''
   const period = isTrackingPeriod(rawPeriod) ? rawPeriod : DEFAULT_TRACKING_PERIOD
   const [filter, setFilter] = useState<TrackingFilter | null>(null)
   const [opened, setOpened] = useState<PortfolioRow | null>(null)
 
-  // todos os projetos acompanhados: base dos blocos de hoje e das opções dos filtros
+  // todos os projetos acompanhados: base da faixa, da atenção e das opções dos filtros
   const range = trackingPeriodRange(period, now)
   const baseQuery: ExecutiveQuery = { projectIds: [], statuses: [...TRACKED_STATUSES], from: range.from, to: range.to, tzOffset: now.getTimezoneOffset() }
   const base = useExecutiveDashboard(baseQuery)
@@ -88,7 +102,7 @@ export function TrackingPage() {
   const allRows = useMemo(() => data?.portfolio ?? [], [data])
   const rows = useMemo(() => scopeRows(allRows, { areaId, ownerId }), [allRows, areaId, ownerId])
   const scoped = !!(areaId || ownerId)
-  // o bloco do período segue o departamento/responsável escolhido (outra leitura só quando há filtro)
+  // os números do período seguem o departamento/responsável escolhido (outra leitura só com filtro)
   const scopedQuery: ExecutiveQuery | null = scoped && rows.length ? { ...baseQuery, projectIds: rows.map((r) => r.project.id) } : null
   const scopedData = useExecutiveDashboard(scopedQuery)
   const periodData = scoped ? scopedData.data : data
@@ -98,104 +112,111 @@ export function TrackingPage() {
   }
   if (!data) return <AppLoading label={t('tracking.loading')} />
 
-  const summary = trackingSummary(rows, today)
-  const time = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'short', timeStyle: 'short' })
+  const time = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })
   const areaOptions = [{ value: 'all', label: t('tracking.filters.allAreas') }, ...scopeOptions(allRows, 'area').map((o) => ({ value: o.id, label: o.name })), { value: 'none', label: t('tracking.noArea') }]
   const ownerOptions = [{ value: 'all', label: t('tracking.filters.allOwners') }, ...scopeOptions(allRows, 'owner').map((o) => ({ value: o.id, label: o.name }))]
-  const pickFilter = (next: TrackingFilter | null) => {
+  const showPortfolio = (next: TrackingFilter | null) => {
     setFilter(next)
-    document.getElementById('tracking-portfolio')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    set('tab', '')
+    window.requestAnimationFrame(() => document.getElementById('panorama-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 pb-10">
-      <header className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">{t('tracking.title')}</h1>
-          <p className="mt-1 text-sm text-muted">
-            {t('tracking.asOf', { time: time.format(data.generatedAt) })} · {scoped ? t('tracking.scope.filtered', { count: rows.length }) : t('tracking.scope.all')}
-          </p>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 pb-10">
+      {/* cabeçalho e filtros */}
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-fg">{t('tracking.title')}</h1>
+            <p className="mt-1 text-sm text-muted">
+              {t('tracking.periodLine', { from: dayLabel(range.from, i18n.language), to: dayLabel(range.to, i18n.language) })} · {t('tracking.asOf', { time: time.format(data.generatedAt) })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 print:hidden">
+            <span className="inline-flex items-center rounded-full bg-primary-soft px-3 py-1 text-sm font-medium text-primary-soft-fg">
+              {scoped ? t('tracking.scope.filtered', { count: rows.length }) : t('tracking.scope.all')}
+            </span>
+            <AppIconButton variant="secondary" label={t('tracking.print')} icon={<Printer />} onClick={() => window.print()} />
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <AppSelect size="sm" aria-label={t('tracking.filters.area')} value={areaId || 'all'} onValueChange={(v) => set('area', v === 'all' ? '' : v)} options={areaOptions} triggerClassName="min-w-44" />
-          <AppSelect size="sm" aria-label={t('tracking.filters.owner')} value={ownerId || 'all'} onValueChange={(v) => set('owner', v === 'all' ? '' : v)} options={ownerOptions} triggerClassName="min-w-44" />
-          <AppIconButton variant="secondary" label={t('tracking.print')} icon={<Printer />} onClick={() => window.print()} />
+          <AppSelect size="sm" aria-label={t('tracking.filters.area')} value={areaId || 'all'} onValueChange={(v) => set('area', v === 'all' ? '' : v)} options={areaOptions} triggerClassName="min-w-48" />
+          <AppSelect size="sm" aria-label={t('tracking.filters.owner')} value={ownerId || 'all'} onValueChange={(v) => set('owner', v === 'all' ? '' : v)} options={ownerOptions} triggerClassName="min-w-48" />
+          <AppSegmentedControl
+            size="sm"
+            label={t('tracking.period.label')}
+            value={period}
+            onValueChange={(v) => set('period', v === DEFAULT_TRACKING_PERIOD ? '' : v)}
+            options={TRACKING_PERIODS.map((p) => ({ value: p, label: t(`tracking.period.${p}`) }))}
+          />
         </div>
       </header>
 
       {allRows.length === 0 ? (
         <AppEmptyState icon={<FolderKanban />} title={t('tracking.empty')} description={t('tracking.emptyHint')} />
       ) : (
-        <>
-          {/* 1 · hoje */}
-          <Section title={t('tracking.sections.today')}>
-            <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border lg:grid-cols-4">
-              <Kpi value={summary.active} label={t('tracking.kpi.active')} active={filter === null} onClick={() => pickFilter(null)} />
-              <Kpi value={summary.late} label={t('tracking.kpi.late')} alert active={filter === 'late'} onClick={() => pickFilter('late')} />
-              <Kpi value={summary.blocked} label={t('tracking.kpi.blocked')} alert active={filter === 'blocked'} onClick={() => pickFilter('blocked')} />
-              <Kpi value={summary.risk} label={t('tracking.kpi.risk')} alert active={filter === 'risk'} onClick={() => pickFilter('risk')} />
-            </div>
-            <p className="mt-2 text-xs text-muted">{t('tracking.kpi.help')}</p>
-          </Section>
-
-          {/* 2 · decisão */}
-          <Section title={t('tracking.sections.decision')}>
-            <DecisionTable rows={rows} today={today} onOpen={setOpened} />
-          </Section>
-
-          {/* 3 · próximas entregas */}
-          <Section title={t('tracking.sections.upcoming')}>
-            <UpcomingTable data={data} rows={rows} today={today} onOpen={setOpened} />
-          </Section>
-
-          {/* 4 · carteira */}
-          <Section
-            id="tracking-portfolio"
-            title={t('tracking.sections.portfolio')}
-            actions={
-              <AppSegmentedControl
-                size="sm"
-                label={t('tracking.groupBy')}
-                value={group}
-                onValueChange={(v) => set('group', v === 'priority' ? '' : v)}
-                options={TRACKING_GROUPS.map((g) => ({ value: g, label: t(`tracking.groups.${g}`) }))}
-              />
-            }
-          >
-            {filter && (
-              <p className="mb-2 text-sm text-muted">
-                {t(`tracking.filtered.${filter}`)}{' '}
-                <button type="button" className="font-medium text-primary-text hover:underline" onClick={() => setFilter(null)}>
-                  {t('tracking.filtered.clear')}
-                </button>
-              </p>
-            )}
-            <PortfolioTable rows={applyTrackingFilter(rows, filter, today)} group={group} today={today} onOpen={setOpened} />
-          </Section>
-
-          {/* 5 · período */}
-          <section aria-labelledby="tracking-period" className="flex flex-col gap-5 border-t-4 border-double border-border pt-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id="tracking-period" className="text-base font-semibold text-fg">
-                {t('tracking.sections.period')}
-              </h2>
-              <AppSegmentedControl
-                size="sm"
-                label={t('tracking.period.label')}
-                value={period}
-                onValueChange={(v) => set('period', v === DEFAULT_TRACKING_PERIOD ? '' : v)}
-                options={TRACKING_PERIODS.map((p) => ({ value: p, label: t(`tracking.period.${p}`) }))}
-              />
-            </div>
-            {periodData ? <PeriodBlock data={periodData} /> : <AppLoading label={t('tracking.loading')} />}
-            <div className="flex flex-col gap-2 text-sm">
-              <Link to="/reports" className="inline-flex items-center gap-1 font-medium text-primary-text hover:underline print:hidden">
-                {t('tracking.teamReport')} <ArrowRight className="size-4" aria-hidden />
-              </Link>
-              <p className="text-xs text-muted">{t('tracking.soon')}</p>
-            </div>
-          </section>
-        </>
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
+          <Hero rows={rows} today={today} periodData={periodData} filter={filter} onFilter={showPortfolio} />
+          <Attention data={data} rows={rows} today={today} onOpen={setOpened} />
+          <div id="panorama-tabs" className="scroll-mt-4 px-5 pb-6 sm:px-6">
+            <AppTabs
+              aria-label={t('tracking.tabs.label')}
+              value={tab}
+              onValueChange={(v) => set('tab', v === 'portfolio' ? '' : v)}
+              tabs={[
+                {
+                  value: 'portfolio',
+                  label: <TabLabel title={t('tracking.tabs.portfolio')} hint={t('tracking.tabs.portfolioHint')} />,
+                  content: (
+                    <div className="flex flex-col gap-3 pt-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        {filter ? (
+                          <p className="text-sm text-muted">
+                            {t(`tracking.filtered.${filter}`)}{' '}
+                            <button type="button" className="font-medium text-primary-text hover:underline" onClick={() => setFilter(null)}>
+                              {t('tracking.filtered.clear')}
+                            </button>
+                          </p>
+                        ) : (
+                          <span />
+                        )}
+                        <AppSegmentedControl
+                          size="sm"
+                          label={t('tracking.groupBy')}
+                          value={group}
+                          onValueChange={(v) => set('group', v === 'priority' ? '' : v)}
+                          options={TRACKING_GROUPS.map((g) => ({ value: g, label: t(`tracking.groups.${g}`) }))}
+                        />
+                      </div>
+                      <PortfolioTable rows={applyTrackingFilter(rows, filter, today)} group={group} today={today} onOpen={setOpened} />
+                    </div>
+                  ),
+                },
+                {
+                  value: 'team',
+                  label: <TabLabel title={t('tracking.tabs.team')} hint={t('tracking.tabs.teamHint')} />,
+                  content: <div className="pt-4">{periodData ? <PeriodBlock data={periodData} /> : <AppLoading label={t('tracking.loading')} />}</div>,
+                },
+                {
+                  value: 'deliveries',
+                  label: <TabLabel title={t('tracking.tabs.deliveries')} hint={t('tracking.tabs.deliveriesHint')} />,
+                  content: (
+                    <div className="flex flex-col gap-6 pt-4">
+                      <div>
+                        <h3 className="mb-2 text-sm font-semibold text-fg">{t('tracking.sections.upcoming')}</h3>
+                        <UpcomingTable data={data} rows={rows} today={today} onOpen={setOpened} />
+                      </div>
+                      <div>
+                        <h3 className="mb-2 text-sm font-semibold text-fg">{t('tracking.done.title')}</h3>
+                        <AchievementsList data={periodData ?? data} rows={rows} />
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </div>
       )}
 
       <ProjectDrawer row={opened} today={today} onClose={() => setOpened(null)} />
@@ -203,87 +224,184 @@ export function TrackingPage() {
   )
 }
 
-/* ------------------------------------------------------------------ peças */
+const dayLabel = (day: string, locale: string) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${day}T00:00:00Z`))
 
-function Section({ id, title, actions, children }: { id?: string; title: string; actions?: ReactNode; children: ReactNode }) {
-  const headingId = useId()
+function TabLabel({ title, hint }: { title: string; hint: string }) {
   return (
-    <section id={id} aria-labelledby={headingId} className="scroll-mt-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 id={headingId} className="text-base font-semibold text-fg">
-          {title}
-        </h2>
-        {actions && <div className="print:hidden">{actions}</div>}
+    <span className="inline-flex items-baseline gap-1.5">
+      {title}
+      <span className="text-xs font-normal text-muted">{hint}</span>
+    </span>
+  )
+}
+
+/* ------------------------------------------------------------------ faixa de destaque */
+
+const SITUATION_CHART: Record<TrackingSituation, AppChartTone> = { ok: 'success', watch: 'warning', risk: 'danger', none: 'neutral' }
+
+function Hero({
+  rows,
+  today,
+  periodData,
+  filter,
+  onFilter,
+}: {
+  rows: PortfolioRow[]
+  today: string
+  periodData: ExecutiveDashboard | undefined
+  filter: TrackingFilter | null
+  onFilter: (filter: TrackingFilter | null) => void
+}) {
+  const { t } = useTranslation()
+  const summary = trackingSummary(rows, today)
+  const counts = situationCounts(rows)
+  const progress = averageProgress(rows)
+  const overdueTasks = rows.reduce((sum, r) => sum + r.tasks.overdue, 0)
+  const blockedTasks = rows.reduce((sum, r) => sum + r.tasks.blocked, 0)
+  const weekly = periodData?.timeline.points.map((p) => p.tasksCompleted) ?? []
+  const segments = (['ok', 'watch', 'risk', 'none'] as const).map((s) => ({ key: s, label: t(`tracking.situation.${s}`), value: counts[s], tone: SITUATION_CHART[s] }))
+  return (
+    <section aria-label={t('tracking.hero.label')} className="border-b border-border">
+      {/* rótulos alinhados com as colunas: as quatro de hoje e a do período */}
+      <div className="hidden grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.15fr)] lg:grid" aria-hidden>
+        <span className="col-span-4 px-6 pt-4 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('tracking.hero.today')}</span>
+        <span className="border-l border-border px-6 pt-4 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('tracking.hero.period')}</span>
       </div>
-      {children}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.15fr)]">
+        <HeroCell label={t('tracking.hero.health')}>
+          <div className="flex items-center gap-4">
+            <AppDonut className="size-16 shrink-0" label={t('tracking.hero.health')} segments={segments} thickness={16} activeKey={filter === 'risk' ? 'risk' : null} onSegmentClick={(key) => key === 'risk' && onFilter('risk')} />
+            <ul className="flex flex-col gap-0.5 text-sm">
+              {segments
+                .filter((s) => s.value > 0 || s.key !== 'none')
+                .map((s) => (
+                  <li key={s.key} className="inline-flex items-center gap-1.5 text-fg">
+                    <span aria-hidden className={cn('size-2 rounded-full', chartToneBg(s.tone))} />
+                    {s.label}
+                    <span className="font-semibold tabular-nums">{s.value}</span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        </HeroCell>
+        <HeroCell label={t('tracking.hero.progress')}>
+          {progress === null ? (
+            <p className="text-sm text-muted">{t('tracking.hero.noProgress')}</p>
+          ) : (
+            <>
+              <span className="text-3xl font-bold tabular-nums text-fg">{progress} %</span>
+              <AppMeter value={progress} label={t('tracking.hero.progress')} size="md" className="mt-2" />
+            </>
+          )}
+        </HeroCell>
+        <HeroCell label={t('tracking.hero.late')} onClick={() => onFilter(filter === 'late' ? null : 'late')} active={filter === 'late'}>
+          <span className={cn('text-3xl font-bold tabular-nums', summary.late ? 'text-danger' : 'text-fg')}>{summary.late}</span>
+          <span className="text-sm text-muted">{t('tracking.hero.lateHint', { count: overdueTasks })}</span>
+        </HeroCell>
+        <HeroCell label={t('tracking.hero.blocked')} onClick={() => onFilter(filter === 'blocked' ? null : 'blocked')} active={filter === 'blocked'}>
+          <span className={cn('text-3xl font-bold tabular-nums', summary.blocked ? 'text-danger' : 'text-fg')}>{summary.blocked}</span>
+          <span className="text-sm text-muted">{t('tracking.hero.blockedHint', { count: blockedTasks })}</span>
+        </HeroCell>
+        <HeroCell label={t('tracking.hero.deliveries')} period>
+          <div className="flex items-end justify-between gap-3">
+            <span className="text-3xl font-bold tabular-nums text-fg">{periodData ? periodData.kanban.completed : '…'}</span>
+            <AppSparkline className="h-8 w-24" label={t('tracking.charts.done')} values={weekly} />
+          </div>
+          <span className="text-sm text-muted">{t('tracking.hero.deliveriesHint', { count: periodData?.summary.deliveries.milestones ?? 0 })}</span>
+        </HeroCell>
+      </div>
     </section>
   )
 }
 
-function Kpi({ value, label, alert, active, onClick }: { value: number; label: string; alert?: boolean; active: boolean; onClick: () => void }) {
+function HeroCell({ label, children, onClick, active, period }: { label: string; children: ReactNode; onClick?: () => void; active?: boolean; period?: boolean }) {
+  const body = (
+    <>
+      <span className="text-sm text-muted">{label}</span>
+      {children}
+    </>
+  )
+  const base = cn(
+    'flex min-w-0 flex-col gap-1 border-t border-border px-6 py-5 sm:[&:nth-child(-n+2)]:border-t-0 lg:border-t-0 lg:[&:not(:first-child)]:border-l',
+    period && 'bg-primary-soft/40',
+  )
+  if (!onClick) return <div className={base}>{body}</div>
   return (
     <button
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={cn(
-        'flex flex-col gap-0.5 border-border px-5 py-4 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
-        'border-b even:border-l lg:border-b-0 lg:border-l lg:first:border-l-0 [&:nth-child(n+3)]:border-b-0',
-        active && 'bg-primary-soft/60',
-      )}
+      className={cn(base, 'text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', active && 'bg-surface-2')}
     >
-      <span className={cn('text-3xl font-bold tabular-nums', alert && value > 0 ? 'text-danger' : 'text-fg')}>{value}</span>
-      <span className="text-sm text-muted">{label}</span>
+      {body}
     </button>
   )
 }
 
-const TH = 'whitespace-nowrap border-b border-border-strong px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted'
-const TD = 'border-b border-border px-3 py-2 align-middle'
+/* ------------------------------------------------------------------ requer atenção */
 
-function ProjectName({ row }: { row: PortfolioRow }) {
-  return (
-    <span className="flex items-start gap-2">
-      <ProjectKey value={row.project.key} className="mt-px" />
-      <span className="text-fg">{row.project.name}</span>
-    </span>
-  )
+const ATTENTION_PILL: Record<AttentionKind, string> = {
+  risk: 'bg-danger-soft text-danger-soft-fg',
+  late: 'bg-danger-soft text-danger-soft-fg',
+  paused: 'bg-warning-soft text-warning-soft-fg',
+  blocked: 'bg-warning-soft text-warning-soft-fg',
+  soon: 'bg-info-soft text-info-soft-fg',
 }
+const VISIBLE_ATTENTION = 6
 
-function DecisionTable({ rows, today, onOpen }: { rows: PortfolioRow[]; today: string; onOpen: (row: PortfolioRow) => void }) {
+function Attention({ data, rows, today, onOpen }: { data: ExecutiveDashboard; rows: PortfolioRow[]; today: string; onOpen: (row: PortfolioRow) => void }) {
   const { t } = useTranslation()
   const reasonText = useReasonText()
-  const items = decisionItems(rows, today)
-  if (!items.length) return <p className="rounded-lg border border-border px-4 py-3 text-sm text-muted">{t('tracking.decision.none')}</p>
+  const day = useDayText()
+  const [all, setAll] = useState(false)
+  const items = panoramaAttention(data, rows, today)
+  const shown = all ? items : items.slice(0, VISIBLE_ATTENTION)
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-collapse text-sm">
-        <thead>
-          <tr>
-            <th className={TH}>{t('tracking.columns.priority')}</th>
-            <th className={TH}>{t('tracking.columns.project')}</th>
-            <th className={TH}>{t('tracking.columns.area')}</th>
-            <th className={TH}>{t('tracking.columns.owner')}</th>
-            <th className={TH}>{t('tracking.columns.reason')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(({ row, reasons }) => (
-            <tr key={row.project.id} className="cursor-pointer hover:bg-surface-2" onClick={() => onOpen(row)}>
-              <td className={cn(TD, 'whitespace-nowrap')}>
-                <Priority value={row.project.priority} />
-              </td>
-              <td className={TD}>
-                <ProjectName row={row} />
-              </td>
-              <td className={cn(TD, 'text-muted')}>{row.project.area?.name ?? t('tracking.noArea')}</td>
-              <td className={cn(TD, 'text-muted')}>{row.project.owner?.name ?? '—'}</td>
-              <td className={TD}>{reasons.map((r) => reasonText(r, row)).join(' · ')}</td>
-            </tr>
+    <section aria-labelledby="panorama-attention" className="flex flex-col gap-3 border-b border-border px-5 py-5 sm:px-6">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="panorama-attention" className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+          {t('tracking.attention.title')}
+        </h2>
+        {items.length > VISIBLE_ATTENTION && (
+          <button type="button" className="text-sm font-medium text-primary-text hover:underline print:hidden" onClick={() => setAll((v) => !v)}>
+            {all ? t('tracking.attention.less') : t('tracking.attention.more', { count: items.length - VISIBLE_ATTENTION })}
+          </button>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <p className="rounded-lg border border-border px-4 py-3 text-sm text-muted">{t('tracking.attention.none')}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {shown.map((item) => (
+            <li key={`${item.kind}-${item.row.project.id}-${item.soon?.date ?? ''}`}>
+              <button
+                type="button"
+                onClick={() => onOpen(item.row)}
+                className="grid w-full grid-cols-1 items-center gap-2 rounded-xl border border-border px-4 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[11rem_minmax(0,1fr)_auto] sm:gap-4"
+              >
+                <span className={cn('justify-self-start rounded-full px-2.5 py-0.5 text-xs font-semibold', ATTENTION_PILL[item.kind])}>
+                  {item.kind === 'soon'
+                    ? item.soon?.days === 0
+                      ? t('tracking.attention.kinds.soonToday')
+                      : t('tracking.attention.kinds.soon', { count: item.soon?.days ?? 0 })
+                    : t(`tracking.attention.kinds.${item.kind}`)}
+                </span>
+                <span className="min-w-0 text-sm">
+                  <span className="font-medium text-fg">{item.row.project.name}</span>
+                  <span className="text-muted">
+                    {' · '}
+                    {item.kind === 'soon'
+                      ? `${item.soon?.kind === 'milestone' ? item.soon.name : t('tracking.upcoming.projectDue')} · ${day(item.soon?.date)}`
+                      : item.reasons.map((r) => reasonText(r, item.row)).join(' · ')}
+                  </span>
+                </span>
+                <ArrowRight aria-hidden className="hidden size-4 text-primary-text sm:block" />
+              </button>
+            </li>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </ul>
+      )}
+    </section>
   )
 }
 
@@ -296,6 +414,20 @@ function useReasonText() {
     if (reason.kind === 'blockedTasks') return t('tracking.reasons.blockedTasks', { count: reason.count })
     return healthReason(row.health) ?? t('tracking.situation.risk')
   }
+}
+
+/* ------------------------------------------------------------------ tabelas */
+
+const TH = 'whitespace-nowrap border-b border-border-strong px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted'
+const TD = 'border-b border-border px-3 py-2 align-middle'
+
+function ProjectName({ row }: { row: PortfolioRow }) {
+  return (
+    <span className="flex items-start gap-2">
+      <ProjectKey value={row.project.key} className="mt-px" />
+      <span className="text-fg">{row.project.name}</span>
+    </span>
+  )
 }
 
 function UpcomingTable({ data, rows, today, onOpen }: { data: Parameters<typeof upcomingDeliveries>[0]; rows: PortfolioRow[]; today: string; onOpen: (row: PortfolioRow) => void }) {
@@ -331,13 +463,33 @@ function UpcomingTable({ data, rows, today, onOpen }: { data: Parameters<typeof 
   )
 }
 
+function AchievementsList({ data, rows }: { data: ExecutiveDashboard; rows: PortfolioRow[] }) {
+  const { t } = useTranslation()
+  const ids = new Set(rows.map((r) => r.project.id))
+  const list = data.achievements.filter((a) => ids.has(a.project.id) || a.project.archived)
+  if (!list.length) return <p className="rounded-lg border border-border px-4 py-3 text-sm text-muted">{t('tracking.done.none')}</p>
+  return (
+    <ul className="flex flex-col divide-y divide-border rounded-xl border border-border">
+      {list.map((a) => (
+        <li key={a.project.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+          <span className="flex items-center gap-2">
+            <ProjectKey value={a.project.key} />
+            <span className="text-fg">{a.project.name}</span>
+          </span>
+          <span className="text-muted tabular-nums">{t('tracking.done.row', { tasks: a.tasksDone + a.planItemsDone, milestones: a.milestonesDone.length })}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function Priority({ value }: { value: PortfolioRow['project']['priority'] }) {
   const { t } = useTranslation()
   return <span className={cn(value === 'critical' || value === 'high' ? 'font-semibold text-fg' : 'text-fg')}>{t(`projects.priority.${value}`)}</span>
 }
 
 const SITUATION_TONE: Record<TrackingSituation, string> = { risk: 'text-danger', watch: 'text-warning', ok: 'text-fg', none: 'text-muted' }
-const SITUATION_DOT: Record<TrackingSituation, string> = { risk: 'bg-danger', watch: 'bg-warning', ok: 'border border-border-strong', none: 'border border-dashed border-border-strong' }
+const SITUATION_DOT: Record<TrackingSituation, string> = { risk: 'bg-danger', watch: 'bg-warning', ok: 'bg-success', none: 'border border-dashed border-border-strong' }
 
 function Situation({ row }: { row: PortfolioRow }) {
   const { t } = useTranslation()
@@ -411,7 +563,9 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
                     {row.project.dueDate ? day(row.project.dueDate) : t('tracking.noDate')}
                     {late > 0 && ` · ${t('tracking.lateShort', { count: late })}`}
                   </td>
-                  <td className={cn(TD, 'max-w-48 truncate')} title={row.nextMilestone?.name}>{row.nextMilestone ? `${row.nextMilestone.name} · ${day(row.nextMilestone.dueDate)}` : '—'}</td>
+                  <td className={cn(TD, 'max-w-48 truncate')} title={row.nextMilestone?.name}>
+                    {row.nextMilestone ? `${row.nextMilestone.name} · ${day(row.nextMilestone.dueDate)}` : '—'}
+                  </td>
                   <td className={cn(TD, 'text-right whitespace-nowrap tabular-nums')}>
                     {row.tasks.open} · {row.tasks.inProgress}
                   </td>
@@ -425,7 +579,9 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
   )
 }
 
-function PeriodBlock({ data }: { data: NonNullable<ReturnType<typeof useExecutiveDashboard>['data']> }) {
+/* ------------------------------------------------------------------ equipe e tarefas */
+
+function PeriodBlock({ data }: { data: ExecutiveDashboard }) {
   const { t } = useTranslation()
   const duration = useDurationText()
   const points = data.timeline.points
@@ -476,16 +632,27 @@ function PeriodBlock({ data }: { data: NonNullable<ReturnType<typeof useExecutiv
           points={points.map((p) => ({ key: p.start, label: label(p.start), values: [p.tasksCompleted, p.tasksInProgress, p.tasksOverdue] }))}
         />
       </div>
+      <Link to="/reports" className="inline-flex items-center gap-1 text-sm font-medium text-primary-text hover:underline print:hidden">
+        {t('tracking.teamReport')} <ArrowRight className="size-4" aria-hidden />
+      </Link>
+      <p className="text-xs text-muted">{t('tracking.soon')}</p>
     </div>
   )
 }
+
+/* ------------------------------------------------------------------ painel do projeto */
 
 function ProjectDrawer({ row, today, onClose }: { row: PortfolioRow | null; today: string; onClose: () => void }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const day = useDayText()
   const reason = useHealthReason()
-  if (!row) return <AppDrawer open={false} onOpenChange={() => onClose()} title="">{null}</AppDrawer>
+  if (!row)
+    return (
+      <AppDrawer open={false} onOpenChange={() => onClose()} title="">
+        {null}
+      </AppDrawer>
+    )
   const late = lateDays(row, today)
   const items: Array<[string, ReactNode]> = [
     [t('tracking.columns.status'), t(`projects.status.${row.project.status}`)],
@@ -508,7 +675,7 @@ function ProjectDrawer({ row, today, onClose }: { row: PortfolioRow | null; toda
       open
       onOpenChange={(open) => !open && onClose()}
       title={row.project.name}
-      description={row.project.key}
+      description={`${row.project.key}${isBlocked(row) ? ` · ${t('tracking.kpi.blocked')}` : ''}`}
       footer={
         <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-primary-text hover:underline" onClick={() => navigate(`/projects/${row.project.id}`)}>
           {t('tracking.drawer.openProject')} <ArrowRight className="size-4" aria-hidden />

@@ -89,31 +89,33 @@ function setup() {
   return { get }
 }
 
-describe('Seguimiento de proyectos', () => {
-  it('pide solo los proyectos en marcha y muestra los cuatro números de hoy', async () => {
+describe('Panorama', () => {
+  it('pide solo los proyectos en marcha y muestra la franja de hoy y del período', async () => {
     const { get } = setup()
-    expect(await screen.findByRole('heading', { name: 'Seguimiento de proyectos' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Panorama' })).toBeInTheDocument()
     expect(get.mock.calls[0]?.[0].statuses).toEqual(['planning', 'active', 'paused'])
-    const today = screen.getByRole('region', { name: '¿Cómo está la cartera hoy?' })
-    expect(within(today).getByRole('button', { name: /3\s*Proyectos en marcha/ })).toBeInTheDocument()
-    expect(within(today).getByRole('button', { name: /1\s*Bloqueados/ })).toBeInTheDocument()
+    const hero = screen.getByRole('region', { name: 'Resumen' })
+    expect(within(hero).getByRole('button', { name: /Atrasados\s*1/ })).toBeInTheDocument()
+    expect(within(hero).getByRole('button', { name: /Bloqueados\s*1/ })).toBeInTheDocument()
+    expect(within(hero).getByText('40 %')).toBeInTheDocument()
   })
 
-  it('la decisión trae solo proyectos con motivo y la cartera se agrupa con un clic', async () => {
+  it('requiere atención trae solo proyectos con motivo y la cartera se agrupa con un clic', async () => {
     setup()
-    const decision = await screen.findByRole('region', { name: '¿Qué necesita una decisión?' })
-    expect(within(decision).getByText('Pausado · 1 tarea bloqueada')).toBeInTheDocument()
-    expect(within(decision).queryByText('Proyecto ADP')).not.toBeInTheDocument()
+    const attention = await screen.findByRole('region', { name: 'Requiere atención' })
+    expect(within(attention).getByText('Pausado')).toBeInTheDocument()
+    expect(within(attention).getByText(/1 tarea bloqueada/)).toBeInTheDocument()
+    expect(within(attention).queryByText('Proyecto ADP')).not.toBeInTheDocument()
 
-    const portfolio = screen.getByRole('region', { name: 'Cartera de proyectos' })
-    expect(within(portfolio).getByRole('columnheader', { name: /Alta/ })).toBeInTheDocument()
-    await userEvent.click(within(portfolio).getByRole('radio', { name: 'Departamento' }))
-    expect(within(portfolio).getByRole('columnheader', { name: /Directoria/ })).toBeInTheDocument()
-    expect(within(portfolio).getByRole('columnheader', { name: /Sin departamento/ })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /Alta/ })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: 'Departamento' }))
+    expect(screen.getByRole('columnheader', { name: /Directoria/ })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /Sin departamento/ })).toBeInTheDocument()
   })
 
-  it('el bloque del período muestra los dos gráficos', async () => {
+  it('la pestaña Equipo y tareas muestra los dos gráficos', async () => {
     setup()
+    await userEvent.click(await screen.findByRole('tab', { name: /Equipo y tareas/ }))
     expect(await screen.findByRole('heading', { name: 'Creadas y terminadas por semana' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Terminadas, en proceso y vencidas por semana' })).toBeInTheDocument()
     expect(screen.getByText('25,5 h')).toBeInTheDocument()

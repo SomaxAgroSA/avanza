@@ -129,3 +129,28 @@ describe('seguimento de projetos', () => {
     expect(trackingPeriodRange('year', now)).toEqual({ from: '2026-01-01', to: '2026-11-11' })
   })
 })
+
+describe('panorama', () => {
+  it('avanço médio só de quem mede e contagem por situação', async () => {
+    const { averageProgress, situationCounts } = await import('./tracking')
+    const a = { ...row('A'), progress: { value: 40, source: 'plan' as const } }
+    const b = { ...row('B', { level: 'critical' }), progress: { value: 80, source: 'tasks' as const } }
+    expect(averageProgress([a, b, row('C')])).toBe(60)
+    expect(averageProgress([row('C')])).toBeNull()
+    expect(situationCounts([a, b, row('C', { level: 'none' })])).toEqual({ risk: 1, watch: 0, ok: 1, none: 1 })
+  })
+
+  it('requer atenção: o motivo mais grave dá o rótulo; entregas próximas de quem não está na lista vêm depois', async () => {
+    const { panoramaAttention } = await import('./tracking')
+    const late = row('L', { due: '2026-11-01', blocked: 2 })
+    const paused = row('P', { status: 'paused', priority: 'high' })
+    const soon = row('S', { due: '2026-11-14' })
+    const list = panoramaAttention({ portfolio: [late, paused, soon], plan: null }, [late, paused, soon], TODAY)
+    expect(list.map((i) => [i.kind, i.row.project.key])).toEqual([
+      ['paused', 'P'],
+      ['late', 'L'],
+      ['soon', 'S'],
+    ])
+    expect(list[2]?.soon?.days).toBe(3)
+  })
+})
