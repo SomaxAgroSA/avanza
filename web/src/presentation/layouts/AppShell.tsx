@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import { Dialog } from 'radix-ui'
 import { Check, KeyRound, Languages, LogOut, Menu, Monitor, Moon, Search, Sun, UserRound, WifiOff } from 'lucide-react'
@@ -23,6 +24,7 @@ import { CommandPalette } from '@/presentation/navigation/CommandPalette'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useLiveNotifications, useRealtimeResync, useRealtimeStatus } from '@/presentation/common/use-live'
 import { findNavTrail, visibleNavItems } from '@/presentation/navigation/nav-items'
+import { rememberNavChild } from '@/presentation/navigation/nav-memory'
 
 /** Layout autenticado: sidebar, topbar, conteúdo e command palette. */
 export function AppShell() {
@@ -83,6 +85,8 @@ function Topbar() {
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen)
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen)
   const trail = findNavTrail(location.pathname)
+  // a última lista aberta de cada grupo (Projetos → Em andamento + filtros): o "Voltar" e o menu voltam a ela
+  useEffect(() => rememberNavChild(location.pathname, location.search), [location.pathname, location.search])
 
   return (
     <header data-print="hide" className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6">

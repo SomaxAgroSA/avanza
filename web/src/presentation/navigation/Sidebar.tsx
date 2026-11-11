@@ -10,6 +10,7 @@ import { usePlatformInfo } from '@/presentation/common/use-platform'
 import { useResolvedTheme } from '@/presentation/common/use-theme'
 import { logoFor } from '@/domain/platform'
 import type { NavItem } from './nav-items'
+import { stickyNavChild } from './nav-memory'
 
 /** Logo e nome da plataforma (Configurador geral); sem logo enviado, a marca padrão do tema. */
 export function BrandMark({ collapsed }: { collapsed?: boolean }) {
@@ -67,6 +68,8 @@ function NavGroup({ item, collapsed, onNavigate }: { item: NavItem; collapsed: b
   const location = useLocation()
   const active = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)
   const [open, setOpen] = useState(active)
+  // dentro de um projeto (/projects/:id) segue marcada a lista de onde a pessoa veio (Em andamento, Concluídos…)
+  const sticky = stickyNavChild(location.pathname, item)
   const Icon = item.icon
 
   if (collapsed) {
@@ -96,7 +99,12 @@ function NavGroup({ item, collapsed, onNavigate }: { item: NavItem; collapsed: b
         <ul className="mt-0.5 flex flex-col gap-0.5 border-l border-border pl-3 ml-[18px]">
           {item.children?.filter((child) => !child.hidden).map((child) => (
             <li key={child.id}>
-              <NavLink to={child.to} end={child.end} onClick={onNavigate} className={cn(linkBase, 'h-8 font-normal')}>
+              <NavLink
+                to={child.to}
+                end={child.end}
+                onClick={onNavigate}
+                className={cn(linkBase, 'h-8 font-normal', sticky === child.to && 'bg-primary-soft font-semibold text-primary-soft-fg')}
+              >
                 <span className="truncate">{t(child.labelKey)}</span>
                 <PhaseBadge phase={child.phase} />
               </NavLink>

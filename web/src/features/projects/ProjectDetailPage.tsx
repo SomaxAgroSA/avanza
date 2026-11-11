@@ -14,7 +14,7 @@ import {
   type ProjectSection,
   type ProjectTab,
 } from '@/domain/project-routes'
-import { isItRole, type Project } from '@/domain/projects'
+import { VIEW_STATUSES, isItRole, type Project } from '@/domain/projects'
 import { AppBadge, AppButton, AppConfirmDialog, AppEmptyState, AppErrorState, AppIcon, AppIconButton, AppNavTabs, AppSkeleton, notify } from '@/presentation/components'
 import { useLiveProject } from '@/presentation/common/use-live'
 import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
@@ -27,6 +27,7 @@ import { ProjectAvatar, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
 import type { ProjectOutletContext } from './project-context'
 import { useProject, useProjectLifecycle } from './queries'
+import { lastNavChild } from '@/presentation/navigation/nav-memory'
 
 /**
  * Página do projeto — o centro do trabalho: cabeçalho do projeto e as abas Visão geral, Ficha, Gestão,
@@ -67,6 +68,17 @@ export function ProjectDetailPage() {
     return <AppErrorState onRetry={() => void project.refetch()} />
   }
   return <ProjectDetail project={project.data} />
+}
+
+/**
+ * "Voltar a projetos": a lista de onde a pessoa veio (Em andamento, Concluídos… com os filtros).
+ * Sem lista lembrada (link direto, Panorama), a lista do status do projeto; arquivado, Arquivados.
+ */
+function backToListPath(status: Project['status'], archived: boolean): string {
+  if (archived) return '/projects/archived'
+  const last = lastNavChild('projects')
+  if (last && !last.startsWith('/projects/archived')) return last
+  return VIEW_STATUSES.finished?.includes(status) ? '/projects/finished' : '/projects/ongoing'
 }
 
 function ProjectDetail({ project }: { project: Project }) {
@@ -132,7 +144,7 @@ function ProjectDetail({ project }: { project: Project }) {
 
   return (
     <>
-      <Link to={archived ? '/projects/archived' : '/projects'} className="mb-2 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
+      <Link to={backToListPath(project.status, archived)} className="mb-2 inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
         <ArrowLeft className="size-4" aria-hidden /> {t('projects.backToList')}
       </Link>
 
