@@ -69,6 +69,8 @@ export const routes: RouteObject[] = [
         children: [
           { path: 'projects', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.AllProjectsPage }))) },
           { path: 'projects/mine', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.MyProjectsPage }))) },
+          { path: 'projects/ongoing', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.OngoingProjectsPage }))) },
+          { path: 'projects/finished', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.FinishedProjectsPage }))) },
           { path: 'projects/archived', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.ArchivedProjectsPage }))) },
           {
             // o projeto é o centro do trabalho: cada aba (e cada visão das tarefas) tem o seu endereço

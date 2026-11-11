@@ -80,6 +80,17 @@ describe('application/projects — visibilidade', () => {
     await assert.rejects(() => projects.getProject(ctx.member, project.id), { code: 'PROJECT_NOT_FOUND' })
   })
 
+  it('visões "ongoing" e "finished" separam os abertos pelo status', async () => {
+    const { projects, ctx } = await setup()
+    const running = await projects.createProject(ctx.manager, input({ key: 'RUN', name: 'Rodando' }))
+    const done = await projects.createProject(ctx.manager, input({ key: 'FIN', name: 'Pronto' }))
+    await projects.updateProject(ctx.manager, done.id, { status: 'completed' })
+    const keys = async (view) => (await projects.listProjects(ctx.manager, { view })).items.map((p) => p.key)
+    assert.deepEqual(await keys('ongoing'), [running.key])
+    assert.deepEqual(await keys('finished'), [done.key])
+    await assert.rejects(() => projects.listProjects(ctx.manager, { view: 'outra' }), { code: 'VALIDATION_ERROR' })
+  })
+
   it('arquivados ficam só na visão "archived"', async () => {
     const { projects, ctx } = await setup()
     const project = await projects.createProject(ctx.manager, input())

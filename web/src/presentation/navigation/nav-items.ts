@@ -41,6 +41,8 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { id: 'projects-all', labelKey: 'nav.projectsAll', to: '/projects', end: true },
       { id: 'projects-mine', labelKey: 'nav.projectsMine', to: '/projects/mine' },
+      { id: 'projects-ongoing', labelKey: 'nav.projectsOngoing', to: '/projects/ongoing' },
+      { id: 'projects-finished', labelKey: 'nav.projectsFinished', to: '/projects/finished' },
       { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived' },
     ],
   },

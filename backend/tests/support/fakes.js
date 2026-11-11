@@ -413,6 +413,8 @@ function createFakeRepositories(store) {
       const memberOf = (p) => store.projectMembers.some((m) => m.projectId === p.id && m.userId === query.scope.userId)
       let items = store.projects.filter((p) => (query.view === 'mine' || !query.scope.viewAll ? memberOf(p) : true))
       items = items.filter((p) => (query.view === 'archived' ? !!p.archivedAt : !p.archivedAt))
+      const viewStatuses = { ongoing: ['planning', 'active', 'paused'], finished: ['completed', 'cancelled'] }[query.view]
+      if (viewStatuses) items = items.filter((p) => viewStatuses.includes(p.status))
       if (query.search) {
         const q = query.search.toLowerCase()
         items = items.filter((p) => p.name.toLowerCase().includes(q) || p.key.toLowerCase().includes(q))

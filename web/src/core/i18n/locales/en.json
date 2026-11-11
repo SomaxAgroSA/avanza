@@ -238,6 +238,8 @@
     "projects": "Projects",
     "projectsAll": "All",
     "projectsMine": "My projects",
+    "projectsOngoing": "In progress",
+    "projectsFinished": "Finished",
     "projectsArchived": "Archived",
     "kanban": "Kanban",
     "tasks": "Tasks",
@@ -1020,6 +1022,8 @@
     "descriptions": {
       "all": "Projects you can access.",
       "mine": "Projects you take part in.",
+      "ongoing": "Requests in planning, in progress or paused.",
+      "finished": "Requests completed or cancelled. Archive them once you no longer need them.",
       "archived": "Archived projects are read-only and can be restored."
     },
     "create": "New project",
@@ -1250,7 +1254,9 @@
       "emptyDescription": "Smaller projects that are part of this one. Create the first one to follow everything from here.",
       "add": "New subproject",
       "onlyMain": "Main projects only"
-    }
+    },
+    "empty_ongoing": "No requests in progress",
+    "empty_finished": "No finished requests yet"
   },
   "calendar": {
     "open": "Open calendar",

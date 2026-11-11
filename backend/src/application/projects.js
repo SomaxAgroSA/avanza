@@ -41,7 +41,7 @@ const FIELD_RULES = {
 const CREATE_SCHEMA = Object.assign({ key: [rules.required(), keyRule] }, FIELD_RULES)
 
 const LIST_SCHEMA = {
-  view: [rules.oneOf(['all', 'mine', 'archived'])],
+  view: [rules.oneOf(projectDomain.PROJECT_VIEWS)],
   search: [rules.maxLength(100)],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],

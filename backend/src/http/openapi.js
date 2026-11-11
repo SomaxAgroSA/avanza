@@ -268,7 +268,7 @@ function build() {
       '/projects': {
         get: op('Lista projetos acessíveis (paginado)', ['projects'], { 200: ok('Página de projetos', { type: 'array', items: ref('Project') }, true) }, {
           parameters: [
-            { name: 'view', in: 'query', schema: { type: 'string', enum: ['all', 'mine', 'archived'] } },
+            { name: 'view', in: 'query', schema: { type: 'string', enum: ['all', 'mine', 'ongoing', 'finished', 'archived'] }, description: 'ongoing = planejamento, em curso ou pausado; finished = concluído ou cancelado (só abertos)' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
             { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'name, key, created_at, due_date, status, priority; prefixo "-" = desc' },

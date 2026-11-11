@@ -29,7 +29,13 @@ export type PaletteCover = (typeof PROJECT_COVERS)[number]
 /** Capa da paleta ou cor livre ("#rrggbb") — domain/colors.ts. */
 export type ProjectCover = PaletteCover | HexColor
 
-export type ProjectView = 'all' | 'mine' | 'archived'
+export type ProjectView = 'all' | 'mine' | 'ongoing' | 'finished' | 'archived'
+
+/** Status de cada visão por andamento (o servidor filtra; aqui só limita as opções do filtro). */
+export const VIEW_STATUSES: Partial<Record<ProjectView, readonly ProjectStatus[]>> = {
+  ongoing: ['planning', 'active', 'paused'],
+  finished: ['completed', 'cancelled'],
+}
 
 /**
  * Seções do projeto que o perfil libera (regras §35: `projects.charter`, `projects.history`,
