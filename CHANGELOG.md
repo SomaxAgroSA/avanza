@@ -4,6 +4,9 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 
 ## [Não lançado]
 
+### Corrigido
+- **Voltar para a lista de onde veio:** ao abrir um projeto a partir de Em andamento, Concluídos ou Arquivados, "Voltar a projetos" volta para essa mesma lista, com os filtros que estavam aplicados, e não mais para Todos os meus projetos. Enquanto a pessoa está dentro do projeto, o menu continua marcando essa lista. Quem chega por um link direto ou pelo Panorama volta para Em andamento ou Concluídos, conforme o status do projeto. A última lista fica guardada na aba do navegador (sessionStorage).
+
 ### Alterado
 - **Configurações sem repetições:** os campos "Severidade" (repetia a Prioridade), "Estimativa (horas)" (repetia a estimativa da tarefa; o valor passa para ela quando estava vazia) e "Área solicitante" (texto livre que repetia as Áreas) saem dos tipos de tarefa — nada do que foi digitado se perde. A permissão "Configurar Kanban", que não tinha efeito, sai do catálogo (migration 0022). O perfil da pessoa se altera só em Controle de acesso; em "O que vê dentro de cada projeto" saem Gestão, Tarefas e Kanban, que já são interruptores de módulo. Em espanhol e inglês, "Áreas" passa a "Departamentos"; no quadro de Gestão, "Etiquetas de status/recurso" passam a "Status do quadro" e "Recursos".
 
