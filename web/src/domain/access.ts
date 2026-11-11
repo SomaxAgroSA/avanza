@@ -23,7 +23,7 @@ export const ACCESS_MODULES: AccessModule[] = [
     sections: ['projects.charter', 'projects.history', 'projects.members', 'projects.report'],
   },
   { module: 'tasks', view: 'tasks.view', actions: ['tasks.create', 'tasks.edit', 'tasks.assign', 'tasks.link', 'tasks.fork', 'tasks.delete'] },
-  { module: 'kanban', view: 'kanban.view', actions: ['kanban.manage'] },
+  { module: 'kanban', view: 'kanban.view', actions: [] },
   { module: 'plan', view: 'plan.view', actions: ['plan.edit', 'plan.manage'] },
   { module: 'reports', view: 'reports.view', actions: [] },
   { module: 'executive', view: 'executive.view', actions: [] },
@@ -42,9 +42,6 @@ const moduleOf = (code: PermissionCode) => ACCESS_MODULES.find((m) => m.view ===
  */
 export const PROJECT_SECTION_CHIPS: { key: string; code: PermissionCode }[] = [
   { key: 'charter', code: 'projects.charter' },
-  { key: 'plan', code: 'plan.view' },
-  { key: 'tasks', code: 'tasks.view' },
-  { key: 'kanban', code: 'kanban.view' },
   { key: 'report', code: 'projects.report' },
   { key: 'members', code: 'projects.members' },
   { key: 'history', code: 'projects.history' },

@@ -4,6 +4,9 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 
 ## [Não lançado]
 
+### Alterado
+- **Configurações sem repetições:** os campos "Severidade" (repetia a Prioridade), "Estimativa (horas)" (repetia a estimativa da tarefa; o valor passa para ela quando estava vazia) e "Área solicitante" (texto livre que repetia as Áreas) saem dos tipos de tarefa — nada do que foi digitado se perde. A permissão "Configurar Kanban", que não tinha efeito, sai do catálogo (migration 0022). O perfil da pessoa se altera só em Controle de acesso; em "O que vê dentro de cada projeto" saem Gestão, Tarefas e Kanban, que já são interruptores de módulo. Em espanhol e inglês, "Áreas" passa a "Departamentos"; no quadro de Gestão, "Etiquetas de status/recurso" passam a "Status do quadro" e "Recursos".
+
 ### Adicionado
 - **Controle de acesso com duas abas:** Por pessoa e Perfis. A aba "Permissões por perfil" saiu (repetia o Por pessoa); a matriz abre a partir de cada perfil ("Editar permissões"), único jeito de configurar um perfil que ainda não tem pessoas. `/settings/permissions` e `?tab=matrix` continuam levando a ela.
 - **Menu sem Tarefas:** as tarefas se veem dentro de cada projeto (aba Tarefas) e no Kanban de todos os projetos; a lista de todas as tarefas sai do menu lateral, mas continua no endereço `/tasks`, na paleta de comandos (Ctrl+K) e nos links de notificações e e-mails.

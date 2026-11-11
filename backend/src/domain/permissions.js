@@ -27,7 +27,6 @@ const PERMISSIONS = Object.freeze([
   { code: 'tasks.link', module: 'tasks' },
 
   { code: 'kanban.view', module: 'kanban' },
-  { code: 'kanban.manage', module: 'kanban' },
 
   { code: 'users.view', module: 'users' },
   { code: 'users.create', module: 'users' },
@@ -76,7 +75,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
   MANAGER: [
     'projects.view', 'projects.create', 'projects.edit', 'projects.charter', 'projects.history', 'projects.members', 'projects.report',
     'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.delete', 'tasks.assign', 'tasks.fork', 'tasks.link',
-    'kanban.view', 'kanban.manage',
+    'kanban.view',
     'users.view',
     'reports.view',
     'docs.view', 'docs.edit', 'docs.manage',

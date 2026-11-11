@@ -11,7 +11,7 @@ const member = (id: string, role: ProjectMember['role'], isOwner = false): Proje
 
 describe('domain/access', () => {
   it('ligar uma ação liga o "ver" do módulo; desligar o "ver" desliga as ações', () => {
-    expect(togglePermission([], 'kanban.manage', true)).toEqual(['kanban.manage', 'kanban.view'])
+    expect(togglePermission([], 'plan.edit', true)).toEqual(['plan.edit', 'plan.view'])
     expect(togglePermission(['tasks.view', 'tasks.edit', 'tasks.create', 'reports.view'], 'tasks.view', false)).toEqual(['reports.view'])
     expect(togglePermission(['tasks.view', 'tasks.edit'], 'tasks.edit', false)).toEqual(['tasks.view'])
     // Configurações não têm "ver": cada permissão vale sozinha
@@ -25,8 +25,8 @@ describe('domain/access', () => {
   })
 
   it('o que vê dentro do projeto, na ordem das abas: seções próprias e módulos que aparecem nele', () => {
-    expect(PROJECT_SECTION_CHIPS.map((c) => c.key)).toEqual(['charter', 'plan', 'tasks', 'kanban', 'report', 'members', 'history'])
-    expect(PROJECT_SECTION_CHIPS.find((c) => c.key === 'kanban')?.code).toBe('kanban.view')
+    // Gestión, Tareas y Kanban no se repiten aquí: ya son interruptores de módulo
+    expect(PROJECT_SECTION_CHIPS.map((c) => c.key)).toEqual(['charter', 'report', 'members', 'history'])
   })
 
   it('Responsável TI é um papel de membro como os outros', () => {

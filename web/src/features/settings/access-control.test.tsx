@@ -74,8 +74,8 @@ describe('Control de acceso', () => {
     const charter = await screen.findByRole('button', { name: 'Ficha' })
     expect(charter).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'Resumen' })).toBeDisabled()
-    // Tareas ya está en el perfil (tasks.view); Kanban no
-    expect(screen.getByRole('button', { name: 'Tareas' })).toHaveAttribute('aria-pressed', 'true')
+    // Gestión, Tareas y Kanban no se repiten como etiquetas: ya son interruptores de módulo
+    expect(screen.queryByRole('button', { name: 'Tareas' })).not.toBeInTheDocument()
     await userEvent.click(charter)
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Crear perfil propio para Douglas' }))
     await waitFor(() => expect(createRole).toHaveBeenCalledOnce())

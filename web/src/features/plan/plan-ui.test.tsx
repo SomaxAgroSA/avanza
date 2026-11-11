@@ -418,7 +418,7 @@ describe('Quadro do projeto — GP-2 (interação)', () => {
         expect.objectContaining({ name: 'Pauta', parent: 'Kickoff', estimatedHours: 2 }),
       ]),
     )
-    expect(await within(dialog).findByText('Linha 3 · Status: status não existe (só o gestor cria etiquetas de status)')).toBeInTheDocument()
+    expect(await within(dialog).findByText('Linha 3 · Status: status não existe (só o gestor cria status do quadro)')).toBeInTheDocument()
     // o problema bloqueia até mudar algo: deixa a coluna Status de fora e importa
     expect(within(dialog).getByRole('button', { name: 'Importar (2)' })).toBeDisabled()
     await userEvent.click(within(dialog).getByRole('combobox', { name: 'Status' }))

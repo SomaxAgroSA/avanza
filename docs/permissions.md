@@ -12,7 +12,7 @@
 |---|---|
 | projects | `projects.view`, `projects.create`, `projects.edit`, `projects.delete`, `projects.view_all` (desde a migration 1790000003); seções do projeto `projects.charter`, `projects.history`, `projects.members`, `projects.report` (regras §35, migration `0020_project_sections.sql`) |
 | tasks | `tasks.view`, `tasks.create`, `tasks.edit`, `tasks.delete`, `tasks.assign`, `tasks.fork`, `tasks.link` |
-| kanban | `kanban.view`, `kanban.manage` |
+| kanban | `kanban.view` |
 | users | `users.view`, `users.create`, `users.edit`, `users.disable` |
 | reports | `reports.view` |
 | audit | `audit.view` (desde a migration 1790000002) |
@@ -31,7 +31,6 @@
 | tasks.create / edit / assign / fork / link | ✓ | ✓ | ✓ | ✓ | |
 | tasks.delete | ✓ | ✓ | ✓ | | |
 | kanban.view | ✓ | ✓ | ✓ | ✓ | ✓ |
-| kanban.manage | ✓ | ✓ | ✓ | | |
 | users.view | ✓ | ✓ | ✓ | | |
 | users.create / edit / disable | ✓ | ✓ | | | |
 | reports.view | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -115,7 +114,7 @@ Projeto arquivado: tudo fica somente leitura (inclusive comentários). A API dev
 | Criar pelo quadro | mesma regra de criar tarefa (`tasks.create` + colaborador) |
 | Limite WIP e transições | configurados em Status (`settings.manage`) |
 
-O leitor vê o quadro, abre os cards e comenta, mas não arrasta nem cria (o quadro vem com `capabilities.move/create = false`). `kanban.manage` fica reservado para configurações próprias do quadro.
+O leitor vê o quadro, abre os cards e comenta, mas não arrasta nem cria (o quadro vem com `capabilities.move/create = false`). O quadro se configura em Configurações → Estados (`settings.manage`: WIP e transições); a antiga `kanban.manage` saiu em 2026-11-11 (migration 0022) por não ser verificada.
 
 ## Backlog e sprints (Fase 6)
 | Ação | Exige |
