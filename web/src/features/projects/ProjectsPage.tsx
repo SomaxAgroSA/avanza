@@ -233,7 +233,13 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={t(TITLES[view])}
         description={t(`projects.descriptions.${view}`)}
         actions={
-          canCreate && view !== 'archived' && view !== 'finished' ? (
+          view === 'finished' ? (
+            // "Arquivados" saiu do menu: chega-se por aqui
+            <Link to="/projects/archived" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-text hover:underline">
+              <Archive className="size-4" aria-hidden />
+              {t('projects.seeArchived')}
+            </Link>
+          ) : canCreate && view !== 'archived' ? (
             <AppButton leftIcon={<FolderPlus />} onClick={() => setCreating(true)}>
               {t('projects.create')}
             </AppButton>

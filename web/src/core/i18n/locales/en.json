@@ -236,10 +236,10 @@
     "main": "Main navigation",
     "dashboard": "Dashboard",
     "projects": "Projects",
-    "projectsAll": "All",
+    "projectsAll": "All projects",
     "projectsMine": "My projects",
-    "projectsOngoing": "In progress",
-    "projectsFinished": "Finished",
+    "projectsOngoing": "Active projects",
+    "projectsFinished": "Finished projects",
     "projectsArchived": "Archived",
     "kanban": "Kanban",
     "tasks": "Tasks",
@@ -1022,8 +1022,8 @@
     "descriptions": {
       "all": "Projects you can access.",
       "mine": "Projects you take part in.",
-      "ongoing": "Requests in planning, in progress or paused.",
-      "finished": "Requests completed or cancelled. Archive them once you no longer need them.",
+      "ongoing": "Projects in planning, in progress or paused.",
+      "finished": "Projects completed or cancelled. Archive them once you no longer need them.",
       "archived": "Archived projects are read-only and can be restored."
     },
     "create": "New project",
@@ -1255,8 +1255,9 @@
       "add": "New subproject",
       "onlyMain": "Main projects only"
     },
-    "empty_ongoing": "No requests in progress",
-    "empty_finished": "No finished requests yet"
+    "empty_ongoing": "No active projects",
+    "empty_finished": "No finished projects yet",
+    "seeArchived": "See archived"
   },
   "calendar": {
     "open": "Open calendar",
