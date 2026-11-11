@@ -59,11 +59,11 @@ describe('painel executivo — leitura rápida', () => {
   const crm = { id: 'p1', key: 'CRM', name: 'CRM' }
   const erp = { id: 'p2', key: 'ERP', name: 'ERP' }
   const project = (ref: typeof crm, level: HealthLevel, factors: HealthFactor[] = []): PortfolioRow => ({
-    project: { ...ref, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', startDate: null, dueDate: null, owner: null },
+    project: { ...ref, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', area: null, startDate: null, dueDate: null, owner: null },
     health: { level, factors },
     progress: null,
     plan: null,
-    tasks: { total: 0, open: 0, overdue: 0, done: 0 },
+    tasks: { total: 0, open: 0, inProgress: 0, blocked: 0, overdue: 0, done: 0 },
     nextMilestone: null,
     openIssues: 0,
   })
@@ -117,8 +117,8 @@ describe('painel executivo — leitura rápida', () => {
     expect(averageDelivery({ hours: 0, count: 0 })).toBeNull()
     expect(averageDelivery({ hours: 96.5, count: 3 })).toEqual({ value: 4, unit: 'days' })
     const points = [
-      { start: '2026-09-01', tasksCreated: 9, tasksCompleted: 2, planItemsCompleted: 1 },
-      { start: '2026-10-01', tasksCreated: 9, tasksCompleted: 0, planItemsCompleted: 0 },
+      { start: '2026-09-01', tasksCreated: 9, tasksCompleted: 2, planItemsCompleted: 1, tasksInProgress: 0, tasksOverdue: 0 },
+      { start: '2026-10-01', tasksCreated: 9, tasksCompleted: 0, planItemsCompleted: 0, tasksInProgress: 0, tasksOverdue: 0 },
     ]
     expect(deliverySeries(points)).toEqual([3, 0])
     expect(hasDeliveries(points)).toBe(true)

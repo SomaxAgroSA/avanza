@@ -235,11 +235,12 @@
   "nav": {
     "main": "Main navigation",
     "dashboard": "Dashboard",
+    "tracking": "Overview",
     "projects": "Projects",
-    "projectsAll": "All projects",
+    "projectsAll": "All my projects",
     "projectsMine": "My projects",
-    "projectsOngoing": "Active projects",
-    "projectsFinished": "Finished projects",
+    "projectsOngoing": "In progress",
+    "projectsFinished": "Finished",
     "projectsArchived": "Archived",
     "kanban": "Kanban",
     "tasks": "Tasks",
@@ -436,7 +437,7 @@
       "title": "Restricted access",
       "description": "Your role doesn't have permission to access this area."
     },
-    "backToDashboard": "Back to dashboard",
+    "backToDashboard": "Back to start",
     "comingSoon": {
       "title": "{{module}} is on the way",
       "description": "This module is part of Phase {{phase}} of the roadmap and isn't available yet.",
@@ -1255,9 +1256,8 @@
       "add": "New subproject",
       "onlyMain": "Main projects only"
     },
-    "empty_ongoing": "No active projects",
-    "empty_finished": "No finished projects yet",
-    "seeArchived": "See archived"
+    "empty_ongoing": "No projects in progress",
+    "empty_finished": "No finished projects yet"
   },
   "calendar": {
     "open": "Open calendar",
@@ -4027,5 +4027,171 @@
     "itemsDescription": "Project charter targets IT takes part in.",
     "target": "target: {{value}} {{unit}}",
     "due": "due: {{date}}"
+  },
+  "tracking": {
+    "title": "Overview",
+    "loading": "Loading tracking…",
+    "loadError": "Could not load tracking",
+    "asOf": "Status as of {{time}}",
+    "scope": {
+      "all": "Scope: whole portfolio",
+      "filtered_one": "Scope: {{count}} project",
+      "filtered_other": "Scope: {{count}} projects"
+    },
+    "filters": {
+      "area": "Department",
+      "owner": "Owner",
+      "allAreas": "Department: all",
+      "allOwners": "Owner: all"
+    },
+    "noArea": "No department",
+    "noOwner": "No owner",
+    "noDate": "No date",
+    "lateShort_one": "+{{count}} day",
+    "lateShort_other": "+{{count}} days",
+    "print": "Print or save as PDF",
+    "empty": "No projects in progress",
+    "emptyHint": "Projects in planning, in progress or paused show up here.",
+    "sections": {
+      "upcoming": "What is due in the next 30 days?"
+    },
+    "kpi": {
+      "active": "Projects in progress",
+      "late": "Late",
+      "blocked": "Blocked",
+      "risk": "At risk",
+      "help": "Late: target date passed. Blocked: paused or with blocked tasks. At risk: the project plan (schedule, progress or open issues) is off track. Click a number to see those projects in the portfolio."
+    },
+    "reasons": {
+      "late_one": "Target date passed {{count}} day ago",
+      "late_other": "Target date passed {{count}} days ago",
+      "paused": "Paused",
+      "blockedTasks_one": "{{count}} blocked task",
+      "blockedTasks_other": "{{count}} blocked tasks"
+    },
+    "situation": {
+      "risk": "At risk",
+      "watch": "Watch",
+      "ok": "On track",
+      "none": "No plan"
+    },
+    "upcoming": {
+      "none": "Nothing due in the next 30 days.",
+      "projectDue": "Project target date"
+    },
+    "groupBy": "Group by",
+    "groups": {
+      "priority": "Priority",
+      "area": "Department",
+      "owner": "Owner",
+      "status": "Status"
+    },
+    "filtered": {
+      "late": "Showing late projects only.",
+      "blocked": "Showing blocked projects only.",
+      "risk": "Showing projects at risk only.",
+      "clear": "Show all"
+    },
+    "portfolio": {
+      "none": "No projects match this filter.",
+      "count_one": "{{count}} project",
+      "count_other": "{{count}} projects",
+      "late_one": "{{count}} late",
+      "late_other": "{{count}} late"
+    },
+    "columns": {
+      "priority": "Priority",
+      "project": "Project",
+      "area": "Department",
+      "owner": "Owner",
+      "reason": "Reason",
+      "date": "Date",
+      "delivery": "Delivery",
+      "status": "Status",
+      "situation": "Situation",
+      "progress": "Progress",
+      "due": "Target date",
+      "nextMilestone": "Next milestone",
+      "tasks": "Tasks",
+      "tasksHint": "Open tasks · in development"
+    },
+    "period": {
+      "label": "Period",
+      "30d": "30 days",
+      "90d": "90 days",
+      "year": "This year"
+    },
+    "periodNumbers": {
+      "work": "Working time per task (average)"
+    },
+    "charts": {
+      "flowTitle": "Created and completed per week",
+      "flowHint": "When more tasks are created than completed, pending work grows.",
+      "stockTitle": "Completed, in progress and overdue per week",
+      "stockHint": "Completed: closed in each week. In progress and overdue: as of the end of each week.",
+      "created": "Created",
+      "done": "Completed",
+      "inProgress": "In progress",
+      "overdue": "Overdue",
+      "ongoingWeek": "* The last week is still in progress."
+    },
+    "teamReport": "See the team task report",
+    "soon": "Coming soon: commitment tracking, scope changes and requests awaiting clarification.",
+    "drawer": {
+      "start": "Start",
+      "open": "Open tasks",
+      "inProgress": "In development",
+      "blocked": "Blocked tasks",
+      "overdue": "Overdue tasks",
+      "issues": "Open issues",
+      "openProject": "Open project"
+    },
+    "periodLine": "Period: {{from}} to {{to}}",
+    "hero": {
+      "label": "Summary",
+      "today": "Today",
+      "period": "In the period",
+      "health": "Portfolio health",
+      "progress": "Average progress",
+      "noProgress": "No measured progress in these projects yet.",
+      "late": "Late projects",
+      "lateHint_one": "{{count}} overdue task",
+      "lateHint_other": "{{count}} overdue tasks",
+      "blocked": "Blocked projects",
+      "blockedHint_one": "{{count}} blocked task",
+      "blockedHint_other": "{{count}} blocked tasks",
+      "deliveries": "Deliveries",
+      "deliveriesHint_one": "tasks completed · {{count}} milestone",
+      "deliveriesHint_other": "tasks completed · {{count}} milestones"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "more": "Show more ({{count}})",
+      "less": "Show less",
+      "none": "Nothing needs attention: no project is late, blocked or at risk, and nothing is due in the next 7 days.",
+      "kinds": {
+        "risk": "At risk",
+        "late": "Late",
+        "paused": "Paused",
+        "blocked": "Blocked tasks",
+        "soon_one": "Due in {{count}} day",
+        "soon_other": "Due in {{count}} days",
+        "soonToday": "Due today"
+      }
+    },
+    "tabs": {
+      "label": "Overview views",
+      "portfolio": "Portfolio",
+      "portfolioHint": "leadership",
+      "team": "Team and tasks",
+      "teamHint": "coordination",
+      "deliveries": "Deliveries",
+      "deliveriesHint": "what is done"
+    },
+    "done": {
+      "title": "What was done in the period",
+      "row": "{{tasks}} deliveries · {{milestones}} milestones",
+      "none": "No deliveries in the period yet."
+    }
   }
 }

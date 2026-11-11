@@ -113,6 +113,7 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
       ['projeto — planejamento', `/projects/${p}/planning`],
       ['projeto — cronograma', `/projects/${p}/timeline`],
       ['relatórios', '/reports'],
+      ['acompanhamento de projetos', '/tracking'],
       ['documentação', '/docs'],
       ['espaço de documentação', '/docs/MANUAL'],
       ['página de documentação', `/docs/MANUAL/${docPage.id}`],

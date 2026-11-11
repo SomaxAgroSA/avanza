@@ -1,6 +1,6 @@
 import { Navigate, useLocation, useParams } from 'react-router'
 import { projectPath, type ProjectSection } from '@/domain/project-routes'
-import { useSession } from '@/features/auth/session'
+import { useCan, useSession } from '@/features/auth/session'
 import { visibleNavItems } from '@/presentation/navigation/nav-items'
 
 /**
@@ -14,11 +14,20 @@ export function LegacyProjectRedirect({ section }: { section: ProjectSection }) 
   return <Navigate to={`${projectPath(projectId, section, search)}${hash}`} replace />
 }
 
+/**
+ * Início (/ e o antigo /dashboard, que saiu do menu): a gerência abre no Panorama; os demais, na lista de
+ * projetos. Links antigos, o pós-login e "Voltar ao início" passam por aqui.
+ */
+export function HomeRedirect() {
+  const executive = useCan('executive.view')
+  return <Navigate to={executive ? '/tracking' : '/projects'} replace />
+}
+
 /** /settings → a primeira tela de Configurações que a pessoa pode abrir (na ordem do menu). */
 export function SettingsIndexRedirect() {
   const { current } = useSession()
   const settings = visibleNavItems(current?.permissions ?? []).find((item) => item.id === 'settings')
-  return <Navigate to={settings?.children?.[0]?.to ?? '/dashboard'} replace />
+  return <Navigate to={settings?.children?.[0]?.to ?? '/'} replace />
 }
 
 /**

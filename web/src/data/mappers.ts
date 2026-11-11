@@ -1145,6 +1145,7 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
         icon: toIcon(PROJECT_ICONS, row.project.icon, 'folder'),
         status: oneOf(PROJECT_STATUSES, row.project.status, 'active'),
         priority: oneOf(PROJECT_PRIORITIES, row.project.priority, 'medium'),
+        area: row.project.area ? { id: row.project.area.id, name: row.project.area.name } : null,
         startDate: row.project.start_date ?? null,
         dueDate: row.project.due_date ?? null,
         owner: person(row.project.owner),
@@ -1153,7 +1154,14 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
       progress:
         row.progress && typeof row.progress.value === 'number' ? { value: row.progress.value, source: row.progress.source === 'plan' ? 'plan' : 'tasks' } : null,
       plan: row.plan ?? null,
-      tasks: row.tasks,
+      tasks: {
+        total: row.tasks.total,
+        open: row.tasks.open,
+        inProgress: row.tasks.in_progress ?? 0,
+        blocked: row.tasks.blocked ?? 0,
+        overdue: row.tasks.overdue,
+        done: row.tasks.done,
+      },
       nextMilestone: row.next_milestone ? { id: row.next_milestone.id, name: row.next_milestone.name, dueDate: row.next_milestone.due_date } : null,
       openIssues: row.open_issues ?? 0,
     })),
@@ -1200,7 +1208,14 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
     },
     timeline: {
       bucket: dto.timeline?.bucket === 'week' ? 'week' : 'month',
-      points: (dto.timeline?.points ?? []).map((p) => ({ start: p.start, tasksCreated: p.tasks_created, tasksCompleted: p.tasks_completed, planItemsCompleted: p.plan_items_completed })),
+      points: (dto.timeline?.points ?? []).map((p) => ({
+        start: p.start,
+        tasksCreated: p.tasks_created,
+        tasksCompleted: p.tasks_completed,
+        planItemsCompleted: p.plan_items_completed,
+        tasksInProgress: p.tasks_in_progress ?? 0,
+        tasksOverdue: p.tasks_overdue ?? 0,
+      })),
     },
     achievements: (dto.achievements ?? []).map((a) => ({
       project: { ...projectRef(a.project), archived: !!a.project.archived },
