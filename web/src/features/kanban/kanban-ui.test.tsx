@@ -253,7 +253,7 @@ describe('KanbanPage', () => {
     expect(screen.queryByText('Nova tela de login')).not.toBeInTheDocument()
   })
 
-  it('área: selo com o nome no cartão e filtro na barra (área ou "Sem área")', async () => {
+  it('área: fora do cartão (fica no painel da tarefa) e filtro na barra (área ou "Sem área")', async () => {
     const withAreas: Board = {
       ...board,
       columns: [
@@ -263,7 +263,8 @@ describe('KanbanPage', () => {
     }
     setup({ data: withAreas })
     const first = await screen.findByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })
-    expect(within(first).getByText('Dpto. TI')).toBeInTheDocument()
+    // o cartão enxuto não repete a área: ela continua no filtro e no painel da tarefa
+    expect(within(first).queryByText('Dpto. TI')).not.toBeInTheDocument()
     expect(within(screen.getByRole('button', { name: /CRM-3 · Nova tela de login/ })).queryByText('Sem área')).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
@@ -384,8 +385,9 @@ describe('KanbanPage — todos os projetos', () => {
   it('cards de vários projetos com a etiqueta do projeto, sem limite WIP e sem criação por coluna', async () => {
     const { getAll, get } = setup({ path: '/kanban/all' })
     const erpCard = await screen.findByRole('button', { name: /ERP-7 · Conciliar notas/ })
-    expect(within(erpCard).getByTestId('kanban-card-project')).toHaveTextContent('ERP')
-    expect(within(screen.getByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })).getByTestId('kanban-card-project')).toHaveTextContent('CRM')
+    // o código já traz a chave do projeto (ERP-7): sem etiqueta repetida; o nome aparece ao passar o mouse
+    expect(within(erpCard).queryByTestId('kanban-card-project')).not.toBeInTheDocument()
+    expect(within(erpCard).getByText('ERP-7')).toBeInTheDocument()
     expect(getAll).toHaveBeenCalled()
     expect(get).not.toHaveBeenCalled()
     // WIP é por projeto: a coluna mostra só o total
