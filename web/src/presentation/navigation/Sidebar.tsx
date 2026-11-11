@@ -127,7 +127,7 @@ export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = tru
       </div>
       <nav aria-label={t('nav.main')} className="flex-1 overflow-y-auto px-2 py-3">
         <ul className="flex flex-col gap-0.5">
-          {items.map((item) => {
+          {items.filter((item) => !item.hidden).map((item) => {
             const Icon = item.icon
             return (
               <li key={item.id}>

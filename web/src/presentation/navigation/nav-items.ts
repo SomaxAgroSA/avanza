@@ -50,7 +50,9 @@ export const NAV_ITEMS: NavItem[] = [
   // só visões de todos os projetos: as de um projeto (Gestão, Planejamento, Kanban do projeto, Cronograma)
   // ficam nas abas da página do projeto
   { id: 'kanban', labelKey: 'nav.kanban', to: '/kanban', icon: KanbanSquare, anyOf: ['kanban.view'] },
-  { id: 'tasks', labelKey: 'nav.tasks', to: '/tasks', icon: CheckSquare, anyOf: ['tasks.view'] },
+  // fora do menu: as tarefas se veem dentro de cada projeto; a lista de todas segue pelo endereço, pela
+  // paleta de comandos e pelos links de notificações e e-mails
+  { id: 'tasks', labelKey: 'nav.tasks', to: '/tasks', icon: CheckSquare, anyOf: ['tasks.view'], hidden: true },
   { id: 'docs', labelKey: 'nav.docs', to: '/docs', icon: BookOpen, anyOf: ['docs.view'] },
   { id: 'users', labelKey: 'nav.users', to: '/users', icon: Users, anyOf: ['users.view'] },
   {
