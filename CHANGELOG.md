@@ -5,6 +5,7 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 ## [Não lançado]
 
 ### Alterado
+- **Card do Kanban enxuto:** código da tarefa (a chave do projeto não se repete; o nome do projeto aparece ao passar o mouse), urgência e prioridade só quando fogem do padrão, título em até 2 linhas, até 2 etiquetas, prazo e responsável. Área, checklist e comentários ficam no painel da tarefa.
 - **Configurações sem repetições:** os campos "Severidade" (repetia a Prioridade), "Estimativa (horas)" (repetia a estimativa da tarefa; o valor passa para ela quando estava vazia) e "Área solicitante" (texto livre que repetia as Áreas) saem dos tipos de tarefa — nada do que foi digitado se perde. A permissão "Configurar Kanban", que não tinha efeito, sai do catálogo (migration 0022). O perfil da pessoa se altera só em Controle de acesso; em "O que vê dentro de cada projeto" saem Gestão, Tarefas e Kanban, que já são interruptores de módulo. Em espanhol e inglês, "Áreas" passa a "Departamentos"; no quadro de Gestão, "Etiquetas de status/recurso" passam a "Status do quadro" e "Recursos".
 
 ### Adicionado

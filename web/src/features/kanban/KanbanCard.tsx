@@ -10,9 +10,9 @@ import type { CustomFieldReferences } from '@/features/task-config/CustomFieldIn
 import { CustomFieldValue } from '@/features/task-config/CustomFieldValue'
 import { TagList } from '@/features/tags/tag-visuals'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
-import { DueDate, TaskCode, TaskIndicators } from '@/features/tasks/task-visuals'
+import { DueDate, TaskCode } from '@/features/tasks/task-visuals'
 import { UrgencyBadge } from '@/features/tasks/TaskUrgency'
-import { AreaBadge } from '@/features/workflow/area-visuals'
+import { usePriorities } from '@/features/workflow/queries'
 
 /** Tipos que não cabem no card (ficam no detalhe). */
 const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
@@ -20,8 +20,11 @@ const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
 const isEmpty = (value: unknown) => value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)
 
 /**
- * Conteúdo do card: código, prioridade, título, campos "no card", tags, prazo, indicadores e responsável.
- * `showProject` (quadro de todos os projetos): etiqueta com a chave do projeto do card.
+ * Conteúdo do card, enxuto: código (o nome do projeto ao passar o mouse), urgência e prioridade só quando
+ * fogem do padrão, título em até 2 linhas, campos marcados "no card", até 2 tags, prazo e responsável.
+ * Área, checklist e comentários ficam no painel da tarefa (abre com um clique).
+ * `showProject` (quadro de todos os projetos): o código já começa com a chave do projeto (ex.: ECC-1),
+ * então a chave só aparece à parte quando o código não a traz.
  */
 export function KanbanCardContent({
   card,
@@ -36,14 +39,19 @@ export function KanbanCardContent({
   compact?: boolean
 }) {
   const { t } = useTranslation()
+  const priorities = usePriorities(false)
+  const defaultPriorityId = priorities.data?.find((p) => p.isDefault)?.id
+  // a prioridade padrão (ex.: Média) não diz nada no quadro: só aparece a que foge dela
+  const showPriority = !!card.priority && card.priority.id !== defaultPriorityId
+  const keyInCode = !!card.project && card.code.startsWith(`${card.project.key}-`)
   const fields = compact ? [] : card.cardFields.filter((f) => !NOT_ON_CARD.includes(f.field.type) && !isEmpty(f.value))
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5">
-          {showProject && card.project && (
+        <span className="flex min-w-0 items-center gap-1.5" title={showProject && card.project ? t('kanban.projectOf', { name: card.project.name }) : undefined}>
+          {showProject && card.project && !keyInCode && (
             // texto principal sobre a superfície neutra: contraste AA no claro e no escuro
-            <AppBadge className={cn('max-w-24 shrink-0 font-mono text-fg', compact && 'px-1.5 py-0 text-[10px]')} title={t('kanban.projectOf', { name: card.project.name })} data-testid="kanban-card-project">
+            <AppBadge className={cn('max-w-24 shrink-0 font-mono text-fg', compact && 'px-1.5 py-0 text-[10px]')} data-testid="kanban-card-project">
               <span className="truncate">{card.project.key}</span>
             </AppBadge>
           )}
@@ -51,11 +59,9 @@ export function KanbanCardContent({
           {/* urgência: o semáforo junto ao código (o nome fica no título e para leitores de tela) */}
           <UrgencyBadge urgency={card.urgency} />
         </span>
-        {card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" iconOnly={compact} />}
+        {showPriority && card.priority && <LookupBadge item={card.priority} className="max-w-[50%]" iconOnly />}
       </div>
-      <p className={cn('font-medium break-words text-fg', compact ? 'line-clamp-2 text-xs leading-snug' : 'line-clamp-3 text-sm')}>{card.title}</p>
-      {/* área responsável: o selo com o nome (no compacto, menor) */}
-      {card.area && <AreaBadge area={card.area} className={cn('self-start', compact && 'px-1.5 py-0 text-[10px]')} />}
+      <p className={cn('font-medium break-words text-fg', compact ? 'line-clamp-1 text-xs leading-snug' : 'line-clamp-2 text-sm')}>{card.title}</p>
       {fields.length > 0 && (
         <dl className="flex flex-col gap-0.5 text-xs">
           {fields.map(({ field, value }) => (
@@ -68,12 +74,9 @@ export function KanbanCardContent({
           ))}
         </dl>
       )}
-      <TagList tags={card.tags} max={compact ? 2 : 3} compact={compact} />
+      {!compact && <TagList tags={card.tags} max={2} />}
       <div className={cn('flex items-center justify-between gap-2', compact ? 'min-h-5 text-[11px] [&_svg]:size-3' : 'min-h-6 text-xs')}>
-        <span className={cn('flex min-w-0 flex-wrap items-center gap-y-1', compact ? 'gap-x-2' : 'gap-x-3')}>
-          {card.dueDate && <DueDate task={card} />}
-          <TaskIndicators task={card} className={compact ? 'mt-0 gap-x-2 text-[11px]' : undefined} />
-        </span>
+        <span className="flex min-w-0 items-center gap-x-2">{card.dueDate && <DueDate task={card} />}</span>
         {card.assignee ? (
           <span title={card.assignee.name} className="shrink-0">
             <AppAvatar name={card.assignee.name} src={card.assignee.avatarUrl} size="xs" />
