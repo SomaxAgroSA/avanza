@@ -4,6 +4,9 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 
 ## [Não lançado]
 
+### Alterado
+- **Configurações sem repetições:** os campos "Severidade" (repetia a Prioridade), "Estimativa (horas)" (repetia a estimativa da tarefa; o valor passa para ela quando estava vazia) e "Área solicitante" (texto livre que repetia as Áreas) saem dos tipos de tarefa — nada do que foi digitado se perde. A permissão "Configurar Kanban", que não tinha efeito, sai do catálogo (migration 0022). O perfil da pessoa se altera só em Controle de acesso; em "O que vê dentro de cada projeto" saem Gestão, Tarefas e Kanban, que já são interruptores de módulo. Em espanhol e inglês, "Áreas" passa a "Departamentos"; no quadro de Gestão, "Etiquetas de status/recurso" passam a "Status do quadro" e "Recursos".
+
 ### Adicionado
 - **Panorama** (menu, no lugar de Dashboard, Painel executivo e Relatórios): a tela única de acompanhamento da gerência — faixa Hoje (saúde da carteira, avanço médio, projetos atrasados e bloqueados) e No período (entregas), lista "Requer atenção" (só projetos, com o motivo) e três abas: Portfólio (carteira agrupável por prioridade, área, responsável ou status), Equipe e tarefas (criadas × concluídas e concluídas, em andamento e vencidas por semana) e Entregas (próximos 30 dias e o que já foi feito). O início (`/`, `/dashboard`) leva ao Panorama com `executive.view` ou aos Projetos. Quem não tem `executive.view` vai para os Relatórios; `/executive` redireciona. `GET /executive` ganhou área e urgência do projeto, tarefas em andamento e bloqueadas por projeto e, na série, as tarefas em andamento e vencidas no fim de cada semana.
 - **Menu Projetos:** Todos os meus projetos, Em andamento (planejamento, em curso ou pausado), Concluídos (concluído ou cancelado) e Arquivados. *Meus projetos* continua pelo card do Dashboard (`view=ongoing|finished` em `GET /projects` e no MCP).

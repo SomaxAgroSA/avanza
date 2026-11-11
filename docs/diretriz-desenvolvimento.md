@@ -100,7 +100,7 @@ Permissões **configuráveis** (nunca codificadas na interface). Exemplos:
 ```
 projects.view  projects.create  projects.edit  projects.delete
 tasks.view  tasks.create  tasks.edit  tasks.delete  tasks.assign  tasks.fork  tasks.link
-kanban.view  kanban.manage
+kanban.view
 users.view  users.create  users.edit  users.disable
 reports.view
 settings.manage  permissions.manage

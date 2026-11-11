@@ -21,7 +21,6 @@ export const PERMISSION_CODES = [
   'tasks.fork',
   'tasks.link',
   'kanban.view',
-  'kanban.manage',
   'users.view',
   'users.create',
   'users.edit',

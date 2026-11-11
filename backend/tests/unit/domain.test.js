@@ -12,7 +12,7 @@ const principal = (roleCode, permissions, extra) =>
 describe('domain/permissions', () => {
   it('catálogo contém as permissões da diretriz', () => {
     const codes = PERMISSIONS.map((p) => p.code)
-    for (const code of ['projects.view', 'tasks.fork', 'kanban.manage', 'users.disable', 'permissions.manage']) {
+    for (const code of ['projects.view', 'tasks.fork', 'kanban.view', 'users.disable', 'permissions.manage']) {
       assert.ok(codes.includes(code), code)
     }
     assert.equal(new Set(codes).size, codes.length, 'códigos duplicados')

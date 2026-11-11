@@ -207,8 +207,9 @@ export function UserFormDialog({ open, onOpenChange, user, roles, canChangeAcces
               onValueChange={field.onChange}
               options={roleOptions}
               placeholder={t('users.selectRole')}
-              disabled={isEdit && !canChangeAccess}
-              hint={isEdit && !canChangeAccess ? t('users.cannotChangeOwnRole') : undefined}
+              // al editar, el perfil se cambia en Configuración → Control de acceso (un solo lugar)
+              disabled={isEdit}
+              hint={isEdit ? (canChangeAccess ? t('users.roleInAccessControl') : t('users.cannotChangeOwnRole')) : undefined}
               error={errors.roleId?.message}
             />
           )}
