@@ -422,14 +422,17 @@ function useReasonText() {
 
 /* ------------------------------------------------------------------ tabelas */
 
-const TH = 'whitespace-nowrap border-b border-border-strong px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted'
+const TH = 'truncate whitespace-nowrap border-b border-border-strong px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted'
 const TD = 'border-b border-border px-3 py-2 align-middle'
 
 function ProjectName({ row }: { row: PortfolioRow }) {
   return (
-    <span className="flex items-start gap-2">
-      <ProjectKey value={row.project.key} className="mt-px" />
-      <span className="text-fg">{row.project.name}</span>
+    // a chave ocupa sempre a mesma largura: os nomes começam todos na mesma linha vertical
+    <span className="grid min-w-0 grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-2">
+      <ProjectKey value={row.project.key} className="justify-self-start" />
+      <span className="truncate text-fg" title={row.project.name}>
+        {row.project.name}
+      </span>
     </span>
   )
 }
@@ -500,12 +503,17 @@ function Situation({ row }: { row: PortfolioRow }) {
   const reason = useHealthReason()
   const situation = situationOf(row)
   return (
-    <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap', SITUATION_TONE[situation])} title={reason(row.health) ?? undefined}>
-      <span aria-hidden className={cn('size-2 rounded-full', SITUATION_DOT[situation])} />
-      {t(`tracking.situation.${situation}`)}
+    <span className={cn('flex min-w-0 items-center gap-1.5 whitespace-nowrap', SITUATION_TONE[situation])} title={reason(row.health) ?? undefined}>
+      <span aria-hidden className={cn('size-2 shrink-0 rounded-full', SITUATION_DOT[situation])} />
+      <span className="truncate">{t(`tracking.situation.${situation}`)}</span>
     </span>
   )
 }
+
+/** Peso de cada coluna da carteira (largura proporcional, tabela fixa). */
+const COLUMN_WEIGHT = { project: 22, area: 12, owner: 12.5, status: 10, priority: 7, situation: 11, progress: 6.5, due: 11.5, milestone: 9.5, tasks: 6.5 } as const
+/** Célula da carteira: uma linha só (o texto longo corta com "…" e aparece inteiro ao passar o mouse). */
+const CELL = 'h-11 truncate whitespace-nowrap border-b border-border px-2.5 align-middle'
 
 function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; group: TrackingGroup; today: string; onOpen: (row: PortfolioRow) => void }) {
   const { t } = useTranslation()
@@ -514,9 +522,20 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
   if (!rows.length) return <p className="rounded-lg border border-border px-4 py-3 text-sm text-muted">{t('tracking.portfolio.none')}</p>
   const groupLabel = (key: string, name: string) =>
     group === 'priority' ? t(`projects.priority.${key}`) : group === 'status' ? t(`projects.status.${key}`) : key === 'none' ? t(group === 'area' ? 'tracking.noArea' : 'tracking.noOwner') : name
+  // larguras fixas (proporcionais) para todas as linhas e grupos ficarem alinhados; a coluna que vira
+  // grupo some e as outras dividem o espaço
+  const columns = (['project', 'area', 'owner', 'status', 'priority', 'situation', 'progress', 'due', 'milestone', 'tasks'] as const).filter(
+    (c) => !(c === 'area' && group === 'area') && !(c === 'owner' && group === 'owner') && !(c === 'status' && group === 'status') && !(c === 'priority' && group === 'priority'),
+  )
+  const total = columns.reduce((sum, c) => sum + COLUMN_WEIGHT[c], 0)
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[980px] border-collapse text-sm">
+      <table className="w-full min-w-[1000px] table-fixed border-collapse text-sm">
+        <colgroup>
+          {columns.map((c) => (
+            <col key={c} style={{ width: `${(COLUMN_WEIGHT[c] / total) * 100}%` }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
             <th className={TH}>{t('tracking.columns.project')}</th>
@@ -548,29 +567,37 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
               const late = lateDays(row, today)
               return (
                 <tr key={row.project.id} className="cursor-pointer hover:bg-surface-2" onClick={() => onOpen(row)}>
-                  <td className={cn(TD, 'min-w-64')}>
+                  <td className={CELL}>
                     <ProjectName row={row} />
                   </td>
-                  {group !== 'area' && <td className={cn(TD, 'min-w-32 text-muted')}>{row.project.area?.name ?? t('tracking.noArea')}</td>}
-                  {group !== 'owner' && <td className={cn(TD, 'whitespace-nowrap text-muted')}>{row.project.owner?.name ?? '—'}</td>}
-                  {group !== 'status' && <td className={cn(TD, 'whitespace-nowrap')}>{t(`projects.status.${row.project.status}`)}</td>}
+                  {group !== 'area' && (
+                    <td className={cn(CELL, 'text-muted')} title={row.project.area?.name}>
+                      {row.project.area?.name ?? t('tracking.noArea')}
+                    </td>
+                  )}
+                  {group !== 'owner' && (
+                    <td className={cn(CELL, 'text-muted')} title={row.project.owner?.name}>
+                      {row.project.owner?.name ?? '—'}
+                    </td>
+                  )}
+                  {group !== 'status' && <td className={CELL}>{t(`projects.status.${row.project.status}`)}</td>}
                   {group !== 'priority' && (
-                    <td className={cn(TD, 'whitespace-nowrap')}>
+                    <td className={CELL}>
                       <Priority value={row.project.priority} />
                     </td>
                   )}
-                  <td className={TD}>
+                  <td className={CELL}>
                     <Situation row={row} />
                   </td>
-                  <td className={cn(TD, 'text-right whitespace-nowrap tabular-nums')}>{row.progress ? `${row.progress.value} %` : '—'}</td>
-                  <td className={cn(TD, 'whitespace-nowrap tabular-nums', late > 0 && 'font-semibold text-danger')}>
+                  <td className={cn(CELL, 'text-right tabular-nums')}>{row.progress ? `${row.progress.value} %` : '—'}</td>
+                  <td className={cn(CELL, 'tabular-nums', late > 0 && 'font-semibold text-danger')}>
                     {row.project.dueDate ? day(row.project.dueDate) : t('tracking.noDate')}
                     {late > 0 && ` · ${t('tracking.lateShort', { count: late })}`}
                   </td>
-                  <td className={cn(TD, 'max-w-48 truncate')} title={row.nextMilestone?.name}>
+                  <td className={CELL} title={row.nextMilestone?.name}>
                     {row.nextMilestone ? `${row.nextMilestone.name} · ${day(row.nextMilestone.dueDate)}` : '—'}
                   </td>
-                  <td className={cn(TD, 'text-right whitespace-nowrap tabular-nums')}>
+                  <td className={cn(CELL, 'text-right tabular-nums')} title={t('tracking.columns.tasksHint')}>
                     {row.tasks.open} · {row.tasks.inProgress}
                   </td>
                 </tr>

@@ -4073,7 +4073,7 @@
       "risk": "En riesgo",
       "watch": "Vigilar",
       "ok": "En orden",
-      "none": "Sin plan cargado"
+      "none": "Sin plan"
     },
     "upcoming": {
       "none": "No hay entregas en los próximos 30 días.",
