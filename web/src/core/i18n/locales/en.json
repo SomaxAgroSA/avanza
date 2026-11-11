@@ -437,7 +437,7 @@
       "title": "Restricted access",
       "description": "Your role doesn't have permission to access this area."
     },
-    "backToDashboard": "Back to dashboard",
+    "backToDashboard": "Back to start",
     "comingSoon": {
       "title": "{{module}} is on the way",
       "description": "This module is part of Phase {{phase}} of the roadmap and isn't available yet.",

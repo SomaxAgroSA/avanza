@@ -437,7 +437,7 @@
       "title": "Acceso restringido",
       "description": "Su perfil no tiene permiso para acceder a esta área."
     },
-    "backToDashboard": "Volver al dashboard",
+    "backToDashboard": "Volver al inicio",
     "comingSoon": {
       "title": "{{module}} está en camino",
       "description": "Este módulo forma parte de la Fase {{phase}} del roadmap y aún no está disponible.",

@@ -5,7 +5,7 @@ describe('navegação', () => {
   it('esconde módulos sem permissão e grupos sem filhos visíveis', () => {
     const items = visibleNavItems(['tasks.view'])
     const ids = items.map((i) => i.id)
-    expect(ids).toContain('dashboard')
+    expect(ids).not.toContain('dashboard')
     expect(ids).toContain('tasks')
     expect(ids).not.toContain('users')
     expect(ids).not.toContain('settings')
@@ -13,7 +13,7 @@ describe('navegação', () => {
 
   it('menu global só com visões de todos os projetos, nesta ordem; as de um projeto são abas do projeto', () => {
     const all = visibleNavItems(['executive.view', 'projects.view', 'kanban.view', 'tasks.view', 'reports.view', 'docs.view', 'users.view', 'plan.view', 'settings.manage'])
-    expect(all.map((i) => i.id)).toEqual(['dashboard', 'tracking', 'projects', 'kanban', 'tasks', 'docs', 'users', 'settings'])
+    expect(all.map((i) => i.id)).toEqual(['tracking', 'projects', 'kanban', 'tasks', 'docs', 'users', 'settings'])
     expect(all.find((i) => i.id === 'projects')?.children?.map((c) => c.id)).toEqual(['projects-all', 'projects-ongoing', 'projects-finished', 'projects-archived', 'projects-mine'])
     // no menu lateral: Todos, Em andamento, Concluídos e Arquivados; Meus projetos segue como página
     expect(all.find((i) => i.id === 'projects')?.children?.filter((c) => !c.hidden).map((c) => c.id)).toEqual(['projects-all', 'projects-ongoing', 'projects-finished', 'projects-archived'])

@@ -4,7 +4,6 @@ import {
   FolderKanban,
   Gauge,
   KanbanSquare,
-  LayoutDashboard,
   Settings,
   Users,
   type LucideIcon,
@@ -30,7 +29,6 @@ export interface NavItem {
 
 /** Estrutura de navegação (diretriz §36). Fonte única para sidebar, breadcrumb e command palette. */
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard },
   // Seguimento de projetos: a tela única da gerência (juntou o Painel executivo e os Relatórios);
   // sem executive.view, leva aos Relatórios das tarefas
   { id: 'tracking', labelKey: 'nav.tracking', to: '/tracking', icon: Gauge, anyOf: ['executive.view', 'reports.view'] },

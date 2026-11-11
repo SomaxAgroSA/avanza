@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '@/presentation/layouts/AppShell'
-import { AccessTabRedirect, LegacyProjectRedirect, SettingsIndexRedirect } from './legacy-redirects'
+import { AccessTabRedirect, HomeRedirect, LegacyProjectRedirect, SettingsIndexRedirect } from './legacy-redirects'
 import { GuestOnly, PermissionGate, RequireAuth } from '@/features/auth/guards'
 import { NotFoundPage, RouteErrorPage } from '@/features/errors/ErrorPages'
 import { isChunkLoadError, reloadForNewVersion } from './chunk-reload'
@@ -58,8 +58,9 @@ export const routes: RouteObject[] = [
     ),
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
-      { path: 'dashboard', ...page(() => import('@/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage }))) },
+      // o Dashboard saiu do menu: o início leva ao Panorama (gerência) ou aos projetos
+      { index: true, element: <HomeRedirect /> },
+      { path: 'dashboard', element: <HomeRedirect /> },
       { path: 'notifications', ...page(() => import('@/features/notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage }))) },
       { path: 'account', ...page(() => import('@/features/account/AccountPage').then((m) => ({ default: m.AccountPage }))) },
       { path: 'account/sessions', ...page(() => import('@/features/account/SessionsPage').then((m) => ({ default: m.SessionsPage }))) },
