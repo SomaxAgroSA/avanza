@@ -19,6 +19,15 @@ const rbac = require('./rbac')
 
 const PROJECT_STATUS = Object.freeze(['planning', 'active', 'paused', 'completed', 'cancelled'])
 const PROJECT_PRIORITY = Object.freeze(['low', 'medium', 'high', 'critical'])
+/**
+ * Visões da lista de projetos: all, mine, archived e as duas por andamento (só projetos abertos) —
+ * ongoing = em andamento (planejamento, em curso, pausado); finished = terminados (concluído, cancelado).
+ */
+const PROJECT_VIEWS = Object.freeze(['all', 'mine', 'ongoing', 'finished', 'archived'])
+const VIEW_STATUSES = Object.freeze({
+  ongoing: Object.freeze(['planning', 'active', 'paused']),
+  finished: Object.freeze(['completed', 'cancelled']),
+})
 /** `it` = Responsável TI (§33): só vê o resumo do projeto e as tarefas atribuídas a ele ou marcadas para TI. */
 const MEMBER_ROLES = Object.freeze(['manager', 'member', 'viewer', 'it'])
 /** Seções do projeto liberadas pelo perfil (§35); a visão geral sempre aparece. */
@@ -180,6 +189,8 @@ function capabilities(access, project) {
 module.exports = {
   PROJECT_STATUS,
   PROJECT_PRIORITY,
+  PROJECT_VIEWS,
+  VIEW_STATUSES,
   MEMBER_ROLES,
   PROJECT_SECTIONS,
   PROJECT_ICONS,

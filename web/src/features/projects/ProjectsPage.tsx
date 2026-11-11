@@ -5,7 +5,7 @@ import { Archive, ArchiveRestore, Copy, ExternalLink, FolderPlus } from 'lucide-
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
-import { PROJECT_PRIORITIES, PROJECT_STATUSES, isOverdue, type Project, type ProjectView } from '@/domain/projects'
+import { PROJECT_PRIORITIES, PROJECT_STATUSES, VIEW_STATUSES, isOverdue, type Project, type ProjectView } from '@/domain/projects'
 import type { ProjectListQuery } from '@/domain/repositories'
 import {
   AppAvatar,
@@ -34,13 +34,21 @@ import type { Area } from '@/domain/workflow'
 
 const EMPTY: Project[] = []
 
-const TITLES: Record<ProjectView, string> = { all: 'nav.projects', mine: 'nav.projectsMine', archived: 'nav.projectsArchived' }
+const TITLES: Record<ProjectView, string> = {
+  all: 'nav.projects',
+  mine: 'nav.projectsMine',
+  ongoing: 'nav.projectsOngoing',
+  finished: 'nav.projectsFinished',
+  archived: 'nav.projectsArchived',
+}
 
 /** Projetos principais (sem pai), para o filtro "Projeto pai" (§34): os que têm subprojetos viram opção. */
 const MAIN_PROJECTS: ProjectListQuery = { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: 'none' } }
 
 export const AllProjectsPage = () => <ProjectsPage view="all" />
 export const MyProjectsPage = () => <ProjectsPage view="mine" />
+export const OngoingProjectsPage = () => <ProjectsPage view="ongoing" />
+export const FinishedProjectsPage = () => <ProjectsPage view="finished" />
 export const ArchivedProjectsPage = () => <ProjectsPage view="archived" />
 
 export function ProjectsPage({ view }: { view: ProjectView }) {
@@ -133,7 +141,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         header: t('projects.fields.status'),
         size: 140,
         cell: (project) => <ProjectStatusBadge status={project.status} />,
-        filter: { label: t('projects.fields.status'), options: PROJECT_STATUSES.map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
+        filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
       },
       {
         id: 'priority',
@@ -200,14 +208,14 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, urgencyOptions, areas.data, areaOptions, parentOptions],
+    [t, locale, urgencyOptions, areas.data, areaOptions, parentOptions, view],
   )
 
   const emptyState =
     !table.hasActiveFilters && view !== 'archived' ? (
       <AppEmptyState
         icon={<FolderPlus />}
-        title={view === 'mine' ? t('projects.emptyMine') : t('projects.empty')}
+        title={view === 'mine' ? t('projects.emptyMine') : view === 'ongoing' || view === 'finished' ? t(`projects.empty_${view}`) : t('projects.empty')}
         description={t('projects.emptyDescription')}
         action={
           canCreate ? (
@@ -225,7 +233,13 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={t(TITLES[view])}
         description={t(`projects.descriptions.${view}`)}
         actions={
-          canCreate && view !== 'archived' ? (
+          view === 'finished' ? (
+            // "Arquivados" saiu do menu: chega-se por aqui
+            <Link to="/projects/archived" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-text hover:underline">
+              <Archive className="size-4" aria-hidden />
+              {t('projects.seeArchived')}
+            </Link>
+          ) : canCreate && view !== 'archived' ? (
             <AppButton leftIcon={<FolderPlus />} onClick={() => setCreating(true)}>
               {t('projects.create')}
             </AppButton>

@@ -94,7 +94,7 @@ function NavGroup({ item, collapsed, onNavigate }: { item: NavItem; collapsed: b
       </button>
       {open && (
         <ul className="mt-0.5 flex flex-col gap-0.5 border-l border-border pl-3 ml-[18px]">
-          {item.children?.map((child) => (
+          {item.children?.filter((child) => !child.hidden).map((child) => (
             <li key={child.id}>
               <NavLink to={child.to} end={child.end} onClick={onNavigate} className={cn(linkBase, 'h-8 font-normal')}>
                 <span className="truncate">{t(child.labelKey)}</span>

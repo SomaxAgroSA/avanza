@@ -25,6 +25,8 @@ export interface NavItem {
   children?: NavItem[]
   /** Considera ativo apenas com correspondência exata do caminho. */
   end?: boolean
+  /** Fora do menu lateral; continua no breadcrumb e na paleta de comandos (a página segue existindo). */
+  hidden?: boolean
 }
 
 /** Estrutura de navegação (diretriz §36). Fonte única para sidebar, breadcrumb e command palette. */
@@ -39,9 +41,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FolderKanban,
     anyOf: ['projects.view'],
     children: [
+      // no menu: todos, ativos e terminados; "Meus projetos" (card do Dashboard) e "Arquivados"
+      // (link em Terminados) ficam fora do menu
       { id: 'projects-all', labelKey: 'nav.projectsAll', to: '/projects', end: true },
-      { id: 'projects-mine', labelKey: 'nav.projectsMine', to: '/projects/mine' },
-      { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived' },
+      { id: 'projects-ongoing', labelKey: 'nav.projectsOngoing', to: '/projects/ongoing' },
+      { id: 'projects-finished', labelKey: 'nav.projectsFinished', to: '/projects/finished' },
+      { id: 'projects-mine', labelKey: 'nav.projectsMine', to: '/projects/mine', hidden: true },
+      { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived', hidden: true },
     ],
   },
   // só visões de todos os projetos: as de um projeto (Gestão, Planejamento, Kanban do projeto, Cronograma)

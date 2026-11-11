@@ -236,8 +236,10 @@
     "main": "Navegação principal",
     "dashboard": "Dashboard",
     "projects": "Projetos",
-    "projectsAll": "Todos",
+    "projectsAll": "Todos os projetos",
     "projectsMine": "Meus projetos",
+    "projectsOngoing": "Projetos ativos",
+    "projectsFinished": "Projetos concluídos",
     "projectsArchived": "Arquivados",
     "kanban": "Kanban",
     "tasks": "Tarefas",
@@ -1020,6 +1022,8 @@
     "descriptions": {
       "all": "Projetos que você pode acessar.",
       "mine": "Projetos em que você participa.",
+      "ongoing": "Projetos em planejamento, em curso ou pausados.",
+      "finished": "Projetos concluídos ou cancelados. Arquive quando não precisar mais consultá-los.",
       "archived": "Projetos arquivados ficam somente leitura e podem ser restaurados."
     },
     "create": "Novo projeto",
@@ -1250,7 +1254,10 @@
       "emptyDescription": "Projetos menores que fazem parte deste. Crie o primeiro para acompanhar tudo daqui.",
       "add": "Novo subprojeto",
       "onlyMain": "Só projetos principais"
-    }
+    },
+    "empty_ongoing": "Nenhum projeto ativo",
+    "empty_finished": "Ainda não há projetos concluídos",
+    "seeArchived": "Ver arquivados"
   },
   "calendar": {
     "open": "Abrir calendário",

@@ -7,6 +7,7 @@
 const { appError } = require('../../core/errors')
 const { newId, ident, direction, likePattern, toDbDate, insertRow, updateRow, findRow, findRows, deleteRow } = require('../sql')
 const { storedFileName } = require('../storage')
+const { VIEW_STATUSES } = require('../../domain/project')
 
 /** Violação de índice único do Postgres (23505) no índice `index`. */
 function isUniqueViolation(err, index) {
@@ -116,6 +117,8 @@ function createProjectRepository(db) {
         where.push(`id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
       }
       where.push(query.view === 'archived' ? 'archived_at IS NOT NULL' : 'archived_at IS NULL')
+      // em andamento / terminados: o status do projeto decide (domain/project.js#VIEW_STATUSES)
+      if (VIEW_STATUSES[query.view]) where.push(`status = ANY(${param(VIEW_STATUSES[query.view].slice())}::text[])`)
       if (query.search) {
         const pattern = param(likePattern(query.search))
         where.push(`(name ILIKE ${pattern} OR "key" ILIKE ${pattern})`)

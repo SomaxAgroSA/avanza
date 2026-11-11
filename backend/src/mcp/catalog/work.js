@@ -170,7 +170,10 @@ const TOOLS = [
       Object.assign(
         {
           search: text(100, 'Text to match in the project name or key.'),
-          view: oneOf(['all', 'mine', 'archived'], 'all = open projects the user can see (default); mine = projects the user belongs to; archived = archived projects.'),
+          view: oneOf(
+            projectDomain.PROJECT_VIEWS,
+            'all = open projects the user can see (default); mine = projects the user belongs to; ongoing = open projects in planning, active or paused; finished = open projects completed or cancelled; archived = archived projects.',
+          ),
           status: oneOf(projectDomain.PROJECT_STATUS, 'Only projects with this status.'),
           priority: oneOf(projectDomain.PROJECT_PRIORITY, 'Only projects with this priority.'),
           urgency: urgencyFilter(),
