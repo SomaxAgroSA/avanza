@@ -94,7 +94,8 @@ describe('Control de acceso', () => {
     setup('/settings/access?tab=roles')
     const tabs = await screen.findByRole('navigation', { name: 'Control de acceso' })
     expect(within(tabs).getByRole('link', { name: 'Perfiles' })).toHaveAttribute('aria-current', 'page')
-    expect(within(tabs).getByRole('link', { name: 'Permisos por perfil' })).toHaveAttribute('href', '/settings/access?tab=matrix')
+    // la matriz ya no es pestaña (repetía "Por persona"): se abre desde cada perfil
+    expect(within(tabs).queryByRole('link', { name: 'Permisos por perfil' })).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: i18n.t('roles.create') })).toBeInTheDocument()
   })
 })

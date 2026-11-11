@@ -3944,7 +3944,7 @@
   },
   "access": {
     "title": "Access control",
-    "description": "Pick a person and set in one place which modules they see, what they see inside each project, what they can do and which projects they join. The other tabs hold the roles and the permission matrix.",
+    "description": "Pick a person and set in one place which modules they see, what they see inside each project, what they can do and which projects they join. Roles are created, and their permissions edited, under Roles.",
     "noUsers": "No users.",
     "user": "User",
     "role": "Role",
@@ -3995,8 +3995,7 @@
     },
     "tabs": {
       "person": "By person",
-      "roles": "Roles",
-      "matrix": "Permissions by role"
+      "roles": "Roles"
     },
     "sections": {
       "title": "What they see inside each project",
@@ -4010,7 +4009,8 @@
       "report": "Report",
       "members": "Members",
       "history": "History"
-    }
+    },
+    "backToRoles": "Back to roles"
   },
   "brief": {
     "subtitle": "Your part in this project",
