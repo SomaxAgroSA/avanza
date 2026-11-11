@@ -392,7 +392,11 @@ function Attention({ data, rows, today, onOpen }: { data: ExecutiveDashboard; ro
                     {' · '}
                     {item.kind === 'soon'
                       ? `${item.soon?.kind === 'milestone' ? item.soon.name : t('tracking.upcoming.projectDue')} · ${day(item.soon?.date)}`
-                      : item.reasons.map((r) => reasonText(r, item.row)).join(' · ')}
+                      : // o motivo que já é a etiqueta não se repete no texto (ex.: "Pausado")
+                        item.reasons
+                          .filter((r) => !(r.kind === 'paused' && item.kind === 'paused'))
+                          .map((r) => reasonText(r, item.row))
+                          .join(' · ')}
                   </span>
                 </span>
                 <ArrowRight aria-hidden className="hidden size-4 text-primary-text sm:block" />
@@ -591,19 +595,10 @@ function PeriodBlock({ data }: { data: ExecutiveDashboard }) {
   const label = (start: string) => `${start.slice(8, 10)}/${start.slice(5, 7)}${ongoing && start === lastStart ? '*' : ''}`
   return (
     <div className="flex flex-col gap-5">
-      <dl className="grid gap-4 sm:grid-cols-3">
-        <div>
-          <dt className="text-sm text-muted">{t('tracking.periodNumbers.done')}</dt>
-          <dd className="text-lg font-semibold tabular-nums text-fg">{data.kanban.completed}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted">{t('tracking.periodNumbers.milestones')}</dt>
-          <dd className="text-lg font-semibold tabular-nums text-fg">{data.summary.deliveries.milestones}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted">{t('tracking.periodNumbers.work')}</dt>
-          <dd className="text-lg font-semibold tabular-nums text-fg">{duration(data.kanban.cycleTime)}</dd>
-        </div>
+      {/* tarefas concluídas e marcos já estão na faixa de cima ("Entregas"); aqui só o que é novo */}
+      <dl>
+        <dt className="text-sm text-muted">{t('tracking.periodNumbers.work')}</dt>
+        <dd className="text-lg font-semibold tabular-nums text-fg">{duration(data.kanban.cycleTime)}</dd>
       </dl>
       <div className="rounded-xl border border-border p-4">
         <h3 className="text-sm font-semibold text-fg">{t('tracking.charts.flowTitle')}</h3>

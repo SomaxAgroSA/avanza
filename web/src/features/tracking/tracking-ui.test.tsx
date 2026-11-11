@@ -95,8 +95,8 @@ describe('Panorama', () => {
     expect(await screen.findByRole('heading', { name: 'Panorama' })).toBeInTheDocument()
     expect(get.mock.calls[0]?.[0].statuses).toEqual(['planning', 'active', 'paused'])
     const hero = screen.getByRole('region', { name: 'Resumen' })
-    expect(within(hero).getByRole('button', { name: /Atrasados\s*1/ })).toBeInTheDocument()
-    expect(within(hero).getByRole('button', { name: /Bloqueados\s*1/ })).toBeInTheDocument()
+    expect(within(hero).getByRole('button', { name: /Proyectos atrasados\s*1/ })).toBeInTheDocument()
+    expect(within(hero).getByRole('button', { name: /Proyectos bloqueados\s*1\s*1 tarea bloqueada/ })).toBeInTheDocument()
     expect(within(hero).getByText('40 %')).toBeInTheDocument()
   })
 

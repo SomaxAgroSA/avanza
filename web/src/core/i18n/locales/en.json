@@ -4122,8 +4122,6 @@
       "year": "This year"
     },
     "periodNumbers": {
-      "done": "Tasks completed",
-      "milestones": "Milestones delivered",
       "work": "Working time per task (average)"
     },
     "charts": {
@@ -4156,12 +4154,12 @@
       "health": "Portfolio health",
       "progress": "Average progress",
       "noProgress": "No measured progress in these projects yet.",
-      "late": "Late",
-      "lateHint_one": "projects · {{count}} overdue task",
-      "lateHint_other": "projects · {{count}} overdue tasks",
-      "blocked": "Blocked",
-      "blockedHint_one": "projects · {{count}} blocked task",
-      "blockedHint_other": "projects · {{count}} blocked tasks",
+      "late": "Late projects",
+      "lateHint_one": "{{count}} overdue task",
+      "lateHint_other": "{{count}} overdue tasks",
+      "blocked": "Blocked projects",
+      "blockedHint_one": "{{count}} blocked task",
+      "blockedHint_other": "{{count}} blocked tasks",
       "deliveries": "Deliveries",
       "deliveriesHint_one": "tasks completed · {{count}} milestone",
       "deliveriesHint_other": "tasks completed · {{count}} milestones"

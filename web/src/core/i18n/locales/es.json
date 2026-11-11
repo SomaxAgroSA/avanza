@@ -4122,8 +4122,6 @@
       "year": "Este año"
     },
     "periodNumbers": {
-      "done": "Tareas concluidas",
-      "milestones": "Hitos entregados",
       "work": "Trabajo efectivo por tarea (promedio)"
     },
     "charts": {
@@ -4156,12 +4154,12 @@
       "health": "Salud de la cartera",
       "progress": "Avance medio",
       "noProgress": "Todavía no hay avance medido en estos proyectos.",
-      "late": "Atrasados",
-      "lateHint_one": "proyectos · {{count}} tarea vencida",
-      "lateHint_other": "proyectos · {{count}} tareas vencidas",
-      "blocked": "Bloqueados",
-      "blockedHint_one": "proyectos · {{count}} tarea bloqueada",
-      "blockedHint_other": "proyectos · {{count}} tareas bloqueadas",
+      "late": "Proyectos atrasados",
+      "lateHint_one": "{{count}} tarea vencida",
+      "lateHint_other": "{{count}} tareas vencidas",
+      "blocked": "Proyectos bloqueados",
+      "blockedHint_one": "{{count}} tarea bloqueada",
+      "blockedHint_other": "{{count}} tareas bloqueadas",
       "deliveries": "Entregas",
       "deliveriesHint_one": "tareas terminadas · {{count}} hito",
       "deliveriesHint_other": "tareas terminadas · {{count}} hitos"
