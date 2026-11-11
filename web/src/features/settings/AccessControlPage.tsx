@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useQueries } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Eye, EyeOff, FolderKanban, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, FolderKanban, ShieldCheck, UserRound } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import {
@@ -49,8 +49,12 @@ const USERS_QUERY = { page: 1, perPage: 100, sort: { id: 'name', direction: 'asc
 const PROJECTS_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 const NONE = 'none'
 
-/** Abas do Controle de acesso (`?tab=`): por pessoa (padrão), perfis e a matriz de permissões por perfil. */
-const ACCESS_TABS = ['person', 'roles', 'matrix'] as const
+/**
+ * Abas do Controle de acesso (`?tab=`): por pessoa (padrão) e perfis. A matriz de permissões por perfil
+ * deixou de ser aba (repetia o "Por pessoa"): abre a partir de um perfil ("Editar permissões", `?role=`),
+ * o único jeito de configurar um perfil que ainda não tem pessoas; o antigo `?tab=matrix` cai nela.
+ */
+const ACCESS_TABS = ['person', 'roles'] as const
 type AccessTab = (typeof ACCESS_TABS)[number]
 
 /**
@@ -63,7 +67,8 @@ export function AccessControlPage() {
   const { t } = useTranslation()
   const [params] = useSearchParams()
   const current = params.get('tab')
-  const tab: AccessTab = ACCESS_TABS.find((value) => value === current) ?? 'person'
+  const tab: AccessTab = current === 'matrix' ? 'roles' : (ACCESS_TABS.find((value) => value === current) ?? 'person')
+  const showMatrix = tab === 'roles' && (current === 'matrix' || params.has('role'))
   // lugar das ações da aba aberta (Novo perfil, Salvar…), à direita da linha das abas
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
   const pathOf = (value: AccessTab) => (value === 'person' ? '/settings/access' : `/settings/access?tab=${value}`)
@@ -78,7 +83,20 @@ export function AccessControlPage() {
         actions={<div ref={setActionsSlot} className="flex items-center gap-2" />}
       />
       <TabActionsSlotContext.Provider value={actionsSlot}>
-        {tab === 'roles' ? <RolesPage /> : tab === 'matrix' ? <PermissionsPage /> : <PersonAccess />}
+        {tab === 'roles' ? (
+          showMatrix ? (
+            <>
+              <Link to="/settings/access?tab=roles" className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-primary-text hover:underline">
+                <ArrowLeft className="size-4" aria-hidden /> {t('access.backToRoles')}
+              </Link>
+              <PermissionsPage />
+            </>
+          ) : (
+            <RolesPage />
+          )
+        ) : (
+          <PersonAccess />
+        )}
       </TabActionsSlotContext.Provider>
     </>
   )

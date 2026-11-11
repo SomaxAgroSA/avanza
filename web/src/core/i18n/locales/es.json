@@ -3944,7 +3944,7 @@
   },
   "access": {
     "title": "Control de acceso",
-    "description": "Elige una persona y define en un solo lugar qué módulos ve, qué ve dentro de cada proyecto, qué puede hacer y en qué proyectos entra. En las otras pestañas, los perfiles y la matriz de permisos.",
+    "description": "Elige una persona y define en un solo lugar qué módulos ve, qué ve dentro de cada proyecto, qué puede hacer y en qué proyectos entra. En Perfiles se crean los perfiles y se editan sus permisos.",
     "noUsers": "No hay usuarios.",
     "user": "Usuario",
     "role": "Perfil",
@@ -3995,8 +3995,7 @@
     },
     "tabs": {
       "person": "Por persona",
-      "roles": "Perfiles",
-      "matrix": "Permisos por perfil"
+      "roles": "Perfiles"
     },
     "sections": {
       "title": "Qué ve dentro de cada proyecto",
@@ -4010,7 +4009,8 @@
       "report": "Informe",
       "members": "Miembros",
       "history": "Historial"
-    }
+    },
+    "backToRoles": "Volver a perfiles"
   },
   "brief": {
     "subtitle": "Su participación en este proyecto",

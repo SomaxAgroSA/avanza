@@ -124,7 +124,7 @@ export function RolesPage() {
               key: 'permissions',
               label: t('roles.editPermissions'),
               icon: <ShieldCheck />,
-              onSelect: () => navigate(`/settings/access?tab=matrix&role=${encodeURIComponent(role.id)}`),
+              onSelect: () => navigate(`/settings/access?tab=roles&role=${encodeURIComponent(role.id)}`),
             },
           ],
         }}
