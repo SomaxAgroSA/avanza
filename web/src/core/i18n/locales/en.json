@@ -4141,7 +4141,8 @@
       "created": "Created",
       "done": "Completed",
       "inProgress": "In progress",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "ongoingWeek": "* The last week is still in progress."
     },
     "teamReport": "See the team task report",
     "soon": "Coming soon: commitment tracking, scope changes and requests awaiting clarification.",

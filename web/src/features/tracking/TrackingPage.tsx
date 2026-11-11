@@ -243,9 +243,9 @@ const TD = 'border-b border-border px-3 py-2 align-middle'
 
 function ProjectName({ row }: { row: PortfolioRow }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <ProjectKey value={row.project.key} />
-      <span className="truncate text-fg">{row.project.name}</span>
+    <span className="flex items-start gap-2">
+      <ProjectKey value={row.project.key} className="mt-px" />
+      <span className="text-fg">{row.project.name}</span>
     </span>
   )
 }
@@ -392,10 +392,10 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
               const late = lateDays(row, today)
               return (
                 <tr key={row.project.id} className="cursor-pointer hover:bg-surface-2" onClick={() => onOpen(row)}>
-                  <td className={cn(TD, 'max-w-72')}>
+                  <td className={cn(TD, 'min-w-64')}>
                     <ProjectName row={row} />
                   </td>
-                  {group !== 'area' && <td className={cn(TD, 'text-muted')}>{row.project.area?.name ?? t('tracking.noArea')}</td>}
+                  {group !== 'area' && <td className={cn(TD, 'min-w-32 text-muted')}>{row.project.area?.name ?? t('tracking.noArea')}</td>}
                   {group !== 'owner' && <td className={cn(TD, 'whitespace-nowrap text-muted')}>{row.project.owner?.name ?? '—'}</td>}
                   {group !== 'status' && <td className={cn(TD, 'whitespace-nowrap')}>{t(`projects.status.${row.project.status}`)}</td>}
                   {group !== 'priority' && (
@@ -411,7 +411,7 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
                     {row.project.dueDate ? day(row.project.dueDate) : t('tracking.noDate')}
                     {late > 0 && ` · ${t('tracking.lateShort', { count: late })}`}
                   </td>
-                  <td className={cn(TD, 'max-w-56 truncate')}>{row.nextMilestone ? `${row.nextMilestone.name} · ${day(row.nextMilestone.dueDate)}` : '—'}</td>
+                  <td className={cn(TD, 'max-w-48 truncate')} title={row.nextMilestone?.name}>{row.nextMilestone ? `${row.nextMilestone.name} · ${day(row.nextMilestone.dueDate)}` : '—'}</td>
                   <td className={cn(TD, 'text-right whitespace-nowrap tabular-nums')}>
                     {row.tasks.open} · {row.tasks.inProgress}
                   </td>
@@ -428,8 +428,11 @@ function PortfolioTable({ rows, group, today, onOpen }: { rows: PortfolioRow[]; 
 function PeriodBlock({ data }: { data: NonNullable<ReturnType<typeof useExecutiveDashboard>['data']> }) {
   const { t } = useTranslation()
   const duration = useDurationText()
-  const label = (start: string) => `${start.slice(8, 10)}/${start.slice(5, 7)}`
   const points = data.timeline.points
+  // a última semana ainda está em curso: o rótulo leva "*" e a nota explica (evita ler a queda como problema)
+  const lastStart = points.at(-1)?.start ?? ''
+  const ongoing = !!lastStart && Date.parse(`${lastStart}T00:00:00Z`) + 7 * 86_400_000 > data.generatedAt.getTime()
+  const label = (start: string) => `${start.slice(8, 10)}/${start.slice(5, 7)}${ongoing && start === lastStart ? '*' : ''}`
   return (
     <div className="flex flex-col gap-5">
       <dl className="grid gap-4 sm:grid-cols-3">
@@ -448,7 +451,9 @@ function PeriodBlock({ data }: { data: NonNullable<ReturnType<typeof useExecutiv
       </dl>
       <div className="rounded-xl border border-border p-4">
         <h3 className="text-sm font-semibold text-fg">{t('tracking.charts.flowTitle')}</h3>
-        <p className="mb-3 text-xs text-muted">{t('tracking.charts.flowHint')}</p>
+        <p className="mb-3 text-xs text-muted">
+          {t('tracking.charts.flowHint')} {ongoing && t('tracking.charts.ongoingWeek')}
+        </p>
         <AppTrendChart
           title={t('tracking.charts.flowTitle')}
           seriesA={t('tracking.charts.created')}
@@ -458,7 +463,9 @@ function PeriodBlock({ data }: { data: NonNullable<ReturnType<typeof useExecutiv
       </div>
       <div className="rounded-xl border border-border p-4">
         <h3 className="text-sm font-semibold text-fg">{t('tracking.charts.stockTitle')}</h3>
-        <p className="mb-3 text-xs text-muted">{t('tracking.charts.stockHint')}</p>
+        <p className="mb-3 text-xs text-muted">
+          {t('tracking.charts.stockHint')} {ongoing && t('tracking.charts.ongoingWeek')}
+        </p>
         <AppLineChart
           title={t('tracking.charts.stockTitle')}
           series={[

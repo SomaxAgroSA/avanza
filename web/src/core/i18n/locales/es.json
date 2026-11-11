@@ -4141,7 +4141,8 @@
       "created": "Creadas",
       "done": "Terminadas",
       "inProgress": "En proceso",
-      "overdue": "Vencidas"
+      "overdue": "Vencidas",
+      "ongoingWeek": "* La última semana todavía está en curso."
     },
     "teamReport": "Ver el informe de tareas del equipo",
     "soon": "Próximamente: cumplimiento de compromisos, cambios de alcance y demandas pendientes de aclaración.",
