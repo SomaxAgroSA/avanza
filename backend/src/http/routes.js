@@ -209,6 +209,7 @@ const projectAction = (fn, status) => (e) =>
 
 const getProject = projectAction((s, ctx, r) => s.getProject(ctx, r.id))
 const createProject = projectAction((s, ctx, r) => s.createProject(ctx, r.body()), 201)
+const projectCovers = projectAction((s, ctx, r) => s.projectCovers(ctx, r.query()))
 const updateProject = projectAction((s, ctx, r) => s.updateProject(ctx, r.id, r.body()))
 const archiveProject = projectAction((s, ctx, r) => s.archiveProject(ctx, r.id))
 const unarchiveProject = projectAction((s, ctx, r) => s.unarchiveProject(ctx, r.id))
@@ -674,6 +675,7 @@ module.exports = {
   listProjects,
   getProject,
   createProject,
+  projectCovers,
   updateProject,
   archiveProject,
   unarchiveProject,

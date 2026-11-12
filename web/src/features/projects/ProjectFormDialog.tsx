@@ -7,7 +7,7 @@ import { Check } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
-import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, canHaveParent, parentCandidates, suggestKey, type Project } from '@/domain/projects'
+import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, canHaveParent, parentCandidates, suggestKey, type Project, type ProjectCover } from '@/domain/projects'
 import type { ProjectListQuery } from '@/domain/repositories'
 import { projectSchema, type ProjectInput } from '@/domain/validation'
 import { NO_URGENCY } from '@/domain/urgency'
@@ -18,12 +18,14 @@ import { ProjectAvatar } from './project-visuals'
 import { CustomColorSwatch } from '@/features/task-config/config-visuals'
 import { isHexColor } from '@/domain/colors'
 import { IconPicker } from '@/features/icons/IconPicker'
-import { useCreateProject, useProjects, useUpdateProject } from './queries'
+import { useCreateProject, useProjectCovers, useProjects, useUpdateProject } from './queries'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useAreas } from '@/features/workflow/queries'
 import { AreaBadge } from '@/features/workflow/area-visuals'
 
 const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId' }
+
+const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
 /** Valor do select para "sem área" / "sem pai" (o select não aceita texto vazio). */
 const NO_AREA = '__none__'
@@ -70,6 +72,9 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
   const parents = useProjects(PARENT_QUERY, open)
   const parentOptions = parentCandidates(parents.data?.items ?? [], project)
   const lockedParent = !canHaveParent(project)
+  // cor única (§24): as dos outros projetos ficam travadas e o projeto novo já nasce com uma livre
+  const covers = useProjectCovers(project?.id, open)
+  const usedCovers = covers.data?.used ?? []
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<ProjectInput>({
     resolver: zodResolver(projectSchema),
@@ -81,7 +86,19 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
     reset(defaults(project, parentId))
   }, [open, project, parentId, reset])
 
-  const [name, key, icon, cover] = useWatch({ control, name: ['name', 'key', 'icon', 'cover'] })
+  const [name, key, icon, cover, parentValue] = useWatch({ control, name: ['name', 'key', 'icon', 'cover', 'parentId'] })
+  // subprojeto: usa a cor e o ícone do pai (o servidor aplica a mesma regra)
+  const parent = parentValue ? (parentOptions.find((p) => p.id === parentValue) ?? (project?.parent?.id === parentValue ? project.parent : null)) : null
+  const shownIcon = parent ? parent.icon : icon
+  const shownCover = parent ? parent.cover : cover
+  const coverTaken = (value: string) => usedCovers.some((used) => sameColor(used, value)) && !(project && !project.parent && sameColor(project.cover, value))
+
+  const suggested = covers.data?.suggested
+  const coverDirty = !!formState.dirtyFields.cover
+  useEffect(() => {
+    if (!open || isEdit || !suggested || coverDirty) return
+    setValue('cover', suggested as ProjectCover)
+  }, [open, isEdit, suggested, coverDirty, setValue])
 
   const onSubmit = handleSubmit((values) => {
     const data = {
@@ -278,50 +295,67 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
 
         <div className="flex min-w-0 flex-col gap-5 lg:border-l lg:border-border lg:pl-8">
           <div className="flex items-center gap-4 rounded-xl border border-border p-4">
-            <ProjectAvatar icon={icon} cover={cover} size="lg" />
+            <ProjectAvatar icon={shownIcon} cover={shownCover} size="lg" />
             <div className="min-w-0">
               <p className="truncate font-semibold text-fg">{name || t('projects.namePlaceholder')}</p>
               <p className="font-mono text-xs text-muted">{key ? key.toUpperCase() : '—'}</p>
             </div>
           </div>
 
-          <Controller
-            control={control}
-            name="icon"
-            render={({ field }) => (
-              <IconPicker
-                label={t('projects.fields.icon')}
-                value={field.value}
-                onChange={field.onChange}
-                builtins={PROJECT_ICONS}
-                components={PROJECT_ICON_COMPONENTS}
-                fallback={PROJECT_ICON_COMPONENTS.folder}
-                builtinLabel={(icon) => t(`projects.icons.${icon}`)}
-              />
-            )}
-          />
+          {parent && (
+            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted" data-testid="project-inherits-parent">
+              {t('projects.inheritsParent', { name: parent.name })}
+            </p>
+          )}
 
+          {!parent && (
+            <Controller
+              control={control}
+              name="icon"
+              render={({ field }) => (
+                <IconPicker
+                  label={t('projects.fields.icon')}
+                  value={field.value}
+                  onChange={field.onChange}
+                  builtins={PROJECT_ICONS}
+                  components={PROJECT_ICON_COMPONENTS}
+                  fallback={PROJECT_ICON_COMPONENTS.folder}
+                  builtinLabel={(icon) => t(`projects.icons.${icon}`)}
+                />
+              )}
+            />
+          )}
+
+          {!parent && (
           <Controller
             control={control}
             name="cover"
             render={({ field }) => (
-              <AppFormField label={t('projects.fields.cover')}>
+              <AppFormField
+                label={t('projects.fields.cover')}
+                hint={t('projects.coverUniqueHint')}
+                error={errors.cover?.message ?? (isHexColor(field.value) && coverTaken(field.value) ? 'color_in_use' : undefined)}
+              >
                 {({ id }) => (
                   <div id={id} role="radiogroup" aria-label={t('projects.fields.cover')} className="flex flex-wrap items-center gap-2">
                     {PROJECT_COVERS.map((key) => {
                       const selected = field.value === key
+                      const taken = !selected && coverTaken(key)
+                      const label = taken ? t('projects.coverTaken', { color: t(`projects.covers.${key}`) }) : t(`projects.covers.${key}`)
                       return (
                         <button
                           key={key}
                           type="button"
                           role="radio"
                           aria-checked={selected}
-                          aria-label={t(`projects.covers.${key}`)}
-                          title={t(`projects.covers.${key}`)}
+                          aria-label={label}
+                          title={label}
+                          disabled={taken}
                           onClick={() => field.onChange(key)}
                           style={coverStyle(key)}
                           className={cn(
-                            'flex size-8 items-center justify-center rounded-full text-white ring-offset-2 ring-offset-surface transition-transform hover:scale-110',
+                            'flex size-8 items-center justify-center rounded-full text-white ring-offset-2 ring-offset-surface transition-transform',
+                            taken ? 'cursor-not-allowed opacity-25' : 'hover:scale-110',
                             selected && 'ring-2 ring-primary',
                           )}
                         >
@@ -335,6 +369,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
               </AppFormField>
             )}
           />
+          )}
         </div>
       </form>
     </AppDialog>

@@ -411,13 +411,19 @@ function createTaskRepository(db) {
     async list(query) {
       const { where, params } = listFilters(query)
       const order = []
+      // parâmetros só da listagem (a contagem usa os do filtro): "minhas tarefas primeiro" entra no ORDER BY
+      const listParams = params.slice()
+      if (query.firstAssigneeId) {
+        listParams.push(query.firstAssigneeId)
+        order.push(`(tasks.assignee_id IS NOT DISTINCT FROM $${listParams.length}) DESC`)
+      }
       query.sort.forEach((s) => {
         if (ORDER[s.column]) ORDER[s.column](direction(s.direction)).forEach((o) => order.push(o))
       })
       order.push('tasks.created ASC', 'tasks.id ASC')
-      const page = params.concat([query.pagination.perPage, query.pagination.offset])
+      const page = listParams.concat([query.pagination.perPage, query.pagination.offset])
       const rows = await db.query(
-        `SELECT tasks.* FROM tasks ${where} ORDER BY ${order.join(', ')} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        `SELECT tasks.* FROM tasks ${where} ORDER BY ${order.join(', ')} LIMIT $${listParams.length + 1} OFFSET $${listParams.length + 2}`,
         page,
       )
       const count = await db.one(`SELECT COUNT(*) AS total FROM tasks ${where}`, params)

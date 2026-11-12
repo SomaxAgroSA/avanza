@@ -127,7 +127,8 @@
     "in_future": "The date can’t be in the future",
     "parent_is_child": "That project is already a subproject; choose a main project",
     "has_children": "A project with subprojects cannot have a parent",
-    "parent_archived": "The parent project is archived"
+    "parent_archived": "The parent project is archived",
+    "color_in_use": "Another project already uses this color"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -1257,7 +1258,10 @@
       "onlyMain": "Main projects only"
     },
     "empty_ongoing": "No projects in progress",
-    "empty_finished": "No finished projects yet"
+    "empty_finished": "No finished projects yet",
+    "inheritsParent": "Uses the color and icon of {{name}}, its parent project.",
+    "coverUniqueHint": "Each project has its own color. Faded colors are already in use.",
+    "coverTaken": "{{color}}: used by another project"
   },
   "calendar": {
     "open": "Open calendar",
@@ -1751,6 +1755,11 @@
       "remove": "Hide from the IT owner",
       "added": "{{code}} is now visible to the IT owner.",
       "removed": "{{code}} is no longer visible to the IT owner."
+    },
+    "mine": {
+      "badge": "Yours",
+      "toggle": "My tasks first",
+      "hint": "Shows the tasks you are assigned to at the top; the rest stay below."
     }
   },
   "tags": {
@@ -1958,7 +1967,8 @@
     "compact": "Compact",
     "compactHint": "Narrower columns and leaner cards, to see more columns at once",
     "collapse": "Collapse the {{name}} column",
-    "expand": "Expand the {{name}} column"
+    "expand": "Expand the {{name}} column",
+    "mineHint": "Highlights the cards you are assigned to. The order of each column does not change."
   },
   "sprints": {
     "none": "No sprint",

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ChevronDown, KanbanSquare, Minimize2, Plus } from 'lucide-react'
+import { Archive, ChevronDown, KanbanSquare, Minimize2, Plus, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { readJson, writeJson } from '@/core/storage/safe-storage'
@@ -48,6 +48,7 @@ import { useTags } from '@/features/tags/queries'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
 import { TaskFormDialog, type TaskFormInitial } from '@/features/tasks/TaskFormDialog'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
+import { useMineFirst } from '@/features/tasks/use-mine-first'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { TaskDetailDialog } from '@/features/tasks/TaskDetailDialog'
 import { KanbanBoard, type KanbanDrop } from './KanbanBoard'
@@ -113,6 +114,8 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
     setSwimlaneState(value)
     writeJson(SWIMLANE_KEY, value)
   }
+  // "Minhas tarefas primeiro" (o mesmo interruptor da Lista): aqui destaca os cards da pessoa
+  const [mineFirst, setMineFirst] = useMineFirst()
   // colunas recolhidas e modo compacto: valem para todos os quadros (os status são os mesmos)
   const [view, setViewState] = useState<BoardView>(() => parseBoardView(readJson<unknown>(VIEW_KEY, null)))
   const setView = (next: BoardView) => {
@@ -295,6 +298,15 @@ function BoardScreen({ projectId, nav }: { projectId: string | null; nav?: React
                   onValueChange={(value) => setSwimlane(value as Swimlane)}
                   options={SWIMLANES.map((s) => ({ value: s, label: t(`kanban.swimlanes.${s}`) }))}
                 />
+                <AppButton
+                  variant={mineFirst ? 'soft' : 'secondary'}
+                  leftIcon={<UserCheck />}
+                  aria-pressed={mineFirst}
+                  title={t('kanban.mineHint')}
+                  onClick={() => setMineFirst(!mineFirst)}
+                >
+                  {t('tasks.mine.toggle')}
+                </AppButton>
                 <AppButton
                   variant={view.compact ? 'soft' : 'secondary'}
                   leftIcon={<Minimize2 />}

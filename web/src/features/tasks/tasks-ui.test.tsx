@@ -470,7 +470,7 @@ describe('TasksTable: urgência (semáforo)', () => {
     await screen.findByText(detail.title)
     await userEvent.click(screen.getByRole('combobox', { name: 'Urgência' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Alta' }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ urgency: 'high' }) }), { projectId: 'p1' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ urgency: 'high' }) }), { projectId: 'p1', mineFirst: true }))
     // ativo: o filtro mostra "Nome: valor"
     expect(screen.getByRole('combobox', { name: 'Urgência' })).toHaveTextContent('Urgência: Alta')
   })
@@ -506,7 +506,25 @@ describe('TasksTable: área responsável', () => {
     await screen.findByText(detail.title)
     await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Sem área' }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ area: 'none' }) }), undefined))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ area: 'none' }) }), { mineFirst: true }))
     expect(screen.getByRole('combobox', { name: 'Área' })).toHaveTextContent('Área: Sem área')
+  })
+})
+
+describe('TasksTable: minhas tarefas primeiro', () => {
+  it('liga por padrão: pede à API mine_first, marca as da pessoa e desliga com um clique (lembrando a escolha)', async () => {
+    localStorage.removeItem('avanza.tasks.mineFirst')
+    const mine = { ...detail, id: 'mine', code: 'CRM-9', title: 'Tarefa da Ana', assignee: { id: 'u1', name: 'Ana Souza', email: 'ana@kamban.test', avatarUrl: null } }
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [mine, detail], page: 1, perPage: 20, total: 2, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="mine-first" projectId="p1" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByText('Tarefa da Ana')
+    expect(list).toHaveBeenLastCalledWith(expect.anything(), { projectId: 'p1', mineFirst: true })
+    expect(screen.getAllByTestId('task-mine')).toHaveLength(1)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Minhas tarefas primeiro' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.anything(), { projectId: 'p1' }))
+    expect(screen.queryByTestId('task-mine')).not.toBeInTheDocument()
+    expect(localStorage.getItem('avanza.tasks.mineFirst')).toBe('false')
+    localStorage.removeItem('avanza.tasks.mineFirst')
   })
 })

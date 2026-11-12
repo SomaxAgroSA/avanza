@@ -447,6 +447,7 @@ function createFakeRepositories(store) {
       })
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
+    listAll: (query) => store.projects.filter((p) => !(query && query.ids) || query.ids.includes(p.id)).slice().sort((x, y) => (x.key > y.key ? 1 : -1)),
     countChildren: (ids) => {
       const counts = {}
       store.projects
@@ -649,6 +650,11 @@ function createFakeRepositories(store) {
       }
       const sorts = query.sort.concat([{ column: 'created', direction: 'ASC' }])
       items = items.slice().sort((a, b) => {
+        if (query.firstAssigneeId) {
+          const ma = a.assigneeId === query.firstAssigneeId ? 0 : 1
+          const mb = b.assigneeId === query.firstAssigneeId ? 0 : 1
+          if (ma !== mb) return ma - mb
+        }
         for (const s of sorts) {
           const va = TASK_SORT[s.column](a)
           const vb = TASK_SORT[s.column](b)

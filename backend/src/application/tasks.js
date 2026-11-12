@@ -90,6 +90,7 @@ const LIST_SCHEMA = {
   plan_item_id: [idRule],
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
+  mine_first: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   it_visible: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   // `none` = sem urgência
   urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
@@ -537,6 +538,7 @@ function createTaskService(deps) {
         sprint_id: pick('sprint_id'),
         plan_item_id: pick('plan_item_id'),
         in_report: pick('in_report'),
+        mine_first: pick('mine_first'),
         it_visible: pick('it_visible'),
         urgency: pick('urgency'),
         area_id: pick('area_id'),
@@ -579,6 +581,8 @@ function createTaskService(deps) {
       areaId: filters.area_id,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
+      // "Minhas tarefas primeiro": as atribuídas a quem consulta vêm antes, cada grupo na ordem pedida
+      firstAssigneeId: filters.mine_first === 'true' ? ctx.principal.userId : undefined,
       pagination,
     })
     const refs = Object.assign(await refsFor(result.items), { scoped: await itProjects(ctx, result.items) })

@@ -464,6 +464,10 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
     },
     transferOwnership: (id, userId) => one(api.put<ProjectDto>(`${path(id)}/owner`, { user_id: userId })),
     listMembers: (id) => members(api.get<ProjectMemberDto[]>(`${path(id)}/members`)),
+    async covers(exclude) {
+      const { data } = await api.get<{ used: string[]; suggested: string }>('/project-covers', { query: { exclude } })
+      return { used: data.used, suggested: data.suggested }
+    },
     addMember: (id, userId, role) => members(api.post<ProjectMemberDto[]>(`${path(id)}/members`, { user_id: userId, role })),
     updateMemberRole: (id, userId, role) => members(api.patch<ProjectMemberDto[]>(memberPath(id, userId), { role })),
     async removeMember(id, userId) {
@@ -1294,6 +1298,7 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
       })
       if (options?.projectId) filters.project_id = options.projectId
       if (options?.planItemId) filters.plan_item_id = options.planItemId
+      if (options?.mineFirst) filters.mine_first = 'true'
       const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/tasks', {
         query: { page: query.page, perPage: query.perPage, sort: toSortParam(query.sort), search: query.search.trim() || undefined, ...filters },
       })

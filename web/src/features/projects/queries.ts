@@ -11,6 +11,7 @@ export const projectKeys = {
   candidates: (id: string, search: string) => ['projects', 'candidates', id, search] as const,
   history: (id: string) => ['projects', 'history', id] as const,
   files: (id: string) => ['projects', 'files', id] as const,
+  covers: (exclude: string) => ['projects', 'covers', exclude] as const,
 }
 
 /** Lista geral dos filtros de projeto (seletor das visões, Tarefas, Relatórios): ativos, pelo nome. */
@@ -24,6 +25,12 @@ export function useProjects(query: ProjectListQuery, enabled = true) {
 export function useProject(id: string | undefined) {
   const { projects } = useRepositories()
   return useQuery({ queryKey: projectKeys.detail(id ?? ''), queryFn: () => projects.get(id as string), enabled: !!id })
+}
+
+/** Cores já usadas por outros projetos e a próxima livre (formulário do projeto). */
+export function useProjectCovers(exclude: string | undefined, enabled: boolean) {
+  const { projects } = useRepositories()
+  return useQuery({ queryKey: projectKeys.covers(exclude ?? ''), queryFn: () => projects.covers(exclude), enabled, staleTime: 0 })
 }
 
 export function useProjectMembers(id: string | undefined) {

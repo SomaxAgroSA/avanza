@@ -121,4 +121,27 @@ describe('ProjectFormDialog', () => {
       expect(await screen.findByText('Esse projeto já é um subprojeto; escolha um projeto principal')).toBeInTheDocument()
     })
   })
+
+  it('cor única: sugere a próxima livre e trava as que outros projetos já usam', async () => {
+    const create = vi.fn().mockResolvedValue(created)
+    const repositories = fakeRepositories({ projects: { create, covers: () => Promise.resolve({ used: ['violet', 'indigo'], suggested: 'blue' }) } })
+    renderRoutes([{ path: '/projects', element: <ProjectFormDialog open onOpenChange={() => {}} /> }, { path: '/projects/:id', element: <p>detalhe</p> }], {
+      repositories,
+      initialPath: '/projects',
+    })
+    expect(await screen.findByRole('radio', { name: /Violeta: em uso/ })).toBeDisabled()
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Azul' })).toHaveAttribute('aria-checked', 'true'))
+    await userEvent.type(screen.getByLabelText(/^Nome/), 'Portal')
+    await userEvent.click(screen.getByRole('button', { name: 'Novo projeto' }))
+    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ cover: 'blue' })))
+  })
+
+  it('subprojeto: usa a cor e o ícone do pai, sem os seletores', async () => {
+    const parent = { id: 'pai', key: 'GCS', name: 'Gestão Comercial', icon: 'rocket', cover: '#1a5700', parent: null, archivedAt: null, capabilities: { edit: true } } as unknown as Project
+    const repositories = fakeRepositories({ projects: { list: () => Promise.resolve({ items: [parent], page: 1, perPage: 100, total: 1, totalPages: 1 }) } })
+    renderRoutes([{ path: '/projects', element: <ProjectFormDialog open onOpenChange={() => {}} parentId="pai" /> }], { repositories, initialPath: '/projects' })
+    expect(await screen.findByTestId('project-inherits-parent')).toHaveTextContent('Gestão Comercial')
+    expect(screen.queryByRole('radiogroup', { name: 'Capa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Foguete' })).not.toBeInTheDocument()
+  })
 })

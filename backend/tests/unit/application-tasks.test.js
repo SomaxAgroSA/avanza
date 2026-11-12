@@ -304,6 +304,11 @@ describe('application/tasks — listagem', () => {
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { priority_id: s.priorities.high.id })).items.map((t) => t.code), ['CRM-1'])
     assert.deepEqual((await s.tasks.listTasks(s.ctx.admin, { project_id: s.other.id })).items.map((t) => t.code), ['SAP-1'])
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { sort: '-code' })).items.map((t) => t.code), ['CRM-2', 'CRM-1'])
+    // "minhas tarefas primeiro": as de quem consulta antes, sem esconder as outras; cada grupo na ordem pedida
+    assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { sort: 'code', mine_first: 'true' })).items.map((t) => t.code), ['CRM-2', 'CRM-1'])
+    assert.equal((await s.tasks.listTasks(s.ctx.mario, { mine_first: 'true' })).meta.total, 2)
+    assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { sort: 'code', mine_first: 'false' })).items.map((t) => t.code), ['CRM-1', 'CRM-2'])
+    await assert.rejects(() => s.tasks.listTasks(s.ctx.mario, { mine_first: 'sim' }), { code: 'VALIDATION_ERROR' })
 
     const item = (await s.tasks.listTasks(s.ctx.mario, { search: 'login' })).items[0]
     assert.equal(item.project.key, 'CRM')

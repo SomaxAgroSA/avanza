@@ -364,3 +364,50 @@ describe('application/projects — seções do projeto (§35)', () => {
     assert.deepEqual((await projects.getProject(ctx.admin, crm.id)).capabilities.sections, ['charter', 'history', 'members', 'report'])
   })
 })
+
+describe('application/projects — cor única e subprojetos (§24)', () => {
+  it('sem cor escolhida, cada projeto novo ganha a próxima cor livre', async () => {
+    const { projects, ctx } = await setup()
+    const a = await projects.createProject(ctx.manager, input({ key: 'AAA' }))
+    const b = await projects.createProject(ctx.manager, input({ key: 'BBB' }))
+    assert.equal(a.cover, 'violet')
+    assert.equal(b.cover, 'indigo')
+    const covers = await projects.projectCovers(ctx.manager, {})
+    assert.deepEqual(covers.used.sort(), ['indigo', 'violet'])
+    assert.equal(covers.suggested, 'blue')
+  })
+
+  it('rejeita a cor de outro projeto, na criação e na edição', async () => {
+    const { projects, ctx } = await setup()
+    const a = await projects.createProject(ctx.manager, input({ key: 'AAA', cover: '#123456' }))
+    await assert.rejects(() => projects.createProject(ctx.manager, input({ key: 'BBB', cover: '#123456' })), (err) => err.details.fields.cover === 'color_in_use')
+    const b = await projects.createProject(ctx.manager, input({ key: 'BBB' }))
+    await assert.rejects(() => projects.updateProject(ctx.manager, b.id, { cover: a.cover }), (err) => err.details.fields.cover === 'color_in_use')
+    // a própria cor continua aceita (o formulário reenvia tudo)
+    const same = await projects.updateProject(ctx.manager, a.id, { name: 'Outro nome', cover: '#123456' })
+    assert.equal(same.cover, '#123456')
+  })
+
+  it('subprojeto usa a cor e o ícone do pai e acompanha quando o pai muda', async () => {
+    const { projects, ctx } = await setup()
+    const parent = await projects.createProject(ctx.manager, input({ key: 'PAI', icon: 'rocket', cover: '#0369a1' }))
+    const child = await projects.createProject(ctx.manager, input({ key: 'FILHO', icon: 'star', cover: 'red', parent_id: parent.id }))
+    assert.equal(child.cover, '#0369a1')
+    assert.equal(child.icon, 'rocket')
+    await projects.updateProject(ctx.manager, parent.id, { cover: '#7e22ce', icon: 'globe' })
+    const after = await projects.getProject(ctx.manager, child.id)
+    assert.equal(after.cover, '#7e22ce')
+    assert.equal(after.icon, 'globe')
+    // o subprojeto não troca de cor sozinho
+    const kept = await projects.updateProject(ctx.manager, child.id, { cover: 'red' })
+    assert.equal(kept.cover, '#7e22ce')
+  })
+
+  it('ao deixar de ser subprojeto, ganha uma cor própria', async () => {
+    const { projects, ctx } = await setup()
+    const parent = await projects.createProject(ctx.manager, input({ key: 'PAI' }))
+    const child = await projects.createProject(ctx.manager, input({ key: 'FILHO', parent_id: parent.id }))
+    const detached = await projects.updateProject(ctx.manager, child.id, { parent_id: null })
+    assert.notEqual(detached.cover, parent.cover)
+  })
+})

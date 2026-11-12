@@ -227,6 +227,12 @@ export interface ProjectData {
   dueDate: string | null
 }
 
+/** Cores já usadas por outros projetos e a sugestão de uma livre. */
+export interface ProjectCovers {
+  used: string[]
+  suggested: string
+}
+
 export interface ProjectRepository {
   list(query: ProjectListQuery): Promise<Page<Project>>
   get(id: string): Promise<Project>
@@ -237,6 +243,8 @@ export interface ProjectRepository {
   remove(id: string): Promise<void>
   transferOwnership(id: string, userId: string): Promise<Project>
   listMembers(id: string): Promise<ProjectMember[]>
+  /** Cores dos outros projetos abertos (sem `exclude` e seus subprojetos) e a próxima livre (regra da cor única). */
+  covers(exclude?: string): Promise<ProjectCovers>
   addMember(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   updateMemberRole(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   removeMember(id: string, userId: string): Promise<void>
@@ -333,6 +341,8 @@ export interface TaskListOptions {
   projectId?: string
   /** Só as tarefas vinculadas a este elemento da Gestão. */
   planItemId?: string
+  /** As tarefas de quem consulta primeiro ("Minhas tarefas primeiro"); o resto continua na lista. */
+  mineFirst?: boolean
 }
 
 export interface TaskRepository {

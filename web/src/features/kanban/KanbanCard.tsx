@@ -13,6 +13,7 @@ import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { DueDate, TaskCode, TaskIndicators } from '@/features/tasks/task-visuals'
 import { UrgencyBadge } from '@/features/tasks/TaskUrgency'
 import { AreaBadge } from '@/features/workflow/area-visuals'
+import { useIsMine } from '@/features/tasks/use-mine-first'
 
 /** Tipos que não cabem no card (ficam no detalhe). */
 const NOT_ON_CARD: readonly FieldType[] = ['image', 'file', 'textarea']
@@ -108,6 +109,8 @@ export function SortableKanbanCard({
 }) {
   const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id, disabled: locked })
+  // "Minhas tarefas primeiro": no quadro a ordem é a do time; os cards da pessoa ganham destaque
+  const mine = useIsMine(card.assignee?.id)
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter') {
@@ -132,7 +135,8 @@ export function SortableKanbanCard({
       locked={locked}
       dragging={isDragging}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={compact ? 'gap-1 rounded-lg p-2' : undefined}
+      className={cn(compact && 'gap-1 rounded-lg p-2', mine && 'border-l-4 border-l-primary')}
+      data-mine={mine || undefined}
       onClick={() => onOpen(card.id)}
     >
       <KanbanCardContent card={card} references={references} showProject={showProject} compact={compact} />

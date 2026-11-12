@@ -127,7 +127,8 @@
     "in_future": "La fecha no puede ser futura",
     "parent_is_child": "Ese proyecto ya es un subproyecto; elija un proyecto principal",
     "has_children": "Un proyecto con subproyectos no puede tener padre",
-    "parent_archived": "El proyecto padre está archivado"
+    "parent_archived": "El proyecto padre está archivado",
+    "color_in_use": "Otro proyecto ya usa este color"
   },
   "errors": {
     "VALIDATION_ERROR": "Revise los campos destacados.",
@@ -1257,7 +1258,10 @@
       "onlyMain": "Solo proyectos principales"
     },
     "empty_ongoing": "No hay proyectos en marcha",
-    "empty_finished": "Todavía no hay proyectos terminados"
+    "empty_finished": "Todavía no hay proyectos terminados",
+    "inheritsParent": "Usa el color y el ícono de {{name}}, su proyecto padre.",
+    "coverUniqueHint": "Cada proyecto tiene un color propio. Los colores apagados ya están en uso.",
+    "coverTaken": "{{color}}: en uso por otro proyecto"
   },
   "calendar": {
     "open": "Abrir calendario",
@@ -1751,6 +1755,11 @@
       "remove": "Ocultar al Responsable TI",
       "added": "{{code}} ahora la ve el Responsable TI.",
       "removed": "{{code}} ya no la ve el Responsable TI."
+    },
+    "mine": {
+      "badge": "Tuya",
+      "toggle": "Mis tareas primero",
+      "hint": "Muestra arriba las tareas en las que eres responsable; las demás siguen debajo."
     }
   },
   "tags": {
@@ -1958,7 +1967,8 @@
     "compact": "Compacto",
     "compactHint": "Columnas más estrechas y tarjetas más simples, para ver más columnas a la vez",
     "collapse": "Contraer la columna {{name}}",
-    "expand": "Expandir la columna {{name}}"
+    "expand": "Expandir la columna {{name}}",
+    "mineHint": "Destaca las tarjetas en las que eres responsable. El orden de cada columna no cambia."
   },
   "sprints": {
     "none": "Sin sprint",
