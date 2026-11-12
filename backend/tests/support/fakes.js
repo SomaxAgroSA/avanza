@@ -405,7 +405,8 @@ function createFakeRepositories(store) {
     countSince: (userId, purpose, since) => store.authTokens.filter((t) => t.userId === userId && t.purpose === purpose && t.createdAt >= since).length,
   }
 
-  const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'status', priority: 'priority' }
+  const RANKS = { status: ['planning', 'active', 'paused', 'completed', 'cancelled'], priority: ['low', 'medium', 'high', 'critical'], urgency: ['low', 'medium', 'high'] }
+  const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'statusRank', priority: 'priorityRank', urgency: 'urgencyRank', area: 'areaId', owner: 'ownerId', members: 'memberCount' }
   const projectRepository = {
     findById: (id) => store.projects.find((p) => p.id === id) || null,
     findByKey: (key) => store.projects.find((p) => p.key === key) || null,
@@ -429,7 +430,12 @@ function createFakeRepositories(store) {
       if (sort) {
         const field = SORT_FIELDS[sort.column]
         const factor = sort.direction === 'DESC' ? -1 : 1
-        items = items.slice().sort((a, b) => (a[field] > b[field] ? factor : a[field] < b[field] ? -factor : 0))
+        const value = (p) => {
+          if (RANKS[sort.column]) return RANKS[sort.column].indexOf(p[sort.column]) + 1
+          if (field === 'memberCount') return store.projectMembers ? store.projectMembers.filter((m) => m.projectId === p.id).length : 0
+          return p[field]
+        }
+        items = items.slice().sort((a, b) => (value(a) > value(b) ? factor : value(a) < value(b) ? -factor : 0))
       }
       return { items: items.slice(query.pagination.offset, query.pagination.offset + query.pagination.perPage), total: items.length }
     },
@@ -447,6 +453,7 @@ function createFakeRepositories(store) {
       })
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
+    listAll: (query) => store.projects.filter((p) => !(query && query.ids) || query.ids.includes(p.id)).slice().sort((x, y) => (x.key > y.key ? 1 : -1)),
     countChildren: (ids) => {
       const counts = {}
       store.projects
@@ -649,6 +656,11 @@ function createFakeRepositories(store) {
       }
       const sorts = query.sort.concat([{ column: 'created', direction: 'ASC' }])
       items = items.slice().sort((a, b) => {
+        if (query.firstAssigneeId) {
+          const ma = a.assigneeId === query.firstAssigneeId ? 0 : 1
+          const mb = b.assigneeId === query.firstAssigneeId ? 0 : 1
+          if (ma !== mb) return ma - mb
+        }
         for (const s of sorts) {
           const va = TASK_SORT[s.column](a)
           const vb = TASK_SORT[s.column](b)

@@ -1,6 +1,6 @@
 import { DEPENDENCY_RULES, PLAN_STATUS_CATEGORIES, PROGRESS_SOURCES, type Plan, type PlanLink, type PlanGroup, type PlanGroupSummary, type PlanItem, type PlanResource, type PlanStatus } from '@/domain/plan'
 import type { PlanFile, PlanUpdate } from '@/domain/plan-updates'
-import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanReportDto, PlanUpdateDto } from './dtos'
+import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanReportDto, PlanReportItemDto, PlanUpdateDto } from './dtos'
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
 import type { ApiToken, ApiTokenState } from '@/domain/api-tokens'
@@ -9,7 +9,7 @@ import type { Webhook, WebhookDelivery, WebhookDeliveryStatus } from '@/domain/w
 import type { EmailSettingsPatch, EmailSettingsView, OutboxKind, OutboxStatus, OutboxSummary, ResetTokenCheck, ResetTokenState } from '@/domain/email'
 import { BRANDING_SLOTS, type PasswordPolicy, type PlatformInfo, type PlatformSettings, type PlatformSettingsValues } from '@/domain/platform'
 import { COLUMN_TYPES, type PlanColumn } from '@/domain/plan-columns'
-import { HEALTH_FACTORS, ISSUE_STATES, type HealthFactorKey, type HealthLevel, type JournalEntry, type PlanIssue, type PlanReport } from '@/domain/plan-management'
+import { HEALTH_FACTORS, ISSUE_STATES, type HealthFactorKey, type HealthLevel, type JournalEntry, type PlanIssue, type PlanReport, type PlanReportItem } from '@/domain/plan-management'
 import type { PlanDto, PlanGroupDto, PlanGroupSummaryDto, PlanItemDto, PlanLinkDto, PlanResourceDto, PlanStatusDto } from './dtos'
 import type { AuditEntry, CurrentUser, Permission, Role, RoleSummary, Session, User } from '@/domain/entities'
 import { isPermissionCode, type PermissionCode } from '@/domain/permissions'
@@ -143,6 +143,7 @@ export function toProject(dto: ProjectDto): Project {
     name: dto.name,
     key: dto.key,
     description: dto.description ?? '',
+    platformUrl: dto.platform_url ?? '',
     icon: toIcon(PROJECT_ICONS, dto.icon, 'folder'),
     cover: toColor(PROJECT_COVERS, dto.cover, 'violet'),
     status: oneOf(PROJECT_STATUSES, dto.status, 'planning'),
@@ -905,7 +906,19 @@ export function toPlanReport(dto: PlanReportDto): PlanReport {
         .filter((f): f is typeof f & { key: HealthFactorKey } => (HEALTH_FACTORS as readonly string[]).includes(f.key))
         .map((f) => ({ ...f, level: oneOf(HEALTH_LEVELS, f.level, 'none') })),
     },
+    details: {
+      overdue: (dto.details?.overdue ?? []).map(toPlanReportItem),
+      stuck: (dto.details?.stuck ?? []).map(toPlanReportItem),
+      behind: (dto.details?.behind ?? []).map(toPlanReportItem),
+      overEffort: (dto.details?.over_effort ?? []).map(toPlanReportItem),
+      issues: (dto.details?.issues ?? []).map((i) => ({ id: i.id, number: i.number, description: i.description, state: i.state, openedOn: i.opened_on, project: i.project })),
+    },
+    scope: { mode: dto.scope?.mode === 'family' ? 'family' : 'project', projects: dto.scope?.projects ?? [] },
   }
+}
+
+function toPlanReportItem(dto: PlanReportItemDto): PlanReportItem {
+  return { id: dto.id, name: dto.name, project: dto.project, status: dto.status, startDate: dto.start_date, endDate: dto.end_date, progress: dto.progress }
 }
 
 /* ------------------------------------------------------------------ quadro — GP-5 (colunas personalizadas) */

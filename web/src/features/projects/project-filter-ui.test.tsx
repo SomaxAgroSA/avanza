@@ -28,6 +28,7 @@ function project(id: string, key: string, status: ProjectStatus, myRole: Project
     key,
     name: `Projeto ${key}`,
     description: '',
+    platformUrl: '',
     icon: 'folder',
     cover: 'blue',
     status,

@@ -27,6 +27,8 @@ const FIELD_RULES = {
   description: [rules.maxLength(10000)],
   icon: [iconRule(projectDomain.PROJECT_ICONS)],
   cover: [colorRule(projectDomain.PROJECT_COVERS)],
+  // enlace de acceso a la plataforma desarrollada (vazio limpa)
+  platform_url: [rules.custom((value) => (typeof value !== 'string' ? 'invalid_type' : value.trim() === '' || (/^https?:\/\/\S+$/i.test(value.trim()) && value.length <= 500) ? null : 'invalid_url'))],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
   // urgência (semáforo, §31): null limpa
@@ -59,7 +61,7 @@ const MEMBER_SCHEMA = {
   role: [rules.required(), rules.oneOf(projectDomain.MEMBER_ROLES)],
 }
 
-const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority' }
+const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority', urgency: 'urgency', area: 'area', owner: 'owner', members: 'members' }
 
 /**
  * Campos auditáveis no formato público (`areas` = áreas por id, para mostrar o nome no histórico;
@@ -71,6 +73,7 @@ function auditView(project, areas, parents) {
     description: project.description,
     icon: project.icon,
     cover: project.cover,
+    platform_url: project.platformUrl || null,
     status: project.status,
     priority: project.priority,
     urgency: project.urgency || null,
@@ -151,6 +154,7 @@ function createProjectService(deps) {
       description: project.description || '',
       icon: project.icon || 'folder',
       cover: project.cover || 'violet',
+      platform_url: project.platformUrl || '',
       status: project.status,
       priority: project.priority,
       urgency: project.urgency || null,
@@ -240,6 +244,21 @@ function createProjectService(deps) {
     return present(ctx, project)
   }
 
+  /** Cores dos outros projetos abertos — sem `exceptId` e seus subprojetos (regra da cor única, §24). */
+  async function coversInUse(exceptId) {
+    return (await projects.listAll())
+      .filter((p) => !p.archivedAt && p.id !== exceptId && (!exceptId || p.parentId !== exceptId))
+      .map((p) => p.cover)
+  }
+
+  /** Cores já usadas e a próxima livre, para o formulário sugerir e travar as repetidas. */
+  async function projectCovers(ctx, query) {
+    rbac.assertCan(ctx.principal, 'projects.view')
+    const exceptId = query && typeof query.exclude === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(query.exclude) ? query.exclude : null
+    const used = await coversInUse(exceptId)
+    return { used: [...new Set(used.filter(Boolean).map((c) => String(c).toLowerCase()))], suggested: projectDomain.freeCover(used) }
+  }
+
   async function createProject(ctx, input) {
     rbac.assertCan(ctx.principal, 'projects.create')
     const data = assertValid(input, CREATE_SCHEMA)
@@ -250,14 +269,26 @@ function createProjectService(deps) {
     if (await projects.findByKey(key)) throw appError('PROJECT_KEY_IN_USE')
     const area = data.area_id ? activeArea(data.area_id, await areasById()) : null
     const parent = data.parent_id ? await resolveParent(ctx, data.parent_id, null) : null
+    // subprojeto: cor e ícone do pai; projeto principal: cor que nenhum outro usa (a escolhida ou a próxima livre)
+    let icon = data.icon || 'folder'
+    let cover = data.cover || null
+    if (parent) {
+      icon = parent.icon || 'folder'
+      cover = parent.cover || 'violet'
+    } else {
+      const used = await coversInUse(null)
+      if (cover && projectDomain.coverInUse(cover, used)) throw appError('VALIDATION_ERROR', undefined, { fields: { cover: 'color_in_use' } })
+      if (!cover) cover = projectDomain.freeCover(used)
+    }
 
     const project = await deps.unitOfWork.run(async (repos) => {
       const created = await repos.projectRepository.create({
         name: data.name,
         key,
         description: data.description || '',
-        icon: data.icon || 'folder',
-        cover: data.cover || 'violet',
+        icon,
+        cover,
+        platformUrl: (data.platform_url || '').trim(),
         status: data.status || 'planning',
         priority: data.priority || 'medium',
         urgency: data.urgency || null,
@@ -303,6 +334,21 @@ function createProjectService(deps) {
       parents[p.id] = p
     })
 
+    // Cor e ícone: o subprojeto segue o pai; o projeto principal não pode repetir a cor de outro.
+    const parent = parentId ? parents[parentId] : null
+    let icon = data.icon || project.icon
+    let cover = data.cover || project.cover
+    if (parent) {
+      icon = parent.icon || 'folder'
+      cover = parent.cover || 'violet'
+    } else {
+      const used = await coversInUse(project.id)
+      const changed = !!data.cover && String(data.cover).toLowerCase() !== String(project.cover || '').toLowerCase()
+      if (changed && projectDomain.coverInUse(cover, used)) throw appError('VALIDATION_ERROR', undefined, { fields: { cover: 'color_in_use' } })
+      // deixou de ser subprojeto: ganha uma cor própria se a do pai ficou repetida
+      if (project.parentId && projectDomain.coverInUse(cover, used)) cover = projectDomain.freeCover(used)
+    }
+
     // Datas podem ser limpas com null; a validação do intervalo considera os valores já salvos.
     const pickDate = (field, current) => (source[field] === null ? null : data[field] !== undefined ? data[field] : current)
     const startDate = pickDate('start_date', project.startDate)
@@ -313,8 +359,9 @@ function createProjectService(deps) {
     const next = Object.assign({}, project, {
       name: data.name !== undefined ? data.name : project.name,
       description: data.description !== undefined ? data.description : project.description,
-      icon: data.icon || project.icon,
-      cover: data.cover || project.cover,
+      icon,
+      cover,
+      platformUrl: data.platform_url !== undefined ? data.platform_url.trim() : project.platformUrl || '',
       status: data.status || project.status,
       priority: data.priority || project.priority,
       urgency: source.urgency === null ? null : data.urgency !== undefined ? data.urgency : project.urgency || null,
@@ -326,6 +373,7 @@ function createProjectService(deps) {
     const before = auditView(project, areas, parents)
     const changes = diff(before, auditView(next, areas, parents), Object.keys(before))
     if (!changes) return present(ctx, project)
+    const visualChanged = next.icon !== project.icon || next.cover !== project.cover
 
     const saved = await deps.unitOfWork.run(async (repos) => {
       const updated = await repos.projectRepository.update(project.id, {
@@ -333,6 +381,7 @@ function createProjectService(deps) {
         description: next.description,
         icon: next.icon,
         cover: next.cover,
+        platformUrl: next.platformUrl,
         status: next.status,
         priority: next.priority,
         urgency: next.urgency,
@@ -342,6 +391,15 @@ function createProjectService(deps) {
         dueDate: next.dueDate,
       })
       await audit(repos, ctx, project, 'project.updated', changes.oldValue, changes.newValue)
+      // projeto principal que trocou de cor ou ícone: os subprojetos acompanham
+      if (!next.parentId && visualChanged) {
+        const children = (await projects.listAll()).filter((p) => p.parentId === project.id)
+        for (const child of children) {
+          if (child.icon === next.icon && child.cover === next.cover) continue
+          await repos.projectRepository.update(child.id, { icon: next.icon, cover: next.cover })
+          await audit(repos, ctx, child, 'project.updated', { icon: child.icon, cover: child.cover }, { icon: next.icon, cover: next.cover })
+        }
+      }
       return updated
     })
     return present(ctx, saved)
@@ -477,6 +535,7 @@ function createProjectService(deps) {
     listProjects,
     getProject,
     createProject,
+    projectCovers,
     updateProject,
     archiveProject: async (ctx, id) => setArchived(ctx, id, true),
     unarchiveProject: async (ctx, id) => setArchived(ctx, id, false),

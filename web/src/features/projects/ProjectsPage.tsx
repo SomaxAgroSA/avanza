@@ -139,6 +139,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       {
         id: 'status',
         header: t('projects.fields.status'),
+        sortable: true,
         size: 140,
         cell: (project) => <ProjectStatusBadge status={project.status} />,
         filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
@@ -146,6 +147,8 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       {
         id: 'priority',
         header: t('projects.fields.priority'),
+        sortable: true,
+        sortDescFirst: true,
         size: 130,
         cell: (project) => <ProjectPriorityLabel priority={project.priority} />,
         filter: { label: t('projects.fields.priority'), options: PROJECT_PRIORITIES.map((p) => ({ value: p, label: t(`projects.priority.${p}`) })) },
@@ -154,6 +157,8 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         // semáforo: quem edita o projeto troca com um clique
         id: 'urgency',
         header: t('tasks.fields.urgency'),
+        sortable: true,
+        sortDescFirst: true,
         size: 160,
         cell: (project) => <ProjectUrgencyCell project={project} />,
         filter: { label: t('tasks.fields.urgency'), options: urgencyOptions },
@@ -162,6 +167,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         // área responsável: quem edita o projeto troca com um clique
         id: 'area',
         header: t('tasks.fields.area'),
+        sortable: true,
         size: 190,
         cell: (project) => <ProjectAreaCell project={project} areas={areas.data ?? []} />,
         filter: { label: t('tasks.fields.area'), options: areaOptions },
@@ -184,6 +190,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       {
         id: 'owner',
         header: t('projects.fields.owner'),
+        sortable: true,
         size: 200,
         cell: (project) =>
           project.owner ? (
@@ -195,7 +202,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
             '—'
           ),
       },
-      { id: 'members', header: t('projects.fields.members'), size: 110, align: 'end', cell: (project) => project.memberCount },
+      { id: 'members', header: t('projects.fields.members'), sortable: true, sortDescFirst: true, size: 110, align: 'end', cell: (project) => project.memberCount },
       {
         id: 'due_date',
         header: t('projects.fields.dueDate'),

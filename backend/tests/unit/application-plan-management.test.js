@@ -161,5 +161,34 @@ describe('application/plan-management — linha de base, Bateria e relatório', 
     assert.equal((await s.mgmt.getReport(s.ctx.lia, s.project.id, { tz_offset: '-840' })).today, '2024-02-11')
     assert.equal(await codeOf(() => s.mgmt.getReport(s.ctx.lia, s.project.id, { tz_offset: 'x' })), 'VALIDATION_ERROR:{"tz_offset":"invalid_type"}')
     assert.equal(await codeOf(() => s.mgmt.getReport(s.ctx.otto, s.project.id, {})), 'PROJECT_NOT_FOUND')
+    // o que está por trás de cada fator, para o card abrir a lista
+    assert.deepEqual(report.details.overdue.map((i) => [i.name, i.project.key, i.end_date]), [['Plano', 'CLV', '2024-02-05']])
+    assert.deepEqual(report.details.issues.map((i) => [i.description, i.project.key]), [['VPN', 'CLV']])
+    assert.deepEqual(report.scope, { mode: 'project', projects: [{ id: s.project.id, key: 'CLV', name: 'Clover 6', items: 2 }] })
+  })
+
+  it('relatório com scope=family soma os subprojetos que a pessoa vê (a aba Gestão continua só com o projeto)', async () => {
+    const s = await setup()
+    await board(s)
+    const child = await s.deps.projectRepository.create({ name: 'Clover Mobile', key: 'CLM', ownerId: s.users.gabi.id, createdBy: s.users.gabi.id, status: 'active', priority: 'medium', parentId: s.project.id })
+    await s.deps.projectMemberRepository.add({ projectId: child.id, userId: s.users.gabi.id, role: 'manager' })
+    await s.deps.projectMemberRepository.add({ projectId: child.id, userId: s.users.mario.id, role: 'member' })
+    const group = await s.plan.createGroup(s.ctx.gabi, child.id, { name: 'App', color: 'green' })
+    const statuses = (await s.plan.getPlan(s.ctx.gabi, child.id)).statuses
+    await s.plan.createItem(s.ctx.mario, child.id, { group_id: group.id, name: 'Login', status_id: statuses.find((x) => x.category === 'blocked').id, estimated_hours: 6 })
+    await s.mgmt.createIssue(s.ctx.mario, child.id, { opened_on: '2024-02-06', description: 'Loja' })
+
+    const family = await s.mgmt.getReport(s.ctx.gabi, s.project.id, { scope: 'family' })
+    assert.equal(family.summary.total, 3)
+    assert.equal(family.summary.stuck, 1)
+    assert.equal(family.effort.estimated, 20)
+    assert.deepEqual(family.scope.projects.map((p) => [p.key, p.items]), [['CLV', 2], ['CLM', 1]])
+    assert.deepEqual(family.details.stuck.map((i) => [i.name, i.project.key]), [['Login', 'CLM']])
+    assert.deepEqual(family.details.issues.map((i) => i.project.key), ['CLM'])
+    assert.ok(family.groups.some((g) => g.name === 'CLM · App'))
+    // sem a opção, só o projeto; quem não vê o subprojeto não recebe os dados dele
+    assert.equal((await s.mgmt.getReport(s.ctx.gabi, s.project.id, {})).summary.total, 2)
+    const lia = await s.mgmt.getReport(s.ctx.lia, s.project.id, { scope: 'family' })
+    assert.deepEqual(lia.scope.projects.map((p) => p.key), ['CLV'])
   })
 })

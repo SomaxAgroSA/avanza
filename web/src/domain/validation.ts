@@ -104,6 +104,12 @@ export const projectSchema = z
       .transform((value) => value.toUpperCase())
       .pipe(z.string().regex(/^[A-Z][A-Z0-9]{1,9}$/, 'invalid_format')),
     description: z.string().max(10000, 'too_long'),
+    /** enlace da plataforma: vazio ou http(s):// */
+    platformUrl: z
+      .string()
+      .trim()
+      .max(500, 'too_long')
+      .refine((value) => value === '' || /^https?:\/\/\S+$/i.test(value), 'invalid_url'),
     icon: z.union([z.enum(PROJECT_ICONS), z.custom<string>(isIconName)]),
     cover: z.union([z.enum(PROJECT_COVERS), z.custom<HexColor>(isHexColor)]),
     status: z.enum(PROJECT_STATUSES),

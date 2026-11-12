@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArchiveRestore, ArrowLeft, Copy, FolderSearch, FolderTree, Pencil, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, Copy, ExternalLink, FolderSearch, FolderTree, Pencil, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import {
   canOpenSection,
@@ -79,6 +79,15 @@ function backToListPath(status: Project['status'], archived: boolean): string {
   const last = lastNavChild('projects')
   if (last && !last.startsWith('/projects/archived')) return last
   return VIEW_STATUSES.finished?.includes(status) ? '/projects/finished' : '/projects/ongoing'
+}
+
+/** Domínio do enlace (dre.somaxagro.com), para o botão da plataforma. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
 }
 
 function ProjectDetail({ project }: { project: Project }) {
@@ -185,7 +194,21 @@ function ProjectDetail({ project }: { project: Project }) {
                 </div>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {project.platformUrl && (
+                // enlace da plataforma desenvolvida: o destaque do cabeçalho (abre em outra aba)
+                <a
+                  href={project.platformUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#facc15] px-3 text-sm font-semibold text-[#1d2a05] shadow-sm ring-2 ring-[#facc15]/40 hover:bg-[#fde047] focus-visible:outline-2 focus-visible:outline-on-cover"
+                  title={project.platformUrl}
+                  data-testid="project-platform-link"
+                >
+                  <ExternalLink className="size-4" aria-hidden /> {t('projects.openPlatform')}
+                  <span className="hidden text-xs font-normal opacity-75 sm:inline">{hostOf(project.platformUrl)}</span>
+                </a>
+              )}
               {caps.edit && (
                 <AppButton variant="secondary" size="sm" leftIcon={<Pencil />} onClick={() => setEditing(true)}>
                   {t('common.edit')}

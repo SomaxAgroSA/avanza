@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, FileCheck2, FileX2, Laptop } from 'lucide-react'
+import { ExternalLink, FileCheck2, FileX2, Laptop, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { isClosed, type TaskSummary } from '@/domain/tasks'
 import {
+  AppBadge,
+  AppButton,
   AppConfirmDialog,
   AppDataTable,
   AppIconButton,
@@ -14,7 +16,7 @@ import {
   type DataTableColumn,
 } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
-import { useCan } from '@/features/auth/session'
+import { useCan, useSession } from '@/features/auth/session'
 import { managementLink } from '@/features/plan/paths'
 import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
 import { useScreenProjects } from '@/features/projects/use-project-filter'
@@ -27,6 +29,7 @@ import { TaskPreviewDrawer } from './TaskPreviewDrawer'
 import { UrgencyCell } from './TaskUrgency'
 import { AreaCell } from './TaskArea'
 import { useUrgencyFilterOptions } from './urgency-options'
+import { useMineFirst } from './use-mine-first'
 import { DueDate, PersonCell, TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { useTags } from '@/features/tags/queries'
 import { TagList } from '@/features/tags/tag-visuals'
@@ -75,7 +78,10 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
     setSearch(search)
     onSearchApplied?.()
   }, [search, setSearch, onSearchApplied])
-  const tasks = useTasksList(table.query, projectId ? { projectId } : undefined)
+  // minhas tarefas primeiro (padrão ligado): o servidor ordena; as da pessoa ganham a marca "Tuya"
+  const [mineFirst, setMineFirst] = useMineFirst()
+  const me = useSession().current?.user.id
+  const tasks = useTasksList(table.query, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
   const statuses = useStatuses(true)
   const priorities = usePriorities(true)
   const types = useTaskTypes(true)
@@ -107,7 +113,14 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         minSize: 240,
         cell: (task) => (
           <div className="min-w-0">
-            <TaskCode task={task} />
+            <span className="flex items-center gap-2">
+              <TaskCode task={task} />
+              {mineFirst && me && task.assignee?.id === me && (
+                <AppBadge tone="primary" className="px-1.5 py-0 text-[10px]" data-testid="task-mine">
+                  {t('tasks.mine.badge')}
+                </AppBadge>
+              )}
+            </span>
             <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <TagList tags={task.tags} max={3} className="mt-0.5" />
@@ -261,7 +274,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, areaOptions],
+    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, areaOptions, mineFirst, me],
   )
 
   return (
@@ -279,6 +292,17 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         onRetry={() => void tasks.refetch()}
         searchPlaceholder={t('tasks.searchPlaceholder')}
         actionsSlot={actionsSlot}
+        toolbar={
+          <AppButton
+            variant={mineFirst ? 'soft' : 'secondary'}
+            leftIcon={<UserCheck />}
+            aria-pressed={mineFirst}
+            title={t('tasks.mine.hint')}
+            onClick={() => setMineFirst(!mineFirst)}
+          >
+            {t('tasks.mine.toggle')}
+          </AppButton>
+        }
         actions={{
           // só na aba Tarefas do projeto: o que sai no informe (aba Informe) e o que o Responsável TI vê
           leading:

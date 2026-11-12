@@ -38,6 +38,7 @@ const ROUTES = [
   ['DELETE', '/api/v1/users/:id/avatar', 'removeUserAvatar'],
   ['GET', '/api/v1/audit-logs', 'listAuditLogs'],
   ['GET', '/api/v1/projects', 'listProjects'],
+  ['GET', '/api/v1/project-covers', 'projectCovers'],
   ['POST', '/api/v1/projects', 'createProject', JSON_LIMIT],
   ['GET', '/api/v1/projects/:id', 'getProject'],
   ['PATCH', '/api/v1/projects/:id', 'updateProject', JSON_LIMIT],

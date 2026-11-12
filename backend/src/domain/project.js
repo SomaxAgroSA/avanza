@@ -38,6 +38,40 @@ const PROJECT_ICONS = Object.freeze([
 ])
 const PROJECT_COVERS = Object.freeze(['violet', 'indigo', 'blue', 'cyan', 'teal', 'green', 'amber', 'orange', 'red', 'pink', 'slate'])
 
+/**
+ * Cor de projeto única (regras §24): cada projeto principal tem a sua cor, e o subprojeto usa a cor e o
+ * ícone do pai. Ordem em que as cores livres são sugeridas: os nomes da paleta e depois tons escuros bem
+ * separados (o ícone é branco sobre a cor). Acabando a lista, um tom gerado pelo ângulo áureo.
+ */
+const COVER_SEQUENCE = Object.freeze(PROJECT_COVERS.concat([
+  '#be185d', '#0369a1', '#7e22ce', '#a16207', '#047857', '#9a3412', '#4338ca', '#0e7490', '#a21caf', '#365314',
+  '#1e3a8a', '#7f1d1d', '#155e75', '#581c87', '#854d0e', '#166534', '#9d174d', '#3730a3', '#78350f', '#334155',
+  '#0f766e', '#c2410c', '#6d28d9', '#14532d', '#831843', '#0c4a6e', '#b45309', '#1d4ed8', '#be123c', '#4d7c0f',
+]))
+
+function hslHex(h, s, l) {
+  const k = (n) => (n + h / 30) % 12
+  const a = s * Math.min(l, 1 - l)
+  const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))))
+  return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+/** Primeira cor que nenhum outro projeto usa (`used`: cores dos outros projetos, sem o próprio e seus subprojetos). */
+function freeCover(used) {
+  const taken = new Set((used || []).filter(Boolean).map((c) => String(c).toLowerCase()))
+  for (const cover of COVER_SEQUENCE) if (!taken.has(cover)) return cover
+  for (let i = 0; i < 1000; i++) {
+    const hex = hslHex((i * 137.508) % 360, 0.6, 0.32 + (i % 3) * 0.04)
+    if (!taken.has(hex)) return hex
+  }
+  return COVER_SEQUENCE[0]
+}
+
+/** A cor já é de outro projeto? */
+function coverInUse(cover, used) {
+  return !!cover && (used || []).some((c) => c && String(c).toLowerCase() === String(cover).toLowerCase())
+}
+
 const KEY_PATTERN = /^[A-Z][A-Z0-9]{1,9}$/
 
 function normalizeKey(key) {
@@ -195,6 +229,9 @@ module.exports = {
   PROJECT_SECTIONS,
   PROJECT_ICONS,
   PROJECT_COVERS,
+  COVER_SEQUENCE,
+  freeCover,
+  coverInUse,
   normalizeKey,
   keyIssue,
   datesIssue,

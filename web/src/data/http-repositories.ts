@@ -422,7 +422,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -464,6 +464,10 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
     },
     transferOwnership: (id, userId) => one(api.put<ProjectDto>(`${path(id)}/owner`, { user_id: userId })),
     listMembers: (id) => members(api.get<ProjectMemberDto[]>(`${path(id)}/members`)),
+    async covers(exclude) {
+      const { data } = await api.get<{ used: string[]; suggested: string }>('/project-covers', { query: { exclude } })
+      return { used: data.used, suggested: data.suggested }
+    },
     addMember: (id, userId, role) => members(api.post<ProjectMemberDto[]>(`${path(id)}/members`, { user_id: userId, role })),
     updateMemberRole: (id, userId, role) => members(api.patch<ProjectMemberDto[]>(memberPath(id, userId), { role })),
     async removeMember(id, userId) {
@@ -1016,8 +1020,8 @@ export function createHttpPlanRepository(api: ApiClient): PlanRepository {
       const { data } = await api.del<{ values?: number }>(`/plan/columns/${encodeURIComponent(id)}`)
       return { values: data?.values ?? 0 }
     },
-    async report(projectId, tzOffset) {
-      return toPlanReport((await api.get<PlanReportDto>(`${project(projectId)}/plan/report`, { query: { tz_offset: String(tzOffset) } })).data)
+    async report(projectId, tzOffset, scope) {
+      return toPlanReport((await api.get<PlanReportDto>(`${project(projectId)}/plan/report`, { query: { tz_offset: String(tzOffset), scope: scope === 'family' ? 'family' : undefined } })).data)
     },
   }
 }
@@ -1294,6 +1298,7 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
       })
       if (options?.projectId) filters.project_id = options.projectId
       if (options?.planItemId) filters.plan_item_id = options.planItemId
+      if (options?.mineFirst) filters.mine_first = 'true'
       const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/tasks', {
         query: { page: query.page, perPage: query.perPage, sort: toSortParam(query.sort), search: query.search.trim() || undefined, ...filters },
       })

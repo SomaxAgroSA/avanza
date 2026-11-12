@@ -49,6 +49,7 @@ function createProjectRepository(db) {
     description: ['description', 'text'],
     icon: ['icon', 'text'],
     cover: ['cover', 'text'],
+    platformUrl: ['platform_url', 'text'],
     status: ['status', 'text'],
     priority: ['priority', 'text'],
     urgency: ['urgency', 'text'],
@@ -71,6 +72,7 @@ function createProjectRepository(db) {
       description: row.description,
       icon: row.icon,
       cover: row.cover,
+      platformUrl: row.platform_url || '',
       status: row.status,
       priority: row.priority,
       urgency: row.urgency || null,
@@ -86,9 +88,23 @@ function createProjectRepository(db) {
     }
   }
 
+  /**
+   * Colunas ordenadas por expressão (lista de projetos): status na ordem do fluxo, prioridade e urgência
+   * pela gravidade, departamento e dono pelo nome, membros pela quantidade. Vazios sempre por último.
+   */
+  const SORT_EXPRESSIONS = {
+    status: "CASE \"status\" WHEN 'planning' THEN 1 WHEN 'active' THEN 2 WHEN 'paused' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 END",
+    priority: "CASE \"priority\" WHEN 'low' THEN 1 WHEN 'medium' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END",
+    urgency: "CASE \"urgency\" WHEN 'low' THEN 1 WHEN 'medium' THEN 2 WHEN 'high' THEN 3 END",
+    area: '(SELECT lower(a."name") FROM "areas" a WHERE a."id" = projects."area_id")',
+    owner: '(SELECT lower(u."name") FROM "users" u WHERE u."id" = projects."owner_id")',
+    members: '(SELECT count(*) FROM "project_members" m WHERE m."project_id" = projects."id")',
+  }
+
   function sortClause(sort) {
     const parts = (sort || []).map((s) => {
       const dir = direction(s.direction)
+      if (SORT_EXPRESSIONS[s.column]) return `${SORT_EXPRESSIONS[s.column]} ${dir} NULLS LAST`
       const nulls = NULLABLE.has(s.column) ? (dir === 'ASC' ? ' NULLS FIRST' : ' NULLS LAST') : ''
       return `${ident(s.column)} ${dir}${nulls}`
     })

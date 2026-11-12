@@ -4,6 +4,13 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 
 ## [Não lançado]
 
+### Adicionado
+- **Enlace da plataforma:** campo no topo do formulário do projeto; com ele, o cabeçalho mostra o botão amarelo "Abrir plataforma" (abre em outra aba) e os Detalhes, a linha "Plataforma" (migration 0023).
+- **Saúde do projeto com subprojetos e cards clicáveis:** no Resumo do projeto principal, a saúde, o resumo, o cronograma e o esforço somam os subprojetos que a pessoa vê (opção "Só este projeto"; a aba Gestão continua só com o projeto). Cada card mostra só o número-chave (a frase completa fica no texto de ajuda) e abre a lista do que está por trás — elementos atrasados, parados, abaixo do planejado, com mais horas que o estimado ou os problemas em aberto —, cada um com o enlace para o elemento na Gestão do seu projeto.
+- **Lista de projetos ordenável por todas as colunas:** Estado (ordem do fluxo), Prioridade e Urgência (da mais alta para a mais baixa no primeiro clique), Departamento, Dono, Membros e Entrega.
+- **Cor única por projeto:** cada projeto principal tem uma cor que nenhum outro usa. O projeto novo já nasce com a próxima cor livre; no formulário, as cores de outros projetos aparecem apagadas e não podem ser escolhidas (a cor livre repetida é recusada com "Outro projeto já usa esta cor"). O subprojeto usa sempre a cor e o ícone do projeto pai — o formulário mostra "Usa a cor e o ícone de…" no lugar dos seletores — e acompanha quando o pai muda; ao deixar de ser subprojeto, ganha uma cor própria. `GET /project-covers` informa as cores em uso e a próxima livre.
+- **Minhas tarefas primeiro** (ligado por padrão, por pessoa): na Lista de tarefas, as tarefas em que a pessoa é responsável vêm no topo com a marca "Sua", e as demais continuam abaixo; no Kanban, os cards da pessoa ganham uma faixa de destaque e a ordem das colunas (a prioridade do time) não muda. Um botão desliga nas duas telas. `GET /tasks` aceita `mine_first=true`.
+
 ### Corrigido
 - **Voltar para a lista de onde veio:** ao abrir um projeto a partir de Em andamento, Concluídos ou Arquivados, "Voltar a projetos" volta para essa mesma lista, com os filtros que estavam aplicados, e não mais para Todos os meus projetos. Enquanto a pessoa está dentro do projeto, o menu continua marcando essa lista. Quem chega por um link direto ou pelo Panorama volta para Em andamento ou Concluídos, conforme o status do projeto. A última lista fica guardada na aba do navegador (sessionStorage).
 

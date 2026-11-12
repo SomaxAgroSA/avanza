@@ -269,24 +269,85 @@ function createPlanManagementService(deps) {
     return Number(raw)
   }
 
+  /**
+   * Relatório do quadro. `scope=family` (resumo do projeto principal) soma os subprojetos abertos que a
+   * pessoa vê — elementos, esforço, problemas e saúde juntos; sem a opção, só o projeto (aba Gestão).
+   * `details` traz o que está por trás de cada fator, para o card da saúde abrir a lista.
+   */
   async function getReport(ctx, projectId, query) {
     const { project } = await loadProject(ctx, projectId)
     const offset = readOffset(query)
-    const statusById = indexBy(await ensureStatuses(project))
-    const list = await deps.planItemRepository.listByProject(project.id, MAX_ITEMS)
+    const scope = query && query.scope === 'family' ? 'family' : 'project'
+    const family = [project]
+    if (scope === 'family' && !project.parentId) {
+      const children = (await deps.projectRepository.listAll())
+        .filter((p) => p.parentId === project.id && !p.archivedAt)
+        .sort((a, b) => (a.key > b.key ? 1 : -1))
+      for (const child of children) {
+        try {
+          family.push((await loadProject(ctx, child.id)).project)
+        } catch (error) {
+          // subprojeto que a pessoa não vê fica fora da conta
+          if (!error || error.code !== 'PROJECT_NOT_FOUND') throw error
+        }
+      }
+    }
+
+    const statusById = {}
+    const items = []
+    const groups = []
+    const resources = []
+    const issueList = []
+    const pending = {}
+    const progress = {}
+    const projectOf = {}
+    const counts = {}
+    for (const p of family) {
+      const statuses = indexBy(await ensureStatuses(p))
+      Object.assign(statusById, statuses)
+      const list = await deps.planItemRepository.listByProject(p.id, MAX_ITEMS)
+      const categoryOf = (i) => (i.statusId && statuses[i.statusId] ? statuses[i.statusId].category : null)
+      list.forEach((i) => {
+        projectOf[i.id] = p
+      })
+      counts[p.id] = list.filter((i) => !i.parentId).length
+      items.push(...list)
+      Object.assign(progress, await progressOf(list, statuses))
+      Object.assign(pending, await pendingMap(list, await deps.planLinkRepository.listByProject(p.id), categoryOf))
+      const groupList = await deps.projectGroupRepository.listByProject(p.id)
+      const numbers = planDomain.numberGroups(groupList)
+      planDomain.orderGroups(groupList).forEach((g) => groups.push({ id: g.id, name: p.id === project.id ? g.name : `${p.key} · ${g.name}`, color: g.color, number: numbers[g.id] }))
+      resources.push(...(await deps.planResourceRepository.listByProject(p.id)))
+      ;(await issues.listByProject(p.id)).forEach((issue) => issueList.push(Object.assign({}, issue, { project: p })))
+    }
     const categoryOf = (i) => (i.statusId && statusById[i.statusId] ? statusById[i.statusId].category : null)
-    const groupList = await deps.projectGroupRepository.listByProject(project.id)
-    const numbers = planDomain.numberGroups(groupList)
-    return planReport({
-      items: list,
-      categoryOf,
-      progress: await progressOf(list, statusById),
-      groups: planDomain.orderGroups(groupList).map((g) => ({ id: g.id, name: g.name, color: g.color, number: numbers[g.id] })),
-      resources: await deps.planResourceRepository.listByProject(project.id),
-      issues: await issues.listByProject(project.id),
-      pending: await pendingMap(list, await deps.planLinkRepository.listByProject(project.id), categoryOf),
-      today: localDay(deps.clock.now(), offset),
+    const report = planReport({ items, categoryOf, progress, groups, resources, issues: issueList, pending, today: localDay(deps.clock.now(), offset) })
+
+    const ref = (p) => ({ id: p.id, key: p.key, name: p.name })
+    const byId = indexBy(items)
+    const present = (id) => {
+      const item = byId[id]
+      const status = item.statusId ? statusById[item.statusId] : null
+      return {
+        id: item.id,
+        name: item.name,
+        project: ref(projectOf[item.id]),
+        status: status ? { name: status.name, color: status.color, category: status.category } : null,
+        start_date: item.startDate || null,
+        end_date: item.endDate || item.startDate || null,
+        progress: (progress[item.id] || { value: 0 }).value,
+      }
+    }
+    const details = {}
+    Object.keys(report.details).forEach((key) => {
+      details[key] = report.details[key].map(present)
     })
+    details.issues = issueList
+      .filter((i) => i.state !== 'resolved')
+      .map((i) => ({ id: i.id, number: i.number, description: truncate(i.description || '', 200), state: i.state, opened_on: i.openedOn || null, project: ref(i.project) }))
+    report.details = details
+    report.scope = { mode: scope, projects: family.map((p) => Object.assign(ref(p), { items: counts[p.id] })) }
+    return report
   }
 
   return {

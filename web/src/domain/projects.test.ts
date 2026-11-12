@@ -36,6 +36,7 @@ describe('domain/projects — projeto pai e seções (regras §34 e §35)', () =
     name: 'CRM',
     key: 'CRM',
     description: '',
+    platformUrl: '',
     icon: 'folder',
     cover: 'violet',
     status: 'active',

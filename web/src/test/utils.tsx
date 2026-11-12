@@ -138,6 +138,7 @@ export function fakeRepositories(overrides: {
       remove: notImplemented,
       transferOwnership: notImplemented,
       listMembers: () => Promise.resolve([]),
+      covers: () => Promise.resolve({ used: [], suggested: 'violet' }),
       addMember: notImplemented,
       updateMemberRole: notImplemented,
       removeMember: notImplemented,

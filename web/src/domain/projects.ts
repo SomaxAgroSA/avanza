@@ -78,6 +78,8 @@ export interface Project {
   name: string
   key: string
   description: string
+  /** Enlace de acesso à plataforma desenvolvida (vazio = sem plataforma). */
+  platformUrl: string
   icon: ProjectIcon
   cover: ProjectCover
   status: ProjectStatus

@@ -127,7 +127,8 @@
     "in_future": "The date can’t be in the future",
     "parent_is_child": "That project is already a subproject; choose a main project",
     "has_children": "A project with subprojects cannot have a parent",
-    "parent_archived": "The parent project is archived"
+    "parent_archived": "The parent project is archived",
+    "color_in_use": "Another project already uses this color"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -1018,7 +1019,9 @@
       "dueDate": "Due",
       "icon": "Icon",
       "cover": "Cover",
-      "role": "Role"
+      "role": "Role",
+      "platformUrl": "Platform link",
+      "platform": "Platform"
     },
     "descriptions": {
       "all": "Projects you can access.",
@@ -1257,7 +1260,12 @@
       "onlyMain": "Main projects only"
     },
     "empty_ongoing": "No projects in progress",
-    "empty_finished": "No finished projects yet"
+    "empty_finished": "No finished projects yet",
+    "inheritsParent": "Uses the color and icon of {{name}}, its parent project.",
+    "coverUniqueHint": "Each project has its own color. Faded colors are already in use.",
+    "coverTaken": "{{color}}: used by another project",
+    "platformUrlHint": "Address to open the platform that was built. Shown as an “Open platform” button at the top of the project.",
+    "openPlatform": "Open platform"
   },
   "calendar": {
     "open": "Open calendar",
@@ -1751,6 +1759,11 @@
       "remove": "Hide from the IT owner",
       "added": "{{code}} is now visible to the IT owner.",
       "removed": "{{code}} is no longer visible to the IT owner."
+    },
+    "mine": {
+      "badge": "Yours",
+      "toggle": "My tasks first",
+      "hint": "Shows the tasks you are assigned to at the top; the rest stay below."
     }
   },
   "tags": {
@@ -1958,7 +1971,8 @@
     "compact": "Compact",
     "compactHint": "Narrower columns and leaner cards, to see more columns at once",
     "collapse": "Collapse the {{name}} column",
-    "expand": "Expand the {{name}} column"
+    "expand": "Expand the {{name}} column",
+    "mineHint": "Highlights the cards you are assigned to. The order of each column does not change."
   },
   "sprints": {
     "none": "No sprint",
@@ -3299,6 +3313,15 @@
           "stuck": "No open item.",
           "effort": "No done items with estimate and actual.",
           "issues": "No issues."
+        },
+        "short": {
+          "none": "No data",
+          "schedule": "{{count}} of {{of}} late",
+          "progress": "Plan {{planned}}% · done {{actual}}%",
+          "stuck": "{{count}} of {{of}} stuck",
+          "effort": "{{value}}% over estimate",
+          "issues_one": "{{count}} open",
+          "issues_other": "{{count}} open"
         }
       },
       "summary": {
@@ -3338,6 +3361,44 @@
         "group": "Group",
         "items": "Done/total",
         "empty": "No groups yet."
+      },
+      "details": {
+        "open": {
+          "schedule_one": "See {{count}}",
+          "schedule_other": "See {{count}}",
+          "progress_one": "See {{count}}",
+          "progress_other": "See {{count}}",
+          "stuck_one": "See {{count}}",
+          "stuck_other": "See {{count}}",
+          "effort_one": "See {{count}}",
+          "effort_other": "See {{count}}",
+          "issues_one": "See {{count}}",
+          "issues_other": "See {{count}}"
+        },
+        "title": {
+          "schedule_one": "{{count}} late item",
+          "schedule_other": "{{count}} late items",
+          "progress_one": "{{count}} item behind plan",
+          "progress_other": "{{count}} items behind plan",
+          "stuck_one": "{{count}} stuck item",
+          "stuck_other": "{{count}} stuck items",
+          "effort_one": "{{count}} item over its estimate",
+          "effort_other": "{{count}} items over their estimate",
+          "issues_one": "{{count}} open issue",
+          "issues_other": "{{count}} open issues"
+        },
+        "nothing": "Nothing to review",
+        "openItem": "Open →"
+      },
+      "scope": {
+        "label": "What is counted",
+        "family": "With subprojects",
+        "family_one": "With subprojects ({{count}})",
+        "family_other": "With subprojects ({{count}})",
+        "project": "This project only",
+        "includes": "Includes:",
+        "items_one": "{{count}} item",
+        "items_other": "{{count}} items"
       }
     },
     "customColumns": {
