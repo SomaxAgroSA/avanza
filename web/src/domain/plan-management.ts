@@ -88,4 +88,43 @@ export interface PlanReport {
   resources: Array<{ resourceId: string | null; name: string | null; color: string | null; items: number; open: number; estimated: number | null }>
   groups: Array<{ groupId: string; number: string | null; name: string; color: string; items: number; done: number; overdue: number; progress: number; estimated: number | null; actual: number | null }>
   health: { level: HealthLevel; factors: HealthFactor[] }
+  /** O que está por trás de cada fator (o card da saúde abre a lista). */
+  details: PlanReportDetails
+  /** Projetos somados (o principal e, com scope=family, os subprojetos que a pessoa vê). */
+  scope: { mode: PlanReportScope; projects: Array<PlanReportProject & { items: number }> }
+}
+
+export type PlanReportScope = 'project' | 'family'
+
+export interface PlanReportProject {
+  id: string
+  key: string
+  name: string
+}
+
+export interface PlanReportItem {
+  id: string
+  name: string
+  project: PlanReportProject
+  status: { name: string; color: string; category: string } | null
+  startDate: string | null
+  endDate: string | null
+  progress: number
+}
+
+export interface PlanReportIssue {
+  id: string
+  number: number
+  description: string
+  state: string
+  openedOn: string | null
+  project: PlanReportProject
+}
+
+export interface PlanReportDetails {
+  overdue: PlanReportItem[]
+  stuck: PlanReportItem[]
+  behind: PlanReportItem[]
+  overEffort: PlanReportItem[]
+  issues: PlanReportIssue[]
 }

@@ -26,6 +26,7 @@ const project = (overrides: Partial<Project> = {}): Project => ({
   key: 'CRM',
   name: 'CRM Corporativo',
   description: '',
+  platformUrl: '',
   icon: 'folder',
   cover: 'blue',
   status: 'active',

@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import { screen, waitFor, within } from '@testing-library/react'
 import i18n from '@/core/i18n'
 import type { PermissionCode } from '@/domain/permissions'
@@ -27,6 +28,7 @@ function project(capabilities = MANAGER): Project {
     key: 'CRM',
     name: 'CRM Corporativo',
     description: 'Implantação do CRM',
+    platformUrl: '',
     icon: 'folder',
     cover: 'blue',
     status: 'active',
@@ -49,6 +51,8 @@ function project(capabilities = MANAGER): Project {
 
 const report = (total: number): PlanReport => ({
   today: '2026-02-10',
+  details: { overdue: [{ id: 'e1', name: 'Levantamento', project: { id: 'p1', key: 'CRM', name: 'CRM Corporativo' }, status: null, startDate: null, endDate: '2026-02-01', progress: 0 }], stuck: [], behind: [], overEffort: [], issues: [] },
+  scope: { mode: 'project', projects: [] },
   summary: { total, done: 1, open: 2, overdue: 1, stuck: 0, canceled: 0, progress: 50 },
   schedule: { onTime: 0, overdue: 1, unscheduled: 1, done: 1 },
   effort: { estimated: 5.5, actual: 3, remaining: 2.5, deviation: { hours: 1, percent: 25 } },
@@ -239,13 +243,22 @@ describe('Página do projeto — saúde na visão geral', () => {
     const { planReport } = setup('/projects/p1')
     const health = await screen.findByRole('region', { name: 'Saúde do projeto' })
     expect(within(health).getAllByText('Crítico').length).toBeGreaterThan(0)
-    expect(within(health).getByText('100% dos abertos com data estão atrasados (1 de 1).')).toBeInTheDocument()
-    expect(within(health).getByText('Realizado 25% acima do estimado nos feitos (1 h).')).toBeInTheDocument()
+    // no card, o número-chave; a frase completa fica no texto de ajuda
+    expect(within(health).getByText('1 de 1 atrasados')).toBeInTheDocument()
+    expect(within(health).getByTitle('100% dos abertos com data estão atrasados (1 de 1).')).toBeInTheDocument()
+    expect(within(health).getByText('25% acima do estimado')).toBeInTheDocument()
+    expect(within(health).getByTitle('Realizado 25% acima do estimado nos feitos (1 h).')).toBeInTheDocument()
+    // o card abre a lista do que está por trás do número, com o enlace para o elemento na Gestão
+    await userEvent.click(within(health).getByTestId('health-factor-schedule'))
+    const details = within(health).getByTestId('health-details')
+    expect(details).toHaveTextContent('Levantamento')
+    expect(within(details).getByRole('link', { name: /Abrir/ })).toHaveAttribute('href', '/projects/p1/management?item=e1')
+    expect(within(health).getByTestId('health-factor-stuck')).toBeDisabled()
     expect(within(health).getByRole('region', { name: 'Esforço' })).toHaveTextContent('+25%')
     expect(within(health).getByRole('region', { name: 'Cronograma dos pendentes' })).toHaveTextContent('Sem datas1')
     expect(within(health).getByRole('progressbar', { name: 'Progresso' })).toHaveAttribute('aria-valuenow', '50')
     expect(within(health).getByRole('link', { name: /Abrir a gestão do projeto/ })).toHaveAttribute('href', '/projects/p1/management')
-    expect(planReport).toHaveBeenCalledWith('p1', new Date().getTimezoneOffset())
+    expect(planReport).toHaveBeenCalledWith('p1', new Date().getTimezoneOffset(), 'project')
   })
 
   it('quadro sem elementos: sem o bloco; sem plan.view: nem consulta', async () => {

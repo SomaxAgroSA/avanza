@@ -27,6 +27,8 @@ const FIELD_RULES = {
   description: [rules.maxLength(10000)],
   icon: [iconRule(projectDomain.PROJECT_ICONS)],
   cover: [colorRule(projectDomain.PROJECT_COVERS)],
+  // enlace de acceso a la plataforma desarrollada (vazio limpa)
+  platform_url: [rules.custom((value) => (typeof value !== 'string' ? 'invalid_type' : value.trim() === '' || (/^https?:\/\/\S+$/i.test(value.trim()) && value.length <= 500) ? null : 'invalid_url'))],
   status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
   priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
   // urgência (semáforo, §31): null limpa
@@ -59,7 +61,7 @@ const MEMBER_SCHEMA = {
   role: [rules.required(), rules.oneOf(projectDomain.MEMBER_ROLES)],
 }
 
-const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority' }
+const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority', urgency: 'urgency', area: 'area', owner: 'owner', members: 'members' }
 
 /**
  * Campos auditáveis no formato público (`areas` = áreas por id, para mostrar o nome no histórico;
@@ -71,6 +73,7 @@ function auditView(project, areas, parents) {
     description: project.description,
     icon: project.icon,
     cover: project.cover,
+    platform_url: project.platformUrl || null,
     status: project.status,
     priority: project.priority,
     urgency: project.urgency || null,
@@ -151,6 +154,7 @@ function createProjectService(deps) {
       description: project.description || '',
       icon: project.icon || 'folder',
       cover: project.cover || 'violet',
+      platform_url: project.platformUrl || '',
       status: project.status,
       priority: project.priority,
       urgency: project.urgency || null,
@@ -284,6 +288,7 @@ function createProjectService(deps) {
         description: data.description || '',
         icon,
         cover,
+        platformUrl: (data.platform_url || '').trim(),
         status: data.status || 'planning',
         priority: data.priority || 'medium',
         urgency: data.urgency || null,
@@ -356,6 +361,7 @@ function createProjectService(deps) {
       description: data.description !== undefined ? data.description : project.description,
       icon,
       cover,
+      platformUrl: data.platform_url !== undefined ? data.platform_url.trim() : project.platformUrl || '',
       status: data.status || project.status,
       priority: data.priority || project.priority,
       urgency: source.urgency === null ? null : data.urgency !== undefined ? data.urgency : project.urgency || null,
@@ -375,6 +381,7 @@ function createProjectService(deps) {
         description: next.description,
         icon: next.icon,
         cover: next.cover,
+        platformUrl: next.platformUrl,
         status: next.status,
         priority: next.priority,
         urgency: next.urgency,

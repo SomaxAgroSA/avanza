@@ -23,7 +23,7 @@ import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useAreas } from '@/features/workflow/queries'
 import { AreaBadge } from '@/features/workflow/area-visuals'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId', platform_url: 'platformUrl' }
 
 const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
@@ -38,6 +38,7 @@ function defaults(project?: Project | null, parentId?: string): ProjectInput {
     name: project?.name ?? '',
     key: project?.key ?? '',
     description: project?.description ?? '',
+    platformUrl: project?.platformUrl ?? '',
     icon: project?.icon ?? 'folder',
     cover: project?.cover ?? 'violet',
     status: project?.status ?? 'planning',
@@ -104,6 +105,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
     const data = {
       name: values.name.trim(),
       description: values.description,
+      platformUrl: values.platformUrl.trim(),
       icon: values.icon,
       cover: values.cover,
       status: values.status,
@@ -182,6 +184,16 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
     >
       <form id="project-form" onSubmit={onSubmit} noValidate className="grid items-start gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-5">
+          <AppTextField
+            label={t('projects.fields.platformUrl')}
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            placeholder="https://"
+            hint={t('projects.platformUrlHint')}
+            error={errors.platformUrl?.message}
+            {...register('platformUrl')}
+          />
           <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
             <AppTextField label={t('projects.fields.name')} required autoComplete="off" error={errors.name?.message} {...nameField} />
             <AppTextField

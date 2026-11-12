@@ -61,6 +61,7 @@ describe('ProjectFormDialog', () => {
         name: 'CRM Corporativo',
         key: 'CRM',
         description: '',
+        platformUrl: '',
         icon: 'rocket',
         cover: 'violet',
         status: 'planning',

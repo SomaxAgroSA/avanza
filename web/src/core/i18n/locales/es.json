@@ -1019,7 +1019,9 @@
       "dueDate": "Entrega",
       "icon": "Icono",
       "cover": "Portada",
-      "role": "Rol"
+      "role": "Rol",
+      "platformUrl": "Enlace de la plataforma",
+      "platform": "Plataforma"
     },
     "descriptions": {
       "all": "Proyectos a los que tiene acceso.",
@@ -1261,7 +1263,9 @@
     "empty_finished": "Todavía no hay proyectos terminados",
     "inheritsParent": "Usa el color y el ícono de {{name}}, su proyecto padre.",
     "coverUniqueHint": "Cada proyecto tiene un color propio. Los colores apagados ya están en uso.",
-    "coverTaken": "{{color}}: en uso por otro proyecto"
+    "coverTaken": "{{color}}: en uso por otro proyecto",
+    "platformUrlHint": "Dirección para entrar a la plataforma desarrollada. Aparece como botón “Abrir plataforma” arriba del proyecto.",
+    "openPlatform": "Abrir plataforma"
   },
   "calendar": {
     "open": "Abrir calendario",
@@ -3309,6 +3313,15 @@
           "stuck": "Ningún elemento abierto.",
           "effort": "Sin elementos listos con esfuerzo y real.",
           "issues": "Sin problemas."
+        },
+        "short": {
+          "none": "Sin datos",
+          "schedule": "{{count}} de {{of}} atrasados",
+          "progress": "Plan {{planned}}% · hecho {{actual}}%",
+          "stuck": "{{count}} de {{of}} detenidos",
+          "effort": "{{value}}% sobre lo estimado",
+          "issues_one": "{{count}} abierto",
+          "issues_other": "{{count}} abiertos"
         }
       },
       "summary": {
@@ -3348,6 +3361,44 @@
         "group": "Grupo",
         "items": "Listos/total",
         "empty": "Todavía no hay grupos."
+      },
+      "details": {
+        "open": {
+          "schedule_one": "Ver {{count}}",
+          "schedule_other": "Ver {{count}}",
+          "progress_one": "Ver {{count}}",
+          "progress_other": "Ver {{count}}",
+          "stuck_one": "Ver {{count}}",
+          "stuck_other": "Ver {{count}}",
+          "effort_one": "Ver {{count}}",
+          "effort_other": "Ver {{count}}",
+          "issues_one": "Ver {{count}}",
+          "issues_other": "Ver {{count}}"
+        },
+        "title": {
+          "schedule_one": "{{count}} elemento atrasado",
+          "schedule_other": "{{count}} elementos atrasados",
+          "progress_one": "{{count}} elemento por debajo de lo planificado",
+          "progress_other": "{{count}} elementos por debajo de lo planificado",
+          "stuck_one": "{{count}} elemento detenido",
+          "stuck_other": "{{count}} elementos detenidos",
+          "effort_one": "{{count}} elemento con más horas de lo estimado",
+          "effort_other": "{{count}} elementos con más horas de lo estimado",
+          "issues_one": "{{count}} problema abierto",
+          "issues_other": "{{count}} problemas abiertos"
+        },
+        "nothing": "Nada para revisar",
+        "openItem": "Abrir →"
+      },
+      "scope": {
+        "label": "Qué entra en la cuenta",
+        "family": "Con subproyectos",
+        "family_one": "Con subproyectos ({{count}})",
+        "family_other": "Con subproyectos ({{count}})",
+        "project": "Solo este proyecto",
+        "includes": "Incluye:",
+        "items_one": "{{count}} elemento",
+        "items_other": "{{count}} elementos"
       }
     },
     "customColumns": {

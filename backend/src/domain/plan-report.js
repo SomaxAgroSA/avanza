@@ -118,7 +118,17 @@ function planReport(options) {
     }
   })
 
-  return { today, summary, schedule, effort, resources, groups, health: health({ open, overdue, stuck, active, today, deviation, issues: options.issues, progressOf }) }
+  // o que está por trás de cada fator (o card da saúde abre a lista): ids dos elementos de 1º nível
+  const behind = active.filter((i) => !isDone(i) && startOf(i) && expectedProgress(i, today) > progressOf(i))
+  const overEffort = measured.filter((i) => actualOf(i) > metric(i, 'estimated_hours'))
+  const details = {
+    overdue: overdue.map((i) => i.id),
+    stuck: stuck.map((i) => i.id),
+    behind: behind.map((i) => i.id),
+    over_effort: overEffort.map((i) => i.id),
+  }
+
+  return { today, summary, schedule, effort, resources, groups, details, health: health({ open, overdue, stuck, active, today, deviation, issues: options.issues, progressOf }) }
 }
 
 function health(data) {

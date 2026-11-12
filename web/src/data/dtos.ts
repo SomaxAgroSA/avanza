@@ -74,6 +74,7 @@ export interface ProjectDto {
   name: string
   key: string
   description: string
+  platform_url?: string
   icon: string
   cover: string
   status: string
@@ -687,6 +688,24 @@ export interface PlanReportDto {
   resources: Array<{ resource_id: string | null; name: string | null; color: string | null; items: number; open: number; estimated: number | null }>
   groups: Array<{ group_id: string; number: string | null; name: string; color: string; items: number; done: number; overdue: number; progress: number; estimated: number | null; actual: number | null }>
   health: { level: string; factors: Array<{ key: string; level: string; value: number | null; count?: number; of?: number; planned?: number | null; actual?: number | null; hours?: number | null }> }
+  details?: {
+    overdue?: PlanReportItemDto[]
+    stuck?: PlanReportItemDto[]
+    behind?: PlanReportItemDto[]
+    over_effort?: PlanReportItemDto[]
+    issues?: Array<{ id: string; number: number; description: string; state: string; opened_on: string | null; project: { id: string; key: string; name: string } }>
+  }
+  scope?: { mode: string; projects: Array<{ id: string; key: string; name: string; items: number }> }
+}
+
+export interface PlanReportItemDto {
+  id: string
+  name: string
+  project: { id: string; key: string; name: string }
+  status: { name: string; color: string; category: string } | null
+  start_date: string | null
+  end_date: string | null
+  progress: number
 }
 
 // ---------------------------------------------------------------- Configurador geral

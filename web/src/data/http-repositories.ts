@@ -422,7 +422,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -1020,8 +1020,8 @@ export function createHttpPlanRepository(api: ApiClient): PlanRepository {
       const { data } = await api.del<{ values?: number }>(`/plan/columns/${encodeURIComponent(id)}`)
       return { values: data?.values ?? 0 }
     },
-    async report(projectId, tzOffset) {
-      return toPlanReport((await api.get<PlanReportDto>(`${project(projectId)}/plan/report`, { query: { tz_offset: String(tzOffset) } })).data)
+    async report(projectId, tzOffset, scope) {
+      return toPlanReport((await api.get<PlanReportDto>(`${project(projectId)}/plan/report`, { query: { tz_offset: String(tzOffset), scope: scope === 'family' ? 'family' : undefined } })).data)
     },
   }
 }

@@ -411,3 +411,25 @@ describe('application/projects — cor única e subprojetos (§24)', () => {
     assert.notEqual(detached.cover, parent.cover)
   })
 })
+
+describe('application/projects — enlace da plataforma e ordenação da lista', () => {
+  it('guarda o enlace (http/https), limpa com vazio e recusa o que não é enlace', async () => {
+    const { deps, projects, ctx } = await setup()
+    const p = await projects.createProject(ctx.manager, input({ platform_url: ' https://dre.somaxagro.com ' }))
+    assert.equal(p.platform_url, 'https://dre.somaxagro.com')
+    await assert.rejects(() => projects.updateProject(ctx.manager, p.id, { platform_url: 'dre.somax' }), (err) => err.details.fields.platform_url === 'invalid_url')
+    const cleared = await projects.updateProject(ctx.manager, p.id, { platform_url: '' })
+    assert.equal(cleared.platform_url, '')
+    assert.equal(deps.store.audit.at(-1).action, 'project.updated')
+  })
+
+  it('ordena por prioridade e status pela gravidade/fluxo, não pelo nome', async () => {
+    const { projects, ctx } = await setup()
+    await projects.createProject(ctx.manager, input({ key: 'AAA', priority: 'low', status: 'paused' }))
+    await projects.createProject(ctx.manager, input({ key: 'BBB', priority: 'critical', status: 'planning' }))
+    await projects.createProject(ctx.manager, input({ key: 'CCC', priority: 'high', status: 'active' }))
+    const keys = async (sort) => (await projects.listProjects(ctx.manager, { sort })).items.map((p) => p.key)
+    assert.deepEqual(await keys('-priority'), ['BBB', 'CCC', 'AAA'])
+    assert.deepEqual(await keys('status'), ['BBB', 'CCC', 'AAA'])
+  })
+})

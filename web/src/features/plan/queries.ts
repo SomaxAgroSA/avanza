@@ -160,9 +160,10 @@ export function usePlanIssues(projectId: string) {
 }
 
 /** Relatório com "hoje" no fuso de quem consulta. */
-export function usePlanReport(projectId: string) {
+export function usePlanReport(projectId: string, scope: 'project' | 'family' = 'project') {
   const { plan } = useRepositories()
-  return useQuery({ queryKey: managementKeys.report(projectId), queryFn: () => plan.report(projectId, new Date().getTimezoneOffset()) })
+  // a chave começa pela do relatório: as mutações que invalidam o relatório também pegam o resumo com subprojetos
+  return useQuery({ queryKey: [...managementKeys.report(projectId), scope], queryFn: () => plan.report(projectId, new Date().getTimezoneOffset(), scope) })
 }
 
 /** Diário e problemas; recarregam a gestão e o relatório (os problemas em aberto pesam na saúde). */

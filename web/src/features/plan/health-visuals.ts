@@ -4,6 +4,23 @@ import type { HealthFactor, HealthLevel } from '@/domain/plan-management'
 /** Tom do selo de cada nível de saúde (relatório do quadro e painel executivo). */
 export const HEALTH_TONE: Record<HealthLevel, 'success' | 'warning' | 'danger' | 'neutral'> = { ok: 'success', attention: 'warning', critical: 'danger', none: 'neutral' }
 
+/** O número-chave do fator, curto (card do resumo); a frase completa fica no texto de ajuda. */
+export function factorShort(t: TFunction, factor: HealthFactor): string {
+  if (factor.level === 'none') return t('plan.report.health.short.none')
+  switch (factor.key) {
+    case 'schedule':
+      return t('plan.report.health.short.schedule', { count: factor.count ?? 0, of: factor.of ?? 0 })
+    case 'progress':
+      return t('plan.report.health.short.progress', { planned: factor.planned ?? 0, actual: factor.actual ?? 0 })
+    case 'stuck':
+      return t('plan.report.health.short.stuck', { count: factor.count ?? 0, of: factor.of ?? 0 })
+    case 'effort':
+      return t('plan.report.health.short.effort', { value: factor.value ?? 0 })
+    default:
+      return t('plan.report.health.short.issues', { count: factor.value ?? 0 })
+  }
+}
+
 /** Frase do fator com o seu valor (nunca só a nota). */
 export function factorDetail(t: TFunction, factor: HealthFactor): string {
   if (factor.level === 'none') return t(`plan.report.health.noData.${factor.key}`)

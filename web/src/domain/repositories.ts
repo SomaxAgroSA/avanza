@@ -213,6 +213,8 @@ export interface ProjectListQuery extends ListQuery {
 export interface ProjectData {
   name: string
   description: string
+  /** Enlace da plataforma desenvolvida (vazio limpa). */
+  platformUrl?: string
   icon: ProjectIcon
   cover: ProjectCover
   status: ProjectStatus
@@ -504,7 +506,8 @@ export interface PlanRepository {
   updateIssue(id: string, input: IssueInput): Promise<PlanIssue>
   deleteIssue(id: string): Promise<void>
   /** `tzOffset`: minutos (Date#getTimezoneOffset) — "hoje" no fuso de quem consulta. */
-  report(projectId: string, tzOffset: number): Promise<PlanReport>
+  /** `family`: soma os subprojetos que a pessoa vê (resumo do projeto principal). */
+  report(projectId: string, tzOffset: number, scope?: 'project' | 'family'): Promise<PlanReport>
   // colunas personalizadas (GP-5; o valor da célula vai no updateItem, `custom`)
   createColumn(projectId: string, input: PlanColumnInput): Promise<PlanColumn>
   updateColumn(id: string, input: PlanColumnInput): Promise<PlanColumn>

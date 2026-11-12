@@ -84,7 +84,7 @@ function Overview({ project }: { project: Project }) {
   return (
     <div className="flex flex-col gap-4">
       {/* saúde do quadro de gestão (só quando o projeto tem quadro com elementos) */}
-      {canViewPlan && <ProjectHealth projectId={project.id} />}
+      {canViewPlan && <ProjectHealth projectId={project.id} family={!project.parent && project.childCount > 0} />}
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
           <AppCard title={t('projects.fields.description')}>
@@ -98,6 +98,13 @@ function Overview({ project }: { project: Project }) {
         </div>
         <AppCard title={t('projects.details')}>
           <dl className="divide-y divide-border">
+            {project.platformUrl && (
+              <Detail label={t('projects.fields.platform')}>
+                <a href={project.platformUrl} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-primary-text hover:underline">
+                  {project.platformUrl.replace(/^https?:\/\//i, '').replace(/\/$/, '')} ↗
+                </a>
+              </Detail>
+            )}
             <Detail label={t('projects.fields.status')}>
               <ProjectStatusBadge status={project.status} />
             </Detail>

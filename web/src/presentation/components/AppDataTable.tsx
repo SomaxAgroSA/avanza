@@ -38,6 +38,8 @@ export interface DataTableColumn<T> {
   header: string
   cell: (row: T) => ReactNode
   sortable?: boolean
+  /** Primeiro clique ordena do maior para o menor (ex.: prioridade, quantidade). */
+  sortDescFirst?: boolean
   /** Pode ser ocultada pelo usuário (padrão: true). */
   hideable?: boolean
   size?: number
@@ -193,7 +195,7 @@ export function AppDataTable<T extends RowData>({
         cell: (ctx) => col.cell(ctx.row.original),
         enableSorting: !!col.sortable,
         // O accessor devolve a linha inteira; sem isto a primeira ordenação seria descendente.
-        sortDescFirst: false,
+        sortDescFirst: !!col.sortDescFirst,
         enableHiding: col.hideable !== false,
         enableResizing: true,
         size: col.size ?? 180,
