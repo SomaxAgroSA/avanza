@@ -39,6 +39,7 @@ function project(id: string, key: string, status: ProjectStatus, myRole: Project
     childCount: 0,
     owner: null,
     lead: null,
+    devLead: null,
     startDate: null,
     dueDate: null,
     archivedAt: null,

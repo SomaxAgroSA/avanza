@@ -23,7 +23,7 @@ import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useAreas } from '@/features/workflow/queries'
 import { AreaBadge } from '@/features/workflow/area-visuals'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId', platform_url: 'platformUrl', lead_id: 'leadId' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId', platform_url: 'platformUrl', lead_id: 'leadId', dev_lead_id: 'devLeadId' }
 
 const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
@@ -49,6 +49,7 @@ function defaults(project?: Project | null, parentId?: string): ProjectInput {
     areaId: project?.area?.id ?? '',
     parentId: project ? (project.parent?.id ?? '') : (parentId ?? ''),
     leadId: project?.lead?.id ?? '',
+    devLeadId: project?.devLead?.id ?? '',
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -79,6 +80,13 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
   // cor única (§24): as dos outros projetos ficam travadas e o projeto novo já nasce com uma livre
   const covers = useProjectCovers(project?.id, open)
   const members = useProjectMembers(open && project ? project.id : undefined)
+  // Gestão e Desenvolvimento: o dono e os membros que trabalham no projeto (gestor ou membro)
+  const leadOptions = [
+    { value: NO_LEAD, label: t('projects.noLead') },
+    ...(members.data ?? [])
+      .filter((m) => m.isOwner || m.role === 'manager' || m.role === 'member')
+      .map((m) => ({ value: m.user.id, label: m.user.name, textValue: m.user.name, prefix: <AppAvatar name={m.user.name} src={m.user.avatarUrl} size="xs" /> })),
+  ]
   const usedCovers = covers.data?.used ?? []
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<ProjectInput>({
@@ -121,6 +129,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
       parentId: values.parentId !== (project?.parent?.id ?? '') ? values.parentId || null : undefined,
       // só quando mudou ('' limpa); na criação, quem cria já é o responsável
       leadId: isEdit && values.leadId !== (project?.lead?.id ?? '') ? values.leadId || null : undefined,
+      // desenvolvimento: idem (o projeto novo nasce sem)
+      devLeadId: isEdit && values.devLeadId !== (project?.devLead?.id ?? '') ? values.devLeadId || null : undefined,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -249,26 +259,25 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
             />
           </div>
           {isEdit && (
-            <Controller
-              control={control}
-              name="leadId"
-              render={({ field }) => (
-                <AppSelect
-                  label={t('projects.fields.lead')}
-                  value={field.value || NO_LEAD}
-                  onValueChange={(value) => field.onChange(value === NO_LEAD ? '' : value)}
-                  hint={t('projects.leadHint')}
-                  error={errors.leadId?.message}
-                  options={[
-                    { value: NO_LEAD, label: t('projects.noLead') },
-                    // o dono e os membros que trabalham no projeto (gestor ou membro)
-                    ...(members.data ?? [])
-                      .filter((m) => m.isOwner || m.role === 'manager' || m.role === 'member')
-                      .map((m) => ({ value: m.user.id, label: m.user.name, textValue: m.user.name, prefix: <AppAvatar name={m.user.name} src={m.user.avatarUrl} size="xs" /> })),
-                  ]}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(['leadId', 'devLeadId'] as const).map((name) => (
+                <Controller
+                  key={name}
+                  control={control}
+                  name={name}
+                  render={({ field }) => (
+                    <AppSelect
+                      label={t(name === 'leadId' ? 'projects.fields.lead' : 'projects.fields.devLead')}
+                      value={field.value || NO_LEAD}
+                      onValueChange={(value) => field.onChange(value === NO_LEAD ? '' : value)}
+                      hint={t(name === 'leadId' ? 'projects.leadHint' : 'projects.devLeadHint')}
+                      error={errors[name]?.message}
+                      options={leadOptions}
+                    />
+                  )}
                 />
-              )}
-            />
+              ))}
+            </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller

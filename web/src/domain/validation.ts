@@ -120,8 +120,10 @@ export const projectSchema = z
     areaId: z.string(),
     /** id do projeto pai ou '' (sem pai) */
     parentId: z.string(),
-    /** responsável (dono ou membro) ou '' (sem responsável) */
+    /** responsável pela gestão (dono ou membro) ou '' (sem responsável) */
     leadId: z.string(),
+    /** responsável pelo desenvolvimento (dono ou membro) ou '' (sem responsável) */
+    devLeadId: z.string(),
     /** AAAA-MM-DD ou '' */
     startDate: z.string(),
     dueDate: z.string(),

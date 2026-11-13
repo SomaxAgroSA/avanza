@@ -216,8 +216,10 @@ export interface ProjectData {
   description: string
   /** Enlace da plataforma desenvolvida (vazio limpa). */
   platformUrl?: string
-  /** Responsável (dono ou membro gestor/membro); null limpa. */
+  /** Responsável pela gestão (dono ou membro gestor/membro); null limpa. */
   leadId?: string | null
+  /** Responsável pelo desenvolvimento (dono ou membro gestor/membro); null limpa. */
+  devLeadId?: string | null
   icon: ProjectIcon
   cover: ProjectCover
   status: ProjectStatus

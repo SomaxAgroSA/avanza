@@ -26,11 +26,11 @@ const edson = { id: 'u3', name: 'Edson Queiroz', email: 'e@x.com', avatarUrl: nu
 function project(id: string, key: string, name: string, lead = ana): Project {
   return {
     id, key, name, description: '', platformUrl: '', icon: 'folder', cover: 'blue', status: 'active', priority: 'medium', urgency: null, area: null, parent: null,
-    childCount: 0, owner: ana, lead, startDate: null, dueDate: null, archivedAt: null, createdAt: null, updatedAt: null, memberCount: 3, myRole: 'owner',
+    childCount: 0, owner: ana, lead, devLead: null, startDate: null, dueDate: null, archivedAt: null, createdAt: null, updatedAt: null, memberCount: 3, myRole: 'owner',
     capabilities: { edit: true, manageMembers: true, archive: true, delete: false, transfer: true, uploadFiles: true, sections: [] },
   }
 }
-const DS = project('ds', 'DS', 'DESIGN-SYSTEM', douglas)
+const DS = { ...project('ds', 'DS', 'DESIGN-SYSTEM'), devLead: douglas }
 const GCS = project('gcs', 'GCS', 'GESTIÓN COMERCIAL', douglas)
 const ODF = project('odf', 'ODF', 'OPERATIVA DE FERTILIZANTES')
 const today = new Date()
@@ -65,14 +65,18 @@ function setup(permissions: PermissionCode[] = ['projects.view', 'tasks.view'], 
   return { teamActivity }
 }
 
-describe('Proyectos: responsable y quién está trabajando', () => {
-  it('la columna Responsable reemplaza al dueño y "Trabajando" marca quién está en cada proyecto', async () => {
+describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
+  it('las columnas Gestión y Desarrollo reemplazan al dueño y "Trabajando" marca quién está en cada proyecto', async () => {
     setup()
     const table = await screen.findByRole('table')
-    expect(within(table).getByRole('columnheader', { name: /Responsable/ })).toBeInTheDocument()
+    const headers = within(table).getAllByRole('columnheader').map((h) => h.textContent?.trim())
+    // en el orden pedido: NOMBRE · ESTADO · GESTIÓN · DESARROLLO
+    expect(headers.slice(0, 4).join(' · ')).toMatch(/Nombre.* · Estado.* · Gestión.* · Desarrollo/)
     expect(within(table).queryByRole('columnheader', { name: /Dueño/ })).toBeNull()
     const row = (name: string) => within(table).getByText(name).closest('tr') as HTMLElement
     await waitFor(() => expect(within(row('DESIGN-SYSTEM')).getByText('Douglas · 35 en curso')).toHaveAttribute('data-state', 'working'))
+    // DS: Angelica en Gestión, Douglas en Desarrollo
+    expect(within(row('DESIGN-SYSTEM')).getByText('Angelica Davalos')).toBeInTheDocument()
     expect(within(row('DESIGN-SYSTEM')).getByText('Douglas Martins')).toBeInTheDocument()
     // en curso, pero sin movimiento hace más de 7 días
     expect(within(row('GESTIÓN COMERCIAL')).getByText(/Douglas · 13 en curso, sin movimiento/)).toHaveAttribute('data-state', 'stale')
@@ -105,8 +109,8 @@ describe('Proyectos: responsable y quién está trabajando', () => {
   })
 })
 
-describe('Formulario: responsable del proyecto', () => {
-  it('elige entre el dueño y los miembros que trabajan (no los lectores) y guarda solo si cambió', async () => {
+describe('Formulario: Gestión y Desarrollo', () => {
+  it('Gestión: elige entre el dueño y los miembros que trabajan (no los lectores) y guarda solo si cambió', async () => {
     const update = vi.fn<ProjectRepository['update']>(() => Promise.resolve(DS))
     const members = [
       { user: ana, role: 'manager', isOwner: true },
@@ -119,7 +123,7 @@ describe('Formulario: responsable del proyecto', () => {
     })
     renderRoutes([{ path: '/', element: <ProjectFormDialog open onOpenChange={() => {}} project={ODF} /> }], { repositories, initialPath: '/' })
     const dialog = await screen.findByRole('dialog')
-    const select = within(dialog).getByRole('combobox', { name: /Responsable/ })
+    const select = within(dialog).getByRole('combobox', { name: /Gestión/ })
     await waitFor(() => expect(select).toHaveTextContent('Angelica Davalos'))
     await userEvent.click(select)
     const options = await screen.findAllByRole('option')
@@ -129,5 +133,28 @@ describe('Formulario: responsable del proyecto', () => {
     await userEvent.click(screen.getByRole('option', { name: /Douglas Martins/ }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('odf', expect.objectContaining({ leadId: 'u2' })))
+  })
+
+  it('Desarrollo: empieza vacío, ofrece las mismas personas y guarda solo ese campo', async () => {
+    const update = vi.fn<ProjectRepository['update']>(() => Promise.resolve(DS))
+    const members = [
+      { user: ana, role: 'manager', isOwner: true },
+      { user: douglas, role: 'member', isOwner: false },
+      { user: edson, role: 'viewer', isOwner: false },
+    ] as unknown as ProjectMember[]
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(['projects.view', 'projects.edit']) },
+      projects: { listMembers: () => Promise.resolve(members), update, covers: () => Promise.resolve({ used: [], suggested: 'blue' }), list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }) },
+    })
+    renderRoutes([{ path: '/', element: <ProjectFormDialog open onOpenChange={() => {}} project={ODF} /> }], { repositories, initialPath: '/' })
+    const dialog = await screen.findByRole('dialog')
+    const select = within(dialog).getByRole('combobox', { name: /Desarrollo/ })
+    expect(select).toHaveTextContent('Sin responsable')
+    await userEvent.click(select)
+    const options = await screen.findAllByRole('option')
+    expect(options).toHaveLength(3)
+    await userEvent.click(screen.getByRole('option', { name: /Douglas Martins/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('odf', expect.objectContaining({ devLeadId: 'u2', leadId: undefined })))
   })
 })

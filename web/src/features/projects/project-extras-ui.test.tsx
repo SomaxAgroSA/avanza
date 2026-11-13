@@ -37,6 +37,7 @@ const project = (overrides: Partial<Project> = {}): Project => ({
   childCount: 0,
   owner: null,
   lead: null,
+  devLead: null,
   startDate: new Date('2026-09-22T00:00:00.000Z'),
   dueDate: null,
   archivedAt: null,
