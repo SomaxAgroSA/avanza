@@ -78,7 +78,7 @@ describe('API painel executivo', { timeout: 180000 }, () => {
     assert.equal(crmRow.project.owner.name, 'Gil')
     assert.equal(erpRow.health.level, 'none')
     assert.deepEqual(erpRow.progress, { value: 50, source: 'tasks' })
-    assert.deepEqual(erpRow.tasks, { total: 2, open: 1, overdue: 1, done: 1 })
+    assert.deepEqual(erpRow.tasks, { total: 2, open: 1, in_progress: 0, blocked: 0, overdue: 1, done: 1 })
     assert.deepEqual(data.summary.health, { ok: 0, attention: 0, critical: 1, none: 1 })
     assert.equal(data.plan.open_issues_total, 1)
     assert.equal(data.plan.issues[0].project.key, 'CRM')
