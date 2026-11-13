@@ -401,11 +401,21 @@ function createTaskRepository(db) {
       return map
     },
 
-    /** Tarefas ligadas a elementos da Gestão, contadas por elemento e status (progresso pelas tarefas). */
+    /**
+     * Tarefas ligadas a elementos da Gestão por elemento e status: contagem (progresso pelas tarefas) e
+     * somas das horas informadas — 0 é "não informado", então só entram as > 0 (null = nenhuma).
+     */
     async planItemStats(itemIds) {
       if (!itemIds || itemIds.length === 0) return []
-      const rows = await db.query('SELECT plan_item_id, status_id, count(*)::int AS total FROM tasks WHERE plan_item_id = ANY($1::text[]) GROUP BY plan_item_id, status_id', [itemIds])
-      return rows.map((row) => ({ planItemId: row.plan_item_id, statusId: row.status_id, total: row.total }))
+      const rows = await db.query(
+        `SELECT plan_item_id, status_id, count(*)::int AS total,
+                sum(estimated_hours) FILTER (WHERE estimated_hours > 0) AS estimated,
+                sum(actual_hours) FILTER (WHERE actual_hours > 0) AS actual
+         FROM tasks WHERE plan_item_id = ANY($1::text[]) GROUP BY plan_item_id, status_id`,
+        [itemIds],
+      )
+      const hoursOf = (value) => (value === null || value === undefined ? null : Math.round(Number(value) * 100) / 100)
+      return rows.map((row) => ({ planItemId: row.plan_item_id, statusId: row.status_id, total: row.total, estimated: hoursOf(row.estimated), actual: hoursOf(row.actual) }))
     },
 
     async listBySprint(sprintId) {

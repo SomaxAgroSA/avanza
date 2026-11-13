@@ -255,6 +255,8 @@ export interface PlanItemDto {
   baseline_end?: string | null
   custom?: Record<string, string | number | boolean>
   tasks?: { total: number; done: number }
+  estimated_from_tasks?: boolean
+  actual_from_tasks?: boolean
 }
 
 export interface PlanColumnDto {

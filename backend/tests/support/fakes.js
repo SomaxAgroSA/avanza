@@ -634,8 +634,11 @@ function createFakeRepositories(store) {
         .filter((t) => t.planItemId && itemIds.includes(t.planItemId))
         .forEach((t) => {
           const key = `${t.planItemId}|${t.statusId}`
-          out[key] = out[key] || { planItemId: t.planItemId, statusId: t.statusId, total: 0 }
+          out[key] = out[key] || { planItemId: t.planItemId, statusId: t.statusId, total: 0, estimated: null, actual: null }
           out[key].total += 1
+          // como o SQL: só as horas informadas (> 0) entram na soma
+          if (t.estimatedHours > 0) out[key].estimated = Math.round(((out[key].estimated || 0) + t.estimatedHours) * 100) / 100
+          if (t.actualHours > 0) out[key].actual = Math.round(((out[key].actual || 0) + t.actualHours) * 100) / 100
         })
       return Object.values(out)
     },

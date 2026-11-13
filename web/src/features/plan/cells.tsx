@@ -323,6 +323,7 @@ export function NumberCell({
   max,
   suffix,
   title,
+  fromTasks,
   onChange,
 }: {
   value: number | null
@@ -332,13 +333,23 @@ export function NumberCell({
   max: number
   suffix?: string
   title?: string
+  /** Horas que vêm das tarefas vinculadas (o elemento não tem as próprias): aparece "pelas tarefas". */
+  fromTasks?: boolean
   onChange: (value: number | null) => void
 }) {
   const { t, i18n } = useTranslation()
   const shown = formatNumber(value, i18n.language)
-  const display = shown === null ? '' : suffix ? `${shown} ${suffix}` : shown
+  const text = shown === null ? '' : suffix ? `${shown} ${suffix}` : shown
+  const display = fromTasks ? (
+    <span className="flex flex-col items-center gap-0.5 leading-tight">
+      {text}
+      <span className="text-[11px] text-muted">{t('plan.hoursFromTasks')}</span>
+    </span>
+  ) : (
+    text
+  )
   return (
-    <span title={title} className="block">
+    <span title={fromTasks ? t('plan.hoursFromTasksHint') : title} className="block">
       <AppInlineEdit
         value={formatNumberInput(value, i18n.language)}
         display={display}

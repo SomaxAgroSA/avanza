@@ -2895,6 +2895,8 @@
     "noResourcesFound": "Nenhuma etiqueta encontrada.",
     "estimatedOf": "Esforço estimado de {{name}} (horas)",
     "durationOf": "Duração de {{name}} (dias)",
+    "hoursFromTasks": "pelas tarefas",
+    "hoursFromTasksHint": "Soma das horas das tarefas vinculadas (sem as canceladas). Digite um valor para informar no elemento; apagar volta às tarefas.",
     "durationFromSchedule": "Calculada pelo cronograma (dias corridos).",
     "workOf": "Trabalho de {{name}} (horas)",
     "actualOf": "Realizado de {{name}} (horas)",

@@ -59,8 +59,8 @@ const plan: Plan = {
   resources: [],
   groups: [group],
   items: [
-    item('i1', 'Kickoff', { progress: { value: 60, source: 'tasks' }, tasks: { total: 5, done: 3 } }),
-    item('i2', 'Cronograma', { position: 2, progress: { value: 20, source: 'manual' }, progressManual: 20 }),
+    item('i1', 'Kickoff', { progress: { value: 60, source: 'tasks' }, tasks: { total: 5, done: 3 }, estimatedHours: 8, actualHours: 7.5, estimatedFromTasks: true, actualFromTasks: true }),
+    item('i2', 'Cronograma', { position: 2, progress: { value: 20, source: 'manual' }, progressManual: 20, estimatedHours: 3 }),
   ],
   links: [],
   columns: [],
@@ -157,6 +157,24 @@ describe('Gestão: tarefas vinculadas aos elementos', () => {
     await userEvent.click(within(table).getByRole('button', { name: 'Tarefas de Kickoff: 3 de 5 concluídas' }))
     const panel = await screen.findByRole('dialog', { name: 'Kickoff' })
     expect(within(panel).getByRole('tab', { name: 'Tarefas (5)' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('esforço pelas tarefas: a célula e o painel mostram a soma com "pelas tarefas"; o informado no elemento fica sem o aviso', async () => {
+    setup()
+    const table = await screen.findByRole('table', { name: '1.0 Iniciação' })
+    const fromTasks = within(table).getByRole('button', { name: 'Esforço estimado de Kickoff (horas)' })
+    expect(fromTasks).toHaveTextContent(/^8\s*pelas tarefas$/)
+    expect(fromTasks.closest('[title]')).toHaveAttribute('title', expect.stringContaining('Soma das horas das tarefas vinculadas'))
+    const own = within(table).getByRole('button', { name: 'Esforço estimado de Cronograma (horas)' })
+    expect(own).toHaveTextContent(/^3$/)
+
+    await userEvent.click(within(table).getByRole('button', { name: 'Tarefas de Kickoff: 3 de 5 concluídas' }))
+    const panel = await screen.findByRole('dialog', { name: 'Kickoff' })
+    await userEvent.click(within(panel).getByRole('tab', { name: 'Detalhes' }))
+    // o elemento não tem a coluna Realizado no quadro: no painel aparece quando há valor
+    expect(within(panel).getByText('8 h')).toBeInTheDocument()
+    expect(within(panel).getByText('7,5 h')).toBeInTheDocument()
+    expect(within(panel).getAllByText('· pelas tarefas')).toHaveLength(2)
   })
 
   it('aba Tarefas: lista código, título (link), status e responsável, com "3 de 5 concluídas"', async () => {

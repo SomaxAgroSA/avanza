@@ -24,7 +24,7 @@ function createPlanService(deps) {
   const items = deps.planItemRepository
 
   const support = createPlanSupport(deps)
-  const { loadProject, loadOwned, assertCan, audit, ensureStatuses, settingsOf, pendingMap, assertDependencies, usersOf, presentItem, presentGroup, progressOf, loadGroup, loadItem, snapshot, changes, assertRefs, fieldsFrom, listColumns, readCustom } = support
+  const { loadProject, loadOwned, assertCan, audit, ensureStatuses, settingsOf, pendingMap, assertDependencies, usersOf, presentItem, presentGroup, planDataOf, loadGroup, loadItem, snapshot, changes, assertRefs, fieldsFrom, listColumns, readCustom } = support
 
   /* ------------------------------------------------------------------ leitura */
 
@@ -33,10 +33,10 @@ function createPlanService(deps) {
     const statusList = await ensureStatuses(project)
     const statusById = indexBy(statusList)
     const loaded = await items.listByProject(project.id, MAX_ITEMS + 1)
-    const list = loaded.slice(0, MAX_ITEMS)
     const groupList = await groups.listByProject(project.id)
     const numbers = planDomain.numberGroups(groupList)
-    const progress = await progressOf(list, statusById)
+    // elementos com o esforço das tarefas ligadas onde não há o próprio (regras §28)
+    const { items: list, progress } = await planDataOf(loaded.slice(0, MAX_ITEMS), statusById)
     const users = await usersOf(list)
     const childCount = {}
     list.forEach((i) => {
@@ -268,8 +268,9 @@ function createPlanService(deps) {
     const { item, project } = await loadItem(ctx, id)
     const root = item.parentId ? (await items.findById(item.parentId)) || item : item
     const family = [root].concat(await items.listChildren(root.id))
-    const progress = await progressOf(family, indexBy(await statuses.listByProject(project.id)))
-    return await presentItem(item, progress, await usersOf([item]), item.parentId ? 0 : family.length - 1, await listColumns(item.projectId))
+    const { items: shown, progress } = await planDataOf(family, indexBy(await statuses.listByProject(project.id)))
+    const current = shown.find((i) => i.id === item.id) || item
+    return await presentItem(current, progress, await usersOf([item]), item.parentId ? 0 : family.length - 1, await listColumns(item.projectId))
   }
 
   async function createItem(ctx, projectId, raw) {

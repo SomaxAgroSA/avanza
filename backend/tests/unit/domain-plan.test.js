@@ -147,6 +147,59 @@ describe('domain/plan — progresso e totais', () => {
     assert.deepEqual(counts, { e1: { total: 5, done: 3 } })
   })
 
+  it('horas das tarefas por elemento: soma das informadas (> 0), canceladas fora; sem horas = null', () => {
+    const cat = { a: 'todo', b: 'done', c: 'cancelled' }
+    const effort = plan.taskEffortFrom(
+      [
+        { planItemId: 'e1', statusId: 'a', total: 2, estimated: 3, actual: null },
+        { planItemId: 'e1', statusId: 'b', total: 3, estimated: 5.5, actual: 4.25 },
+        { planItemId: 'e1', statusId: 'c', total: 5, estimated: 100, actual: 100 },
+        { planItemId: 'e2', statusId: 'a', total: 1, estimated: null, actual: null },
+        { planItemId: 'e3', statusId: 'c', total: 1, estimated: 8, actual: 8 },
+      ],
+      (id) => cat[id],
+    )
+    assert.deepEqual(effort, { e1: { estimated: 8.5, actual: 4.25 }, e2: { estimated: null, actual: null } })
+  })
+
+  it('esforço pelas tarefas: só onde o elemento não tem o próprio, campo a campo; o original não muda', () => {
+    const items = [
+      { id: 'e1', metrics: {} },
+      { id: 'e2', metrics: { estimated_hours: 10 } },
+      { id: 'e3', metrics: { estimated_hours: 2, actual_hours: 1 } },
+      { id: 's1', parentId: 'e3' },
+      { id: 'e4', metrics: { duration_days: 3 } },
+    ]
+    const effort = { e1: { estimated: 8.5, actual: 4.25 }, e2: { estimated: 6, actual: 5 }, e3: { estimated: 9, actual: 9 }, s1: { estimated: 3, actual: null }, e4: { estimated: null, actual: null } }
+    const shown = plan.withTaskEffort(items, effort)
+    const byId = Object.fromEntries(shown.map((i) => [i.id, i]))
+    assert.deepEqual(byId.e1.metrics, { estimated_hours: 8.5, actual_hours: 4.25 })
+    assert.deepEqual(byId.e1.effortFromTasks, { estimated_hours: true, actual_hours: true })
+    // o próprio vale primeiro; o que falta vem das tarefas
+    assert.deepEqual(byId.e2.metrics, { estimated_hours: 10, actual_hours: 5 })
+    assert.deepEqual(byId.e2.effortFromTasks, { estimated_hours: false, actual_hours: true })
+    assert.deepEqual(byId.e3.metrics, { estimated_hours: 2, actual_hours: 1 })
+    assert.deepEqual(byId.e3.effortFromTasks, { estimated_hours: false, actual_hours: false })
+    assert.deepEqual(byId.s1.metrics, { estimated_hours: 3 })
+    assert.deepEqual(byId.e4.metrics, { duration_days: 3 })
+    assert.deepEqual(byId.e4.effortFromTasks, { estimated_hours: false, actual_hours: false })
+    // sem tarefas: o mesmo objeto; a entrada não é alterada (as gravações usam o valor próprio)
+    assert.equal(plan.withTaskEffort(items, {})[0], items[0])
+    assert.deepEqual(items[0].metrics, {})
+  })
+
+  it('o esforço pelas tarefas pesa no progresso dos subelementos e entra no rodapé', () => {
+    const items = [
+      { id: 'e1', statusId: 'work' },
+      { id: 's1', parentId: 'e1', statusId: 'done' },
+      { id: 's2', parentId: 'e1', statusId: 'plan', metrics: { estimated_hours: 1 } },
+    ]
+    const shown = plan.withTaskEffort(items, { s1: { estimated: 3, actual: 2 } })
+    assert.deepEqual(plan.computeProgress(shown, categoryOf).e1, { value: 75, source: 'subitems' })
+    const top = plan.withTaskEffort([{ id: 'a', statusId: 'work', metrics: {} }], { a: { estimated: 6, actual: null } })
+    assert.equal(plan.groupSummary(top, plan.computeProgress(top, categoryOf), (i) => i.statusId).estimated_hours, 6)
+  })
+
   it('rodapé do grupo: distribuição de status, período, somas de esforço e duração, progresso ponderado', () => {
     const items = [
       { id: 'a', statusId: 'done', startDate: null, endDate: null, metrics: { estimated_hours: 1.5, duration_days: 1 } },

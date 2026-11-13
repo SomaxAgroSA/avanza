@@ -194,3 +194,41 @@ describe('application/plan-management — linha de base, Bateria e relatório', 
     assert.deepEqual(lia.scope.projects.map((p) => p.key), ['CLV'])
   })
 })
+
+describe('application/plan — esforço pelas tarefas ligadas (regras §28)', () => {
+  it('sem esforço próprio, quadro, elemento, rodapé e saúde usam a soma das horas das tarefas (canceladas fora); o próprio prevalece', async () => {
+    const s = await setup()
+    const taskStatus = (id, category) => s.deps.store.statuses.push({ id, key: id.toUpperCase(), name: id, color: 'blue', category, order: 0, isActive: true })
+    taskStatus('t_todo', 'todo')
+    taskStatus('t_done', 'done')
+    taskStatus('t_cancel', 'cancelled')
+    const group = await s.plan.createGroup(s.ctx.gabi, s.project.id, { name: 'Execução', color: 'green' })
+    const done = (await s.plan.getPlan(s.ctx.gabi, s.project.id)).statuses.find((x) => x.category === 'done').id
+    const linked = await s.plan.createItem(s.ctx.mario, s.project.id, { group_id: group.id, name: 'Relatórios', status_id: done })
+    const own = await s.plan.createItem(s.ctx.mario, s.project.id, { group_id: group.id, name: 'Painel', status_id: done, estimated_hours: 10 })
+    const task = (planItemId, statusId, estimatedHours, actualHours) => s.deps.taskRepository.create({ projectId: s.project.id, planItemId, statusId, estimatedHours, actualHours })
+    task(linked.id, 't_done', 6, 7.5)
+    task(linked.id, 't_done', 2, null)
+    task(linked.id, 't_cancel', 50, 50)
+    task(own.id, 't_done', 4, 12)
+
+    const board = await s.plan.getPlan(s.ctx.lia, s.project.id)
+    const hours = (row) => [row.estimated_hours, row.actual_hours, row.estimated_from_tasks, row.actual_from_tasks]
+    assert.deepEqual(hours(board.items.find((i) => i.id === linked.id)), [8, 7.5, true, true])
+    assert.deepEqual(hours(board.items.find((i) => i.id === own.id)), [10, 12, false, true])
+    assert.equal(board.groups.find((g) => g.id === group.id).summary.estimated_hours, 18)
+    assert.deepEqual(hours(await s.plan.getItem(s.ctx.lia, linked.id)), [8, 7.5, true, true])
+
+    const report = await s.mgmt.getReport(s.ctx.lia, s.project.id, {})
+    assert.deepEqual(report.effort, { estimated: 18, actual: 19.5, remaining: 0, deviation: { hours: 1.5, percent: 8 } })
+    assert.deepEqual(report.health.factors.find((f) => f.key === 'effort'), { key: 'effort', value: 8, level: 'ok', hours: 1.5 })
+
+    // gravado continua só o valor próprio: as horas das tarefas não passam a ser do elemento
+    assert.deepEqual(s.deps.store.planItems.find((i) => i.id === linked.id).metrics, {})
+    // informar no elemento passa a valer; limpar volta às tarefas
+    await s.plan.updateItem(s.ctx.mario, linked.id, { estimated_hours: 5 })
+    assert.deepEqual(hours(await s.plan.getItem(s.ctx.lia, linked.id)), [5, 7.5, false, true])
+    await s.plan.updateItem(s.ctx.mario, linked.id, { estimated_hours: null })
+    assert.deepEqual(hours(await s.plan.getItem(s.ctx.lia, linked.id)), [8, 7.5, true, true])
+  })
+})

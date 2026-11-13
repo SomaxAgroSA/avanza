@@ -829,6 +829,8 @@ export function toPlanItem(dto: PlanItemDto): PlanItem {
     baselineEnd: dto.baseline_end ?? null,
     custom: dto.custom ?? {},
     tasks: { total: dto.tasks?.total ?? 0, done: dto.tasks?.done ?? 0 },
+    estimatedFromTasks: !!dto.estimated_from_tasks,
+    actualFromTasks: !!dto.actual_from_tasks,
   }
 }
 

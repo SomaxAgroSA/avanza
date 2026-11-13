@@ -379,6 +379,26 @@ describe('repositórios de tarefas (Postgres)', () => {
     assert.equal((await r.tasks.findById(child2.id)).sprintId, null)
   })
 
+  it('planItemStats: tarefas ligadas por elemento e status, com as somas das horas informadas (> 0)', async () => {
+    const project = await seedProject()
+    const group = await insertRow(t.db, 'project_groups', { project_id: project.id, name: 'Fase' })
+    const item = await insertRow(t.db, 'plan_items', { project_id: project.id, group_id: group.id, name: 'Elemento' })
+    const bare = await insertRow(t.db, 'plan_items', { project_id: project.id, group_id: group.id, name: 'Sem horas' })
+    await seedTask(project, { planItemId: item.id, statusId: status.CONCLUIDO, estimatedHours: 3, actualHours: 2.5 })
+    await seedTask(project, { planItemId: item.id, statusId: status.CONCLUIDO, estimatedHours: 1.5 })
+    await seedTask(project, { planItemId: item.id, statusId: status.BACKLOG, estimatedHours: 4 })
+    await seedTask(project, { planItemId: bare.id, statusId: status.BACKLOG })
+    await seedTask(project)
+    const rows = (await r.tasks.planItemStats([item.id, bare.id])).sort((a, b) => (a.planItemId + a.statusId < b.planItemId + b.statusId ? -1 : 1))
+    const expected = [
+      { planItemId: item.id, statusId: status.CONCLUIDO, total: 2, estimated: 4.5, actual: 2.5 },
+      { planItemId: item.id, statusId: status.BACKLOG, total: 1, estimated: 4, actual: null },
+      { planItemId: bare.id, statusId: status.BACKLOG, total: 1, estimated: null, actual: null },
+    ].sort((a, b) => (a.planItemId + a.statusId < b.planItemId + b.statusId ? -1 : 1))
+    assert.deepEqual(rows, expected)
+    assert.deepEqual(await r.tasks.planItemStats([]), [])
+  })
+
   it('tags e valores personalizados: substituição e leitura em lote, com as colunas de índice', async () => {
     const project = await seedProject()
     const [one, two] = [await seedTask(project), await seedTask(project)]

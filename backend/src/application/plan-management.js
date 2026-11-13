@@ -27,7 +27,7 @@ function createPlanManagementService(deps) {
   const journal = deps.planJournalRepository
   const issues = deps.planIssueRepository
   const support = createPlanSupport(deps)
-  const { loadProject, loadOwned, assertCan, audit, ensureStatuses, settingsOf, pendingMap, progressOf, assertRefs } = support
+  const { loadProject, loadOwned, assertCan, audit, ensureStatuses, settingsOf, pendingMap, planDataOf, assertRefs } = support
 
   const today = () => deps.clock.now().toISOString().slice(0, 10)
   const usersFor = async (ids) => {
@@ -305,14 +305,16 @@ function createPlanManagementService(deps) {
     for (const p of family) {
       const statuses = indexBy(await ensureStatuses(p))
       Object.assign(statusById, statuses)
-      const list = await deps.planItemRepository.listByProject(p.id, MAX_ITEMS)
+      // elementos com o esforço das tarefas ligadas onde não há o próprio (regras §28)
+      const data = await planDataOf(await deps.planItemRepository.listByProject(p.id, MAX_ITEMS), statuses)
+      const list = data.items
       const categoryOf = (i) => (i.statusId && statuses[i.statusId] ? statuses[i.statusId].category : null)
       list.forEach((i) => {
         projectOf[i.id] = p
       })
       counts[p.id] = list.filter((i) => !i.parentId).length
       items.push(...list)
-      Object.assign(progress, await progressOf(list, statuses))
+      Object.assign(progress, data.progress)
       Object.assign(pending, await pendingMap(list, await deps.planLinkRepository.listByProject(p.id), categoryOf))
       const groupList = await deps.projectGroupRepository.listByProject(p.id)
       const numbers = planDomain.numberGroups(groupList)
