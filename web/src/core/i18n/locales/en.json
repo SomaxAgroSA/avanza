@@ -805,7 +805,8 @@
       "it_visible": "Visible to IT",
       "doc_page": "Page",
       "doc_space": "Documentation space",
-      "lead": "Lead"
+      "lead": "Management lead",
+      "dev_lead": "Development lead"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -1029,7 +1030,8 @@
       "role": "Role",
       "platformUrl": "Platform link",
       "platform": "Platform",
-      "lead": "Lead"
+      "lead": "Management",
+      "devLead": "Development"
     },
     "descriptions": {
       "all": "Projects you can access.",
@@ -1289,7 +1291,8 @@
       "targetPlaceholder": "Choose the project",
       "archivedHint": "The project is already archived and hidden from lists. Delete it only if you want it gone for good."
     },
-    "leadHint": "Who drives the project. Permissions do not change: the owner still manages it.",
+    "leadHint": "Who manages the project. Permissions do not change: the owner still manages it.",
+    "devLeadHint": "Who carries out the technical work (the owner or a manager/member). Permissions do not change.",
     "noLead": "No lead"
   },
   "calendar": {

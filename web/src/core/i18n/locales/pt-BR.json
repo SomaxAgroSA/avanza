@@ -805,7 +805,8 @@
       "it_visible": "Visível para TI",
       "doc_page": "Página",
       "doc_space": "Espaço de documentação",
-      "lead": "Responsável"
+      "lead": "Responsável pela gestão",
+      "dev_lead": "Responsável pelo desenvolvimento"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -1029,7 +1030,8 @@
       "role": "Papel",
       "platformUrl": "Enlace da plataforma",
       "platform": "Plataforma",
-      "lead": "Responsável"
+      "lead": "Gestão",
+      "devLead": "Desenvolvimento"
     },
     "descriptions": {
       "all": "Projetos que você pode acessar.",
@@ -1289,7 +1291,8 @@
       "targetPlaceholder": "Escolha o projeto",
       "archivedHint": "O projeto já está arquivado e não aparece nas listas. Excluir só é preciso se quiser apagá-lo de vez."
     },
-    "leadHint": "Quem leva o projeto adiante. Não muda as permissões: o dono continua administrando.",
+    "leadHint": "Quem gerencia o projeto. Não muda as permissões: o dono continua administrando.",
+    "devLeadHint": "Quem executa a parte técnica (o dono ou um membro gestor/membro). Não muda as permissões.",
     "noLead": "Sem responsável"
   },
   "calendar": {

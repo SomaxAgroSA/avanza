@@ -92,7 +92,7 @@ describe('domain/plan-report — saúde do projeto', () => {
     assert.ok(r.health.factors.every((f) => f.level === 'ok'))
   })
 
-  it('a saúde é o pior fator: atraso, progresso abaixo do planejado, parados, estouro de esforço e problemas em aberto', () => {
+  it('a saúde é o pior fator: atraso, progresso abaixo do planejado, parados e estouro de esforço (problemas em aberto não entram)', () => {
     const r = build(
       [
         item('a', { statusId: 'st_done', startDate: '2024-01-01', endDate: '2024-01-05', metrics: { estimated_hours: 10, actual_hours: 14 } }),
@@ -112,8 +112,9 @@ describe('domain/plan-report — saúde do projeto', () => {
     assert.equal(by.stuck.level, 'critical') // 1 de 2 abertos parado
     assert.equal(by.effort.level, 'critical') // +40% nos feitos
     assert.equal(by.effort.value, 40)
-    assert.equal(by.issues.level, 'attention') // 2 em aberto
-    assert.equal(by.issues.value, 2)
+    // 2 problemas em aberto na Gestão: ficam na aba Problemas, não na saúde
+    assert.equal(by.issues, undefined)
+    assert.deepEqual(Object.keys(by), ['schedule', 'progress', 'stuck', 'effort'])
     assert.equal(r.health.level, 'critical')
   })
 
@@ -127,7 +128,7 @@ describe('domain/plan-report — saúde do projeto', () => {
   it('sem dados para o fator: "sem dados" e não pesa na saúde', () => {
     const r = build([item('a')])
     const by = Object.fromEntries(r.health.factors.map((f) => [f.key, f.level]))
-    assert.deepEqual(by, { schedule: 'none', progress: 'none', stuck: 'ok', effort: 'none', issues: 'ok' })
+    assert.deepEqual(by, { schedule: 'none', progress: 'none', stuck: 'ok', effort: 'none' })
     assert.equal(r.health.level, 'ok')
   })
 })

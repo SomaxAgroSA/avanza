@@ -39,6 +39,7 @@ function project(capabilities = MANAGER): Project {
     childCount: 0,
     owner: null,
     lead: null,
+    devLead: null,
     startDate: null,
     dueDate: null,
     archivedAt: null,
@@ -66,7 +67,6 @@ const report = (total: number): PlanReport => ({
       { key: 'progress', level: 'ok', value: 0, planned: 50, actual: 50 },
       { key: 'stuck', level: 'ok', value: 0, count: 0, of: 2 },
       { key: 'effort', level: 'attention', value: 25, hours: 1 },
-      { key: 'issues', level: 'ok', value: 0 },
     ],
   },
 })

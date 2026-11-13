@@ -89,6 +89,7 @@ export interface ProjectDto {
   child_count?: number
   owner: UserSummaryDto | null
   lead?: UserSummaryDto | null
+  dev_lead?: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
   archived_at: string | null

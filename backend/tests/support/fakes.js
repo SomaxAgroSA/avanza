@@ -407,7 +407,7 @@ function createFakeRepositories(store) {
   }
 
   const RANKS = { status: ['planning', 'active', 'paused', 'completed', 'cancelled'], priority: ['low', 'medium', 'high', 'critical'], urgency: ['low', 'medium', 'high'] }
-  const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'statusRank', priority: 'priorityRank', urgency: 'urgencyRank', area: 'areaId', owner: 'ownerId', lead: 'leadId', members: 'memberCount' }
+  const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'statusRank', priority: 'priorityRank', urgency: 'urgencyRank', area: 'areaId', owner: 'ownerId', lead: 'leadId', dev_lead: 'devLeadId', members: 'memberCount' }
   const projectRepository = {
     findById: (id) => store.projects.find((p) => p.id === id) || null,
     findByKey: (key) => store.projects.find((p) => p.key === key) || null,

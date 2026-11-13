@@ -55,6 +55,5 @@ export function useFactorText() {
 }
 
 function shortReason(t: ReturnType<typeof useTranslation>['t'], factor: HealthFactor): string {
-  if (factor.key === 'issues') return t('executive.portfolio.reason.issues', { count: factor.value ?? 0 })
   return t(`executive.portfolio.reason.${factor.key}`, { value: factor.value ?? 0 })
 }

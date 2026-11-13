@@ -39,7 +39,7 @@ describe('painel executivo', () => {
     const factors = [
       { key: 'progress' as const, level: 'attention' as const, value: 12 },
       { key: 'schedule' as const, level: 'critical' as const, value: 35 },
-      { key: 'issues' as const, level: 'critical' as const, value: 4 },
+      { key: 'stuck' as const, level: 'critical' as const, value: 40 },
     ]
     expect(mainHealthFactor({ level: 'critical', factors })?.key).toBe('schedule')
     expect(mainHealthFactor({ level: 'attention', factors: [factors[0]!] })?.key).toBe('progress')

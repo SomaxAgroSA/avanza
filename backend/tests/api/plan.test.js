@@ -263,7 +263,7 @@ describe('API Quadro do projeto', { timeout: 180000 }, () => {
     // relatório
     const report = (await lia.get(`/projects/${p}/plan/report?tz_offset=180`)).body.data
     assert.deepEqual([report.summary.total, report.summary.done, report.effort.estimated], [2, 1, 14])
-    assert.deepEqual(report.health.factors.map((f) => f.key), ['schedule', 'progress', 'stuck', 'effort', 'issues'])
+    assert.deepEqual(report.health.factors.map((f) => f.key), ['schedule', 'progress', 'stuck', 'effort'])
     assert.equal((await lia.get(`/projects/${p}/plan/report?tz_offset=abc`)).status, 400)
 
     assert.equal((await admin.del(`/projects/${p}/plan/baseline`)).status, 200)
