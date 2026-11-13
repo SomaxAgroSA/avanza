@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Archive, ArchiveRestore, Copy, ExternalLink, FolderPlus } from 'lucide-react'
+import { Archive, ArchiveRestore, Copy, ExternalLink, FolderPlus, Users } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
@@ -24,7 +24,9 @@ import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './proje
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { DeleteProjectDialog } from './DeleteProjectDialog'
 import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
-import { useProjectLifecycle, useProjects, useUpdateProject } from './queries'
+import { useProjectLifecycle, useProjects, useTeamActivity, useUpdateProject } from './queries'
+import { ActivityCell, TeamActivityDrawer } from './team-activity'
+import { activityByProject } from './team-activity-data'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { AreaPicker } from '@/features/workflow/area-visuals'
@@ -58,6 +60,12 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const errorMessage = useErrorMessage()
   const copy = useCopy()
   const canCreate = useCan('projects.create')
+  // Equipo ahora: quién está trabajando en cada proyecto (solo en las listas de proyectos en marcha)
+  const showActivity = useCan('tasks.view') && view !== 'archived' && view !== 'finished'
+  const team = useTeamActivity(showActivity)
+  const activity = useMemo(() => activityByProject(team.data), [team.data])
+  const [teamOpen, setTeamOpen] = useState(false)
+  const createHere = canCreate && view !== 'archived' && view !== 'finished'
   const [params, setParams] = useSearchParams()
 
   const table = useDataTableState(`projects-${view}`, { sort: { id: 'name', direction: 'asc' }, columnVisibility: { parent: false } })
@@ -144,6 +152,33 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         cell: (project) => <ProjectStatusBadge status={project.status} />,
         filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
       },
+      // Responsable y Trabajando junto al estado: se ven sin desplazar la tabla
+      {
+        // quem leva o projeto adiante (o dono continua nos Detalhes do projeto)
+        id: 'lead',
+        header: t('projects.fields.lead'),
+        sortable: true,
+        size: 200,
+        cell: (project) =>
+          project.lead ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <AppAvatar name={project.lead.name} src={project.lead.avatarUrl} size="xs" />
+              <span className="truncate">{project.lead.name}</span>
+            </div>
+          ) : (
+            <span className="text-subtle">—</span>
+          ),
+      },
+      ...(showActivity
+        ? [
+            {
+              id: 'activity',
+              header: t('team.column'),
+              size: 280,
+              cell: (project: Project) => <ActivityCell entries={activity.get(project.id)} />,
+            },
+          ]
+        : []),
       {
         id: 'priority',
         header: t('projects.fields.priority'),
@@ -187,21 +222,6 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
           ),
         filter: { label: t('projects.parent.field'), options: parentOptions },
       },
-      {
-        id: 'owner',
-        header: t('projects.fields.owner'),
-        sortable: true,
-        size: 200,
-        cell: (project) =>
-          project.owner ? (
-            <div className="flex min-w-0 items-center gap-2">
-              <AppAvatar name={project.owner.name} src={project.owner.avatarUrl} size="xs" />
-              <span className="truncate">{project.owner.name}</span>
-            </div>
-          ) : (
-            '—'
-          ),
-      },
       { id: 'members', header: t('projects.fields.members'), sortable: true, sortDescFirst: true, size: 110, align: 'end', cell: (project) => project.memberCount },
       {
         id: 'due_date',
@@ -215,7 +235,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, urgencyOptions, areas.data, areaOptions, parentOptions, view],
+    [t, locale, urgencyOptions, areas.data, areaOptions, parentOptions, view, showActivity, activity],
   )
 
   const emptyState =
@@ -240,13 +260,23 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={t(TITLES[view])}
         description={t(`projects.descriptions.${view}`)}
         actions={
-          canCreate && view !== 'archived' && view !== 'finished' ? (
-            <AppButton leftIcon={<FolderPlus />} onClick={() => setCreating(true)}>
-              {t('projects.create')}
-            </AppButton>
+          showActivity || createHere ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {showActivity && (
+                <AppButton variant="secondary" leftIcon={<Users />} onClick={() => setTeamOpen(true)}>
+                  {t('team.open')}
+                </AppButton>
+              )}
+              {createHere && (
+                <AppButton leftIcon={<FolderPlus />} onClick={() => setCreating(true)}>
+                  {t('projects.create')}
+                </AppButton>
+              )}
+            </div>
           ) : undefined
         }
       />
+      {showActivity && <TeamActivityDrawer open={teamOpen} onOpenChange={setTeamOpen} />}
 
       <AppDataTable
         caption={t(TITLES[view])}

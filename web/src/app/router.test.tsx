@@ -38,6 +38,7 @@ function project(capabilities = MANAGER): Project {
     parent: null,
     childCount: 0,
     owner: null,
+    lead: null,
     startDate: null,
     dueDate: null,
     archivedAt: null,

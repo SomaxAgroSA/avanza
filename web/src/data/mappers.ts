@@ -3,6 +3,7 @@ import type { PlanFile, PlanUpdate } from '@/domain/plan-updates'
 import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanReportDto, PlanReportItemDto, PlanUpdateDto } from './dtos'
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
+import type { TeamActivityDto } from './dtos'
 import type { ApiToken, ApiTokenState } from '@/domain/api-tokens'
 import type { WebhookDto, WebhookDeliveryDto } from './dtos'
 import type { Webhook, WebhookDelivery, WebhookDeliveryStatus } from '@/domain/webhooks'
@@ -53,6 +54,7 @@ import {
   type ProjectMember,
   type ProjectRole,
   type ProjectStatus,
+  type TeamActivity,
   type UserSummary,
 } from '@/domain/projects'
 
@@ -155,6 +157,7 @@ export function toProject(dto: ProjectDto): Project {
       : null,
     childCount: dto.child_count ?? 0,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
+    lead: dto.lead ? toUserSummary(dto.lead) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
     archivedAt: toDate(dto.archived_at),
@@ -1286,6 +1289,26 @@ export function toProjectBrief(dto: ProjectBriefDto): ProjectBrief {
       unit: i.unit ?? '',
       target: typeof i.target === 'number' ? i.target : null,
       dueDate: i.due_date ? i.due_date.slice(0, 10) : null,
+    })),
+  }
+}
+
+const TEAM_STATES = ['working', 'active', 'idle'] as const
+export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
+  return {
+    windowDays: dto.window_days,
+    people: dto.people.map((person) => ({
+      user: toUserSummary(person.user),
+      projects: person.projects.map((row) => ({
+        project: { id: row.project.id, key: row.project.key, name: row.project.name, icon: toIcon(PROJECT_ICONS, row.project.icon, 'folder'), cover: toColor(PROJECT_COVERS, row.project.cover, 'violet') },
+        state: oneOf(TEAM_STATES, row.state, 'idle'),
+        inProgress: row.in_progress,
+        recent: row.recent,
+        open: row.open,
+        stale: !!row.stale,
+        lastActivity: toDate(row.last_activity),
+        tasks: row.tasks.map((task) => ({ id: task.id, code: task.code, title: task.title, status: task.status, updatedAt: toDate(task.updated_at), inProgress: !!task.in_progress, moved: !!task.moved })),
+      })),
     })),
   }
 }

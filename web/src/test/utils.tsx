@@ -130,6 +130,7 @@ export function fakeRepositories(overrides: {
     },
     projects: {
       list: () => Promise.resolve({ items: [], page: 1, perPage: 20, total: 0, totalPages: 0 }),
+      teamActivity: () => Promise.resolve({ windowDays: 7, people: [] }),
       get: notImplemented,
       create: notImplemented,
       update: notImplemented,

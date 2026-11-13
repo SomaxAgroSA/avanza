@@ -93,6 +93,8 @@ export interface Project {
   /** Quantidade de subprojetos. */
   childCount: number
   owner: UserSummary | null
+  /** Responsável: quem leva o projeto adiante (dono ou membro). Não muda permissão. */
+  lead: UserSummary | null
   startDate: Date | null
   dueDate: Date | null
   archivedAt: Date | null
@@ -176,4 +178,40 @@ export function parentCandidates(all: readonly Project[], project: Pick<Project,
 /** Pode criar um subprojeto a partir deste: quem cria projetos e edita este, que não é subprojeto nem arquivado. */
 export function canAddSubproject(project: Project, canCreateProjects: boolean): boolean {
   return canCreateProjects && project.capabilities.edit && !project.parent && !project.archivedAt
+}
+
+/** Equipo ahora: estado de uma pessoa num projeto (janela de 7 dias). */
+export type TeamActivityState = 'working' | 'active' | 'idle'
+
+export interface TeamActivityTask {
+  id: string
+  code: string
+  title: string
+  status: { id: string; name: string; color: string; category: string }
+  updatedAt: Date | null
+  inProgress: boolean
+  moved: boolean
+}
+
+export interface TeamActivityProject {
+  project: { id: string; key: string; name: string; icon: ProjectIcon; cover: ProjectCover }
+  /** working = tarefas em andamento que mudaram na janela; active = mudou tarefas na janela; idle = só abertas ou paradas. */
+  state: TeamActivityState
+  inProgress: number
+  recent: number
+  open: number
+  /** Tarefas em andamento, mas sem mudança na janela. */
+  stale: boolean
+  lastActivity: Date | null
+  tasks: TeamActivityTask[]
+}
+
+export interface TeamActivityPerson {
+  user: UserSummary
+  projects: TeamActivityProject[]
+}
+
+export interface TeamActivity {
+  windowDays: number
+  people: TeamActivityPerson[]
 }

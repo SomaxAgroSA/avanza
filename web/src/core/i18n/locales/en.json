@@ -128,7 +128,8 @@
     "parent_is_child": "That project is already a subproject; choose a main project",
     "has_children": "A project with subprojects cannot have a parent",
     "parent_archived": "The parent project is archived",
-    "color_in_use": "Another project already uses this color"
+    "color_in_use": "Another project already uses this color",
+    "not_a_member": "Choose the owner or a project member (manager or member)."
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -803,7 +804,8 @@
       "parent_project": "Parent project",
       "it_visible": "Visible to IT",
       "doc_page": "Page",
-      "doc_space": "Documentation space"
+      "doc_space": "Documentation space",
+      "lead": "Lead"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -1026,7 +1028,8 @@
       "cover": "Cover",
       "role": "Role",
       "platformUrl": "Platform link",
-      "platform": "Platform"
+      "platform": "Platform",
+      "lead": "Lead"
     },
     "descriptions": {
       "all": "Projects you can access.",
@@ -1285,7 +1288,9 @@
       "target": "Project that receives the documentation",
       "targetPlaceholder": "Choose the project",
       "archivedHint": "The project is already archived and hidden from lists. Delete it only if you want it gone for good."
-    }
+    },
+    "leadHint": "Who drives the project. Permissions do not change: the owner still manages it.",
+    "noLead": "No lead"
   },
   "calendar": {
     "open": "Open calendar",
@@ -4319,5 +4324,46 @@
       "row": "{{tasks}} deliveries · {{milestones}} milestones",
       "none": "No deliveries in the period yet."
     }
+  },
+  "team": {
+    "open": "Team now",
+    "column": "Working",
+    "title": "Team now",
+    "description": "Which project each person is working on, based on their tasks from the last {{days}} days.",
+    "emptyTitle": "No one has open tasks",
+    "emptyHint": "Once tasks are assigned in ongoing projects, they show up here.",
+    "noActivity": "No activity this week",
+    "summary": "{{working}} project(s) in progress · {{active}} with activity this week",
+    "groups": {
+      "working": "Working now",
+      "active": "Active this week",
+      "idle": "Open tasks, no movement for over 7 days"
+    },
+    "metric": {
+      "working_one": "{{count}} in progress",
+      "working_other": "{{count}} in progress",
+      "active_one": "{{count}} update · {{when}}",
+      "active_other": "{{count}} updates · {{when}}",
+      "stale_one": "{{count}} in progress, no movement {{when}}",
+      "stale_other": "{{count}} in progress, no movement {{when}}",
+      "idle_one": "{{count}} open · {{when}}",
+      "idle_other": "{{count}} open · {{when}}"
+    },
+    "chip": {
+      "working_one": "{{name}} · {{count}} in progress",
+      "working_other": "{{name}} · {{count}} in progress",
+      "workingTitle_one": "{{name}}: {{count}} task in progress · last activity {{when}}",
+      "workingTitle_other": "{{name}}: {{count}} tasks in progress · last activity {{when}}",
+      "stale_one": "{{name}} · {{count}} in progress, no movement {{when}}",
+      "stale_other": "{{name}} · {{count}} in progress, no movement {{when}}",
+      "staleTitle_one": "{{name}}: {{count}} task marked in progress, but no movement {{when}}",
+      "staleTitle_other": "{{name}}: {{count}} tasks marked in progress, but no movement {{when}}",
+      "active": "{{name}} · active {{when}}",
+      "activeTitle_one": "{{name}}: updated {{count}} task this week · {{when}}",
+      "activeTitle_other": "{{name}}: updated {{count}} tasks this week · {{when}}"
+    },
+    "showTasks": "Show {{name}}'s tasks in {{project}}",
+    "hideTasks": "Hide {{name}}'s tasks in {{project}}",
+    "tasksOf": "{{name}}'s tasks in {{project}}"
   }
 }

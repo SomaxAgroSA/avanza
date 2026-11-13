@@ -11,24 +11,26 @@ import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES, ca
 import type { ProjectListQuery } from '@/domain/repositories'
 import { projectSchema, type ProjectInput } from '@/domain/validation'
 import { NO_URGENCY } from '@/domain/urgency'
-import { AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
+import { AppAvatar, AppButton, AppDatePicker, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { PROJECT_ICON_COMPONENTS, coverStyle } from './project-theme'
 import { ProjectAvatar } from './project-visuals'
 import { CustomColorSwatch } from '@/features/task-config/config-visuals'
 import { isHexColor } from '@/domain/colors'
 import { IconPicker } from '@/features/icons/IconPicker'
-import { useCreateProject, useProjectCovers, useProjects, useUpdateProject } from './queries'
+import { useCreateProject, useProjectCovers, useProjectMembers, useProjects, useUpdateProject } from './queries'
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useAreas } from '@/features/workflow/queries'
 import { AreaBadge } from '@/features/workflow/area-visuals'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId', platform_url: 'platformUrl' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId', platform_url: 'platformUrl', lead_id: 'leadId' }
 
 const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
 /** Valor do select para "sem área" / "sem pai" (o select não aceita texto vazio). */
 const NO_AREA = '__none__'
+/** Valor do select para "sem responsável" (o Radix não aceita valor vazio). */
+const NO_LEAD = '__no_lead__'
 
 /** Projetos que podem ser pai (sem pai, ativos): até 100, pelo nome (a regra final é do servidor, §34). */
 const PARENT_QUERY: ProjectListQuery = { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: 'none' } }
@@ -46,6 +48,7 @@ function defaults(project?: Project | null, parentId?: string): ProjectInput {
     urgency: project?.urgency ?? NO_URGENCY,
     areaId: project?.area?.id ?? '',
     parentId: project ? (project.parent?.id ?? '') : (parentId ?? ''),
+    leadId: project?.lead?.id ?? '',
     startDate: toDayInput(project?.startDate),
     dueDate: toDayInput(project?.dueDate),
   }
@@ -75,6 +78,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
   const lockedParent = !canHaveParent(project)
   // cor única (§24): as dos outros projetos ficam travadas e o projeto novo já nasce com uma livre
   const covers = useProjectCovers(project?.id, open)
+  const members = useProjectMembers(open && project ? project.id : undefined)
   const usedCovers = covers.data?.used ?? []
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<ProjectInput>({
@@ -115,6 +119,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
       areaId: values.areaId !== (project?.area?.id ?? '') ? values.areaId || null : undefined,
       // só quando mudou (null solta): o pai que ficou arquivado depois continua valendo
       parentId: values.parentId !== (project?.parent?.id ?? '') ? values.parentId || null : undefined,
+      // só quando mudou ('' limpa); na criação, quem cria já é o responsável
+      leadId: isEdit && values.leadId !== (project?.lead?.id ?? '') ? values.leadId || null : undefined,
       startDate: values.startDate || null,
       dueDate: values.dueDate || null,
     }
@@ -242,6 +248,28 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
               render={({ field }) => <AppSelect label={t('tasks.fields.urgency')} value={field.value} onValueChange={field.onChange} options={urgencyOptions} />}
             />
           </div>
+          {isEdit && (
+            <Controller
+              control={control}
+              name="leadId"
+              render={({ field }) => (
+                <AppSelect
+                  label={t('projects.fields.lead')}
+                  value={field.value || NO_LEAD}
+                  onValueChange={(value) => field.onChange(value === NO_LEAD ? '' : value)}
+                  hint={t('projects.leadHint')}
+                  error={errors.leadId?.message}
+                  options={[
+                    { value: NO_LEAD, label: t('projects.noLead') },
+                    // o dono e os membros que trabalham no projeto (gestor ou membro)
+                    ...(members.data ?? [])
+                      .filter((m) => m.isOwner || m.role === 'manager' || m.role === 'member')
+                      .map((m) => ({ value: m.user.id, label: m.user.name, textValue: m.user.name, prefix: <AppAvatar name={m.user.name} src={m.user.avatarUrl} size="xs" /> })),
+                  ]}
+                />
+              )}
+            />
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={control}

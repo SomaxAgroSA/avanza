@@ -117,6 +117,16 @@ function Overview({ project }: { project: Project }) {
             <Detail label={t('tasks.fields.area')}>
               <AreaBadge area={project.area} />
             </Detail>
+            <Detail label={t('projects.fields.lead')}>
+              {project.lead ? (
+                <span className="inline-flex items-center gap-2">
+                  <AppAvatar name={project.lead.name} size="xs" />
+                  {project.lead.name}
+                </span>
+              ) : (
+                '—'
+              )}
+            </Detail>
             <Detail label={t('projects.fields.owner')}>
               {project.owner ? (
                 <span className="inline-flex items-center gap-2">

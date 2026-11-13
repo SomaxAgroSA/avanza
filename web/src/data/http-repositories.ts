@@ -22,6 +22,8 @@ import type { CharterItemInput } from '@/domain/charter'
 import type { Urgency } from '@/domain/urgency'
 import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
 import { toCharterItem, toCharterMeasurement, toProjectBrief, toProjectCharter } from './mappers'
+import { toTeamActivity } from './mappers'
+import type { TeamActivityDto } from './dtos'
 import { toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
@@ -422,7 +424,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url', leadId: 'lead_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -467,6 +469,9 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
     async covers(exclude) {
       const { data } = await api.get<{ used: string[]; suggested: string }>('/project-covers', { query: { exclude } })
       return { used: data.used, suggested: data.suggested }
+    },
+    async teamActivity() {
+      return toTeamActivity((await api.get<TeamActivityDto>('/team-activity')).data)
     },
     addMember: (id, userId, role) => members(api.post<ProjectMemberDto[]>(`${path(id)}/members`, { user_id: userId, role })),
     updateMemberRole: (id, userId, role) => members(api.patch<ProjectMemberDto[]>(memberPath(id, userId), { role })),

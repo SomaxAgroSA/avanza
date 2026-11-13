@@ -407,7 +407,7 @@ function createFakeRepositories(store) {
   }
 
   const RANKS = { status: ['planning', 'active', 'paused', 'completed', 'cancelled'], priority: ['low', 'medium', 'high', 'critical'], urgency: ['low', 'medium', 'high'] }
-  const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'statusRank', priority: 'priorityRank', urgency: 'urgencyRank', area: 'areaId', owner: 'ownerId', members: 'memberCount' }
+  const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'statusRank', priority: 'priorityRank', urgency: 'urgencyRank', area: 'areaId', owner: 'ownerId', lead: 'leadId', members: 'memberCount' }
   const projectRepository = {
     findById: (id) => store.projects.find((p) => p.id === id) || null,
     findByKey: (key) => store.projects.find((p) => p.key === key) || null,
@@ -582,6 +582,15 @@ function createFakeRepositories(store) {
         })
     },
     findManyByIds: (ids) => store.tasks.filter((t) => ids.includes(t.id)),
+    listActivity: (projectIds, since) =>
+      store.tasks
+        .filter((t) => projectIds.includes(t.projectId) && t.assigneeId)
+        .map((t) => {
+          const st = store.statuses.find((x) => x.id === t.statusId) || { id: t.statusId, name: '', color: 'gray', category: 'todo' }
+          return { id: t.id, code: t.code, title: t.title, projectId: t.projectId, assigneeId: t.assigneeId, updatedAt: t.updatedAt, status: { id: st.id, name: st.name, color: st.color, category: st.category } }
+        })
+        .filter((t) => !['done', 'cancelled'].includes(t.status.category) || t.updatedAt >= since)
+        .sort((x, y) => y.updatedAt - x.updatedAt),
     listForReport: (query) =>
       store.tasks
         .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))

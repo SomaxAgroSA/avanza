@@ -12,6 +12,7 @@ export const projectKeys = {
   history: (id: string) => ['projects', 'history', id] as const,
   files: (id: string) => ['projects', 'files', id] as const,
   covers: (exclude: string) => ['projects', 'covers', exclude] as const,
+  team: ['projects', 'team-activity'] as const,
 }
 
 /** Lista geral dos filtros de projeto (seletor das visões, Tarefas, Relatórios): ativos, pelo nome. */
@@ -31,6 +32,12 @@ export function useProject(id: string | undefined) {
 export function useProjectCovers(exclude: string | undefined, enabled: boolean) {
   const { projects } = useRepositories()
   return useQuery({ queryKey: projectKeys.covers(exclude ?? ''), queryFn: () => projects.covers(exclude), enabled, staleTime: 0 })
+}
+
+/** Equipo ahora: em que projeto cada pessoa está trabalhando (atualiza a cada minuto). */
+export function useTeamActivity(enabled = true) {
+  const { projects } = useRepositories()
+  return useQuery({ queryKey: projectKeys.team, queryFn: () => projects.teamActivity(), enabled, staleTime: 60_000 })
 }
 
 export function useProjectMembers(id: string | undefined) {
