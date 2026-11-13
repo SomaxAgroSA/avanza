@@ -35,12 +35,11 @@ export function ProjectHealth({ projectId, family = false }: { projectId: string
 }
 
 /** Lista que cada fator abre (as chaves de `details`). */
-const FACTOR_DETAILS: Record<HealthFactorKey, 'overdue' | 'behind' | 'stuck' | 'overEffort' | 'issues'> = {
+const FACTOR_DETAILS: Record<HealthFactorKey, 'overdue' | 'behind' | 'stuck' | 'overEffort'> = {
   schedule: 'overdue',
   progress: 'behind',
   stuck: 'stuck',
   effort: 'overEffort',
-  issues: 'issues',
 }
 
 function HealthCard({
@@ -91,7 +90,7 @@ function HealthCard({
           </Link>
         </AppButton>
       </div>
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {health.factors.map((factor) => {
           const count = countOf(factor.key)
           const selected = open === factor.key
@@ -175,30 +174,19 @@ function FactorDetails({ factor, data }: { factor: HealthFactorKey; data: PlanRe
     <section id="plan-health-details" aria-live="polite" className="mt-3 rounded-lg border border-primary bg-surface p-3 shadow-card" data-testid="health-details">
       <h3 className="text-sm font-semibold text-fg">{t(`plan.report.details.title.${factor}`, { count: data.details[key].length })}</h3>
       <ul className="mt-2 divide-y divide-border">
-        {key === 'issues'
-          ? data.details.issues.map((issue) => (
-              <li key={issue.id} className="flex items-center gap-3 py-2 text-sm">
-                <span className="shrink-0 rounded bg-surface-2 px-1.5 font-mono text-xs text-muted">{issue.project.key}</span>
-                <span className="min-w-0 flex-1 truncate text-fg">#{issue.number} · {issue.description}</span>
-                <span className="shrink-0 text-xs text-muted">{t(`plan.management.issues.states.${issue.state}`, { defaultValue: issue.state })}</span>
-                <Link to={managementLink(issue.project.id, { view: 'management' })} className="shrink-0 text-xs font-medium text-primary-text hover:underline">
-                  {t('plan.report.details.openItem')}
-                </Link>
-              </li>
-            ))
-          : data.details[key].map((item: PlanReportItem) => (
-              <li key={item.id} className="flex items-center gap-3 py-2 text-sm">
-                <span className="shrink-0 rounded bg-surface-2 px-1.5 font-mono text-xs text-muted" title={item.project.name}>
-                  {item.project.key}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-fg">{item.name}</span>
-                {item.status && <span className="hidden shrink-0 text-xs text-muted sm:inline">{item.status.name}</span>}
-                <span className="shrink-0 text-xs tabular-nums text-muted">{factor === 'progress' ? `${item.progress}%` : day(item.endDate)}</span>
-                <Link to={managementLink(item.project.id, { item: item.id })} className="shrink-0 text-xs font-medium text-primary-text hover:underline">
-                  {t('plan.report.details.openItem')}
-                </Link>
-              </li>
-            ))}
+        {data.details[key].map((item: PlanReportItem) => (
+          <li key={item.id} className="flex items-center gap-3 py-2 text-sm">
+            <span className="shrink-0 rounded bg-surface-2 px-1.5 font-mono text-xs text-muted" title={item.project.name}>
+              {item.project.key}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-fg">{item.name}</span>
+            {item.status && <span className="hidden shrink-0 text-xs text-muted sm:inline">{item.status.name}</span>}
+            <span className="shrink-0 text-xs tabular-nums text-muted">{factor === 'progress' ? `${item.progress}%` : day(item.endDate)}</span>
+            <Link to={managementLink(item.project.id, { item: item.id })} className="shrink-0 text-xs font-medium text-primary-text hover:underline">
+              {t('plan.report.details.openItem')}
+            </Link>
+          </li>
+        ))}
       </ul>
     </section>
   )

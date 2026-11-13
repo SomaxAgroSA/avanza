@@ -148,7 +148,7 @@ describe('application/plan-management — linha de base, Bateria e relatório', 
     assert.equal(s.actions('plan_settings.baseline_cleared').length, 1)
   })
 
-  it('relatório: hoje no fuso de quem consulta; indicadores, recursos, grupos e saúde com os fatores (inclui os problemas em aberto)', async () => {
+  it('relatório: hoje no fuso de quem consulta; indicadores, recursos, grupos e saúde com os fatores (os problemas em aberto não entram)', async () => {
     const s = await setup()
     await board(s)
     await s.mgmt.createIssue(s.ctx.mario, s.project.id, { opened_on: '2024-02-05', description: 'VPN' })
@@ -156,8 +156,10 @@ describe('application/plan-management — linha de base, Bateria e relatório', 
     assert.equal(report.today, '2024-02-10')
     assert.deepEqual(report.summary, { total: 2, done: 1, open: 1, overdue: 1, stuck: 0, canceled: 0, progress: 29 })
     assert.equal(report.groups[0].name, 'Iniciação')
-    assert.equal(report.health.factors.find((f) => f.key === 'issues').value, 1)
+    // o problema aberto continua na lista da Gestão, mas não pesa na saúde (o crítico vem do atraso)
+    assert.equal(report.health.factors.some((f) => f.key === 'issues'), false)
     assert.equal(report.health.level, 'critical')
+    assert.equal(report.health.factors.find((f) => f.key === 'schedule').level, 'critical')
     assert.equal((await s.mgmt.getReport(s.ctx.lia, s.project.id, { tz_offset: '-840' })).today, '2024-02-11')
     assert.equal(await codeOf(() => s.mgmt.getReport(s.ctx.lia, s.project.id, { tz_offset: 'x' })), 'VALIDATION_ERROR:{"tz_offset":"invalid_type"}')
     assert.equal(await codeOf(() => s.mgmt.getReport(s.ctx.otto, s.project.id, {})), 'PROJECT_NOT_FOUND')

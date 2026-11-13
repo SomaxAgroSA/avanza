@@ -54,7 +54,6 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
           factors: [
             { key: 'schedule', value: 35, level: 'critical', count: 7, of: 20 },
             { key: 'progress', value: 12, level: 'attention', planned: 70, actual: 58 },
-            { key: 'issues', value: 2, level: 'attention' },
           ],
         },
         progress: { value: 72, source: 'plan' },
