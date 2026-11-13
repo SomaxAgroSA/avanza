@@ -363,6 +363,18 @@ export interface DocTreePageDto {
   has_draft: boolean
   is_home: boolean
   updated_at: string | null
+  tasks?: Array<{ id: string; code: string; title: string }>
+}
+
+export interface TaskDocLinkDto {
+  id: string
+  title: string
+  status: string
+  is_home: boolean
+  space: { id: string; key: string; name: string; icon: string; color: string }
+  updated_at: string | null
+  linked_at: string | null
+  capabilities?: { unlink?: boolean }
 }
 
 export interface DocPageDto {

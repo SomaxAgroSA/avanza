@@ -66,6 +66,8 @@ export const AUDIT_ACTIONS = [
   'task.deleted',
   'task.linked',
   'task.unlinked',
+  'task.doc_linked',
+  'task.doc_unlinked',
   'task.forked',
   'comment.added',
   'comment.edited',

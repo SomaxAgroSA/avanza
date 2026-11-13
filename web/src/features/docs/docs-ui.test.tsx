@@ -37,6 +37,7 @@ const SPACE: DocSpace = {
 const tree = (id: string, title: string, parentId: string | null, position: number, extra: Partial<DocTreePage> = {}): DocTreePage => ({
   id,
   parentId,
+  tasks: [],
   title,
   status: 'published',
   position,

@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { MemberRole } from '@/domain/projects'
-import type { ProjectData, ProjectListQuery } from '@/domain/repositories'
+import type { ProjectData, ProjectListQuery, ProjectRemoveOptions } from '@/domain/repositories'
 import { useRepositories } from '@/presentation/common/repositories-context'
 
 export const projectKeys = {
@@ -84,7 +84,7 @@ export function useProjectLifecycle() {
   return {
     archive: useMutation({ mutationFn: (id: string) => projects.archive(id), onSuccess: invalidate }),
     unarchive: useMutation({ mutationFn: (id: string) => projects.unarchive(id), onSuccess: invalidate }),
-    remove: useMutation({ mutationFn: (id: string) => projects.remove(id), onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: ({ id, options }: { id: string; options?: ProjectRemoveOptions }) => projects.remove(id, options), onSuccess: invalidate }),
     transfer: useMutation({
       mutationFn: ({ id, userId }: { id: string; userId: string }) => projects.transferOwnership(id, userId),
       onSuccess: invalidate,

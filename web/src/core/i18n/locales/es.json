@@ -231,7 +231,8 @@
     "WEBHOOK_DELIVERY_NOT_FOUND": "Entrega no encontrada.",
     "ICON_IN_USE": "Este ícono lo usan proyectos, tipos de tarea o espacios y no se puede quitar.",
     "ICON_NOT_FOUND": "Este ícono no está en la biblioteca.",
-    "CHARTER_ITEM_NOT_FOUND": "Ítem de la ficha no encontrado."
+    "CHARTER_ITEM_NOT_FOUND": "Ítem de la ficha no encontrado.",
+    "PROJECT_HAS_DOCS": "Este proyecto tiene documentación: elige si moverla, dejarla como espacio general o eliminarla."
   },
   "nav": {
     "main": "Navegación principal",
@@ -800,7 +801,9 @@
       "measured_at": "Fecha de la medición",
       "urgency": "Urgencia",
       "parent_project": "Proyecto padre",
-      "it_visible": "Visible para TI"
+      "it_visible": "Visible para TI",
+      "doc_page": "Página",
+      "doc_space": "Espacio de documentación"
     },
     "actions": {
       "auth.login": "Inició sesión",
@@ -948,7 +951,9 @@
       "charter_item.updated": "Ítem de la ficha modificado",
       "charter_item.deleted": "Ítem eliminado de la ficha",
       "charter_item.reordered": "Ítems de la ficha reordenados",
-      "charter_item.measured": "Medición registrada"
+      "charter_item.measured": "Medición registrada",
+      "task.doc_linked": "Documentación vinculada",
+      "task.doc_unlinked": "Documentación desvinculada"
     }
   },
   "projects": {
@@ -1067,7 +1072,8 @@
       "tasks": "Tareas",
       "management": "Gestión",
       "report": "Informe",
-      "charter": "Ficha"
+      "charter": "Ficha",
+      "docs": "Documentación"
     },
     "taskViews": {
       "label": "Vistas de tareas",
@@ -1265,7 +1271,21 @@
     "coverUniqueHint": "Cada proyecto tiene un color propio. Los colores apagados ya están en uso.",
     "coverTaken": "{{color}}: en uso por otro proyecto",
     "platformUrlHint": "Dirección para entrar a la plataforma desarrollada. Aparece como botón “Abrir plataforma” arriba del proyecto.",
-    "openPlatform": "Abrir plataforma"
+    "openPlatform": "Abrir plataforma",
+    "deleteDocs": {
+      "intro_one": "Este proyecto tiene un espacio de documentación. ¿Qué hacemos con él?",
+      "intro_other": "Este proyecto tiene {{count}} espacios de documentación. ¿Qué hacemos con ellos?",
+      "question": "Qué hacer con la documentación",
+      "move": "Moverla a otro proyecto",
+      "moveHint": "Sigue igual, ahora vinculada al proyecto que elijas.",
+      "general": "Dejarla como espacio general",
+      "generalHint": "Queda en Documentación, sin proyecto, para toda la empresa.",
+      "delete": "Eliminarla junto con el proyecto",
+      "deleteHint": "Se borran las páginas, sus versiones y archivos. No se puede recuperar.",
+      "target": "Proyecto que recibe la documentación",
+      "targetPlaceholder": "Elige el proyecto",
+      "archivedHint": "El proyecto ya está archivado y no aparece en las listas. Eliminarlo solo hace falta si quieres borrarlo del todo."
+    }
   },
   "calendar": {
     "open": "Abrir calendario",
@@ -1694,7 +1714,8 @@
       "history": "Historial",
       "comments": "Comentarios ({{count}})",
       "attachments": "Adjuntos ({{count}})",
-      "relations": "Relaciones ({{count}})"
+      "relations": "Relaciones ({{count}})",
+      "docs": "Documentación ({{count}})"
     },
     "fields": {
       "task": "Tarea",
@@ -2651,7 +2672,6 @@
       "keyHint": "2 a 10 letras o números, empezando por letra (ej.: MANUAL).",
       "keyLocked": "La clave no cambia después de creada.",
       "projectHint": "Opcional: vincula el espacio a un proyecto (quien gestiona el proyecto gestiona el espacio).",
-      "projectLocked": "El proyecto no cambia después de creado.",
       "noProject": "Ninguno (espacio de la empresa)",
       "clearProject": "Quitar proyecto",
       "namePlaceholder": "Nombre del espacio",
@@ -2665,7 +2685,11 @@
       "deleteHint_one": "Se eliminarán la página, sus versiones y archivos. No se puede deshacer.",
       "deleteHint_other": "Se eliminarán las {{count}} páginas, sus versiones y archivos. No se puede deshacer.",
       "notFound": "Espacio no encontrado",
-      "notFoundHint": "No existe o no tienes acceso."
+      "notFoundHint": "No existe o no tienes acceso.",
+      "projectChangeHint": "Si lo vinculaste por error, elige el proyecto correcto.",
+      "projectChange": "Al guardar, {{key}} pasa de {{from}} a {{to}}. Lo leen los miembros de {{to}}; quien está solo en {{from}} deja de verlo. Las páginas, sus versiones y el historial no cambian.",
+      "projectRemove": "Al guardar, {{key}} deja de estar vinculado a {{from}} y lo lee toda la empresa. Las páginas, sus versiones y el historial no cambian.",
+      "noProjectShort": "sin proyecto"
     },
     "tree": {
       "title": "Páginas",
@@ -2747,6 +2771,47 @@
       "sharedDraft": "Este borrador fue modificado por última vez por {{who}} el {{when}}; tus cambios continúan el mismo borrador.",
       "titleLabel": "Título de la página",
       "contentLabel": "Contenido de la página"
+    },
+    "links": {
+      "linkedTasks": "Tareas vinculadas:",
+      "noTasks": "Sin tareas vinculadas",
+      "link": "Vincular a tareas",
+      "unlink": "Quitar el vínculo con {{code}}",
+      "unlinked": "Vínculo con {{code}} quitado.",
+      "dialogTitle": "Vincular a tareas",
+      "dialogDescription": "Tareas abiertas de {{project}}",
+      "chooseProject": "Elige el proyecto de las tareas",
+      "project": "Proyecto",
+      "search": "Buscar por código o título…",
+      "noOpenTasks": "No hay tareas abiertas que coincidan.",
+      "alreadyLinked": "Ya vinculada",
+      "selected_one": "{{count}} seleccionada",
+      "selected_other": "{{count}} seleccionadas",
+      "confirm": "Vincular",
+      "linked_one": "Página vinculada a {{count}} tarea.",
+      "linked_other": "Página vinculada a {{count}} tareas.",
+      "linkedPages": "Páginas vinculadas",
+      "linkPage": "Vincular página",
+      "linkPageTitle": "Vincular página a {{code}}",
+      "linkPageHint": "Elige una página de la documentación del proyecto o busca en toda la documentación.",
+      "searchPages": "Buscar páginas…",
+      "noPages": "Ninguna página coincide.",
+      "searchOtherSpaces": "Este proyecto no tiene espacio de documentación: busca la página en los demás espacios.",
+      "pageLinked": "Página vinculada.",
+      "createFromTask": "Crear página desde la tarea",
+      "noProjectSpace": "El proyecto todavía no tiene espacio de documentación.",
+      "goToProjectDocs": "Crearlo",
+      "taskEmptyTitle": "Sin documentación vinculada",
+      "taskEmptyHint": "Vincula una página para leerla aquí mismo, sin salir de la tarea.",
+      "openFull": "Abrir completa",
+      "unlinkPage": "Quitar vínculo",
+      "pageUnlinked": "Vínculo quitado."
+    },
+    "project": {
+      "emptyTitle": "Este proyecto todavía no tiene documentación",
+      "emptyManager": "Crea un espacio vinculado al proyecto: sus páginas aparecerán aquí, con las tareas vinculadas a cada una.",
+      "emptyReader": "Cuando se cree un espacio vinculado al proyecto, sus páginas aparecerán aquí.",
+      "openSpace": "Abrir espacio"
     }
   },
   "plan": {

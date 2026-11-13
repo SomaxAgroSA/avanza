@@ -19,9 +19,9 @@ import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
 import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
-import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
+import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
-import { SPACE_ICONS, SPACE_VISIBILITIES, type DocPage, type DocSpace, type DocTreePage, type RichContent } from '@/domain/docs'
+import { SPACE_ICONS, SPACE_VISIBILITIES, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
@@ -428,7 +428,30 @@ export function toDocSpace(dto: DocSpaceDto): DocSpace {
 }
 
 export function toDocTreePage(dto: DocTreePageDto): DocTreePage {
-  return { id: dto.id, parentId: dto.parent_id, title: dto.title, status: docStatus(dto.status), position: dto.position ?? 0, hasDraft: !!dto.has_draft, isHome: !!dto.is_home, updatedAt: toDate(dto.updated_at) }
+  return {
+    id: dto.id,
+    parentId: dto.parent_id,
+    title: dto.title,
+    status: docStatus(dto.status),
+    position: dto.position ?? 0,
+    hasDraft: !!dto.has_draft,
+    isHome: !!dto.is_home,
+    updatedAt: toDate(dto.updated_at),
+    tasks: (dto.tasks ?? []).map((task) => ({ id: task.id, code: task.code, title: task.title })),
+  }
+}
+
+export function toTaskDocLink(dto: TaskDocLinkDto): TaskDocLink {
+  return {
+    id: dto.id,
+    title: dto.title,
+    status: docStatus(dto.status),
+    isHome: !!dto.is_home,
+    space: { id: dto.space.id, key: dto.space.key, name: dto.space.name, icon: toIcon(SPACE_ICONS, dto.space.icon, 'book'), color: toColor(OPTION_COLORS, dto.space.color, 'blue') },
+    updatedAt: toDate(dto.updated_at),
+    linkedAt: toDate(dto.linked_at),
+    canUnlink: !!dto.capabilities?.unlink,
+  }
 }
 
 export function toDocPage(dto: DocPageDto): DocPage {

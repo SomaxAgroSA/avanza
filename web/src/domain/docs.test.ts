@@ -4,6 +4,7 @@ import { applyMove, buildDocTree, docOutline, matchRanges, dropZone, flattenDocT
 const page = (id: string, parentId: string | null, position: number, extra: Partial<DocTreePage> = {}): DocTreePage => ({
   id,
   parentId,
+  tasks: [],
   title: id.toUpperCase(),
   status: 'published',
   position,

@@ -11,7 +11,7 @@ import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relat
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { ExecutiveDashboard, ExecutiveQuery } from './executive'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
-import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent } from './docs'
+import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
 import type {
@@ -242,7 +242,8 @@ export interface ProjectRepository {
   update(id: string, data: Partial<ProjectData>): Promise<Project>
   archive(id: string): Promise<Project>
   unarchive(id: string): Promise<Project>
-  remove(id: string): Promise<void>
+  /** Com documentação, `docs` diz o que fazer com os espaços do projeto (sem ele: PROJECT_HAS_DOCS). */
+  remove(id: string, options?: ProjectRemoveOptions): Promise<void>
   transferOwnership(id: string, userId: string): Promise<Project>
   listMembers(id: string): Promise<ProjectMember[]>
   /** Cores dos outros projetos abertos (sem `exclude` e seus subprojetos) e a próxima livre (regra da cor única). */
@@ -339,6 +340,12 @@ export interface LookupRepository<T extends LookupItem = LookupItem> {
 }
 
 /** Filtros extras da listagem de tarefas (além de busca, ordenação e `filters` da tabela). */
+/** O que fazer com os espaços de documentação do projeto excluído. */
+export interface ProjectRemoveOptions {
+  docs?: 'move' | 'general' | 'delete'
+  docsProjectId?: string
+}
+
 export interface TaskListOptions {
   projectId?: string
   /** Só as tarefas vinculadas a este elemento da Gestão. */
@@ -539,6 +546,13 @@ export interface DocsRepository {
   uploadFiles(pageId: string, files: File[]): Promise<DocFile[]>
   search(q: string): Promise<DocSearchResult[]>
   recent(): Promise<DocRecent[]>
+  /** Tarefas vinculadas à página (só as visíveis). */
+  listPageTasks(pageId: string): Promise<TaskSummary[]>
+  /** Vincula tarefas à página (quem edita o espaço); devolve a lista atualizada. */
+  linkTasks(pageId: string, taskIds: string[]): Promise<TaskSummary[]>
+  unlinkTask(pageId: string, taskId: string): Promise<void>
+  /** Páginas vinculadas à tarefa (só as dos espaços que a pessoa lê). */
+  listTaskDocs(taskId: string): Promise<TaskDocLink[]>
 }
 
 /** Relacionamentos, subtarefas e fork. */

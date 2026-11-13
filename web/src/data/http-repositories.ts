@@ -22,7 +22,7 @@ import type { CharterItemInput } from '@/domain/charter'
 import type { Urgency } from '@/domain/urgency'
 import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
 import { toCharterItem, toCharterMeasurement, toProjectBrief, toProjectCharter } from './mappers'
-import { toDocPage, toDocSpace, toDocTreePage, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
+import { toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
 import type { ColumnTypePreview } from '@/domain/plan-columns'
@@ -39,7 +39,7 @@ import { fromEmailPatch, toEmailSettings, toOutboxSummary, toResetTokenCheck } f
 import type { FlushResult } from '@/domain/email'
 import type { IssueInput, JournalInput } from '@/domain/plan-management'
 import type { PlanBulkInput, PlanBulkResult, PlanGroupInput, PlanImportResult, PlanImportRow, PlanItemInput } from '@/domain/plan'
-import type { DocPageDto, DocSpaceDto, DocTreePageDto } from './dtos'
+import type { DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
 import type { DocFile, DocSpaceInput, RichContent } from '@/domain/docs'
 import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
@@ -459,8 +459,8 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
     update: (id, data) => one(api.patch<ProjectDto>(path(id), projectBody(data))),
     archive: (id) => one(api.post<ProjectDto>(`${path(id)}/archive`)),
     unarchive: (id) => one(api.post<ProjectDto>(`${path(id)}/unarchive`)),
-    async remove(id) {
-      await api.del(path(id))
+    async remove(id, options) {
+      await api.del(path(id), options?.docs ? { query: { docs: options.docs, docs_project_id: options.docsProjectId || undefined } } : undefined)
     },
     transferOwnership: (id, userId) => one(api.put<ProjectDto>(`${path(id)}/owner`, { user_id: userId })),
     listMembers: (id) => members(api.get<ProjectMemberDto[]>(`${path(id)}/members`)),
@@ -1192,6 +1192,18 @@ export function createHttpDocsRepository(api: ApiClient): DocsRepository {
       const form = new FormData()
       files.forEach((file) => form.append('files', file))
       return (await api.postForm<DocFile[]>(`${page(pageId)}/files`, form)).data
+    },
+    async listPageTasks(pageId) {
+      return (await api.get<TaskDto[]>(`${page(pageId)}/tasks`)).data.map(toTaskSummary)
+    },
+    async linkTasks(pageId, taskIds) {
+      return (await api.post<TaskDto[]>(`${page(pageId)}/tasks`, { task_ids: taskIds })).data.map(toTaskSummary)
+    },
+    async unlinkTask(pageId, taskId) {
+      await api.del(`${page(pageId)}/tasks/${encodeURIComponent(taskId)}`)
+    },
+    async listTaskDocs(taskId) {
+      return (await api.get<TaskDocLinkDto[]>(`/tasks/${encodeURIComponent(taskId)}/docs`)).data.map(toTaskDocLink)
     },
     async search(q) {
       const { data } = await api.get<Array<{ page_id: string; title: string; space: { id: string; key: string; name: string }; snippet: string; published_at: string | null }>>('/docs/search', { query: { q } })

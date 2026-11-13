@@ -292,8 +292,13 @@ function build() {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody(ref('ProjectInput')),
         }),
-        delete: op('Exclui projeto arquivado (dono ou projects.view_all + projects.delete)', ['projects'], { 200: ok('Excluído', { type: 'object' }), 409: errorResponse('PROJECT_NOT_ARCHIVED') }, {
-          parameters: [idParam, csrfHeader],
+        delete: op('Exclui projeto arquivado (dono ou projects.view_all + projects.delete). Com espaços de documentação, `docs` é obrigatório: move (para `docs_project_id`, que a pessoa gerencia), general (sem projeto, toda a empresa) ou delete (saem junto); sem ele → 409 PROJECT_HAS_DOCS com `details.spaces`', ['projects'], { 200: ok('Excluído', { type: 'object' }), 409: errorResponse('PROJECT_HAS_DOCS') }, {
+          parameters: [
+            idParam,
+            csrfHeader,
+            { name: 'docs', in: 'query', schema: { type: 'string', enum: ['move', 'general', 'delete'] } },
+            { name: 'docs_project_id', in: 'query', schema: { type: 'string' } },
+          ],
         }),
       },
       '/projects/{id}/archive': { post: op('Arquiva o projeto', ['projects'], { 200: ok('Arquivado', ref('Project')) }, { parameters: [idParam, csrfHeader] }) },
@@ -943,7 +948,7 @@ function build() {
       },
       '/docs/spaces/{id}': {
         get: op('Espaço pela CHAVE (ex.: MANUAL), com a árvore de páginas visíveis (rascunhos só para quem edita)', ['docs'], { 200: ok('Espaço e páginas', { type: 'object' }), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam] }),
-        patch: op('Configura o espaço (quem gerencia): name, description, icon, color, visibility', ['docs'], { 200: ok('Espaço', ref('DocSpace')), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
+        patch: op('Configura o espaço (quem gerencia): name, description, icon, color, visibility e project_id (outro projeto que a pessoa gerencia, ou "" / null para tirar — aí visibility precisa ser company)', ['docs'], { 200: ok('Espaço', ref('DocSpace')), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
         delete: op('Exclui o espaço com páginas, versões e arquivos (quem gerencia)', ['docs'], { 200: ok('Excluído', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
       '/docs/spaces/{id}/pages': {
@@ -975,6 +980,21 @@ function build() {
       },
       '/docs/pages/{id}/files': {
         post: op('Envia imagens/arquivos da página (multipart "files"; tipo conferido pelo conteúdo; até 20 MB cada)', ['docs'], { 201: ok('Arquivos', { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, kind: { type: 'string' }, url: { type: 'string' } } } }) }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/docs/pages/{id}/tasks': {
+        get: op('Tarefas vinculadas à página (só as que a pessoa vê; mesmo formato da lista de tarefas)', ['docs'], { 200: ok('Tarefas', { type: 'array', items: { type: 'object' } }), 404: errorResponse('DOC_PAGE_NOT_FOUND') }, { parameters: [idParam] }),
+        post: op('Vincula tarefas à página (quem edita o espaço e vê as tarefas; até 50 por vez; o par repetido é ignorado). Devolve a lista atualizada', ['docs'], { 200: ok('Tarefas', { type: 'array', items: { type: 'object' } }), 404: errorResponse('TASK_NOT_FOUND') }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['task_ids'], properties: { task_ids: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 50 } } }),
+        }),
+      },
+      '/docs/pages/{id}/tasks/{taskId}': {
+        delete: op('Desvincula a tarefa da página (quem edita o espaço)', ['docs'], { 200: ok('Desvinculada', { type: 'object', properties: { deleted: { type: 'boolean' } } }) }, {
+          parameters: [idParam, { name: 'taskId', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
+        }),
+      },
+      '/tasks/{id}/docs': {
+        get: op('Páginas de documentação vinculadas à tarefa (só as dos espaços que a pessoa lê): id, title, status, is_home, space, updated_at, linked_at, capabilities.unlink', ['docs'], { 200: ok('Páginas', { type: 'array', items: { type: 'object' } }), 404: errorResponse('TASK_NOT_FOUND') }, { parameters: [idParam] }),
       },
       '/docs/files/{id}': {
         get: op('Arquivo da página (quem vê a página): imagens em linha, demais como anexo; nosniff + CSP sandbox', ['docs'], { 200: { description: 'Arquivo' }, 404: errorResponse('DOC_FILE_NOT_FOUND') }, { parameters: [idParam] }),

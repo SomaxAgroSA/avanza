@@ -231,7 +231,8 @@
     "WEBHOOK_DELIVERY_NOT_FOUND": "Delivery not found.",
     "ICON_IN_USE": "This icon is used by projects, task types or spaces and cannot be removed.",
     "ICON_NOT_FOUND": "This icon is not in the library.",
-    "CHARTER_ITEM_NOT_FOUND": "Charter item not found."
+    "CHARTER_ITEM_NOT_FOUND": "Charter item not found.",
+    "PROJECT_HAS_DOCS": "This project has documentation: choose whether to move it, keep it as a general space or delete it."
   },
   "nav": {
     "main": "Main navigation",
@@ -800,7 +801,9 @@
       "measured_at": "Measurement date",
       "urgency": "Urgency",
       "parent_project": "Parent project",
-      "it_visible": "Visible to IT"
+      "it_visible": "Visible to IT",
+      "doc_page": "Page",
+      "doc_space": "Documentation space"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -948,7 +951,9 @@
       "charter_item.updated": "Charter item changed",
       "charter_item.deleted": "Item removed from the charter",
       "charter_item.reordered": "Charter items reordered",
-      "charter_item.measured": "Measurement recorded"
+      "charter_item.measured": "Measurement recorded",
+      "task.doc_linked": "Documentation linked",
+      "task.doc_unlinked": "Documentation unlinked"
     }
   },
   "projects": {
@@ -1067,7 +1072,8 @@
       "tasks": "Tasks",
       "management": "Management",
       "report": "Report",
-      "charter": "Charter"
+      "charter": "Charter",
+      "docs": "Documentation"
     },
     "taskViews": {
       "label": "Task views",
@@ -1265,7 +1271,21 @@
     "coverUniqueHint": "Each project has its own color. Faded colors are already in use.",
     "coverTaken": "{{color}}: used by another project",
     "platformUrlHint": "Address to open the platform that was built. Shown as an “Open platform” button at the top of the project.",
-    "openPlatform": "Open platform"
+    "openPlatform": "Open platform",
+    "deleteDocs": {
+      "intro_one": "This project has a documentation space. What should happen to it?",
+      "intro_other": "This project has {{count}} documentation spaces. What should happen to them?",
+      "question": "What to do with the documentation",
+      "move": "Move it to another project",
+      "moveHint": "It stays the same, now linked to the project you choose.",
+      "general": "Keep it as a general space",
+      "generalHint": "It stays in Documentation, with no project, for the whole company.",
+      "delete": "Delete it with the project",
+      "deleteHint": "Pages, versions and files are erased. This cannot be undone.",
+      "target": "Project that receives the documentation",
+      "targetPlaceholder": "Choose the project",
+      "archivedHint": "The project is already archived and hidden from lists. Delete it only if you want it gone for good."
+    }
   },
   "calendar": {
     "open": "Open calendar",
@@ -1694,7 +1714,8 @@
       "history": "History",
       "comments": "Comments ({{count}})",
       "attachments": "Attachments ({{count}})",
-      "relations": "Relations ({{count}})"
+      "relations": "Relations ({{count}})",
+      "docs": "Documentation ({{count}})"
     },
     "fields": {
       "task": "Task",
@@ -2651,7 +2672,6 @@
       "keyHint": "2 to 10 letters or digits, starting with a letter (e.g. MANUAL).",
       "keyLocked": "The key cannot change after creation.",
       "projectHint": "Optional: links the space to a project (project managers manage the space).",
-      "projectLocked": "The project cannot change after creation.",
       "noProject": "None (company space)",
       "clearProject": "Remove project",
       "namePlaceholder": "Space name",
@@ -2665,7 +2685,11 @@
       "deleteHint_one": "The page, its versions and files will be deleted. This cannot be undone.",
       "deleteHint_other": "All {{count}} pages, versions and files will be deleted. This cannot be undone.",
       "notFound": "Space not found",
-      "notFoundHint": "It does not exist or you do not have access."
+      "notFoundHint": "It does not exist or you do not have access.",
+      "projectChangeHint": "Linked it by mistake? Pick the right project.",
+      "projectChange": "When you save, {{key}} moves from {{from}} to {{to}}. Members of {{to}} can read it; people only in {{from}} lose access. Pages, versions and history stay the same.",
+      "projectRemove": "When you save, {{key}} is no longer linked to {{from}} and the whole company can read it. Pages, versions and history stay the same.",
+      "noProjectShort": "no project"
     },
     "tree": {
       "title": "Pages",
@@ -2747,6 +2771,47 @@
       "sharedDraft": "This draft was last changed by {{who}} on {{when}}; your changes continue the same draft.",
       "titleLabel": "Page title",
       "contentLabel": "Page content"
+    },
+    "links": {
+      "linkedTasks": "Linked tasks:",
+      "noTasks": "No linked tasks",
+      "link": "Link to tasks",
+      "unlink": "Unlink {{code}}",
+      "unlinked": "{{code}} unlinked.",
+      "dialogTitle": "Link to tasks",
+      "dialogDescription": "Open tasks of {{project}}",
+      "chooseProject": "Choose the project of the tasks",
+      "project": "Project",
+      "search": "Search by code or title…",
+      "noOpenTasks": "No open tasks match.",
+      "alreadyLinked": "Already linked",
+      "selected_one": "{{count}} selected",
+      "selected_other": "{{count}} selected",
+      "confirm": "Link",
+      "linked_one": "Page linked to {{count}} task.",
+      "linked_other": "Page linked to {{count}} tasks.",
+      "linkedPages": "Linked pages",
+      "linkPage": "Link page",
+      "linkPageTitle": "Link a page to {{code}}",
+      "linkPageHint": "Pick a page from the project documentation or search all documentation.",
+      "searchPages": "Search pages…",
+      "noPages": "No pages match.",
+      "searchOtherSpaces": "This project has no documentation space: search the page in the other spaces.",
+      "pageLinked": "Page linked.",
+      "createFromTask": "Create page from task",
+      "noProjectSpace": "The project has no documentation space yet.",
+      "goToProjectDocs": "Create it",
+      "taskEmptyTitle": "No linked documentation",
+      "taskEmptyHint": "Link a page to read it right here, without leaving the task.",
+      "openFull": "Open full page",
+      "unlinkPage": "Unlink",
+      "pageUnlinked": "Unlinked."
+    },
+    "project": {
+      "emptyTitle": "This project has no documentation yet",
+      "emptyManager": "Create a space linked to the project: its pages show up here, with the tasks linked to each one.",
+      "emptyReader": "Once a space is linked to the project, its pages show up here.",
+      "openSpace": "Open space"
     }
   },
   "plan": {

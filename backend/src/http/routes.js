@@ -213,7 +213,7 @@ const projectCovers = projectAction((s, ctx, r) => s.projectCovers(ctx, r.query(
 const updateProject = projectAction((s, ctx, r) => s.updateProject(ctx, r.id, r.body()))
 const archiveProject = projectAction((s, ctx, r) => s.archiveProject(ctx, r.id))
 const unarchiveProject = projectAction((s, ctx, r) => s.unarchiveProject(ctx, r.id))
-const deleteProject = projectAction((s, ctx, r) => s.deleteProject(ctx, r.id))
+const deleteProject = projectAction((s, ctx, r) => s.deleteProject(ctx, r.id, r.query()))
 const transferProject = projectAction((s, ctx, r) => s.transferOwnership(ctx, r.id, r.body()))
 const listProjectMembers = projectAction((s, ctx, r) => s.listMembers(ctx, r.id))
 const addProjectMember = projectAction((s, ctx, r) => s.addMember(ctx, r.id, r.body()), 201)
@@ -410,6 +410,12 @@ const updateDocSpace = configAction('docSpaces', (s, ctx, r) => s.updateSpace(ct
 const deleteDocSpace = configAction('docSpaces', (s, ctx, r) => s.deleteSpace(ctx, r.id))
 const createDocPage = configAction('docPages', (s, ctx, r) => s.createPage(ctx, r.id, r.body()), 201)
 const getDocPage = configAction('docPages', (s, ctx, r) => s.getPage(ctx, r.id))
+const listDocPageTasks = configAction('docLinks', (s, ctx, r) => s.listPageTasks(ctx, r.id))
+const linkDocPageTasks = configAction('docLinks', (s, ctx, r) => s.linkTasks(ctx, r.id, r.body()))
+function unlinkDocPageTask(e) {
+  return handle(e, async ({ ctx, services, param }) => ({ data: await services.docLinks.unlinkTask(ctx, param('id'), param('taskId')) }))
+}
+const listTaskDocs = configAction('docLinks', (s, ctx, r) => s.listTaskDocs(ctx, r.id))
 const deleteDocPage = configAction('docPages', (s, ctx, r) => s.deletePage(ctx, r.id))
 const getDocDraft = configAction('docPages', (s, ctx, r) => s.getDraft(ctx, r.id))
 const saveDocDraft = configAction('docPages', (s, ctx, r) => s.saveDraft(ctx, r.id, r.body()))
@@ -761,6 +767,10 @@ module.exports = {
   deleteDocSpace,
   createDocPage,
   getDocPage,
+  listDocPageTasks,
+  linkDocPageTasks,
+  unlinkDocPageTask,
+  listTaskDocs,
   deleteDocPage,
   getDocDraft,
   saveDocDraft,

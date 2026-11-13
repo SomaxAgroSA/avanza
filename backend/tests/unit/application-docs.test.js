@@ -192,3 +192,113 @@ describe('application/doc-pages', () => {
     assert.equal(await codeOf(() => s.pages.fileFor(s.ctx.otto, file.id)), 'DOC_FILE_NOT_FOUND')
   })
 })
+
+describe('application/doc-links e projeto do espaço', () => {
+  const { createDocLinkService } = require('../../src/application/doc-links')
+  const { createProjectService } = require('../../src/application/projects')
+
+  async function withProjectSpace() {
+    const s = await setup()
+    const erp = await s.deps.projectRepository.create({ name: 'ERP', key: 'ERP', ownerId: s.project.ownerId, createdBy: s.project.ownerId, status: 'active', priority: 'medium' })
+    await s.deps.projectMemberRepository.add({ projectId: erp.id, userId: s.project.ownerId, role: 'manager' })
+    const fora = await s.deps.projectRepository.create({ name: 'Fora', key: 'FORA', ownerId: 'ninguem', createdBy: 'ninguem', status: 'active', priority: 'medium' })
+    const space = await s.spaces.createSpace(s.ctx.gabi, { key: 'CRMDOC', name: 'Docs do CRM', project_id: s.project.id, visibility: 'project' })
+    const page = await s.pages.createPage(s.ctx.mario, space.id, { title: 'Prompt da demo' })
+    await s.pages.publishPage(s.ctx.mario, page.id, { title: 'Prompt da demo', content: doc('Leia primeiro.') })
+    const t1 = await s.deps.taskRepository.create({ projectId: s.project.id, title: 'Protótipo', code: 'CRM-1', number: 1 })
+    const t2 = await s.deps.taskRepository.create({ projectId: s.project.id, title: 'PWA do avaliador', code: 'CRM-2', number: 2 })
+    const alheia = await s.deps.taskRepository.create({ projectId: fora.id, title: 'Alheia', code: 'FORA-1', number: 1 })
+    // excluir projeto exige projects.delete (administrador)
+    const admin = await ctxOf(s.deps, await seedUser(s.deps, { roleCode: 'ADMIN', name: 'Ana' }))
+    return Object.assign(s, { erp, fora, space, page, t1, t2, alheia, admin, links: createDocLinkService(s.deps), projects: createProjectService(s.deps) })
+  }
+
+  it('vincula tarefas à página (quem edita o espaço), mostra dos dois lados e desvincula com histórico', async () => {
+    const s = await withProjectSpace()
+    const linked = await s.links.linkTasks(s.ctx.mario, s.page.id, { task_ids: [s.t1.id, s.t2.id] })
+    assert.deepEqual(linked.map((t) => t.code), ['CRM-1', 'CRM-2'])
+    // repetir não duplica nem gera outro registro
+    await s.links.linkTasks(s.ctx.mario, s.page.id, { task_ids: [s.t1.id] })
+    assert.equal(s.deps.store.audit.filter((e) => e.action === 'task.doc_linked').length, 2)
+    assert.deepEqual(s.deps.store.audit.find((e) => e.action === 'task.doc_linked').newValue, { doc_page: 'Prompt da demo', doc_space: 'CRMDOC' })
+
+    // leitor vê, não vincula; tarefa de projeto alheio é "não encontrada"
+    assert.equal(await codeOf(() => s.links.linkTasks(s.ctx.lia, s.page.id, { task_ids: [s.t1.id] })), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.links.linkTasks(s.ctx.mario, s.page.id, { task_ids: [s.alheia.id] })), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.links.linkTasks(s.ctx.mario, s.page.id, { task_ids: [] })), 'VALIDATION_ERROR:{"task_ids":"invalid_type"}')
+
+    // na tarefa: a página, com o espaço; quem só lê não desvincula; quem não vê a tarefa recebe 404
+    const docs = await s.links.listTaskDocs(s.ctx.lia, s.t1.id)
+    assert.deepEqual(docs.map((d) => [d.title, d.space.key, d.capabilities.unlink]), [['Prompt da demo', 'CRMDOC', false]])
+    assert.equal((await s.links.listTaskDocs(s.ctx.mario, s.t1.id))[0].capabilities.unlink, true)
+    assert.equal(await codeOf(() => s.links.listTaskDocs(s.ctx.otto, s.t1.id)), 'TASK_NOT_FOUND')
+
+    // na árvore do espaço, cada página traz as tarefas vinculadas
+    const tree = await s.spaces.getSpace(s.ctx.lia, 'CRMDOC')
+    assert.deepEqual(tree.pages.find((p) => p.id === s.page.id).tasks.map((t) => t.code), ['CRM-1', 'CRM-2'])
+    assert.deepEqual(tree.pages.find((p) => p.is_home).tasks, [])
+
+    assert.deepEqual(await s.links.unlinkTask(s.ctx.mario, s.page.id, s.t2.id), { deleted: true })
+    assert.deepEqual((await s.links.listPageTasks(s.ctx.lia, s.page.id)).map((t) => t.code), ['CRM-1'])
+    const unlinked = s.deps.store.audit.find((e) => e.action === 'task.doc_unlinked')
+    assert.deepEqual([unlinked.entityId, unlinked.oldValue.doc_page], [s.t2.id, 'Prompt da demo'])
+
+    // a tarefa excluída leva o vínculo
+    await s.deps.taskRepository.delete(s.t1.id)
+    assert.deepEqual(await s.links.listPageTasks(s.ctx.mario, s.page.id), [])
+  })
+
+  it('o espaço muda de projeto (para outro que a pessoa gerencia) ou fica sem projeto, com histórico', async () => {
+    const s = await withProjectSpace()
+    assert.equal(await codeOf(() => s.spaces.updateSpace(s.ctx.mario, s.space.id, { project_id: s.erp.id })), 'FORBIDDEN')
+    assert.notEqual(await codeOf(() => s.spaces.updateSpace(s.ctx.gabi, s.space.id, { project_id: s.fora.id })), 'OK')
+    const moved = await s.spaces.updateSpace(s.ctx.gabi, s.space.id, { project_id: s.erp.id })
+    assert.equal(moved.project.key, 'ERP')
+    const entry = s.deps.store.audit.filter((e) => e.action === 'doc_space.updated').pop()
+    assert.deepEqual([entry.oldValue, entry.newValue], [{ project: 'CRM' }, { project: 'ERP' }])
+    // quem estava só no CRM deixa de ver
+    assert.equal(await codeOf(() => s.spaces.getSpace(s.ctx.mario, 'CRMDOC')), 'DOC_SPACE_NOT_FOUND')
+
+    // sem projeto, o espaço precisa ser da empresa
+    assert.equal(await codeOf(() => s.spaces.updateSpace(s.ctx.gabi, s.space.id, { project_id: '' })), 'VALIDATION_ERROR:{"visibility":"project_required"}')
+    const general = await s.spaces.updateSpace(s.ctx.gabi, s.space.id, { project_id: null, visibility: 'company' })
+    assert.deepEqual([general.project, general.visibility], [null, 'company'])
+    assert.ok(await s.spaces.getSpace(s.ctx.otto, 'CRMDOC'))
+  })
+
+  it('excluir projeto com documentação exige a decisão: mover, deixar geral ou excluir junto', async () => {
+    const s = await withProjectSpace()
+    await s.projects.archiveProject(s.ctx.gabi, s.project.id)
+    let error = null
+    try {
+      await s.projects.deleteProject(s.admin, s.project.id, {})
+    } catch (err) {
+      error = err
+    }
+    assert.equal(error.code, 'PROJECT_HAS_DOCS')
+    assert.deepEqual(error.details.spaces.map((x) => x.key), ['CRMDOC'])
+    assert.equal(await codeOf(() => s.projects.deleteProject(s.admin, s.project.id, { docs: 'move' })), 'VALIDATION_ERROR:{"docs_project_id":"required"}')
+    assert.equal(await codeOf(() => s.projects.deleteProject(s.admin, s.project.id, { docs: 'sumir' })), 'VALIDATION_ERROR:{"docs":"invalid_option"}')
+
+    await s.projects.deleteProject(s.admin, s.project.id, { docs: 'move', docs_project_id: s.erp.id })
+    const space = await s.deps.docSpaceRepository.findByKey('CRMDOC')
+    assert.equal(space.projectId, s.erp.id)
+    assert.ok(await s.deps.docPageRepository.findById(s.page.id))
+    const entry = s.deps.store.audit.filter((e) => e.action === 'doc_space.updated').pop()
+    assert.deepEqual([entry.oldValue, entry.newValue], [{ project: 'CRM' }, { project: 'ERP' }])
+  })
+
+  it('excluir projeto: "geral" deixa o espaço para a empresa; "excluir" leva junto', async () => {
+    const s = await withProjectSpace()
+    const other = await s.spaces.createSpace(s.ctx.gabi, { key: 'ERPDOC', name: 'Docs do ERP', project_id: s.erp.id, visibility: 'project' })
+    await s.projects.archiveProject(s.ctx.gabi, s.project.id)
+    await s.projects.deleteProject(s.admin, s.project.id, { docs: 'general' })
+    const general = await s.deps.docSpaceRepository.findByKey('CRMDOC')
+    assert.deepEqual([general.projectId, general.visibility], [null, 'company'])
+
+    await s.projects.archiveProject(s.ctx.gabi, s.erp.id)
+    await s.projects.deleteProject(s.admin, s.erp.id, { docs: 'delete' })
+    assert.equal(await s.deps.docSpaceRepository.findById(other.id), null)
+    assert.ok(s.deps.store.audit.some((e) => e.action === 'doc_space.deleted' && e.entityId === other.id))
+  })
+})

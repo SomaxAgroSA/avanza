@@ -95,6 +95,7 @@ export interface DocSpaceInput {
   description?: string
   icon?: SpaceIcon
   color?: OptionColor
+  /** Na configuração: '' tira o vínculo com o projeto. */
   projectId?: string
   visibility?: SpaceVisibility
 }
@@ -108,6 +109,27 @@ export interface DocTreePage {
   hasDraft: boolean
   isHome: boolean
   updatedAt: Date | null
+  /** Tarefas vinculadas à página que a pessoa vê. */
+  tasks: DocLinkedTask[]
+}
+
+/** Tarefa vinculada a uma página (resumo para a árvore do espaço). */
+export interface DocLinkedTask {
+  id: string
+  code: string
+  title: string
+}
+
+/** Página de documentação vinculada a uma tarefa (aba Documentação da tarefa). */
+export interface TaskDocLink {
+  id: string
+  title: string
+  status: 'draft' | 'published'
+  isHome: boolean
+  space: { id: string; key: string; name: string; icon: SpaceIcon; color: OptionColor }
+  updatedAt: Date | null
+  linkedAt: Date | null
+  canUnlink: boolean
 }
 
 export interface DocSpaceDetail {

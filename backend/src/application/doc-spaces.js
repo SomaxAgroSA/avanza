@@ -2,8 +2,10 @@
  * Espaços de documentação (expansão, Onda 2).
  * - Criar: `docs.manage` (+ gestor do projeto, se o espaço for de projeto). Ao criar, nasce a página
  *   inicial já publicada (versão 1) com o nome do espaço.
- * - Configurar/excluir: quem gerencia o espaço (domain/docs.js). Chave e projeto não mudam.
- * - Auditoria: doc_space.created/updated/deleted.
+ * - Configurar/excluir: quem gerencia o espaço (domain/docs.js). A chave não muda; o projeto muda (para
+ *   outro que a pessoa gerencia, ou nenhum — aí o espaço precisa ser "Toda a empresa").
+ * - Árvore: cada página traz as tarefas vinculadas que a pessoa vê (doc-links.js).
+ * - Auditoria: doc_space.created/updated/deleted (a troca de projeto entra no updated, com as chaves).
  */
 
 const { appError } = require('../core/errors')
@@ -19,6 +21,7 @@ const { assertIconAvailable } = require('./icon-library')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso } = require('./presenters')
 const { createDocAccess } = require('./doc-access')
+const { createDocLinkService } = require('./doc-links')
 
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
 const RULES = {
@@ -39,6 +42,21 @@ function invalid(fields) {
 function createDocSpaceService(deps) {
   const spaces = deps.docSpaceRepository
   const access = createDocAccess(deps)
+  const docLinks = createDocLinkService(deps)
+
+  /** Projeto que a pessoa gerencia (para vincular um espaço): PROJECT_NOT_FOUND / FORBIDDEN. */
+  async function managedProject(ctx, projectId) {
+    const project = await deps.projectRepository.findById(projectId)
+    const projectAccess = project ? projectDomain.resolveAccess(ctx.principal, project, await deps.projectMemberRepository.find(project.id, ctx.principal.userId)) : null
+    if (!project || !projectAccess.canView) throw appError('PROJECT_NOT_FOUND')
+    if (!projectAccess.isManager) throw appError('FORBIDDEN')
+    return project
+  }
+
+  async function projectKey(projectId) {
+    const project = projectId ? await deps.projectRepository.findById(projectId) : null
+    return project ? project.key : null
+  }
 
   async function audit(repos, ctx, entityId, action, oldValue, newValue) {
     await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'doc_space', entityId, action, oldValue, newValue }))
@@ -73,10 +91,11 @@ function createDocSpaceService(deps) {
 
   async function getSpace(ctx, key) {
     const loaded = await access.loadSpaceByKey(ctx, key)
-    const pages = (await deps.docPageRepository.listTree(loaded.space.id))
+    const visible = (await deps.docPageRepository.listTree(loaded.space.id))
       .filter((page) => docsDomain.canSeePage(loaded.access, page))
       .sort((a, b) => (a.position || 0) - (b.position || 0))
-      .map((page) => ({
+    const tasks = await docLinks.tasksByPage(ctx, visible.map((page) => page.id))
+    const pages = visible.map((page) => ({
         id: page.id,
         parent_id: page.parentId || null,
         title: page.title,
@@ -85,6 +104,7 @@ function createDocSpaceService(deps) {
         has_draft: loaded.access.canEdit ? !!page.draftAt : false,
         is_home: page.id === loaded.space.homePageId,
         updated_at: iso(page.publishedAt || page.updatedAt),
+        tasks: tasks[page.id] || [],
       }))
     return {
       space: await present(loaded.space, loaded.access, pages.filter((p) => p.status === 'published').length),
@@ -100,12 +120,7 @@ function createDocSpaceService(deps) {
     await assertIconAvailable(deps, data.icon, docsDomain.SPACE_ICONS)
     const visibilityIssue = docsDomain.visibilityIssue(data.visibility, data.project_id)
     if (visibilityIssue) throw invalid({ visibility: visibilityIssue })
-    if (data.project_id) {
-      const project = await deps.projectRepository.findById(data.project_id)
-      const projectAccess = project ? projectDomain.resolveAccess(ctx.principal, project, await deps.projectMemberRepository.find(project.id, ctx.principal.userId)) : null
-      if (!project || !projectAccess.canView) throw appError('PROJECT_NOT_FOUND')
-      if (!projectAccess.isManager) throw appError('FORBIDDEN')
-    }
+    if (data.project_id) await managedProject(ctx, data.project_id)
     if (await spaces.findByKey(data.key)) throw appError('DOC_SPACE_KEY_IN_USE')
 
     const now = deps.clock.now()
@@ -156,16 +171,33 @@ function createDocSpaceService(deps) {
     })
     const data = assertValid(source, schema)
     await assertIconAvailable(deps, data.icon, docsDomain.SPACE_ICONS, loaded.space.icon)
-    if (data.visibility) {
-      const issue = docsDomain.visibilityIssue(data.visibility, loaded.space.projectId)
+    // projeto: '' ou null tira o vínculo; outro id passa o espaço para esse projeto (que a pessoa gerencia)
+    const currentProject = loaded.space.projectId || null
+    let nextProject = currentProject
+    if (Object.prototype.hasOwnProperty.call(source, 'project_id')) {
+      const raw = source.project_id
+      nextProject = raw === null || raw === '' ? null : assertValid({ project_id: raw }, { project_id: RULES.project_id }).project_id
+      if (nextProject && nextProject !== currentProject) await managedProject(ctx, nextProject)
+    }
+    const projectChanged = nextProject !== currentProject
+    if (data.visibility || projectChanged) {
+      const issue = docsDomain.visibilityIssue(data.visibility || loaded.space.visibility, nextProject)
       if (issue) throw invalid({ visibility: issue })
     }
     const before = { name: loaded.space.name, description: loaded.space.description || '', icon: loaded.space.icon, color: loaded.space.color, visibility: loaded.space.visibility }
     const change = diff(before, data, EDITABLE)
-    if (!change) return present(loaded.space, loaded.access)
+    if (!change && !projectChanged) return present(loaded.space, loaded.access)
+    const oldValue = Object.assign({}, change ? change.oldValue : {})
+    const newValue = Object.assign({}, change ? change.newValue : {})
+    const patch = Object.assign({}, newValue)
+    if (projectChanged) {
+      oldValue.project = await projectKey(currentProject)
+      newValue.project = await projectKey(nextProject)
+      patch.projectId = nextProject
+    }
     const saved = await deps.unitOfWork.run(async (repos) => {
-      const updated = await repos.docSpaceRepository.update(loaded.space.id, change.newValue)
-      await audit(repos, ctx, loaded.space.id, 'doc_space.updated', change.oldValue, change.newValue)
+      const updated = await repos.docSpaceRepository.update(loaded.space.id, patch)
+      await audit(repos, ctx, loaded.space.id, 'doc_space.updated', oldValue, newValue)
       return updated
     })
     return present(saved, await access.accessOf(ctx, saved))

@@ -32,6 +32,9 @@ import { TaskCode } from './task-visuals'
 import { TaskChecklist } from './TaskChecklist'
 import { TaskComments } from './TaskComments'
 import { TaskAttachments } from './TaskAttachments'
+import { TaskDocsPanel } from './TaskDocsPanel'
+import { useCan } from '@/features/auth/session'
+import { useTaskDocs } from '@/features/docs/queries'
 import { TagList } from '@/features/tags/tag-visuals'
 
 export function TaskDetailPage() {
@@ -70,7 +73,7 @@ export function TaskDetailPage() {
 }
 
 /** Abas do detalhe; `?tab=comments` abre direto nos comentários (ex.: vindo de uma notificação). */
-const TASK_TABS = ['details', 'comments', 'attachments', 'relations', 'history']
+const TASK_TABS = ['details', 'comments', 'attachments', 'relations', 'docs', 'history']
 
 /**
  * Detalhe completo da tarefa: cabeçalho com ações, campos rápidos, abas e propriedades. Na página, a aba fica
@@ -92,6 +95,9 @@ export function TaskDetailView({ task, embedded = false, onDeleted }: { task: Ta
   const [deleting, setDeleting] = useState(false)
   const [forking, setForking] = useState(false)
   const relations = useTaskRelations(task.id)
+  // documentação vinculada: a aba aparece para quem lê a documentação
+  const canDocs = useCan('docs.view')
+  const taskDocs = useTaskDocs(canDocs ? task.id : undefined)
 
   const attachments = useTaskAttachments(task.id)
   const references = useMemo(
@@ -218,6 +224,15 @@ export function TaskDetailView({ task, embedded = false, onDeleted }: { task: Ta
               label: t('tasks.tabs.relations', { count: relations.data ? relationCount(relations.data) : 0 }),
               content: <TaskRelationsPanel task={task} />,
             },
+            ...(canDocs
+              ? [
+                  {
+                    value: 'docs',
+                    label: t('tasks.tabs.docs', { count: taskDocs.data?.length ?? 0 }),
+                    content: <TaskDocsPanel task={task} />,
+                  },
+                ]
+              : []),
             {
               value: 'history',
               label: t('tasks.tabs.history'),

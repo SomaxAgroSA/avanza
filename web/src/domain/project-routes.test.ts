@@ -53,6 +53,8 @@ describe('domain/project-routes — endereços da página do projeto', () => {
   it('abas visíveis seguem as permissões dos antigos itens do menu', () => {
     expect(visibleProjectTabs([], access(false))).toEqual(['overview', 'charter', 'files', 'members', 'history'])
     expect(visibleProjectTabs(['plan.view', 'tasks.view'], access(true))).toEqual(['overview', 'charter', 'management', 'tasks', 'report', 'files', 'members', 'history', 'settings'])
+    // Documentação, com docs.view (entre Arquivos e Membros)
+    expect(visibleProjectTabs(['docs.view'], access(false))).toEqual(['overview', 'charter', 'files', 'docs', 'members', 'history'])
     // o Informe é montado com as tarefas: só com tasks.view (o Kanban sozinho não basta)
     expect(visibleProjectTabs(['kanban.view'], access(false))).not.toContain('report')
     // só o Kanban também abre a aba Tarefas

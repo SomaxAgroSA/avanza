@@ -84,6 +84,7 @@ function createFakeStore() {
     planIssues: [],
     docSpaces: [],
     docPages: [],
+    docPageTasks: [],
     docVersions: [],
     docFiles: [],
     relations: [],
@@ -447,6 +448,8 @@ function createFakeRepositories(store) {
     update: (id, patch) => Object.assign(projectRepository.findById(id), patch, { updatedAt: new Date() }),
     delete: (id) => {
       store.projects = store.projects.filter((p) => p.id !== id)
+      // como a FK (ON DELETE CASCADE): os espaços de documentação do projeto saem junto
+      store.docSpaces.filter((sp) => sp.projectId === id).map((sp) => sp.id).forEach((spaceId) => docSpaceRepository.delete(spaceId))
       // como a FK (ON DELETE SET NULL): os subprojetos ficam sem pai
       store.projects.filter((p) => p.parentId === id).forEach((p) => {
         p.parentId = null
@@ -507,6 +510,7 @@ function createFakeRepositories(store) {
       store.taskTags = store.taskTags.filter((r) => r.taskId !== id)
       store.comments = store.comments.filter((c) => c.taskId !== id)
       store.attachments = store.attachments.filter((a) => a.taskId !== id)
+      store.docPageTasks = store.docPageTasks.filter((l) => l.taskId !== id)
     },
     maxPosition: (projectId, statusId) => {
       const list = store.tasks.filter((t) => t.projectId === projectId && t.statusId === statusId && typeof t.position === 'number')
@@ -986,6 +990,7 @@ function createFakeRepositories(store) {
     findById: (id) => store.docSpaces.find((s) => s.id === id) || null,
     findByKey: (key) => store.docSpaces.find((s) => s.key === key) || null,
     list: () => store.docSpaces.slice().sort((a, b) => a.name.localeCompare(b.name)),
+    listByProject: (projectId) => docSpaceRepository.list().filter((sp) => sp.projectId === projectId),
     create: (data) => {
       const space = Object.assign({ id: nextDocId('space'), createdAt: stamp(), updatedAt: stamp() }, data)
       store.docSpaces.push(space)
@@ -1018,6 +1023,7 @@ function createFakeRepositories(store) {
       store.docPages = store.docPages.filter((p) => !ids.includes(p.id))
       store.docVersions = store.docVersions.filter((v) => !ids.includes(v.pageId))
       store.docFiles = store.docFiles.filter((f) => !ids.includes(f.pageId))
+      store.docPageTasks = store.docPageTasks.filter((l) => !ids.includes(l.pageId))
     },
     renumber: (ids) =>
       ids.forEach((id, index) => {
@@ -1051,6 +1057,22 @@ function createFakeRepositories(store) {
       return file
     },
     findById: (id) => store.docFiles.find((f) => f.id === id) || null,
+  }
+  const docPageTaskRepository = {
+    listByPages: (pageIds) => store.docPageTasks.filter((l) => pageIds.includes(l.pageId)),
+    listByTask: (taskId) => store.docPageTasks.filter((l) => l.taskId === taskId),
+    find: (pageId, taskId) => store.docPageTasks.find((l) => l.pageId === pageId && l.taskId === taskId) || null,
+    add: (data) => {
+      if (docPageTaskRepository.find(data.pageId, data.taskId)) return null
+      const link = { id: nextDocId('link0'), pageId: data.pageId, taskId: data.taskId, createdBy: data.createdBy || null, createdAt: stamp() }
+      store.docPageTasks.push(link)
+      return link
+    },
+    remove: (pageId, taskId) => {
+      const before = store.docPageTasks.length
+      store.docPageTasks = store.docPageTasks.filter((l) => !(l.pageId === pageId && l.taskId === taskId))
+      return store.docPageTasks.length < before
+    },
   }
 
   const loginAttemptRepository = {
@@ -1460,6 +1482,7 @@ function createFakeRepositories(store) {
     docPageRepository,
     docPageVersionRepository,
     docFileRepository,
+    docPageTaskRepository,
     taskValueRepository,
     tagRepository,
     iconLibraryRepository,

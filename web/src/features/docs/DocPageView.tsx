@@ -11,6 +11,7 @@ import { AppRichTextView, scrollToHeading } from '@/presentation/components/rich
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { editPath, pagePath } from './docs-paths'
 import { DraftBadge } from './docs-visuals'
+import { PageTasksBar } from './doc-links'
 import { useDocPage } from './queries'
 import { VersionsDrawer } from './VersionsDrawer'
 
@@ -24,7 +25,7 @@ export interface DocPageViewProps {
   onRequestDelete: (page: DocTreePage) => void
 }
 
-/** Leitura da página: trilha, título, quem publicou, conteúdo, "Nesta página" e subpáginas. */
+/** Leitura da página: trilha, título, quem publicou, tarefas vinculadas, conteúdo, "Nesta página" e subpáginas. */
 export function DocPageView({ pageId, detail, panelButton, onCreateChild, onRequestMove, onRequestDelete }: DocPageViewProps) {
   const { t } = useTranslation()
   const page = useDocPage(pageId)
@@ -125,6 +126,8 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
           </AppButton>
         </div>
       )}
+
+      <PageTasksBar key={page.id} pageId={page.id} project={detail.space.project} canEdit={canEdit} />
 
       <div className="grid items-start gap-8 2xl:grid-cols-[minmax(0,1fr)_15rem]">
         <div ref={contentRef} className="min-w-0">
