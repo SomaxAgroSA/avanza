@@ -70,6 +70,26 @@ describe('API tarefas ligadas aos elementos da Gestão', { timeout: 180000 }, ()
     assert.equal(unlinked.plan_item, null)
   })
 
+  it('sem horas próprias, o elemento usa a soma das horas das tarefas no quadro e na saúde; informar no elemento substitui', async () => {
+    const proj = (await admin.post('/projects', { name: 'Horas', key: 'HRS' })).body.data
+    const group = (await admin.post(`/projects/${proj.id}/groups`, { name: 'Fase' })).body.data
+    const done = (await admin.get(`/projects/${proj.id}/plan`)).body.data.statuses.find((s) => s.category === 'done')
+    const element = (await admin.post(`/projects/${proj.id}/plan/items`, { group_id: group.id, name: 'Entrega', status_id: done.id })).body.data
+    const task = (title, extra) => admin.post('/tasks', Object.assign({ project_id: proj.id, task_type_id: type.id, title, plan_item_id: element.id }, extra))
+    assert.equal((await task('A', { estimated_hours: 6, actual_hours: 7.5, status_id: status('done').id })).status, 201)
+    assert.equal((await task('B', { estimated_hours: 2 })).status, 201)
+    assert.equal((await task('C', { estimated_hours: 50, actual_hours: 50, status_id: status('cancelled').id })).status, 201)
+
+    const row = (await admin.get(`/projects/${proj.id}/plan`)).body.data.items.find((i) => i.id === element.id)
+    assert.deepEqual([row.estimated_hours, row.actual_hours, row.estimated_from_tasks, row.actual_from_tasks], [8, 7.5, true, true])
+    const report = (await admin.get(`/projects/${proj.id}/plan/report`)).body.data
+    assert.deepEqual(report.effort, { estimated: 8, actual: 7.5, remaining: 0.5, deviation: { hours: -0.5, percent: -6 } })
+    assert.equal(report.health.factors.find((f) => f.key === 'effort').level, 'ok')
+
+    const own = (await admin.patch(`/plan/items/${element.id}`, { estimated_hours: 5 })).body.data
+    assert.deepEqual([own.estimated_hours, own.estimated_from_tasks, own.actual_hours, own.actual_from_tasks], [5, false, 7.5, true])
+  })
+
   it('excluir o elemento desliga as tarefas (elas continuam)', async () => {
     const group = (await admin.post(`/projects/${project.id}/groups`, { name: 'Fase 2' })).body.data
     const temp = (await admin.post(`/projects/${project.id}/plan/items`, { group_id: group.id, name: 'Temporário' })).body.data

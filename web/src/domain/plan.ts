@@ -116,6 +116,12 @@ export interface PlanItem {
   custom: Record<string, CustomValue>
   /** Tarefas vinculadas (execução do elemento); ausente = nenhuma (ver plan-tasks.ts). */
   tasks?: PlanTaskCount
+  /**
+   * `estimatedHours`/`actualHours` vieram das tarefas vinculadas (o elemento não tem o próprio; regras
+   * §28). Digitar um valor passa a valer no lugar; limpar volta às tarefas. Ausente = não.
+   */
+  estimatedFromTasks?: boolean
+  actualFromTasks?: boolean
 }
 
 /** Dependência gravada: `blocks` = from bloqueia to (to depende de from); `relates` = relacionados. */

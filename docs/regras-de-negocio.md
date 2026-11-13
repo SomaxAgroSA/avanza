@@ -481,7 +481,7 @@ A Gestão de projetos tem as visões **Quadro principal · Cronograma · Kanban 
 **Relatórios** (sobre os elementos; cancelados ficam fora das contas; "hoje" no fuso de quem vê)
 - **Resumo**: elementos, feitos, pendentes, atrasados, parados (etiqueta da categoria parado/bloqueado ou dependência pendente) e progresso (ponderado pelo esforço, como no rodapé).
 - **Cronograma dos pendentes**: no prazo, atrasados e sem datas.
-- **Esforço**: estimado, realizado (o do elemento ou, sem ele, a soma dos subelementos), restante (estimado − realizado, mínimo 0) e desvio dos feitos (realizado − estimado, em horas e %).
+- **Esforço**: estimado (o do elemento ou, sem ele, a soma das tarefas ligadas — §28), realizado (o do elemento; sem ele, a soma das tarefas ligadas; sem elas, a soma dos subelementos), restante (estimado − realizado, mínimo 0) e desvio dos feitos (realizado − estimado, em horas e %).
 - **Recursos**: elementos (pendentes) e esforço de cada recurso — elemento com dois recursos conta nos dois; "Sem recurso" por último. **Grupos**: feitos/total, progresso, esforço estimado e realizado e atrasados.
 - **Saúde do projeto**: o **pior** dos fatores com dados (Saudável, Atenção, Crítico), sempre mostrando cada fator e o seu valor:
 
@@ -655,6 +655,7 @@ A Gestão de projetos é o **plano macro** do projeto (fases, entregas, cronogra
 
 - **Onde ligar:** no painel do elemento (seção Tarefas: vincular uma tarefa existente, criar uma nova já ligada, desvincular) ou no formulário/página da tarefa (campo **Elemento da Gestão**). Ligar exige poder editar a tarefa; elemento de outro projeto é recusado.
 - **Progresso pelas tarefas:** elemento que não está "feito" e tem tarefas ligadas tem o progresso = tarefas concluídas ÷ tarefas ligadas (canceladas não contam). Isso vale antes do progresso dos subelementos e do informado à mão; o elemento "feito" continua 100%. O quadro mostra "pelas tarefas · 3/5". A saúde do projeto e o Painel executivo usam esse mesmo progresso.
+- **Esforço pelas tarefas:** elemento (ou subelemento) sem esforço estimado próprio usa a soma das horas estimadas das tarefas ligadas; sem realizado próprio, a soma das horas realizadas — campo a campo, canceladas fora e só as horas informadas (0 = não informado). O valor do próprio elemento vale primeiro: digitar no quadro passa a valer no lugar; apagar volta às tarefas. A célula mostra "pelas tarefas" e o painel do elemento mostra o Realizado quando há valor. Vale em toda leitura — quadro, rodapé dos grupos, progresso ponderado, Cronograma, saúde do projeto e Painel executivo; nada é gravado no elemento.
 - **Excluir o elemento** desliga as tarefas (elas continuam existindo, sem elemento). Ligar, trocar e desligar ficam no histórico da tarefa ("Elemento da Gestão").
 - O Claude (MCP) liga com `plan_item_id` em `create_task`/`update_task` e filtra com `list_tasks`.
 

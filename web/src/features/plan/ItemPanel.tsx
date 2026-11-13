@@ -352,7 +352,17 @@ function DetailsTab({ plan, item }: { plan: Plan; item: PlanItem }) {
   const resources = item.resourceIds.map((id) => plan.resources.find((r) => r.id === id)).filter((r): r is NonNullable<typeof r> => !!r)
   const deps = dependenciesOf(item.id, plan)
   const dash = <span className="text-subtle">—</span>
-  const hours = (value: number | null) => (value === null ? dash : `${formatNumber(value, locale)} h`)
+  // horas vindas das tarefas vinculadas (o elemento não tem as próprias) levam "pelas tarefas"
+  const hours = (value: number | null, fromTasks?: boolean) =>
+    value === null ? (
+      dash
+    ) : fromTasks ? (
+      <span title={t('plan.hoursFromTasksHint')}>
+        {`${formatNumber(value, locale)} h`} <span className="text-xs text-muted">· {t('plan.hoursFromTasks')}</span>
+      </span>
+    ) : (
+      `${formatNumber(value, locale)} h`
+    )
   const rows: Array<[string, ReactNode]> = [
     [t('plan.columns.status'), status ? <StatusBlock key="s" status={status} className="min-h-7 w-40 rounded-md text-xs" /> : dash],
     [t('plan.columns.schedule'), item.startDate || item.endDate ? <SchedulePill key="c" start={item.startDate} end={item.endDate} color={group?.color ?? 'blue'} /> : dash],
@@ -362,8 +372,9 @@ function DetailsTab({ plan, item }: { plan: Plan; item: PlanItem }) {
           [t('plan.columns.due'), formatSchedule(item.dueDate, item.dueDate, locale) ?? dash],
         ] as Array<[string, ReactNode]>)
       : ([[t('plan.columns.resources'), resources.length ? <span key="r" className="flex flex-wrap gap-1">{resources.map((r) => <ResourceChip key={r.id} resource={r} />)}</span> : dash]] as Array<[string, ReactNode]>)),
-    [item.parentId ? t('plan.columns.work') : t('plan.columns.estimated'), hours(item.estimatedHours)],
-    ...(item.parentId ? ([[t('plan.columns.actual'), hours(item.actualHours)]] as Array<[string, ReactNode]>) : []),
+    [item.parentId ? t('plan.columns.work') : t('plan.columns.estimated'), hours(item.estimatedHours, item.estimatedFromTasks)],
+    // o elemento não tem a coluna Realizado no quadro: aparece aqui quando há valor (das tarefas ou informado)
+    ...(item.parentId || item.actualHours !== null ? ([[t('plan.columns.actual'), hours(item.actualHours, item.actualFromTasks)]] as Array<[string, ReactNode]>) : []),
     [t('plan.columns.duration'), item.durationDays === null ? dash : t('plan.daysCount', { count: item.durationDays })],
     [
       t('plan.columns.progress'),

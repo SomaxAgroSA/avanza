@@ -133,15 +133,19 @@ function createExecutiveService(deps) {
     const issues = await deps.planIssueRepository.listByProjects(ids)
     const planCategoryOf = (item) => (item.statusId && planStatuses[item.statusId] ? planStatuses[item.statusId].category : null)
 
-    // tarefas ligadas aos elementos (ADR-050): mandam no progresso deles
+    // tarefas ligadas aos elementos (ADR-050): mandam no progresso deles e, onde o elemento não tem o
+    // próprio, dão o esforço estimado e o realizado (regras §28)
     const taskCategory = {}
     ;(await deps.statusRepository.list({ includeInactive: true })).forEach((s) => {
       taskCategory[s.id] = s.category
     })
-    const taskCounts = planDomain.taskCountsFrom(await deps.taskRepository.planItemStats(planItems.map((i) => i.id)), (statusId) => taskCategory[statusId] || null)
+    const taskStats = await deps.taskRepository.planItemStats(planItems.map((i) => i.id))
+    const taskCategoryOf = (statusId) => taskCategory[statusId] || null
+    const taskCounts = planDomain.taskCountsFrom(taskStats, taskCategoryOf)
+    const shownItems = planDomain.withTaskEffort(planItems, planDomain.taskEffortFrom(taskStats, taskCategoryOf))
 
     const itemsByProject = {}
-    planItems.forEach((item) => {
+    shownItems.forEach((item) => {
       ;(itemsByProject[item.projectId] = itemsByProject[item.projectId] || []).push(item)
     })
     const plans = {}
@@ -201,7 +205,7 @@ function createExecutiveService(deps) {
       owners,
       areas,
       plans,
-      planItems,
+      planItems: shownItems,
       planCategoryOf,
       issues,
       milestones,

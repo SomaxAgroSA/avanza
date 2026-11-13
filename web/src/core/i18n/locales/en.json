@@ -2892,6 +2892,8 @@
     "noResourcesFound": "No labels found.",
     "estimatedOf": "Estimated effort of {{name}} (hours)",
     "durationOf": "Duration of {{name}} (days)",
+    "hoursFromTasks": "from tasks",
+    "hoursFromTasksHint": "Sum of the hours of the linked tasks (cancelled ones excluded). Type a value to set it on the element; clearing it goes back to the tasks.",
     "durationFromSchedule": "Calculated from the timeline (calendar days).",
     "workOf": "Work of {{name}} (hours)",
     "actualOf": "Actual of {{name}} (hours)",

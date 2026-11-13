@@ -189,8 +189,11 @@ function createPlanSupport(deps) {
       due_date: item.dueDate || null,
       owner,
       resource_ids: item.resourceIds || [],
+      // esforço efetivo: o do elemento ou, sem ele, a soma das horas das tarefas ligadas (regras §28)
       estimated_hours: metric(item, 'estimated_hours'),
       actual_hours: metric(item, 'actual_hours'),
+      estimated_from_tasks: !!(item.effortFromTasks && item.effortFromTasks.estimated_hours),
+      actual_from_tasks: !!(item.effortFromTasks && item.effortFromTasks.actual_hours),
       // duração efetiva (cronograma ou informada) e a informada (editável quando não há cronograma)
       duration_days: planDomain.durationOf(item),
       duration_manual: metric(item, 'duration_days'),
@@ -218,21 +221,31 @@ function createPlanSupport(deps) {
     }
   }
 
-  /** Tarefas ligadas por elemento: { itemId: { total (sem canceladas), done } }. */
-  async function taskCountsOf(itemIds) {
+  /**
+   * Tarefas ligadas por elemento: `counts` { itemId: { total (sem canceladas), done } } e `effort`
+   * { itemId: { estimated, actual } } (horas informadas, sem as canceladas).
+   */
+  async function linkedTasksOf(itemIds) {
     const stats = await deps.taskRepository.planItemStats(itemIds)
-    if (stats.length === 0) return {}
+    if (stats.length === 0) return { counts: {}, effort: {} }
     const category = {}
     ;(await deps.statusRepository.list({ includeInactive: true })).forEach((s) => {
       category[s.id] = s.category
     })
-    return planDomain.taskCountsFrom(stats, (statusId) => category[statusId] || null)
+    const categoryOf = (statusId) => category[statusId] || null
+    return { counts: planDomain.taskCountsFrom(stats, categoryOf), effort: planDomain.taskEffortFrom(stats, categoryOf) }
   }
 
-  /** Progresso de todos os elementos (subelementos contam para o pai; tarefas ligadas mandam no elemento). */
-  async function progressOf(list, statusById) {
-    const counts = await taskCountsOf(list.map((i) => i.id))
-    return planDomain.computeProgress(list, (i) => (i.statusId && statusById[i.statusId] ? statusById[i.statusId].category : null), counts)
+  /**
+   * Elementos como aparecem (com o esforço das tarefas ligadas onde não há o próprio) e o progresso de
+   * todos (subelementos contam para o pai; tarefas ligadas mandam no elemento) — ADR-050, regras §28.
+   * Só para leitura: gravar continua com o elemento do repositório.
+   */
+  async function planDataOf(list, statusById) {
+    const linked = await linkedTasksOf(list.map((i) => i.id))
+    const shown = planDomain.withTaskEffort(list, linked.effort)
+    const progress = planDomain.computeProgress(shown, (i) => (i.statusId && statusById[i.statusId] ? statusById[i.statusId].category : null), linked.counts)
+    return { items: shown, progress }
   }
 
   async function loadGroup(ctx, id) {
@@ -387,7 +400,7 @@ function createPlanSupport(deps) {
     usersOf,
     presentItem,
     presentGroup,
-    progressOf,
+    planDataOf,
     loadGroup,
     loadItem,
     snapshot,

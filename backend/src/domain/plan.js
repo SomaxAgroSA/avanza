@@ -298,6 +298,49 @@ function taskCountsFrom(stats, taskCategoryOf) {
   return out
 }
 
+/**
+ * Horas das tarefas ligadas por elemento a partir de linhas { planItemId, statusId, estimated, actual }
+ * (somas das horas informadas, > 0; null = nenhuma): canceladas ficam fora.
+ */
+function taskEffortFrom(stats, taskCategoryOf) {
+  const add = (a, b) => (b === null || b === undefined ? a : Math.round(((a || 0) + b) * 100) / 100)
+  const out = {}
+  stats.forEach((row) => {
+    if (taskCategoryOf(row.statusId) === 'cancelled') return
+    const entry = (out[row.planItemId] = out[row.planItemId] || { estimated: null, actual: null })
+    entry.estimated = add(entry.estimated, row.estimated)
+    entry.actual = add(entry.actual, row.actual)
+  })
+  return out
+}
+
+const EFFORT_FIELDS = [
+  ['estimated_hours', 'estimated'],
+  ['actual_hours', 'actual'],
+]
+
+/**
+ * Esforço pelas tarefas (regras §28): o elemento (ou subelemento) sem esforço estimado ou realizado
+ * próprio usa a soma das horas das tarefas ligadas, campo a campo — o próprio vale primeiro. Devolve
+ * cópias com `metrics` completas e `effortFromTasks` ({ estimated_hours, actual_hours }); a entrada não
+ * muda, e as gravações continuam com o valor próprio. Usado em toda leitura (quadro, rodapés, progresso
+ * ponderado, saúde e Painel executivo). `effort`: resultado de `taskEffortFrom`.
+ */
+function withTaskEffort(items, effort) {
+  const source = effort || {}
+  return items.map((item) => {
+    const linked = source[item.id]
+    if (!linked) return item
+    const metrics = Object.assign({}, item.metrics || {})
+    const fromTasks = {}
+    EFFORT_FIELDS.forEach(([key, field]) => {
+      fromTasks[key] = metric(item, key) === null && typeof linked[field] === 'number' && linked[field] > 0
+      if (fromTasks[key]) metrics[key] = linked[field]
+    })
+    return Object.assign({}, item, { metrics, effortFromTasks: fromTasks })
+  })
+}
+
 function computeProgress(items, categoryOf, taskCounts) {
   const counts = taskCounts || {}
   const fromTasks = (item) => {
@@ -503,6 +546,8 @@ module.exports = {
   weighted,
   computeProgress,
   taskCountsFrom,
+  taskEffortFrom,
+  withTaskEffort,
   groupSummary,
   placeAmong,
 }

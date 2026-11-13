@@ -260,7 +260,14 @@ export function usePlanColumns(ctx: BoardCtx): { main: AppBoardColumn<PlanItem>[
       label: t('plan.columns.estimated'),
       sortable: true,
       cell: (item) => (
-        <NumberCell value={item.estimatedHours} label={t('plan.estimatedOf', { name: item.name })} readOnly={!canEdit} max={PLAN_LIMITS.hours} onChange={(estimatedHours) => save(item, { estimatedHours })} />
+        <NumberCell
+          value={item.estimatedHours}
+          label={t('plan.estimatedOf', { name: item.name })}
+          readOnly={!canEdit}
+          max={PLAN_LIMITS.hours}
+          fromTasks={item.estimatedFromTasks}
+          onChange={(estimatedHours) => save(item, { estimatedHours })}
+        />
       ),
     },
     {
@@ -353,12 +360,30 @@ export function usePlanColumns(ctx: BoardCtx): { main: AppBoardColumn<PlanItem>[
     {
       ...SUB.work,
       label: t('plan.columns.work'),
-      cell: (item) => <NumberCell value={item.estimatedHours} label={t('plan.workOf', { name: item.name })} readOnly={!canEdit} max={PLAN_LIMITS.hours} onChange={(estimatedHours) => save(item, { estimatedHours })} />,
+      cell: (item) => (
+        <NumberCell
+          value={item.estimatedHours}
+          label={t('plan.workOf', { name: item.name })}
+          readOnly={!canEdit}
+          max={PLAN_LIMITS.hours}
+          fromTasks={item.estimatedFromTasks}
+          onChange={(estimatedHours) => save(item, { estimatedHours })}
+        />
+      ),
     },
     {
       ...SUB.actual,
       label: t('plan.columns.actual'),
-      cell: (item) => <NumberCell value={item.actualHours} label={t('plan.actualOf', { name: item.name })} readOnly={!canEdit} max={PLAN_LIMITS.hours} onChange={(actualHours) => save(item, { actualHours })} />,
+      cell: (item) => (
+        <NumberCell
+          value={item.actualHours}
+          label={t('plan.actualOf', { name: item.name })}
+          readOnly={!canEdit}
+          max={PLAN_LIMITS.hours}
+          fromTasks={item.actualFromTasks}
+          onChange={(actualHours) => save(item, { actualHours })}
+        />
+      ),
     },
     { ...SUB.progress, label: t('plan.columns.progress'), cell: progressCell },
   ]

@@ -25,8 +25,15 @@ function patchItem(item: PlanItem, input: PlanItemInput): PlanItem {
   if (input.endDate !== undefined) next.endDate = input.endDate
   if (input.dueDate !== undefined) next.dueDate = input.dueDate
   if (input.resourceIds !== undefined) next.resourceIds = input.resourceIds
-  if (input.estimatedHours !== undefined) next.estimatedHours = input.estimatedHours
-  if (input.actualHours !== undefined) next.actualHours = input.actualHours
+  // valor informado no elemento passa a valer no lugar das tarefas (limpar: o servidor devolve a soma delas)
+  if (input.estimatedHours !== undefined) {
+    next.estimatedHours = input.estimatedHours
+    next.estimatedFromTasks = false
+  }
+  if (input.actualHours !== undefined) {
+    next.actualHours = input.actualHours
+    next.actualFromTasks = false
+  }
   if (input.durationDays !== undefined) next.durationManual = input.durationDays
   if (input.custom !== undefined) {
     const custom = { ...next.custom }

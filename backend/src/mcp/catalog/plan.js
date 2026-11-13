@@ -41,8 +41,8 @@ const ITEM_FIELDS = {
   end_date: nullableDate('Schedule end (not before the start)'),
   due_date: nullableDate('Due date'),
   resource_ids: { type: ['array', 'null'], items: { type: 'string', maxLength: 64 }, maxItems: planDomain.MAX_RESOURCES, description: 'Resource ids (from get_plan resources); replaces the current list. null clears it.' },
-  estimated_hours: nullable(number(0, 100000, 'Estimated effort in hours (work).')),
-  actual_hours: nullable(number(0, 100000, 'Hours actually spent.')),
+  estimated_hours: nullable(number(0, 100000, "Estimated effort in hours (work). null = use the sum of the linked tasks' hours.")),
+  actual_hours: nullable(number(0, 100000, "Hours actually spent. null = use the sum of the linked tasks' hours.")),
   duration_days: nullable(int(0, 3650, 'Duration in days, used only when the item has no schedule dates.')),
   progress: nullable(int(0, 100, 'Manual progress 0-100 (ignored when the status is done or the element has subitems, which compute it).')),
   custom: {
@@ -126,6 +126,8 @@ function compactItem(item, statusById, resourceById) {
     tasks: item.tasks && item.tasks.total ? item.tasks : null,
     estimated_hours: item.estimated_hours,
     actual_hours: item.actual_hours,
+    // sem o próprio, o esforço é a soma das horas das tarefas ligadas (regras §28); informar no elemento substitui
+    hours_from_tasks: item.estimated_from_tasks || item.actual_from_tasks ? { estimated: !!item.estimated_from_tasks, actual: !!item.actual_from_tasks } : null,
     resources: (item.resource_ids || []).map((rid) => nameOf(resourceById[rid]) || rid),
     custom: item.custom,
     blocked: item.blocked || null,
@@ -201,7 +203,7 @@ const TOOLS = [
   {
     name: 'get_plan_item',
     title: 'Get plan item',
-    description: 'Returns the full plan item (element or subitem): group, parent, status, owner, dates, hours, duration, progress (value and source), resources, custom column values and number of subitems.',
+    description: "Returns the full plan item (element or subitem): group, parent, status, owner, dates, hours, duration, progress (value and source), resources, custom column values and number of subitems. Without hours of its own, the hours are the sum of the linked tasks' hours (estimated_from_tasks / actual_from_tasks).",
     inputSchema: schema({ plan_item_id: PLAN_ITEM_ID }, ['plan_item_id']),
     annotations: READ,
     run: (args, { services, ctx }) => services.plan.getItem(ctx, args.plan_item_id),

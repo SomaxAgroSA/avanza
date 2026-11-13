@@ -123,7 +123,7 @@ describe('mcp/catalog/plan — argumentos para os casos de uso', () => {
           position: 1024, created_at: 'x', updated_at: 'y', blocked: false, updates: 2, files: 0, baseline_start: null, baseline_end: null,
         },
         { id: 'i2', group_id: 'g1', parent_id: 'i1', name: 'Ata', status_id: null, resource_ids: [], progress: { value: 0, source: 'none' }, custom: {}, blocked: false, updates: 0 },
-        { id: 'i3', group_id: 'g2', parent_id: null, name: 'Entrega', status_id: null, resource_ids: [], progress: { value: 0, source: 'none' }, custom: {}, blocked: true, updates: 0 },
+        { id: 'i3', group_id: 'g2', parent_id: null, name: 'Entrega', status_id: null, resource_ids: [], estimated_hours: 6, actual_hours: null, estimated_from_tasks: true, actual_from_tasks: false, progress: { value: 0, source: 'none' }, custom: {}, blocked: true, updates: 0 },
       ],
       truncated: false,
     }
@@ -140,7 +140,8 @@ describe('mcp/catalog/plan — argumentos para os casos de uso', () => {
       start_date: '2026-11-01', progress: 100, estimated_hours: 8, resources: ['Ana'], custom: { c1: 10 }, updates: 2,
       subitems: [{ id: 'i2', name: 'Ata', progress: 0 }],
     })
-    assert.deepEqual(out.items[1], { id: 'i3', name: 'Entrega', group_id: 'g2', progress: 0, blocked: true })
+    // sem horas próprias, o esforço vem das tarefas ligadas (regras §28)
+    assert.deepEqual(out.items[1], { id: 'i3', name: 'Entrega', group_id: 'g2', progress: 0, estimated_hours: 6, hours_from_tasks: { estimated: true, actual: false }, blocked: true })
     assert.equal(out.items.length, 2)
 
     const only = (await run('get_plan', { project_id: 'p1', group_id: 'g1', include_subitems: false }, { 'plan.getPlan': plan })).out
