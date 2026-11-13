@@ -188,7 +188,8 @@ function buildDashboard(input) {
         area: (project.areaId && input.areas && input.areas[project.areaId]) || null,
         start_date: dayOf(project.startDate),
         due_date: dayOf(project.dueDate),
-        owner: (project.ownerId && owners[project.ownerId]) || null,
+        // responsável do projeto (sem ele, o dono)
+        owner: ((project.leadId || project.ownerId) && owners[project.leadId || project.ownerId]) || null,
       },
       health: plan ? plan.health : { level: 'none', factors: [] },
       progress,

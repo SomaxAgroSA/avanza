@@ -41,6 +41,7 @@ const { createPlanColumnsService } = require('../application/plan-columns')
 const { createDocSpaceService } = require('../application/doc-spaces')
 const { createDocPageService } = require('../application/doc-pages')
 const { createDocLinkService } = require('../application/doc-links')
+const { createTeamActivityService } = require('../application/team-activity')
 const { createPlatformSettingsService } = require('../application/platform-settings')
 const { createEmailService } = require('../application/email')
 const { createAccountLinkService } = require('../application/account-links')
@@ -133,6 +134,7 @@ function createContainer(runtime, options) {
     docSpaces: createDocSpaceService(deps),
     docPages: createDocPageService(deps),
     docLinks: createDocLinkService(deps),
+    teamActivity: createTeamActivityService(deps),
     platformSettings: createPlatformSettingsService(deps),
     email: createEmailService(deps),
     accountLinks: createAccountLinkService(deps),

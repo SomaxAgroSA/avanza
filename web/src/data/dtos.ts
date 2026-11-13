@@ -88,6 +88,7 @@ export interface ProjectDto {
   /** Quantidade de subprojetos. */
   child_count?: number
   owner: UserSummaryDto | null
+  lead?: UserSummaryDto | null
   start_date: string | null
   due_date: string | null
   archived_at: string | null
@@ -921,4 +922,22 @@ export interface PreferenceDto<T> {
 export interface ProjectFilterDto {
   statuses: string[]
   members_only: boolean
+}
+
+export interface TeamActivityDto {
+  window_days: number
+  generated_at: string | null
+  people: Array<{
+    user: UserSummaryDto
+    projects: Array<{
+      project: { id: string; key: string; name: string; icon: string; cover: string }
+      state: string
+      in_progress: number
+      recent: number
+      open: number
+      stale: boolean
+      last_activity: string | null
+      tasks: Array<{ id: string; code: string; title: string; status: { id: string; name: string; color: string; category: string }; updated_at: string | null; in_progress: boolean; moved: boolean }>
+    }>
+  }>
 }

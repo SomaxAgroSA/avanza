@@ -184,8 +184,9 @@ function createExecutiveService(deps) {
         areas[area.id] = { id: area.id, name: area.name, color: area.color || null }
       })
     }
+    // "Responsável" do Panorama: o responsável do projeto; sem ele, o dono
     const ownerIds = projects
-      .map((p) => p.ownerId)
+      .map((p) => p.leadId || p.ownerId)
       .concat(issues.map((i) => i.ownerId))
       .filter((id, i, list) => id && list.indexOf(id) === i)
     const owners = {}

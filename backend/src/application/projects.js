@@ -38,6 +38,8 @@ const FIELD_RULES = {
   area_id: [idRule],
   // projeto pai (§34): null solta
   parent_id: [idRule],
+  // responsável: o dono ou um membro (gestor ou membro); null limpa. Não muda permissão.
+  lead_id: [idRule],
   start_date: [rules.isoDate()],
   due_date: [rules.isoDate()],
 }
@@ -63,13 +65,16 @@ const MEMBER_SCHEMA = {
   role: [rules.required(), rules.oneOf(projectDomain.MEMBER_ROLES)],
 }
 
-const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority', urgency: 'urgency', area: 'area', owner: 'owner', members: 'members' }
+const SORTABLE = { name: 'name', key: 'key', created_at: 'created', due_date: 'due_date', status: 'status', priority: 'priority', urgency: 'urgency', area: 'area', owner: 'owner', lead: 'lead', members: 'members' }
 
 /**
  * Campos auditáveis no formato público (`areas` = áreas por id, para mostrar o nome no histórico;
  * `parents` = projetos pai por id, para o nome do pai).
  */
-function auditView(project, areas, parents) {
+/** Papéis de membro que podem ser responsáveis pelo projeto (além do dono). */
+const LEAD_ROLES = ['manager', 'member']
+
+function auditView(project, areas, parents, people) {
   return {
     name: project.name,
     description: project.description,
@@ -81,6 +86,7 @@ function auditView(project, areas, parents) {
     urgency: project.urgency || null,
     area: project.areaId && areas[project.areaId] ? areas[project.areaId].name : null,
     parent_project: project.parentId ? (parents[project.parentId] ? parents[project.parentId].name : project.parentId) : null,
+    lead: project.leadId ? (people && people[project.leadId] ? people[project.leadId].name : project.leadId) : null,
     start_date: iso(project.startDate),
     due_date: iso(project.dueDate),
   }
@@ -142,6 +148,7 @@ function createProjectService(deps) {
   async function present(ctx, project, extra) {
     const info = extra || {}
     const owner = info.owner !== undefined ? info.owner : await deps.userRepository.findById(project.ownerId)
+    const lead = !project.leadId ? null : info.leads ? info.leads[project.leadId] || null : project.leadId === project.ownerId ? owner : await deps.userRepository.findById(project.leadId)
     const memberCount = info.memberCount !== undefined ? info.memberCount : (await members.countByProjects([project.id]))[project.id] || 0
     const role = info.role !== undefined ? info.role : ((await members.find(project.id, ctx.principal.userId)) || {}).role || null
     const access = projectDomain.resolveAccess(ctx.principal, project, role ? { role } : null)
@@ -164,6 +171,7 @@ function createProjectService(deps) {
       parent: presentParent(parent),
       child_count: childCount,
       owner: owner ? toUserSummary(owner) : null,
+      lead: lead ? toUserSummary(lead) : null,
       start_date: iso(project.startDate),
       due_date: iso(project.dueDate),
       archived_at: iso(project.archivedAt),
@@ -220,7 +228,8 @@ function createProjectService(deps) {
     const roles = await members.rolesForUser(ctx.principal.userId, ids)
     const areas = result.items.some((p) => p.areaId) ? await areasById() : {}
     const owners = {}
-    ;(await deps.userRepository.findManyByIds(result.items.map((p) => p.ownerId))).forEach((u) => {
+    const peopleIds = result.items.map((p) => p.ownerId).concat(result.items.map((p) => p.leadId).filter(Boolean))
+    ;(await deps.userRepository.findManyByIds(peopleIds.filter((id, i) => peopleIds.indexOf(id) === i))).forEach((u) => {
       owners[u.id] = u
     })
     const parentIds = result.items.map((p) => p.parentId).filter((id, i, all) => id && all.indexOf(id) === i)
@@ -232,7 +241,7 @@ function createProjectService(deps) {
     return {
       items: await Promise.all(
         result.items.map((p) =>
-          present(ctx, p, { owner: owners[p.ownerId] || null, memberCount: counts[p.id] || 0, role: roles[p.id] || null, areas, parents, childCounts }),
+          present(ctx, p, { owner: owners[p.ownerId] || null, leads: owners, memberCount: counts[p.id] || 0, role: roles[p.id] || null, areas, parents, childCounts }),
         ),
       ),
       meta: buildPageMeta(pagination, result.total),
@@ -297,6 +306,8 @@ function createProjectService(deps) {
         areaId: area ? area.id : null,
         parentId: parent ? parent.id : null,
         ownerId: ctx.principal.userId,
+        // quem cria é o único membro: começa como responsável
+        leadId: ctx.principal.userId,
         createdBy: ctx.principal.userId,
         startDate: data.start_date || null,
         dueDate: data.due_date || null,
@@ -335,6 +346,14 @@ function createProjectService(deps) {
     ;(await projects.findManyByIds([project.parentId, parentId].filter(Boolean))).forEach((p) => {
       parents[p.id] = p
     })
+    // responsável: null limpa; outro id precisa ser o dono ou um membro (gestor ou membro)
+    let leadId = project.leadId || null
+    if (source.lead_id === null) leadId = null
+    else if (data.lead_id !== undefined && data.lead_id !== leadId) leadId = await assertLead(project, data.lead_id)
+    const people = {}
+    ;(await deps.userRepository.findManyByIds([project.leadId, leadId].filter(Boolean))).forEach((u) => {
+      people[u.id] = u
+    })
 
     // Cor e ícone: o subprojeto segue o pai; o projeto principal não pode repetir a cor de outro.
     const parent = parentId ? parents[parentId] : null
@@ -369,11 +388,12 @@ function createProjectService(deps) {
       urgency: source.urgency === null ? null : data.urgency !== undefined ? data.urgency : project.urgency || null,
       areaId,
       parentId,
+      leadId,
       startDate,
       dueDate,
     })
-    const before = auditView(project, areas, parents)
-    const changes = diff(before, auditView(next, areas, parents), Object.keys(before))
+    const before = auditView(project, areas, parents, people)
+    const changes = diff(before, auditView(next, areas, parents, people), Object.keys(before))
     if (!changes) return present(ctx, project)
     const visualChanged = next.icon !== project.icon || next.cover !== project.cover
 
@@ -389,6 +409,7 @@ function createProjectService(deps) {
         urgency: next.urgency,
         areaId: next.areaId,
         parentId: next.parentId,
+        leadId: next.leadId,
         startDate: next.startDate,
         dueDate: next.dueDate,
       })
@@ -405,6 +426,14 @@ function createProjectService(deps) {
       return updated
     })
     return present(ctx, saved)
+  }
+
+  /** O responsável precisa ser o dono ou um membro gestor/membro do projeto (VALIDATION_ERROR lead_id). */
+  async function assertLead(project, userId) {
+    if (userId === project.ownerId) return userId
+    const membership = await members.find(project.id, userId)
+    if (!membership || LEAD_ROLES.indexOf(membership.role) < 0) throw appError('VALIDATION_ERROR', undefined, { fields: { lead_id: 'not_a_member' } })
+    return userId
   }
 
   async function setArchived(ctx, id, archived) {
@@ -555,9 +584,15 @@ function createProjectService(deps) {
     if (!membership) throw appError('MEMBER_NOT_FOUND')
 
     const user = await deps.userRepository.findById(userId)
+    const owner = project.leadId === userId ? await deps.userRepository.findById(project.ownerId) : null
     await deps.unitOfWork.run(async (repos) => {
       await repos.projectMemberRepository.remove(project.id, userId)
       await audit(repos, ctx, project, leaving ? 'project.member_left' : 'project.member_removed', { member: user ? user.name : userId, role: membership.role }, null)
+      // quem sai deixa de ser o responsável: volta para o dono
+      if (project.leadId === userId) {
+        await repos.projectRepository.update(project.id, { leadId: project.ownerId })
+        await audit(repos, ctx, project, 'project.updated', { lead: user ? user.name : userId }, { lead: owner ? owner.name : project.ownerId })
+      }
     })
     return { removed: true }
   }

@@ -56,6 +56,8 @@ function createProjectRepository(db) {
     areaId: ['area_id', 'relation'],
     parentId: ['parent_id', 'relation'],
     ownerId: ['owner_id', 'relation'],
+    // responsável (quem leva o projeto adiante; não dá permissão)
+    leadId: ['lead_id', 'relation'],
     createdBy: ['created_by', 'relation'],
     startDate: ['start_date', 'date'],
     dueDate: ['due_date', 'date'],
@@ -79,6 +81,7 @@ function createProjectRepository(db) {
       areaId: row.area_id || null,
       parentId: row.parent_id || null,
       ownerId: row.owner_id,
+      leadId: row.lead_id || null,
       createdBy: row.created_by || '',
       startDate: row.start_date,
       dueDate: row.due_date,
@@ -90,7 +93,7 @@ function createProjectRepository(db) {
 
   /**
    * Colunas ordenadas por expressão (lista de projetos): status na ordem do fluxo, prioridade e urgência
-   * pela gravidade, departamento e dono pelo nome, membros pela quantidade. Vazios sempre por último.
+   * pela gravidade, departamento, dono e responsável pelo nome, membros pela quantidade. Vazios sempre por último.
    */
   const SORT_EXPRESSIONS = {
     status: "CASE \"status\" WHEN 'planning' THEN 1 WHEN 'active' THEN 2 WHEN 'paused' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 END",
@@ -98,6 +101,7 @@ function createProjectRepository(db) {
     urgency: "CASE \"urgency\" WHEN 'low' THEN 1 WHEN 'medium' THEN 2 WHEN 'high' THEN 3 END",
     area: '(SELECT lower(a."name") FROM "areas" a WHERE a."id" = projects."area_id")',
     owner: '(SELECT lower(u."name") FROM "users" u WHERE u."id" = projects."owner_id")',
+    lead: '(SELECT lower(u."name") FROM "users" u WHERE u."id" = projects."lead_id")',
     members: '(SELECT count(*) FROM "project_members" m WHERE m."project_id" = projects."id")',
   }
 

@@ -317,6 +317,31 @@ function createTaskRepository(db) {
       return (await findRows(db, 'tasks', ids)).map(toEntity)
     },
 
+    /**
+     * Atividade da equipe (painel "Equipo ahora"): tarefas com responsável dos projetos indicados que estão
+     * abertas ou mudaram desde `since` — com o status (nome, cor, categoria) para classificar.
+     */
+    async listActivity(projectIds, since) {
+      if (!projectIds || projectIds.length === 0) return []
+      const rows = await db.query(
+        `SELECT t.id, t.code, t.title, t.project_id, t.assignee_id, t.updated, s.id AS status_id, s.name AS status_name, s.color AS status_color, s.category AS status_category
+         FROM tasks t JOIN task_statuses s ON s.id = t.status_id
+         WHERE t.project_id = ANY($1::text[]) AND t.assignee_id IS NOT NULL
+           AND (s.category NOT IN ('done', 'cancelled') OR t.updated >= $2)
+         ORDER BY t.updated DESC, t.id ASC`,
+        [projectIds, since],
+      )
+      return rows.map((r) => ({
+        id: r.id,
+        code: r.code,
+        title: r.title,
+        projectId: r.project_id,
+        assigneeId: r.assignee_id,
+        updatedAt: r.updated,
+        status: { id: r.status_id, name: r.status_name, color: r.status_color, category: r.status_category },
+      }))
+    },
+
     /** Linhas enxutas para relatórios (só as colunas usadas nos cálculos). */
     async listForReport(query) {
       const where = []

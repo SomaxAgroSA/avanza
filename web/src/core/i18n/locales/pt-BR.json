@@ -128,7 +128,8 @@
     "parent_is_child": "Esse projeto já é um subprojeto; escolha um projeto principal",
     "has_children": "Um projeto com subprojetos não pode ter pai",
     "parent_archived": "O projeto pai está arquivado",
-    "color_in_use": "Outro projeto já usa esta cor"
+    "color_in_use": "Outro projeto já usa esta cor",
+    "not_a_member": "Escolha o dono ou um membro do projeto (gestor ou membro)."
   },
   "errors": {
     "VALIDATION_ERROR": "Verifique os campos destacados.",
@@ -803,7 +804,8 @@
       "parent_project": "Projeto pai",
       "it_visible": "Visível para TI",
       "doc_page": "Página",
-      "doc_space": "Espaço de documentação"
+      "doc_space": "Espaço de documentação",
+      "lead": "Responsável"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -1026,7 +1028,8 @@
       "cover": "Capa",
       "role": "Papel",
       "platformUrl": "Enlace da plataforma",
-      "platform": "Plataforma"
+      "platform": "Plataforma",
+      "lead": "Responsável"
     },
     "descriptions": {
       "all": "Projetos que você pode acessar.",
@@ -1285,7 +1288,9 @@
       "target": "Projeto que recebe a documentação",
       "targetPlaceholder": "Escolha o projeto",
       "archivedHint": "O projeto já está arquivado e não aparece nas listas. Excluir só é preciso se quiser apagá-lo de vez."
-    }
+    },
+    "leadHint": "Quem leva o projeto adiante. Não muda as permissões: o dono continua administrando.",
+    "noLead": "Sem responsável"
   },
   "calendar": {
     "open": "Abrir calendário",
@@ -4319,5 +4324,46 @@
       "row": "{{tasks}} entregas · {{milestones}} marcos",
       "none": "Ainda não há entregas no período."
     }
+  },
+  "team": {
+    "open": "Equipe agora",
+    "column": "Trabalhando",
+    "title": "Equipe agora",
+    "description": "Em que projeto cada pessoa está trabalhando, pelas tarefas dos últimos {{days}} dias.",
+    "emptyTitle": "Ninguém tem tarefas abertas",
+    "emptyHint": "Quando houver tarefas atribuídas em projetos em andamento, elas aparecem aqui.",
+    "noActivity": "Sem atividade nesta semana",
+    "summary": "{{working}} projeto(s) em andamento · {{active}} com atividade nesta semana",
+    "groups": {
+      "working": "Trabalhando agora",
+      "active": "Ativo nesta semana",
+      "idle": "Com tarefas abertas, sem movimento há mais de 7 dias"
+    },
+    "metric": {
+      "working_one": "{{count}} em andamento",
+      "working_other": "{{count}} em andamento",
+      "active_one": "{{count}} mov. · {{when}}",
+      "active_other": "{{count}} mov. · {{when}}",
+      "stale_one": "{{count}} em andamento, sem movimento {{when}}",
+      "stale_other": "{{count}} em andamento, sem movimento {{when}}",
+      "idle_one": "{{count}} aberta · {{when}}",
+      "idle_other": "{{count}} abertas · {{when}}"
+    },
+    "chip": {
+      "working_one": "{{name}} · {{count}} em andamento",
+      "working_other": "{{name}} · {{count}} em andamento",
+      "workingTitle_one": "{{name}}: {{count}} tarefa em andamento · última atividade {{when}}",
+      "workingTitle_other": "{{name}}: {{count}} tarefas em andamento · última atividade {{when}}",
+      "stale_one": "{{name}} · {{count}} em andamento, sem movimento {{when}}",
+      "stale_other": "{{name}} · {{count}} em andamento, sem movimento {{when}}",
+      "staleTitle_one": "{{name}}: {{count}} tarefa marcada em andamento, mas sem movimento {{when}}",
+      "staleTitle_other": "{{name}}: {{count}} tarefas marcadas em andamento, mas sem movimento {{when}}",
+      "active": "{{name}} · ativo {{when}}",
+      "activeTitle_one": "{{name}}: mexeu em {{count}} tarefa nesta semana · {{when}}",
+      "activeTitle_other": "{{name}}: mexeu em {{count}} tarefas nesta semana · {{when}}"
+    },
+    "showTasks": "Ver as tarefas de {{name}} em {{project}}",
+    "hideTasks": "Ocultar as tarefas de {{name}} em {{project}}",
+    "tasksOf": "Tarefas de {{name}} em {{project}}"
   }
 }

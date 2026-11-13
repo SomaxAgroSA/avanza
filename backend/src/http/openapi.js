@@ -265,6 +265,18 @@ function build() {
           ],
         }),
       },
+      '/team-activity': {
+        get: op('Equipo ahora: por pessoa, em quais projetos em andamento está trabalhando (tarefas atribuídas em andamento, que mudaram nos últimos 7 dias ou abertas), com as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; exige tasks.view (sem ele, lista vazia)', ['projects'], {
+          200: ok('Atividade', {
+            type: 'object',
+            properties: {
+              window_days: { type: 'integer' },
+              generated_at: { type: 'string', format: 'date-time' },
+              people: { type: 'array', items: { type: 'object', description: 'user + projects[{ project, state: working|active|idle, in_progress, recent, open, stale, last_activity, tasks[] }]' } },
+            },
+          }),
+        }),
+      },
       '/projects': {
         get: op('Lista projetos acessíveis (paginado)', ['projects'], { 200: ok('Página de projetos', { type: 'array', items: ref('Project') }, true) }, {
           parameters: [

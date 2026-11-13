@@ -49,6 +49,7 @@ import type {
   ProjectPriority,
   ProjectStatus,
   ProjectView,
+  TeamActivity,
   UserSummary,
 } from './projects'
 import type { Language } from '@/core/i18n'
@@ -215,6 +216,8 @@ export interface ProjectData {
   description: string
   /** Enlace da plataforma desenvolvida (vazio limpa). */
   platformUrl?: string
+  /** Responsável (dono ou membro gestor/membro); null limpa. */
+  leadId?: string | null
   icon: ProjectIcon
   cover: ProjectCover
   status: ProjectStatus
@@ -248,6 +251,8 @@ export interface ProjectRepository {
   listMembers(id: string): Promise<ProjectMember[]>
   /** Cores dos outros projetos abertos (sem `exclude` e seus subprojetos) e a próxima livre (regra da cor única). */
   covers(exclude?: string): Promise<ProjectCovers>
+  /** Equipo ahora: em que projeto cada pessoa está trabalhando. */
+  teamActivity(): Promise<TeamActivity>
   addMember(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   updateMemberRole(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   removeMember(id: string, userId: string): Promise<void>
