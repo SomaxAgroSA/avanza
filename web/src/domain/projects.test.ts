@@ -47,6 +47,7 @@ describe('domain/projects — projeto pai e seções (regras §34 e §35)', () =
     childCount: 0,
     owner: null,
     lead: null,
+    devLead: null,
     startDate: null,
     dueDate: null,
     archivedAt: null,

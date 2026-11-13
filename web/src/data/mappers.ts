@@ -158,6 +158,7 @@ export function toProject(dto: ProjectDto): Project {
     childCount: dto.child_count ?? 0,
     owner: dto.owner ? toUserSummary(dto.owner) : null,
     lead: dto.lead ? toUserSummary(dto.lead) : null,
+    devLead: dto.dev_lead ? toUserSummary(dto.dev_lead) : null,
     startDate: toDate(dto.start_date),
     dueDate: toDate(dto.due_date),
     archivedAt: toDate(dto.archived_at),

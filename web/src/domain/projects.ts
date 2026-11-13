@@ -93,8 +93,10 @@ export interface Project {
   /** Quantidade de subprojetos. */
   childCount: number
   owner: UserSummary | null
-  /** Responsável: quem leva o projeto adiante (dono ou membro). Não muda permissão. */
+  /** Gestão: quem gerencia o projeto (dono ou membro). Não muda permissão. */
   lead: UserSummary | null
+  /** Desenvolvimento: quem executa a parte técnica (dono ou membro). Não muda permissão. */
+  devLead: UserSummary | null
   startDate: Date | null
   dueDate: Date | null
   archivedAt: Date | null

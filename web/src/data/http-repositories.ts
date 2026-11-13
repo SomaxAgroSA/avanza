@@ -424,7 +424,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url', leadId: 'lead_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url', leadId: 'lead_id', devLeadId: 'dev_lead_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })

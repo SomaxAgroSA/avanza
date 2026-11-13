@@ -805,7 +805,8 @@
       "it_visible": "Visible para TI",
       "doc_page": "Página",
       "doc_space": "Espacio de documentación",
-      "lead": "Responsable"
+      "lead": "Responsable de gestión",
+      "dev_lead": "Responsable de desarrollo"
     },
     "actions": {
       "auth.login": "Inició sesión",
@@ -1029,7 +1030,8 @@
       "role": "Rol",
       "platformUrl": "Enlace de la plataforma",
       "platform": "Plataforma",
-      "lead": "Responsable"
+      "lead": "Gestión",
+      "devLead": "Desarrollo"
     },
     "descriptions": {
       "all": "Proyectos a los que tiene acceso.",
@@ -1289,7 +1291,8 @@
       "targetPlaceholder": "Elige el proyecto",
       "archivedHint": "El proyecto ya está archivado y no aparece en las listas. Eliminarlo solo hace falta si quieres borrarlo del todo."
     },
-    "leadHint": "Quien lleva adelante el proyecto. No cambia los permisos: el dueño sigue administrándolo.",
+    "leadHint": "Quien gestiona el proyecto. No cambia los permisos: el dueño sigue administrándolo.",
+    "devLeadHint": "Quien ejecuta la parte técnica (el dueño o un miembro gestor/miembro). No cambia los permisos.",
     "noLead": "Sin responsable"
   },
   "calendar": {

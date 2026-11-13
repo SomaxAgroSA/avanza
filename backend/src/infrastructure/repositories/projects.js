@@ -58,6 +58,8 @@ function createProjectRepository(db) {
     ownerId: ['owner_id', 'relation'],
     // responsável (quem leva o projeto adiante; não dá permissão)
     leadId: ['lead_id', 'relation'],
+    // responsável pelo desenvolvimento (execução técnica; não dá permissão)
+    devLeadId: ['dev_lead_id', 'relation'],
     createdBy: ['created_by', 'relation'],
     startDate: ['start_date', 'date'],
     dueDate: ['due_date', 'date'],
@@ -82,6 +84,7 @@ function createProjectRepository(db) {
       parentId: row.parent_id || null,
       ownerId: row.owner_id,
       leadId: row.lead_id || null,
+      devLeadId: row.dev_lead_id || null,
       createdBy: row.created_by || '',
       startDate: row.start_date,
       dueDate: row.due_date,
@@ -102,6 +105,7 @@ function createProjectRepository(db) {
     area: '(SELECT lower(a."name") FROM "areas" a WHERE a."id" = projects."area_id")',
     owner: '(SELECT lower(u."name") FROM "users" u WHERE u."id" = projects."owner_id")',
     lead: '(SELECT lower(u."name") FROM "users" u WHERE u."id" = projects."lead_id")',
+    dev_lead: '(SELECT lower(u."name") FROM "users" u WHERE u."id" = projects."dev_lead_id")',
     members: '(SELECT count(*) FROM "project_members" m WHERE m."project_id" = projects."id")',
   }
 

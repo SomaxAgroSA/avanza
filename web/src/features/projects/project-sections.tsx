@@ -117,16 +117,21 @@ function Overview({ project }: { project: Project }) {
             <Detail label={t('tasks.fields.area')}>
               <AreaBadge area={project.area} />
             </Detail>
-            <Detail label={t('projects.fields.lead')}>
-              {project.lead ? (
-                <span className="inline-flex items-center gap-2">
-                  <AppAvatar name={project.lead.name} size="xs" />
-                  {project.lead.name}
-                </span>
-              ) : (
-                '—'
-              )}
-            </Detail>
+            {([
+              ['projects.fields.lead', project.lead],
+              ['projects.fields.devLead', project.devLead],
+            ] as const).map(([label, person]) => (
+              <Detail key={label} label={t(label)}>
+                {person ? (
+                  <span className="inline-flex items-center gap-2">
+                    <AppAvatar name={person.name} size="xs" />
+                    {person.name}
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </Detail>
+            ))}
             <Detail label={t('projects.fields.owner')}>
               {project.owner ? (
                 <span className="inline-flex items-center gap-2">

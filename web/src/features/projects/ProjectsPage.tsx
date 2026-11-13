@@ -5,7 +5,7 @@ import { Archive, ArchiveRestore, Copy, ExternalLink, FolderPlus, Users } from '
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
-import { PROJECT_PRIORITIES, PROJECT_STATUSES, VIEW_STATUSES, isOverdue, type Project, type ProjectView } from '@/domain/projects'
+import { PROJECT_PRIORITIES, PROJECT_STATUSES, VIEW_STATUSES, isOverdue, type Project, type ProjectView, type UserSummary } from '@/domain/projects'
 import type { ProjectListQuery } from '@/domain/repositories'
 import {
   AppAvatar,
@@ -152,22 +152,22 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         cell: (project) => <ProjectStatusBadge status={project.status} />,
         filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
       },
-      // Responsable y Trabajando junto al estado: se ven sin desplazar la tabla
+      // Gestión, Desarrollo y Trabajando junto al estado: se ven sin desplazar la tabla
       {
-        // quem leva o projeto adiante (o dono continua nos Detalhes do projeto)
+        // quem gerencia o projeto (o dono continua nos Detalhes do projeto)
         id: 'lead',
         header: t('projects.fields.lead'),
         sortable: true,
-        size: 200,
-        cell: (project) =>
-          project.lead ? (
-            <div className="flex min-w-0 items-center gap-2">
-              <AppAvatar name={project.lead.name} src={project.lead.avatarUrl} size="xs" />
-              <span className="truncate">{project.lead.name}</span>
-            </div>
-          ) : (
-            <span className="text-subtle">—</span>
-          ),
+        size: 190,
+        cell: (project) => <PersonCell person={project.lead} />,
+      },
+      {
+        // quem executa a parte técnica
+        id: 'dev_lead',
+        header: t('projects.fields.devLead'),
+        sortable: true,
+        size: 190,
+        cell: (project) => <PersonCell person={project.devLead} />,
       },
       ...(showActivity
         ? [
@@ -342,6 +342,17 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       />
       <DeleteProjectDialog key={deleting?.id ?? 'none'} project={deleting} open={!!deleting} onOpenChange={(open: boolean) => !open && setDeleting(null)} onDeleted={() => setDeleting(null)} />
     </>
+  )
+}
+
+/** Pessoa (Gestão ou Desenvolvimento) na lista: avatar e nome; vazio = "—". */
+function PersonCell({ person }: { person: UserSummary | null }) {
+  if (!person) return <span className="text-subtle">—</span>
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <AppAvatar name={person.name} src={person.avatarUrl} size="xs" />
+      <span className="truncate">{person.name}</span>
+    </div>
   )
 }
 
