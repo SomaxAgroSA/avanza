@@ -314,10 +314,18 @@ const TOOLS = [
   {
     name: 'delete_project',
     title: 'Delete project',
-    description: 'Permanently deletes a project and everything in it (tasks, sprints, files, project management board). It cannot be undone: prefer archive_project. Confirm with the user first.',
-    inputSchema: schema({ project_id: PROJECT_ID }, ['project_id']),
+    description:
+      'Permanently deletes a project and everything in it (tasks, sprints, files, project management board). It cannot be undone: prefer archive_project. If the project has documentation spaces, docs is required (PROJECT_HAS_DOCS otherwise): move them to another project you manage (docs_project_id), keep them as general company spaces, or delete them too (ask the user what to do with them). Confirm with the user first.',
+    inputSchema: schema(
+      {
+        project_id: PROJECT_ID,
+        docs: { type: 'string', enum: ['move', 'general', 'delete'], description: 'What to do with the project documentation spaces: move, general (no project, whole company) or delete.' },
+        docs_project_id: id('Project that receives the documentation spaces (docs = move).'),
+      },
+      ['project_id'],
+    ),
     annotations: DELETE,
-    run: (args, { services, ctx }) => services.projects.deleteProject(ctx, args.project_id),
+    run: (args, { services, ctx }) => services.projects.deleteProject(ctx, args.project_id, pick(args, ['docs', 'docs_project_id'])),
   },
   {
     name: 'get_project_history',

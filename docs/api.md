@@ -85,7 +85,7 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 | GET | `/projects/{id}/brief` | ver o projeto ou Responsável TI | **resumo do Responsável TI** (§33): `{ objective, tasks (atribuídas a quem pede ou marcadas para TI), items (funcionalidades/resultados da ficha sob a responsabilidade dele: id, kind, title, description, unit, target, due_date) }` |
 | PATCH | `/projects/{id}` | gestor + `projects.edit` | parcial; `key` é imutável; datas, `urgency`, `area_id` e `parent_id` aceitam `null` (limpa/solta); projeto arquivado → `PROJECT_ARCHIVED`. Histórico em `project.updated` |
 | POST | `/projects/{id}/archive` · `/unarchive` | gestor + `projects.edit` | arquivado = somente leitura |
-| DELETE | `/projects/{id}` | dono ou `projects.view_all`, + `projects.delete` | só projeto arquivado (`PROJECT_NOT_ARCHIVED`) |
+| DELETE | `/projects/{id}` | dono ou `projects.view_all`, + `projects.delete` | só projeto arquivado (`PROJECT_NOT_ARCHIVED`). Com espaços de documentação, `?docs=` é obrigatório: `move` (+ `docs_project_id`, projeto que a pessoa gerencia), `general` (ficam sem projeto, para toda a empresa) ou `delete` (saem junto); sem ele → 409 `PROJECT_HAS_DOCS` com `details.spaces` |
 | PUT | `/projects/{id}/owner` | dono ou `projects.view_all`, + `projects.edit` | `{ user_id }` — novo dono vira gestor; o anterior continua gestor |
 | GET | `/projects/{id}/history` | ver o projeto + seção Histórico (`projects.history`; o dono sempre) | auditoria do projeto; sem a seção, `FORBIDDEN` (§35) |
 | GET | `/projects/{id}/members` | ver o projeto (não o Responsável TI) | dono primeiro; continua sem a seção Membros (alimenta a escolha de pessoas) |
@@ -186,6 +186,7 @@ Tarefas ganham `sprint: { id, name, state } | null` no resumo, `sprint_id` no PO
 ## Endpoints — Fase 7 (Relacionamentos, subtarefas e fork)
 | Método | Rota | Descrição |
 |---|---|---|
+| GET | `/tasks/{id}/docs` | páginas de documentação vinculadas à tarefa (só as dos espaços que a pessoa lê): `id, title, status, is_home, space { id, key, name, icon, color }, updated_at, linked_at, capabilities.unlink` |
 | GET | `/tasks/{id}/relations` | `parent`, `children` (+ `subtask_progress`), `forked_from`, `forks` e `relations` (cada uma com `type` do ponto de vista desta tarefa); só tarefas visíveis ao usuário; `capabilities: { link, fork, create_subtask, edit }` |
 | POST | `/tasks/{id}/relations` | `{ type, target_id }` com `type` em `relates`, `blocks`, `blocked_by`, `duplicates`, `duplicated_by`, `depends_on`, `dependency_of` — `tasks.link` + colaborador; repetida → `RELATION_EXISTS`; ciclo de bloqueio/dependência → `RELATION_CYCLE` |
 | DELETE | `/relations/{id}` | desfaz (`tasks.link` em qualquer um dos lados) |
@@ -298,7 +299,7 @@ Regra `block`: trocar o status (edição, massa) para uma etiqueta que **inicia*
 | GET | `/docs/spaces` | espaços que a pessoa lê (`docs.view` + visibilidade), com `page_count` e `capabilities` |
 | POST | `/docs/spaces` | `docs.manage` (espaço de projeto: gestor/dono): `{ key*, name*, description, icon, color, project_id, visibility*: company\|project }`; nasce com a página inicial publicada (v1). `DOC_SPACE_KEY_IN_USE`; `visibility: project_required` sem projeto |
 | GET | `/docs/spaces/{key}` | espaço pela **chave** + árvore `pages` (`id, parent_id, title, status, position, has_draft, is_home, updated_at`; rascunhos só para quem edita) + `capabilities` |
-| PATCH/DELETE | `/docs/spaces/{id}` | configurar (`name, description, icon, color, visibility`) / excluir com páginas, versões e arquivos (quem gerencia) |
+| PATCH/DELETE | `/docs/spaces/{id}` | configurar (`name, description, icon, color, visibility` e `project_id` — outro projeto que a pessoa gerencia, ou `""`/`null` para tirar o vínculo, aí `visibility` precisa ser `company`) / excluir com páginas, versões e arquivos (quem gerencia). Na árvore (`GET /docs/spaces/{key}`), cada página traz `tasks [{ id, code, title }]` (as vinculadas que a pessoa vê) |
 | POST | `/docs/spaces/{id}/pages` | `docs.edit`: `{ title*, parent_id }` → página em rascunho; `DOC_PAGE_TOO_DEEP` (8 níveis) |
 | GET/DELETE | `/docs/pages/{id}` | página (conteúdo **publicado**, `version`, `ancestors`, `children`, `draft` pendente para quem edita, `capabilities`) / excluir com subpáginas (`{ deleted }`; `DOC_PAGE_IS_HOME`) |
 | GET/PUT/DELETE | `/docs/pages/{id}/draft` | rascunho para edição (ou o publicado) / salvar `{ title*, content }` (higienizado; `{ saved_at }`) / descartar |
@@ -306,6 +307,8 @@ Regra `block`: trocar o status (edição, massa) para uma etiqueta que **inicia*
 | PUT | `/docs/pages/{id}/move` | `{ parent_id, prev_id \| next_id }` (sem vizinho = fim); `DOC_PAGE_CYCLE`, `DOC_PAGE_TOO_DEEP`, `DOC_PAGE_IS_HOME` |
 | GET | `/docs/pages/{id}/versions` · `/versions/{n}` | versões publicadas (mais recente primeiro) / conteúdo de uma versão (`DOC_VERSION_NOT_FOUND`) |
 | POST | `/docs/pages/{id}/versions/{n}/restore` | publica o conteúdo da versão `n` como a próxima |
+| GET/POST | `/docs/pages/{id}/tasks` | tarefas vinculadas à página (só as visíveis; formato da lista de tarefas) / vincular `{ task_ids: [...] }` (até 50; quem edita o espaço e vê as tarefas; par repetido é ignorado; histórico `task.doc_linked` na tarefa) |
+| DELETE | `/docs/pages/{id}/tasks/{taskId}` | desvincular (quem edita o espaço; histórico `task.doc_unlinked`) → `{ deleted }` |
 | POST | `/docs/pages/{id}/files` | multipart `files` (até 10, 20 MB cada, tipo conferido pelo conteúdo) → `{ id, name, kind: image\|document, mime, size, url }` |
 | GET | `/docs/files/{id}` | arquivo para quem vê a página: imagens em linha, demais como anexo; `nosniff` + CSP sandbox |
 | GET | `/docs/search?q=` | título e conteúdo publicado dos espaços visíveis, sem acento/maiúsculas (2–100 caracteres; até 30) com `snippet` |

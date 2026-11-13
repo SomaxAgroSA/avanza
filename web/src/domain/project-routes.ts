@@ -8,9 +8,10 @@ import type { ProjectProfileSection } from './projects'
 
 /**
  * Abas da página do projeto, na ordem da tela: Visão geral, Ficha (para que o projeto existe e como se
- * mede), Gestão, Tarefas, Informe (documento do projeto em PDF), Arquivos, Membros, Histórico e Configurações.
+ * mede), Gestão, Tarefas, Informe (documento do projeto em PDF), Arquivos, Documentação (os espaços do
+ * projeto), Membros, Histórico e Configurações.
  */
-export const PROJECT_TABS = ['overview', 'charter', 'management', 'tasks', 'report', 'files', 'members', 'history', 'settings'] as const
+export const PROJECT_TABS = ['overview', 'charter', 'management', 'tasks', 'report', 'files', 'docs', 'members', 'history', 'settings'] as const
 export type ProjectTab = (typeof PROJECT_TABS)[number]
 
 /** Visões da aba Tarefas: lista, Kanban, planejamento (backlog e sprints) e cronograma (timeline). */
@@ -31,6 +32,7 @@ const SEGMENTS: Record<ProjectSection, string> = {
   timeline: 'timeline',
   report: 'report',
   files: 'files',
+  docs: 'docs',
   members: 'members',
   history: 'history',
   settings: 'settings',
@@ -78,6 +80,7 @@ export function legacyProjectTab(tab: string | null): { section: ProjectSection;
     case 'charter':
     case 'report':
     case 'files':
+    case 'docs':
     case 'members':
     case 'history':
     case 'settings':
@@ -109,7 +112,7 @@ export function itProjectTabs(sections: readonly ProjectProfileSection[]): Proje
 /**
  * Abas que a pessoa vê: Gestão com `plan.view`, Tarefas com alguma visão, Configurações para quem
  * administra; Ficha, Histórico e Membros com a seção do perfil, e Informe com a seção e `tasks.view` (é
- * montado com as tarefas escolhidas). Visão geral e Arquivos, para todos do projeto.
+ * montado com as tarefas escolhidas), Documentação com `docs.view`. Visão geral e Arquivos, para todos do projeto.
  */
 export function visibleProjectTabs(permissions: readonly string[], access: ProjectTabAccess): ProjectTab[] {
   if (access.it) return itProjectTabs(access.sections)
@@ -118,6 +121,7 @@ export function visibleProjectTabs(permissions: readonly string[], access: Proje
     if (tab === 'tasks') return visibleTaskViews(permissions).length > 0
     if (tab === 'report') return can(permissions, 'tasks.view') && access.sections.includes('report')
     if (tab === 'charter' || tab === 'history' || tab === 'members') return access.sections.includes(tab)
+    if (tab === 'docs') return can(permissions, 'docs.view')
     if (tab === 'settings') return access.manage
     return true
   })

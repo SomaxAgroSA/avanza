@@ -101,6 +101,11 @@ export const routes: RouteObject[] = [
                 children: [{ path: 'kanban', ...page(() => import('@/features/kanban/KanbanPage').then((m) => ({ default: m.ProjectKanbanPage }))) }],
               },
               { path: 'files', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectFilesTab }))) },
+              {
+                // espaços de documentação do projeto (páginas e as tarefas vinculadas)
+                element: <PermissionGate permission="docs.view" />,
+                children: [{ path: 'docs', ...page(() => import('@/features/docs/ProjectDocsTab').then((m) => ({ default: m.ProjectDocsTab }))) }],
+              },
               { path: 'members', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectMembersTab }))) },
               { path: 'history', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectHistoryTab }))) },
               { path: 'settings', ...page(() => import('@/features/projects/project-sections').then((m) => ({ default: m.ProjectSettingsTab }))) },

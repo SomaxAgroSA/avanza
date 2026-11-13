@@ -15,7 +15,7 @@ import {
   type ProjectTab,
 } from '@/domain/project-routes'
 import { VIEW_STATUSES, isItRole, type Project } from '@/domain/projects'
-import { AppBadge, AppButton, AppConfirmDialog, AppEmptyState, AppErrorState, AppIcon, AppIconButton, AppNavTabs, AppSkeleton, notify } from '@/presentation/components'
+import { AppBadge, AppButton, AppEmptyState, AppErrorState, AppIcon, AppIconButton, AppNavTabs, AppSkeleton, notify } from '@/presentation/components'
 import { useLiveProject } from '@/presentation/common/use-live'
 import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
@@ -25,6 +25,7 @@ import { useSession } from '@/features/auth/session'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
+import { DeleteProjectDialog } from './DeleteProjectDialog'
 import type { ProjectOutletContext } from './project-context'
 import { useProject, useProjectLifecycle } from './queries'
 import { lastNavChild } from '@/presentation/navigation/nav-memory'
@@ -144,6 +145,7 @@ function ProjectDetail({ project }: { project: Project }) {
     tasks: projectPath(project.id, taskViews[0] ?? 'list'),
     report: projectPath(project.id, 'report'),
     files: projectPath(project.id, 'files'),
+    docs: projectPath(project.id, 'docs'),
     members: projectPath(project.id, 'members'),
     history: projectPath(project.id, 'history'),
     settings: projectPath(project.id, 'settings'),
@@ -248,23 +250,7 @@ function ProjectDetail({ project }: { project: Project }) {
       </TabActionsSlotContext.Provider>
 
       <ProjectFormDialog open={editing} onOpenChange={setEditing} project={project} />
-      <AppConfirmDialog
-        open={deleting}
-        onOpenChange={setDeleting}
-        title={t('projects.deleteTitle', { name: project.name })}
-        description={t('projects.deleteDescription')}
-        confirmLabel={t('common.delete')}
-        loading={lifecycle.remove.isPending}
-        onConfirm={() =>
-          lifecycle.remove.mutate(project.id, {
-            onSuccess: () => {
-              notify.success(t('projects.deleted', { key: project.key }))
-              navigate('/projects/archived', { replace: true })
-            },
-            onError: (error) => notify.error(errorMessage(error)),
-          })
-        }
-      />
+      <DeleteProjectDialog project={project} open={deleting} onOpenChange={setDeleting} onDeleted={() => navigate('/projects/archived', { replace: true })} />
     </>
   )
 }

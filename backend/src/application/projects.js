@@ -18,6 +18,8 @@ const { URGENCY_LEVELS } = require('../domain/task')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 
+/** O que fazer com a documentação do projeto excluído (deleteProject). */
+const DOCS_ACTIONS = ['move', 'general', 'delete']
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
 
 const keyRule = rules.custom((value) => (typeof value !== 'string' ? 'invalid_type' : projectDomain.keyIssue(projectDomain.normalizeKey(value))))
@@ -417,10 +419,47 @@ function createProjectService(deps) {
     return present(ctx, saved)
   }
 
-  async function deleteProject(ctx, id) {
+  /**
+   * Excluir o projeto. Se ele tem espaços de documentação, é preciso dizer o que fazer com eles
+   * (`docs`): `move` para outro projeto que a pessoa gerencia (`docs_project_id`), `general` (ficam sem
+   * projeto, para toda a empresa) ou `delete` (saem junto). Sem a escolha: PROJECT_HAS_DOCS.
+   */
+  async function deleteProject(ctx, id, options) {
     const { project, access } = await load(ctx, id)
     projectDomain.assertAccess(access, project, 'delete')
+    const spaces = await deps.docSpaceRepository.listByProject(project.id)
+    const opts = options || {}
+    let target = null
+    let docsAction = null
+    if (spaces.length > 0) {
+      if (opts.docs === undefined || opts.docs === null || opts.docs === '') {
+        throw appError('PROJECT_HAS_DOCS', undefined, { spaces: spaces.map((space) => ({ id: space.id, key: space.key, name: space.name })) })
+      }
+      docsAction = assertValid(opts, { docs: [rules.oneOf(DOCS_ACTIONS)] }).docs
+      if (docsAction === 'move') {
+        const data = assertValid(opts, { docs_project_id: [rules.required(), idRule] })
+        if (data.docs_project_id === project.id) throw appError('VALIDATION_ERROR', undefined, { fields: { docs_project_id: 'invalid_option' } })
+        const found = await load(ctx, data.docs_project_id)
+        if (!found.access.canView) throw appError('PROJECT_NOT_FOUND')
+        if (!found.access.isManager) throw appError('FORBIDDEN')
+        target = found.project
+      }
+    }
     await deps.unitOfWork.run(async (repos) => {
+      for (const space of spaces) {
+        const spaceAudit = (action, oldValue, newValue) =>
+          repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'doc_space', entityId: space.id, action, oldValue, newValue }))
+        if (docsAction === 'move') {
+          await repos.docSpaceRepository.update(space.id, { projectId: target.id })
+          await spaceAudit('doc_space.updated', { project: project.key }, { project: target.key })
+        } else if (docsAction === 'general') {
+          await repos.docSpaceRepository.update(space.id, { projectId: null, visibility: 'company' })
+          await spaceAudit('doc_space.updated', { project: project.key, visibility: space.visibility }, { project: null, visibility: 'company' })
+        } else {
+          // sai junto com o projeto (FK em cascata); o registro fica no histórico do espaço
+          await spaceAudit('doc_space.deleted', { key: space.key, name: space.name }, null)
+        }
+      }
       await repos.projectMemberRepository.removeAllForProject(project.id)
       // os subprojetos continuam, agora sem pai (FK ON DELETE SET NULL)
       await repos.projectRepository.delete(project.id)

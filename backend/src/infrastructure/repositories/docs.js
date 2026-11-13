@@ -2,7 +2,8 @@
  * Repositórios Postgres da documentação (expansão, Onda 2): espaços, páginas, versões e arquivos.
  * Árvore, busca e recentes leem só as colunas necessárias (o conteúdo JSON não é carregado).
  * Arquivos ficam no Storage ("doc_files/<id>/<nome guardado>"); ao apagar o registro (inclusive em
- * cascata), um gatilho manda a chave para a lixeira do Storage.
+ * cascata), um gatilho manda a chave para a lixeira do Storage. Vínculos página ↔ tarefa em
+ * "doc_page_tasks" (saem junto com a página ou a tarefa).
  */
 
 const { appError } = require('../../core/errors')
@@ -82,6 +83,9 @@ function createDocSpaceRepository(db) {
     },
     async list() {
       return (await db.query('SELECT * FROM doc_spaces ORDER BY name ASC, id ASC')).map(toEntity)
+    },
+    async listByProject(projectId) {
+      return (await db.query('SELECT * FROM doc_spaces WHERE project_id = $1 ORDER BY name ASC, id ASC', [projectId])).map(toEntity)
     },
     async create(data) {
       return toEntity(await uniqueAs('idx_doc_spaces_key', 'DOC_SPACE_KEY_IN_USE', () => insertRow(db, TABLE, columns(FIELDS, data))))
@@ -334,4 +338,33 @@ function createDocFileRepository(db, ctx) {
   }
 }
 
-module.exports = { createDocSpaceRepository, createDocPageRepository, createDocPageVersionRepository, createDocFileRepository }
+/** Vínculos página ↔ tarefa (um par só uma vez). */
+function createDocPageTaskRepository(db) {
+  const toEntity = (row) => ({ id: row.id, pageId: row.page_id, taskId: row.task_id, createdBy: row.created_by || null, createdAt: row.created })
+  return {
+    async listByPages(pageIds) {
+      if (!pageIds || pageIds.length === 0) return []
+      return (await db.query('SELECT * FROM doc_page_tasks WHERE page_id = ANY($1::text[]) ORDER BY created ASC, id ASC', [pageIds])).map(toEntity)
+    },
+    async listByTask(taskId) {
+      return (await db.query('SELECT * FROM doc_page_tasks WHERE task_id = $1 ORDER BY created ASC, id ASC', [taskId])).map(toEntity)
+    },
+    async find(pageId, taskId) {
+      const row = await db.one('SELECT * FROM doc_page_tasks WHERE page_id = $1 AND task_id = $2', [pageId, taskId])
+      return row ? toEntity(row) : null
+    },
+    /** Cria o vínculo; o par que já existe não muda (devolve null). */
+    async add(data) {
+      const row = await db.one(
+        'INSERT INTO doc_page_tasks (id, page_id, task_id, created_by) VALUES ($1, $2, $3, $4) ON CONFLICT (page_id, task_id) DO NOTHING RETURNING *',
+        [newId(), data.pageId, data.taskId, data.createdBy || null],
+      )
+      return row ? toEntity(row) : null
+    },
+    async remove(pageId, taskId) {
+      return (await db.exec('DELETE FROM doc_page_tasks WHERE page_id = $1 AND task_id = $2', [pageId, taskId])) > 0
+    },
+  }
+}
+
+module.exports = { createDocSpaceRepository, createDocPageRepository, createDocPageVersionRepository, createDocFileRepository, createDocPageTaskRepository }

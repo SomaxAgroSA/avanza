@@ -11,6 +11,7 @@ import { AppButton, AppDialog, AppSelect, AppTextField, AppTextarea, notify } fr
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { ColorPicker } from '@/features/task-config/config-visuals'
 import { useProjects } from '@/features/projects/queries'
+import { ProjectAvatar } from '@/features/projects/project-visuals'
 import { SPACE_ICON_COMPONENTS } from './docs-theme'
 import { IconPicker } from '@/features/icons/IconPicker'
 import { SpaceAvatar } from './docs-visuals'
@@ -19,7 +20,9 @@ import { useSpaceMutations } from './queries'
 const PROJECT_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 const SERVER_FIELDS: Record<string, keyof DocSpaceFormInput> = { project_id: 'projectId' }
 
-function defaults(space?: DocSpace | null): DocSpaceFormInput {
+function defaults(space?: DocSpace | null, projectId?: string): DocSpaceFormInput {
+  // criado da aba Documentação do projeto: já vinculado e só para quem participa
+  if (!space && projectId) return { name: '', key: '', description: '', icon: 'book', color: 'blue', visibility: 'project', projectId }
   return {
     name: space?.name ?? '',
     key: space?.key ?? '',
@@ -36,26 +39,31 @@ export interface SpaceFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** Ausente = criação. */
   space?: DocSpace | null
+  /** Criação já vinculada a este projeto (aba Documentação do projeto). */
+  defaultProjectId?: string
 }
 
-/** Criação/configuração de espaço. A chave e o projeto só se escolhem na criação. */
-export function SpaceFormDialog({ open, onOpenChange, space }: SpaceFormDialogProps) {
+/**
+ * Criação/configuração de espaço. A chave só se escolhe na criação; o projeto pode mudar depois (vinculado
+ * por engano): a lista traz os projetos que a pessoa gerencia, e um aviso diz quem ganha e quem perde acesso.
+ */
+export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }: SpaceFormDialogProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const errorMessage = useErrorMessage()
   const isEdit = !!space
   const { create, update } = useSpaceMutations()
   const pending = create.isPending || update.isPending
-  const projects = useProjects(PROJECT_QUERY, open && !isEdit)
+  const projects = useProjects(PROJECT_QUERY, open)
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<DocSpaceFormInput>({
     resolver: zodResolver(docSpaceSchema),
-    defaultValues: defaults(space),
+    defaultValues: defaults(space, defaultProjectId),
   })
 
   useEffect(() => {
-    if (open) reset(defaults(space))
-  }, [open, space, reset])
+    if (open) reset(defaults(space, defaultProjectId))
+  }, [open, space, defaultProjectId, reset])
 
   const [name, icon, color, visibility, projectId] = useWatch({ control, name: ['name', 'icon', 'color', 'visibility', 'projectId'] })
 
@@ -69,8 +77,10 @@ export function SpaceFormDialog({ open, onOpenChange, space }: SpaceFormDialogPr
     }
     const common = { name: values.name.trim(), description: values.description, icon: values.icon, color: values.color, visibility: values.visibility }
     if (space) {
+      // o projeto só vai quando mudou ('' tira o vínculo)
+      const projectChanged = (values.projectId || '') !== (space.project?.id ?? '')
       update.mutate(
-        { id: space.id, input: common },
+        { id: space.id, input: projectChanged ? { ...common, projectId: values.projectId || '' } : common },
         {
           onSuccess: () => {
             notify.success(t('docs.space.updated'))
@@ -102,9 +112,15 @@ export function SpaceFormDialog({ open, onOpenChange, space }: SpaceFormDialogPr
     },
   })
   const errors = formState.errors
-  // espaço de projeto: só entre os projetos ativos em que a pessoa pode gerenciar (o servidor confere)
-  const projectOptions = (projects.data?.items ?? []).filter((p) => !p.archivedAt).map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` }))
-  const visibilityOptions = SPACE_VISIBILITIES.filter((v) => v === 'company' || isEdit === false || !!space?.project).map((v) => ({
+  // espaço de projeto: só entre os projetos ativos que a pessoa gerencia (o servidor confere); o atual sempre aparece
+  const allProjects = projects.data?.items ?? []
+  const projectOptions = allProjects
+    .filter((p) => (!p.archivedAt && p.capabilities.edit) || p.id === space?.project?.id)
+    .map((p) => ({ value: p.id, label: `${p.key} · ${p.name}`, textValue: `${p.key} · ${p.name}`, prefix: <ProjectAvatar icon={p.icon} cover={p.cover} size="sm" className="size-5 rounded [&_svg]:size-3" /> }))
+  const currentProject = space?.project ?? null
+  const nextProject = allProjects.find((p) => p.id === projectId) ?? null
+  const projectChanged = isEdit && (projectId || '') !== (currentProject?.id ?? '')
+  const visibilityOptions = SPACE_VISIBILITIES.filter((v) => v === 'company' || !!projectId).map((v) => ({
     value: v,
     label: t(`docs.visibility.${v}`),
   }))
@@ -159,31 +175,44 @@ export function SpaceFormDialog({ open, onOpenChange, space }: SpaceFormDialogPr
                 />
               )}
             />
-            {isEdit ? (
-              space?.project && <AppTextField label={t('docs.space.fields.project')} value={`${space.project.key} · ${space.project.name}`} disabled readOnly hint={t('docs.space.projectLocked')} />
-            ) : (
-              <Controller
-                control={control}
-                name="projectId"
-                render={({ field }) => (
-                  <AppSelect
-                    label={t('docs.space.fields.project')}
-                    value={field.value || undefined}
-                    onValueChange={field.onChange}
-                    options={projectOptions}
-                    placeholder={t('docs.space.noProject')}
-                    required={visibility === 'project'}
-                    hint={t('docs.space.projectHint')}
-                    error={errors.projectId?.message}
-                  />
-                )}
-              />
-            )}
+            <Controller
+              control={control}
+              name="projectId"
+              render={({ field }) => (
+                <AppSelect
+                  label={t('docs.space.fields.project')}
+                  value={field.value || undefined}
+                  onValueChange={field.onChange}
+                  options={projectOptions}
+                  placeholder={t('docs.space.noProject')}
+                  required={visibility === 'project'}
+                  searchable
+                  hint={isEdit ? t('docs.space.projectChangeHint') : t('docs.space.projectHint')}
+                  error={errors.projectId?.message}
+                />
+              )}
+            />
           </div>
-          {!isEdit && projectId && (
-            <AppButton variant="link" size="sm" className="self-start" onClick={() => setValue('projectId', '', { shouldDirty: true })}>
+          {projectId && (
+            <AppButton
+              variant="link"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setValue('projectId', '', { shouldDirty: true })
+                // sem projeto, o espaço só pode ser da empresa
+                if (visibility === 'project') setValue('visibility', 'company', { shouldDirty: true })
+              }}
+            >
               {t('docs.space.clearProject')}
             </AppButton>
+          )}
+          {projectChanged && (
+            <p className="rounded-lg border border-warning-soft-fg/25 bg-warning-soft px-3 py-2 text-sm text-warning-soft-fg" role="status" data-testid="space-project-change">
+              {projectId
+                ? t('docs.space.projectChange', { key: space?.key, from: currentProject?.key ?? t('docs.space.noProjectShort'), to: nextProject?.key ?? '' })
+                : t('docs.space.projectRemove', { key: space?.key, from: currentProject?.key ?? '' })}
+            </p>
           )}
         </div>
 

@@ -10,7 +10,6 @@ import type { ProjectListQuery } from '@/domain/repositories'
 import {
   AppAvatar,
   AppButton,
-  AppConfirmDialog,
   AppDataTable,
   AppEmptyState,
   notify,
@@ -23,6 +22,7 @@ import { useCopy } from '@/presentation/common/use-copy'
 import { useCan } from '@/features/auth/session'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
+import { DeleteProjectDialog } from './DeleteProjectDialog'
 import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
 import { useProjectLifecycle, useProjects, useUpdateProject } from './queries'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
@@ -310,24 +310,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
           }
         }}
       />
-      <AppConfirmDialog
-        open={!!deleting}
-        onOpenChange={(open) => !open && setDeleting(null)}
-        title={t('projects.deleteTitle', { name: deleting?.name ?? '' })}
-        description={t('projects.deleteDescription')}
-        confirmLabel={t('common.delete')}
-        loading={lifecycle.remove.isPending}
-        onConfirm={() =>
-          deleting &&
-          lifecycle.remove.mutate(deleting.id, {
-            onSuccess: () => {
-              notify.success(t('projects.deleted', { key: deleting.key }))
-              setDeleting(null)
-            },
-            onError: (error) => notify.error(errorMessage(error)),
-          })
-        }
-      />
+      <DeleteProjectDialog key={deleting?.id ?? 'none'} project={deleting} open={!!deleting} onOpenChange={(open: boolean) => !open && setDeleting(null)} onDeleted={() => setDeleting(null)} />
     </>
   )
 }

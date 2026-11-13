@@ -342,6 +342,10 @@ export function fakeRepositories(overrides: {
       uploadFiles: notImplemented,
       search: () => Promise.resolve([]),
       recent: () => Promise.resolve([]),
+      listPageTasks: () => Promise.resolve([]),
+      linkTasks: notImplemented,
+      unlinkTask: notImplemented,
+      listTaskDocs: () => Promise.resolve([]),
       ...overrides.docs,
     },
     reports: {

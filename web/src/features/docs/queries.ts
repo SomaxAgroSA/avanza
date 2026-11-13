@@ -12,11 +12,13 @@ export const docsKeys = {
   version: (id: string, version: number) => ['docs', 'versions', id, version] as const,
   search: (q: string) => ['docs', 'search', q] as const,
   recent: ['docs', 'recent'] as const,
+  pageTasks: (id: string) => ['docs', 'page-tasks', id] as const,
+  taskDocs: (taskId: string) => ['docs', 'task-docs', taskId] as const,
 }
 
-export function useDocSpaces() {
+export function useDocSpaces(enabled = true) {
   const { docs } = useRepositories()
-  return useQuery({ queryKey: docsKeys.spaces, queryFn: () => docs.listSpaces() })
+  return useQuery({ queryKey: docsKeys.spaces, queryFn: () => docs.listSpaces(), enabled })
 }
 
 export function useDocSpace(key: string) {
@@ -55,6 +57,32 @@ export function useDocSearch(q: string) {
 export function useDocRecent() {
   const { docs } = useRepositories()
   return useQuery({ queryKey: docsKeys.recent, queryFn: () => docs.recent() })
+}
+
+/** Tarefas vinculadas à página (só as que a pessoa vê). */
+export function usePageTasks(pageId: string | undefined) {
+  const { docs } = useRepositories()
+  return useQuery({ queryKey: docsKeys.pageTasks(pageId ?? ''), queryFn: () => docs.listPageTasks(pageId as string), enabled: !!pageId })
+}
+
+/** Páginas vinculadas à tarefa (aba Documentação da tarefa). */
+export function useTaskDocs(taskId: string | undefined) {
+  const { docs } = useRepositories()
+  return useQuery({ queryKey: docsKeys.taskDocs(taskId ?? ''), queryFn: () => docs.listTaskDocs(taskId as string), enabled: !!taskId })
+}
+
+/** Vincular/desvincular página ↔ tarefa: atualiza as listas dos dois lados, a árvore e o histórico da tarefa. */
+export function useDocLinkMutations() {
+  const { docs } = useRepositories()
+  const queryClient = useQueryClient()
+  const refresh = (taskIds: string[]) => {
+    void queryClient.invalidateQueries({ queryKey: docsKeys.all })
+    taskIds.forEach((id) => void queryClient.invalidateQueries({ queryKey: ['tasks', 'history', id] }))
+  }
+  return {
+    link: useMutation({ mutationFn: ({ pageId, taskIds }: { pageId: string; taskIds: string[] }) => docs.linkTasks(pageId, taskIds), onSuccess: (_list, input) => refresh(input.taskIds) }),
+    unlink: useMutation({ mutationFn: ({ pageId, taskId }: { pageId: string; taskId: string }) => docs.unlinkTask(pageId, taskId), onSuccess: (_result, input) => refresh([input.taskId]) }),
+  }
 }
 
 export function useSpaceMutations() {

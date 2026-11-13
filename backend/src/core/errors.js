@@ -53,6 +53,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   DOC_VERSION_NOT_FOUND: { status: 404, message: 'Page version not found' },
   DOC_FILE_NOT_FOUND: { status: 404, message: 'Documentation file not found' },
   DOC_SPACE_KEY_IN_USE: { status: 409, message: 'Space key already in use' },
+  PROJECT_HAS_DOCS: { status: 409, message: 'The project has documentation spaces: choose whether to move, keep as general or delete them' },
   DOC_PAGE_CYCLE: { status: 409, message: 'A page cannot be moved under itself' },
   DOC_PAGE_TOO_DEEP: { status: 409, message: 'Too many page levels' },
   DOC_PAGE_IS_HOME: { status: 409, message: 'The space home page cannot be moved or deleted' },
