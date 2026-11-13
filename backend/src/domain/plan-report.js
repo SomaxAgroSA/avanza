@@ -15,14 +15,14 @@
 const { weighted } = require('./plan')
 
 const DAY_MS = 86400000
-const HEALTH_FACTORS = ['schedule', 'progress', 'stuck', 'effort', 'issues']
+// Os problemas da Gestão não entram na saúde (pedido da coordenação, 13/11/2026): ficam só na aba Problemas.
+const HEALTH_FACTORS = ['schedule', 'progress', 'stuck', 'effort']
 /** Limites de cada fator: até `ok` está bem; até `attention`, atenção; acima, crítico. */
 const LIMITS = {
   schedule: { ok: 0, attention: 20 }, // % dos abertos com data que estão atrasados
   progress: { ok: 10, attention: 25 }, // pontos de progresso abaixo do planejado
   stuck: { ok: 0, attention: 10 }, // % dos abertos parados
   effort: { ok: 10, attention: 25 }, // % de realizado acima do estimado (feitos)
-  issues: { ok: 0, attention: 2 }, // problemas em aberto na Gestão
 }
 const RANK = { none: -1, ok: 0, attention: 1, critical: 2 }
 
@@ -128,7 +128,7 @@ function planReport(options) {
     over_effort: overEffort.map((i) => i.id),
   }
 
-  return { today, summary, schedule, effort, resources, groups, details, health: health({ open, overdue, stuck, active, today, deviation, issues: options.issues, progressOf }) }
+  return { today, summary, schedule, effort, resources, groups, details, health: health({ open, overdue, stuck, active, today, deviation, progressOf }) }
 }
 
 function health(data) {
@@ -137,13 +137,11 @@ function health(data) {
   const scheduled = data.active.filter(startOf)
   const planned = scheduled.length ? weighted(scheduled.map((i) => ({ value: expectedProgress(i, data.today), weight: metric(i, 'estimated_hours') }))) : null
   const actual = scheduled.length ? weighted(scheduled.map((i) => ({ value: data.progressOf(i), weight: metric(i, 'estimated_hours') }))) : null
-  const openIssues = (data.issues || []).filter((i) => i.state !== 'resolved').length
   const factors = [
     factor('schedule', dated.length ? percent(data.overdue.filter(endOf).length, dated.length) : null, { count: data.overdue.length, of: dated.length }),
     factor('progress', planned === null ? null : Math.max(0, planned - actual), { planned, actual }),
     factor('stuck', data.open.length ? percent(data.stuck.length, data.open.length) : null, { count: data.stuck.length, of: data.open.length }),
     factor('effort', data.deviation ? Math.max(0, data.deviation.percent) : null, { hours: data.deviation ? data.deviation.hours : null }),
-    factor('issues', openIssues),
   ]
   const level = factors.reduce((worst, f) => (RANK[f.level] > RANK[worst] ? f.level : worst), 'none')
   return { level, factors }

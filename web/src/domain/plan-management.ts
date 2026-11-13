@@ -64,7 +64,8 @@ export interface IssueInput {
 
 /* ------------------------------------------------------------------ relatório e saúde */
 
-export const HEALTH_FACTORS = ['schedule', 'progress', 'stuck', 'effort', 'issues'] as const
+/** Os problemas da Gestão não entram na saúde: ficam só na aba Problemas. */
+export const HEALTH_FACTORS = ['schedule', 'progress', 'stuck', 'effort'] as const
 export type HealthFactorKey = (typeof HEALTH_FACTORS)[number]
 export type HealthLevel = 'ok' | 'attention' | 'critical' | 'none'
 
