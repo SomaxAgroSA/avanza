@@ -18,6 +18,8 @@ function toUserDto(user) {
     locale: user.locale,
     theme: user.theme,
     email_notifications: user.emailNotifications !== false,
+    // página ao entrar (§38); '' = automática
+    home_page: user.homePage || '',
     created_at: iso(user.createdAt),
     updated_at: iso(user.updatedAt),
     last_login_at: iso(user.lastLoginAt),

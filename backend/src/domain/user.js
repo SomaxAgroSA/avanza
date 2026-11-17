@@ -10,6 +10,11 @@ const attachmentDomain = require('./attachment')
 const USER_STATUS = Object.freeze({ ACTIVE: 'active', DISABLED: 'disabled' })
 const LOCALES = Object.freeze(['pt-BR', 'en', 'es'])
 const THEMES = Object.freeze(['light', 'dark', 'system'])
+/**
+ * Página que a pessoa abre ao entrar no Avanza (§38), escolhida em Controle de acesso. '' = automática
+ * (Panorama para quem vê o painel executivo; senão, a lista de projetos). Só telas do menu.
+ */
+const HOME_PAGES = Object.freeze(['', '/tracking', '/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/kanban', '/docs'])
 
 const PASSWORD_MIN = 10
 const PASSWORD_MAX = 72 // limite do bcrypt
@@ -75,6 +80,7 @@ module.exports = {
   USER_STATUS,
   LOCALES,
   THEMES,
+  HOME_PAGES,
   PASSWORD_MIN,
   PASSWORD_MAX,
   AVATAR_MAX_BYTES,

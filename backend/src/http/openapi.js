@@ -3,6 +3,8 @@
  * Mantenha em sincronia com main.pb.js e docs/api.md.
  */
 
+const { HOME_PAGES } = require('../domain/user')
+
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` })
 
 function envelope(dataSchema, withPageMeta) {
@@ -285,12 +287,13 @@ function build() {
             { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'name, key, created_at, due_date, status, priority; prefixo "-" = desc' },
             { name: 'search', in: 'query', schema: { type: 'string' } },
-            { name: 'status', in: 'query', schema: { type: 'string' } },
-            { name: 'priority', in: 'query', schema: { type: 'string' } },
-            { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência do projeto; none = sem urgência' },
+            { name: 'status', in: 'query', schema: { type: 'string' }, description: 'um ou vários separados por vírgula (§37), ex.: planning,active' },
+            { name: 'priority', in: 'query', schema: { type: 'string' }, description: 'um ou vários separados por vírgula (§37), ex.: high,critical' },
+            { name: 'urgency', in: 'query', schema: { type: 'string' }, description: 'high, medium, low ou none (sem urgência); um ou vários separados por vírgula (§37)' },
             { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
             { name: 'parent_id', in: 'query', schema: { type: 'string' }, description: 'subprojetos deste pai; none = só projetos sem pai (§34)' },
             { name: 'owner_id', in: 'query', schema: { type: 'string' } },
+            { name: 'facets', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'true = meta.facets com as contagens por status, priority e urgency (cada grupo sem o próprio filtro; §37)' },
           ],
         }),
         post: op('Cria projeto (projects.create); criador vira dono e gestor', ['projects'], { 201: ok('Criado', ref('Project')), 409: errorResponse('PROJECT_KEY_IN_USE') }, {
@@ -1242,6 +1245,7 @@ function build() {
             role_id: { type: 'string' },
             locale: { type: 'string', enum: ['pt-BR', 'en', 'es'] },
             theme: { type: 'string', enum: ['light', 'dark', 'system'] },
+            home_page: { type: 'string', enum: HOME_PAGES, description: 'tela aberta ao entrar (§38); "" = automática' },
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
             last_login_at: { type: ['string', 'null'], format: 'date-time' },
@@ -1266,6 +1270,7 @@ function build() {
             role_id: { type: 'string' },
             locale: { type: 'string', enum: ['pt-BR', 'en', 'es'] },
             theme: { type: 'string', enum: ['light', 'dark', 'system'] },
+            home_page: { type: 'string', enum: HOME_PAGES, description: 'tela aberta ao entrar (§38; exige users.edit, também para a própria); "" = automática' },
           },
         },
         Role: {

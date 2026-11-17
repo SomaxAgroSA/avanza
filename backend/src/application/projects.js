@@ -48,13 +48,21 @@ const FIELD_RULES = {
 
 const CREATE_SCHEMA = Object.assign({ key: [rules.required(), keyRule] }, FIELD_RULES)
 
+/** Um ou vários valores separados por vírgula (botões de filtro, §37): todos têm de ser válidos. */
+const listOf = (options) =>
+  rules.custom((value) => (typeof value !== 'string' ? 'invalid_type' : value.split(',').every((v) => options.includes(v)) ? null : 'invalid_option'))
+/** "a,b,a" → ['a', 'b']; vazio → undefined (sem filtro). */
+const toList = (value) => (value ? Array.from(new Set(value.split(','))) : undefined)
+
 const LIST_SCHEMA = {
   view: [rules.oneOf(projectDomain.PROJECT_VIEWS)],
   search: [rules.maxLength(100)],
-  status: [rules.oneOf(projectDomain.PROJECT_STATUS)],
-  priority: [rules.oneOf(projectDomain.PROJECT_PRIORITY)],
+  status: [listOf(projectDomain.PROJECT_STATUS)],
+  priority: [listOf(projectDomain.PROJECT_PRIORITY)],
   // `none` = sem urgência
-  urgency: [rules.oneOf(URGENCY_LEVELS.concat(['none']))],
+  urgency: [listOf(URGENCY_LEVELS.concat(['none']))],
+  // `true` = devolve também as contagens de cada filtro (meta.facets)
+  facets: [rules.oneOf(['true', 'false'])],
   // `none` = sem área
   area_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   // `none` = só projetos sem pai
@@ -212,23 +220,25 @@ function createProjectService(deps) {
         area_id: pick('area_id'),
         parent_id: pick('parent_id'),
         owner_id: pick('owner_id'),
+        facets: pick('facets'),
       },
       LIST_SCHEMA,
     )
     const pagination = parsePagination(q)
-    const result = await projects.list({
+    const listQuery = {
       scope: { userId: ctx.principal.userId, viewAll: rbac.can(ctx.principal, 'projects.view_all') },
       view: filters.view || 'all',
       search: filters.search,
-      status: filters.status,
-      priority: filters.priority,
-      urgency: filters.urgency,
+      status: toList(filters.status),
+      priority: toList(filters.priority),
+      urgency: toList(filters.urgency),
       areaId: filters.area_id,
       parentId: filters.parent_id,
       ownerId: filters.owner_id,
-      sort: parseSort(q.sort, SORTABLE, 'name'),
-      pagination,
-    })
+    }
+    const result = await projects.list(Object.assign({ sort: parseSort(q.sort, SORTABLE, 'name'), pagination }, listQuery))
+    // contagens dos botões de filtro (§37): cada grupo conta com os demais filtros e a busca, menos o próprio
+    const facets = filters.facets === 'true' ? await projects.facets(listQuery) : undefined
 
     const ids = result.items.map((p) => p.id)
     const counts = await members.countByProjects(ids)
@@ -251,7 +261,7 @@ function createProjectService(deps) {
           present(ctx, p, { owner: owners[p.ownerId] || null, leads: owners, memberCount: counts[p.id] || 0, role: roles[p.id] || null, areas, parents, childCounts }),
         ),
       ),
-      meta: buildPageMeta(pagination, result.total),
+      meta: facets ? Object.assign(buildPageMeta(pagination, result.total), { facets }) : buildPageMeta(pagination, result.total),
     }
   }
 

@@ -41,6 +41,49 @@ function columns(fields, data) {
   return values
 }
 
+/** Um valor ou vários (botões de filtro, §37) → lista. */
+const asList = (value) => [].concat(value)
+
+/** Grupos contados nos botões de filtro (§37) → coluna (urgência vazia conta como `none`). */
+const FACET_COLUMNS = [
+  ['status', 'status'],
+  ['priority', 'priority'],
+  ['urgency', `COALESCE(urgency, '')`],
+]
+
+/**
+ * WHERE da lista de projetos: visão, acesso, busca e filtros. `skip` deixa de fora o filtro de um grupo
+ * (`status`, `priority` ou `urgency`) — é assim que cada grupo de botões conta os seus valores.
+ */
+function listFilter(query, skip) {
+  const where = []
+  const params = []
+  const param = (value) => {
+    params.push(value)
+    return `$${params.length}`
+  }
+  if (query.view === 'mine' || !query.scope.viewAll) {
+    where.push(`id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
+  }
+  where.push(query.view === 'archived' ? 'archived_at IS NOT NULL' : 'archived_at IS NULL')
+  // em andamento / terminados: o status do projeto decide (domain/project.js#VIEW_STATUSES)
+  if (VIEW_STATUSES[query.view]) where.push(`status = ANY(${param(VIEW_STATUSES[query.view].slice())}::text[])`)
+  if (query.search) {
+    const pattern = param(likePattern(query.search))
+    where.push(`(name ILIKE ${pattern} OR "key" ILIKE ${pattern})`)
+  }
+  if (query.status && skip !== 'status') where.push(`status = ANY(${param(asList(query.status))}::text[])`)
+  if (query.priority && skip !== 'priority') where.push(`priority = ANY(${param(asList(query.priority))}::text[])`)
+  if (query.urgency && skip !== 'urgency') {
+    where.push(`COALESCE(urgency, '') = ANY(${param(asList(query.urgency).map((u) => (u === 'none' ? '' : u)))}::text[])`)
+  }
+  if (query.areaId) where.push(query.areaId === 'none' ? 'area_id IS NULL' : `area_id = ${param(query.areaId)}`)
+  // `none` = só projetos sem pai (§34)
+  if (query.parentId) where.push(query.parentId === 'none' ? 'parent_id IS NULL' : `parent_id = ${param(query.parentId)}`)
+  if (query.ownerId) where.push(`owner_id = ${param(query.ownerId)}`)
+  return { filter: `WHERE ${where.join(' AND ')}`, params }
+}
+
 function createProjectRepository(db) {
   const TABLE = 'projects'
   const FIELDS = {
@@ -131,31 +174,7 @@ function createProjectRepository(db) {
     },
 
     async list(query) {
-      const where = []
-      const params = []
-      const param = (value) => {
-        params.push(value)
-        return `$${params.length}`
-      }
-      if (query.view === 'mine' || !query.scope.viewAll) {
-        where.push(`id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
-      }
-      where.push(query.view === 'archived' ? 'archived_at IS NOT NULL' : 'archived_at IS NULL')
-      // em andamento / terminados: o status do projeto decide (domain/project.js#VIEW_STATUSES)
-      if (VIEW_STATUSES[query.view]) where.push(`status = ANY(${param(VIEW_STATUSES[query.view].slice())}::text[])`)
-      if (query.search) {
-        const pattern = param(likePattern(query.search))
-        where.push(`(name ILIKE ${pattern} OR "key" ILIKE ${pattern})`)
-      }
-      if (query.status) where.push(`status = ${param(query.status)}`)
-      if (query.priority) where.push(`priority = ${param(query.priority)}`)
-      if (query.urgency) where.push(`urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
-      if (query.areaId) where.push(query.areaId === 'none' ? 'area_id IS NULL' : `area_id = ${param(query.areaId)}`)
-      // `none` = só projetos sem pai (§34)
-      if (query.parentId) where.push(query.parentId === 'none' ? 'parent_id IS NULL' : `parent_id = ${param(query.parentId)}`)
-      if (query.ownerId) where.push(`owner_id = ${param(query.ownerId)}`)
-
-      const filter = `WHERE ${where.join(' AND ')}`
+      const { filter, params } = listFilter(query)
       const counted = await db.one(`SELECT count(*) AS total FROM projects ${filter}`, params)
       const page = params.concat([query.pagination.perPage, query.pagination.offset])
       const rows = await db.query(
@@ -163,6 +182,23 @@ function createProjectRepository(db) {
         page,
       )
       return { items: rows.map(toEntity), total: counted.total }
+    },
+
+    /**
+     * Contagens dos botões de filtro da lista (§37): por status, prioridade e urgência (vazia = `none`),
+     * com a mesma visão, busca e filtros da lista — menos o filtro do próprio grupo. Valor sem projeto não aparece.
+     */
+    async facets(query) {
+      const out = {}
+      for (const [group, column] of FACET_COLUMNS) {
+        const { filter, params } = listFilter(query, group)
+        const rows = await db.query(`SELECT ${column} AS value, count(*)::int AS total FROM projects ${filter} GROUP BY 1`, params)
+        out[group] = {}
+        rows.forEach((row) => {
+          out[group][row.value || 'none'] = Number(row.total)
+        })
+      }
+      return out
     },
 
     /**

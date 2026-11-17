@@ -408,25 +408,42 @@ function createFakeRepositories(store) {
 
   const RANKS = { status: ['planning', 'active', 'paused', 'completed', 'cancelled'], priority: ['low', 'medium', 'high', 'critical'], urgency: ['low', 'medium', 'high'] }
   const SORT_FIELDS = { name: 'name', key: 'key', created: 'createdAt', due_date: 'dueDate', status: 'statusRank', priority: 'priorityRank', urgency: 'urgencyRank', area: 'areaId', owner: 'ownerId', lead: 'leadId', dev_lead: 'devLeadId', members: 'memberCount' }
+  // mesma regra do repositório real (infrastructure/repositories/projects.js#listFilter); `skip` = grupo contado
+  const FACET_VALUE = { status: (p) => p.status, priority: (p) => p.priority, urgency: (p) => p.urgency || 'none' }
+  const filterProjects = (query, skip) => {
+    const memberOf = (p) => store.projectMembers.some((m) => m.projectId === p.id && m.userId === query.scope.userId)
+    let items = store.projects.filter((p) => (query.view === 'mine' || !query.scope.viewAll ? memberOf(p) : true))
+    items = items.filter((p) => (query.view === 'archived' ? !!p.archivedAt : !p.archivedAt))
+    const viewStatuses = { ongoing: ['planning', 'active', 'paused'], finished: ['completed', 'cancelled'] }[query.view]
+    if (viewStatuses) items = items.filter((p) => viewStatuses.includes(p.status))
+    if (query.search) {
+      const q = query.search.toLowerCase()
+      items = items.filter((p) => p.name.toLowerCase().includes(q) || p.key.toLowerCase().includes(q))
+    }
+    Object.keys(FACET_VALUE).forEach((group) => {
+      if (query[group] && skip !== group) items = items.filter((p) => [].concat(query[group]).includes(FACET_VALUE[group](p)))
+    })
+    if (query.areaId) items = items.filter((p) => (p.areaId || 'none') === query.areaId)
+    if (query.parentId) items = items.filter((p) => (p.parentId || 'none') === query.parentId)
+    if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
+    return items
+  }
   const projectRepository = {
     findById: (id) => store.projects.find((p) => p.id === id) || null,
     findByKey: (key) => store.projects.find((p) => p.key === key) || null,
+    facets: (query) => {
+      const out = {}
+      Object.keys(FACET_VALUE).forEach((group) => {
+        out[group] = {}
+        filterProjects(query, group).forEach((p) => {
+          const value = FACET_VALUE[group](p)
+          out[group][value] = (out[group][value] || 0) + 1
+        })
+      })
+      return out
+    },
     list: (query) => {
-      const memberOf = (p) => store.projectMembers.some((m) => m.projectId === p.id && m.userId === query.scope.userId)
-      let items = store.projects.filter((p) => (query.view === 'mine' || !query.scope.viewAll ? memberOf(p) : true))
-      items = items.filter((p) => (query.view === 'archived' ? !!p.archivedAt : !p.archivedAt))
-      const viewStatuses = { ongoing: ['planning', 'active', 'paused'], finished: ['completed', 'cancelled'] }[query.view]
-      if (viewStatuses) items = items.filter((p) => viewStatuses.includes(p.status))
-      if (query.search) {
-        const q = query.search.toLowerCase()
-        items = items.filter((p) => p.name.toLowerCase().includes(q) || p.key.toLowerCase().includes(q))
-      }
-      if (query.status) items = items.filter((p) => p.status === query.status)
-      if (query.priority) items = items.filter((p) => p.priority === query.priority)
-      if (query.urgency) items = items.filter((p) => (p.urgency || 'none') === query.urgency)
-      if (query.areaId) items = items.filter((p) => (p.areaId || 'none') === query.areaId)
-      if (query.parentId) items = items.filter((p) => (p.parentId || 'none') === query.parentId)
-      if (query.ownerId) items = items.filter((p) => p.ownerId === query.ownerId)
+      let items = filterProjects(query)
       const sort = query.sort[0]
       if (sort) {
         const field = SORT_FIELDS[sort.column]
