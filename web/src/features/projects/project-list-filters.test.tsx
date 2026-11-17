@@ -36,10 +36,10 @@ describe('Listas de proyectos: filtros en una línea (§37)', () => {
   it('Estado en selector; Prioridad y Urgencia en botones con cantidades; sin Departamento ni "Más filtros"', async () => {
     const { list } = setup()
     const prioridad = await screen.findByRole('group', { name: 'Prioridad' })
-    // en el orden pedido, con la cantidad de cada uno (sin proyectos = 0) cuando llega la respuesta
-    await waitFor(() => expect(texts(within(prioridad).getAllByRole('button'))).toEqual(['Baja1', 'Media13', 'Alta7', 'Crítica0']))
+    // de mayor a menor (Crítica → Baja), con la cantidad de cada uno (sin proyectos = 0) cuando llega la respuesta
+    await waitFor(() => expect(texts(within(prioridad).getAllByRole('button'))).toEqual(['Crítica0', 'Alta7', 'Media13', 'Baja1']))
     const urgencia = screen.getByRole('group', { name: 'Urgencia' })
-    expect(texts(within(urgencia).getAllByRole('button'))).toEqual(['Baja8', 'Media8', 'Alta3', 'Sin urgencia2'])
+    expect(texts(within(urgencia).getAllByRole('button'))).toEqual(['Alta3', 'Media8', 'Baja8', 'Sin urgencia2'])
     expect(screen.getByRole('combobox', { name: 'Estado' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Departamento' })).toBeNull()
     expect(screen.queryByRole('button', { name: /Más filtros/ })).toBeNull()

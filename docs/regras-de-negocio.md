@@ -752,7 +752,7 @@ Na aba Tarefas → Lista do projeto, o botão **Visível para TI** (ícone de no
 
 - As quatro listas (Todos os meus projetos, Em andamento, Concluídos, Arquivados) têm a barra numa linha só: **busca · Estado** (seletor) **· Prioridade e Urgência** (botões) **· Colunas** à direita (pedido da coordenação, 17/11/2026).
 - **Estado** oferece só os status da lista (Em andamento: planejamento, em curso, pausado; Concluídos: concluído, cancelado; Todos e Arquivados: todos).
-- **Prioridade** (Baixa, Média, Alta, Crítica) e **Urgência** (Baixa, Média, Alta, Sem urgência) são botões que ligam e desligam; vários ao mesmo tempo valem como "ou" dentro do grupo e "e" entre grupos. Na API: `status`, `priority` e `urgency` aceitam vários valores separados por vírgula.
+- **Prioridade** (Crítica, Alta, Média, Baixa) e **Urgência** (Alta, Média, Baixa, Sem urgência) são botões que ligam e desligam, da maior para a menor e com o nome do grupo ao lado, na mesma linha (ajuste da coordenação, 17/11/2026); vários ao mesmo tempo valem como "ou" dentro do grupo e "e" entre grupos. Na API: `status`, `priority` e `urgency` aceitam vários valores separados por vírgula.
 - Cada botão e cada opção de Estado mostra **quantos projetos** há com aquele valor, contando a lista, a busca e os outros filtros — não o próprio grupo (`GET /projects?facets=true` → `meta.facets`). Valor sem projetos aparece com 0, apagado, e continua clicável.
 - **Departamento** e **Projeto pai** saíram da barra (as colunas continuam; a API ainda aceita `area_id` e `parent_id`). Um desses filtros guardado no navegador de antes é descartado ao abrir a lista: nada filtra escondido.
 

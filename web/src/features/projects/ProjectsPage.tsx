@@ -6,7 +6,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
 import {
-  PROJECT_PRIORITIES,
+  PROJECT_PRIORITY_FILTER_ORDER,
   PROJECT_STATUSES,
   PROJECT_URGENCY_FILTER_ORDER,
   VIEW_STATUSES,
@@ -196,7 +196,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         filter: {
           label: t('projects.fields.priority'),
           variant: 'buttons',
-          options: PROJECT_PRIORITIES.map((p) => ({ value: p, label: t(`projects.priority.${p}`), count: count('priority', p) })),
+          options: PROJECT_PRIORITY_FILTER_ORDER.map((p) => ({ value: p, label: t(`projects.priority.${p}`), count: count('priority', p) })),
         },
       },
       {

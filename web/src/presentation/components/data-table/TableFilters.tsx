@@ -78,7 +78,7 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
 }
 
 /**
- * Filtro em botões (§37): o nome em cima e um botão por valor, que liga e desliga; vários ao mesmo tempo
+ * Filtro em botões (§37): o nome ao lado, na mesma linha, e um botão por valor, que liga e desliga; vários ao mesmo tempo
  * (o valor do filtro são os escolhidos unidos por vírgula). Ligado fica verde; com `count`, mostra a
  * quantidade, e o valor sem registros fica apagado (continua clicável).
  */
@@ -89,8 +89,8 @@ export function FilterButtons({ filter, value, onChange }: FilterProps) {
     onChange(next.length ? next.join(',') : undefined)
   }
   return (
-    <div role="group" aria-label={filter.label} className="flex flex-col gap-1">
-      <span aria-hidden className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+    <div role="group" aria-label={filter.label} className="ml-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span aria-hidden className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted">
         {filter.label}
       </span>
       <div className="flex flex-wrap gap-1">
