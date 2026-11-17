@@ -41,7 +41,8 @@ jobs:
       - name: Saúde
         run: |
           for i in $(seq 1 30); do
-            curl -fsS http://127.0.0.1/api/v1/health && exit 0
+            # pelo proxy de borda, com o hostname (outro host cai no "ok" genérico do proxy)
+            curl -fsS -H 'Host: avanza.somaxagro.com' http://127.0.0.1/api/v1/health | grep -q '"status":"ok"' && exit 0
             sleep 2
           done
           docker compose -f /opt/avanza/compose.yml logs --tail 200
