@@ -104,13 +104,16 @@ export function FilterButtons({ filter, value, onChange }: FilterProps) {
               onClick={() => toggle(option.value)}
               className={cn(
                 'inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                on ? 'border-primary bg-primary text-primary-fg hover:bg-primary-hover' : 'border-border-strong bg-surface text-fg hover:border-primary hover:text-primary-text',
-                !on && option.count === 0 && 'opacity-60',
+                on
+                  ? 'border-primary bg-primary text-primary-fg hover:bg-primary-hover'
+                  : // sem registros: apagado com a cor de texto suave (AA), não com transparência (que derruba o contraste)
+                    cn('border-border-strong bg-surface hover:border-primary hover:text-primary-text', option.count === 0 ? 'border-border text-muted' : 'text-fg'),
               )}
             >
               {on && <Check className="size-3.5" aria-hidden />}
               {option.label}
-              {option.count !== undefined && <span className={cn('text-xs font-semibold tabular-nums', on ? 'text-primary-fg/85' : 'text-muted')}>{option.count}</span>}
+              {/* ligado: a mesma cor do texto (branco sobre o verde passa no AA; com transparência não passa) */}
+              {option.count !== undefined && <span className={cn('text-xs font-semibold tabular-nums', on ? 'text-primary-fg' : 'text-muted')}>{option.count}</span>}
             </button>
           )
         })}
