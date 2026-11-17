@@ -1,0 +1,52 @@
+# Publica na VM Azure (runner self-hosted "avanza-prod"): copia a configuração, gera a imagem na própria
+# VM e sobe o compose. Segredos ficam só no /opt/avanza/.env da VM. Volta atrás: "Run workflow" com um ref.
+name: Deploy produção
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit ou tag para publicar (vazio = main)
+        required: false
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, avanza-prod]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Configuração do servidor
+        run: |
+          cp deploy/azure/compose.yml /opt/avanza/compose.yml
+          cp deploy/azure/caddy/Caddyfile /opt/avanza/caddy/Caddyfile
+
+      - name: Build da imagem
+        run: docker build -t avanza:$(git rev-parse --short HEAD) -t avanza:latest .
+
+      - name: Sobe
+        working-directory: /opt/avanza
+        run: |
+          docker compose up -d --remove-orphans
+          docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+
+      - name: Saúde
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1/api/v1/health && exit 0
+            sleep 2
+          done
+          docker compose -f /opt/avanza/compose.yml logs --tail 200
+          exit 1
+
+      - name: Limpeza
+        if: always()
+        run: docker image prune -f
