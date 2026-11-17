@@ -43,6 +43,8 @@ describe('repositórios do núcleo (Postgres)', () => {
         { name: 'Ana', email: 'ana@avanza.test', avatarUrl: null, status: 'active', roleId: roleIds.MEMBER, locale: 'pt-BR', theme: 'system' },
       )
       assert.equal(user.emailNotifications, true)
+      // §38: nasce com a página inicial automática
+      assert.equal(user.homePage, '')
       assert.equal(user.lastLoginAt, null)
       assert.ok(user.createdAt instanceof Date && user.updatedAt instanceof Date)
       assert.equal('password' in user || 'passwordHash' in user, false)
@@ -85,6 +87,9 @@ describe('repositórios do núcleo (Postgres)', () => {
       assert.equal(saved.roleId, roleIds.VIEWER)
       assert.equal(saved.emailNotifications, false)
       assert.equal(saved.lastLoginAt.toISOString(), at.toISOString())
+      assert.equal((await users.update(user.id, { homePage: '/projects/ongoing' })).homePage, '/projects/ongoing')
+      assert.equal((await users.findById(user.id)).homePage, '/projects/ongoing')
+      assert.equal((await users.update(user.id, { homePage: '' })).homePage, '')
       await users.update(user.id, { password: 'NovaSenha9' })
       assert.equal(await users.verifyPassword(user.id, 'NovaSenha9'), true)
       assert.equal(await users.verifyPassword(user.id, 'Senha123'), false)

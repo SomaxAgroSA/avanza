@@ -15,6 +15,8 @@ export interface User {
   theme: ThemePreference
   /** Recebe as notificações também por e-mail (quando o envio está ligado). */
   emailNotifications: boolean
+  /** Tela aberta ao entrar no Avanza (§38); '' = automática. */
+  homePage: string
   createdAt: Date | null
   updatedAt: Date | null
   lastLoginAt: Date | null

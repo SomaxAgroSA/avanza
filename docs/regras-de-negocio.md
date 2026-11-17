@@ -747,3 +747,18 @@ Na aba Tarefas → Lista do projeto, o botão **Visível para TI** (ícone de no
 - Quem edita a tarefa marca e desmarca (`PUT /tasks/{id}/it-visible`); o Responsável TI não muda a marca. Não exige os campos obrigatórios do status; fica no histórico da tarefa ("Visível para TI: Não → Sim").
 - A coluna e o filtro **Visível para TI** (escondidos por padrão) mostram o que está compartilhado; na API, toda tarefa sai com `it_visible` e há o filtro `GET /tasks?it_visible=true|false`.
 - **Claude (MCP):** `set_task_it_visible` e o filtro `it_visible` de `list_tasks`.
+
+## 37. Filtros das listas de projetos
+
+- As quatro listas (Todos os meus projetos, Em andamento, Concluídos, Arquivados) têm a barra numa linha só: **busca · Estado** (seletor) **· Prioridade e Urgência** (botões) **· Colunas** à direita (pedido da coordenação, 17/11/2026).
+- **Estado** oferece só os status da lista (Em andamento: planejamento, em curso, pausado; Concluídos: concluído, cancelado; Todos e Arquivados: todos).
+- **Prioridade** (Baixa, Média, Alta, Crítica) e **Urgência** (Baixa, Média, Alta, Sem urgência) são botões que ligam e desligam; vários ao mesmo tempo valem como "ou" dentro do grupo e "e" entre grupos. Na API: `status`, `priority` e `urgency` aceitam vários valores separados por vírgula.
+- Cada botão e cada opção de Estado mostra **quantos projetos** há com aquele valor, contando a lista, a busca e os outros filtros — não o próprio grupo (`GET /projects?facets=true` → `meta.facets`). Valor sem projetos aparece com 0, apagado, e continua clicável.
+- **Departamento** e **Projeto pai** saíram da barra (as colunas continuam; a API ainda aceita `area_id` e `parent_id`). Um desses filtros guardado no navegador de antes é descartado ao abrir a lista: nada filtra escondido.
+
+## 38. Página inicial por pessoa
+
+- Em Configurações → Controle de acesso → Por pessoa, ao lado do Perfil, **Página inicial** define a tela que a pessoa abre ao entrar no Avanza (e em "Voltar ao início"); depois ela navega livremente.
+- Opções: **Automática** (como antes: Panorama para quem tem `executive.view`; senão, Todos os meus projetos), Panorama, Todos os meus projetos, Em andamento, Concluídos, Arquivados, Kanban e Documentação — só as que o perfil da pessoa abre.
+- Se a pessoa perde o acesso à tela escolhida, entra na automática. Links de e-mail, avisos e o `?next=` do login continuam abrindo direto onde apontam.
+- Gravada em `users.home_page` (migration 0027; `''` = automática; lista fechada em `domain/user.js#HOME_PAGES`); muda por `PATCH /users/{id}` com `users.edit` (também para a própria) e fica no histórico (`user.updated`).

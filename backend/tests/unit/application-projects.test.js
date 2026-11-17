@@ -433,3 +433,42 @@ describe('application/projects — enlace da plataforma e ordenação da lista',
     assert.deepEqual(await keys('status'), ['BBB', 'CCC', 'AAA'])
   })
 })
+
+describe('application/projects — filtros com vários valores e contagens (§37)', () => {
+  it('status, prioridade e urgência aceitam vários valores separados por vírgula', async () => {
+    const { projects, ctx } = await setup()
+    await projects.createProject(ctx.manager, input({ priority: 'high', urgency: 'high' }))
+    await projects.createProject(ctx.manager, input({ name: 'Dois', key: 'DOI', priority: 'critical', urgency: 'low', status: 'active' }))
+    await projects.createProject(ctx.manager, input({ name: 'Tres', key: 'TRE', priority: 'low', status: 'paused' }))
+    const keys = async (q) => (await projects.listProjects(ctx.manager, Object.assign({ sort: 'key' }, q))).items.map((p) => p.key)
+    assert.deepEqual(await keys({ priority: 'high,critical' }), ['CRM', 'DOI'])
+    assert.deepEqual(await keys({ urgency: 'none,low' }), ['DOI', 'TRE'])
+    assert.deepEqual(await keys({ priority: 'high,critical', urgency: 'low' }), ['DOI'])
+    assert.deepEqual(await keys({ status: 'active,paused' }), ['DOI', 'TRE'])
+    assert.deepEqual(await keys({ priority: 'low' }), ['TRE'])
+    await assert.rejects(() => projects.listProjects(ctx.manager, { priority: 'high,urgente' }), { code: 'VALIDATION_ERROR' })
+    await assert.rejects(() => projects.listProjects(ctx.manager, { urgency: ',' }), { code: 'VALIDATION_ERROR' })
+    await assert.rejects(() => projects.listProjects(ctx.manager, { status: 'active,' }), { code: 'VALIDATION_ERROR' })
+  })
+
+  it('facets=true conta cada valor com os demais filtros (o próprio filtro não conta) e respeita a busca', async () => {
+    const { projects, ctx } = await setup()
+    await projects.createProject(ctx.manager, input({ priority: 'high', status: 'active' }))
+    await projects.createProject(ctx.manager, input({ name: 'Dois', key: 'DOI', priority: 'high', urgency: 'low' }))
+    await projects.createProject(ctx.manager, input({ name: 'Tres', key: 'TRE', priority: 'low', status: 'active', urgency: 'high' }))
+    const page = await projects.listProjects(ctx.manager, { status: 'active', facets: 'true' })
+    assert.deepEqual(page.items.map((p) => p.key).sort(), ['CRM', 'TRE'])
+    assert.deepEqual(page.meta.facets.status, { planning: 1, active: 2 })
+    assert.deepEqual(page.meta.facets.priority, { high: 1, low: 1 })
+    assert.deepEqual(page.meta.facets.urgency, { none: 1, high: 1 })
+    const searched = await projects.listProjects(ctx.manager, { search: 'dois', facets: 'true' })
+    assert.deepEqual(searched.meta.facets.status, { planning: 1 })
+    assert.deepEqual(searched.meta.facets.urgency, { low: 1 })
+    // a visão manda: "Em andamento" não conta concluídos
+    await projects.updateProject(ctx.manager, page.items[0].id, { status: 'completed' })
+    assert.deepEqual((await projects.listProjects(ctx.manager, { view: 'ongoing', facets: 'true' })).meta.facets.status, { planning: 1, active: 1 })
+    // sem facets: nada novo no meta
+    assert.equal((await projects.listProjects(ctx.manager, {})).meta.facets, undefined)
+    await assert.rejects(() => projects.listProjects(ctx.manager, { facets: 'sim' }), { code: 'VALIDATION_ERROR' })
+  })
+})

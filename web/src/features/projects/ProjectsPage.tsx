@@ -1,12 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Archive, ArchiveRestore, Copy, ExternalLink, FolderPlus, Users } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
-import { PROJECT_PRIORITIES, PROJECT_STATUSES, VIEW_STATUSES, isOverdue, type Project, type ProjectView, type UserSummary } from '@/domain/projects'
-import type { ProjectListQuery } from '@/domain/repositories'
+import {
+  PROJECT_PRIORITIES,
+  PROJECT_STATUSES,
+  PROJECT_URGENCY_FILTER_ORDER,
+  VIEW_STATUSES,
+  isOverdue,
+  projectListFilters,
+  type Project,
+  type ProjectView,
+  type UserSummary,
+} from '@/domain/projects'
 import {
   AppAvatar,
   AppButton,
@@ -28,9 +37,7 @@ import { useProjectLifecycle, useProjects, useTeamActivity, useUpdateProject } f
 import { ActivityCell, TeamActivityDrawer } from './team-activity'
 import { activityByProject } from './team-activity-data'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
-import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { AreaPicker } from '@/features/workflow/area-visuals'
-import { useAreaFilterOptions } from '@/features/workflow/area-options'
 import { useAreas } from '@/features/workflow/queries'
 import type { Area } from '@/domain/workflow'
 
@@ -43,9 +50,6 @@ const TITLES: Record<ProjectView, string> = {
   finished: 'nav.projectsFinished',
   archived: 'nav.projectsArchived',
 }
-
-/** Projetos principais (sem pai), para o filtro "Projeto pai" (§34): os que têm subprojetos viram opção. */
-const MAIN_PROJECTS: ProjectListQuery = { view: 'all', page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' }, search: '', filters: { parent: 'none' } }
 
 export const AllProjectsPage = () => <ProjectsPage view="all" />
 export const MyProjectsPage = () => <ProjectsPage view="mine" />
@@ -69,7 +73,16 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const [params, setParams] = useSearchParams()
 
   const table = useDataTableState(`projects-${view}`, { sort: { id: 'name', direction: 'asc' }, columnVisibility: { parent: false } })
-  const projects = useProjects({ ...table.query, view })
+  // só os filtros da barra (§37): Departamento/Projeto pai guardados de antes não filtram escondidos — e saem do navegador
+  const filters = useMemo(() => projectListFilters(table.query.filters), [table.query.filters])
+  const { setFilter } = table
+  useEffect(() => {
+    Object.keys(table.state.filters)
+      .filter((id) => !(id in filters))
+      .forEach((id) => setFilter(id, undefined))
+  }, [table.state.filters, filters, setFilter])
+  const projects = useProjects({ ...table.query, filters, view, facets: true })
+  const facets = projects.data?.facets
   const lifecycle = useProjectLifecycle()
 
   const [viewing, setViewing] = useState<Project | null>(null)
@@ -97,17 +110,9 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
     })
   }
 
-  const urgencyOptions = useUrgencyFilterOptions()
-  const mainProjects = useProjects(MAIN_PROJECTS)
-  const parentOptions = useMemo(
-    () => [
-      { value: 'none', label: t('projects.parent.onlyMain') },
-      ...(mainProjects.data?.items ?? []).filter((p) => p.childCount > 0).map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
-    ],
-    [mainProjects.data, t],
-  )
+  // quantidade de projetos por valor (§37): com os demais filtros e a busca; sem projetos = 0
+  const count = useCallback((group: 'status' | 'priority' | 'urgency', value: string) => (facets ? (facets[group][value] ?? 0) : undefined), [facets])
   const areas = useAreas(false)
-  const areaOptions = useAreaFilterOptions(areas.data)
   const columns = useMemo<DataTableColumn<Project>[]>(
     () => [
       {
@@ -150,7 +155,8 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         sortable: true,
         size: 140,
         cell: (project) => <ProjectStatusBadge status={project.status} />,
-        filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
+        // seletor só com os status desta lista (§37)
+        filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`), count: count('status', s) })) },
       },
       // Gestión, Desarrollo y Trabajando junto al estado: se ven sin desplazar la tabla
       {
@@ -186,7 +192,12 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         sortDescFirst: true,
         size: 130,
         cell: (project) => <ProjectPriorityLabel priority={project.priority} />,
-        filter: { label: t('projects.fields.priority'), options: PROJECT_PRIORITIES.map((p) => ({ value: p, label: t(`projects.priority.${p}`) })) },
+        // botões (§37): vários ao mesmo tempo
+        filter: {
+          label: t('projects.fields.priority'),
+          variant: 'buttons',
+          options: PROJECT_PRIORITIES.map((p) => ({ value: p, label: t(`projects.priority.${p}`), count: count('priority', p) })),
+        },
       },
       {
         // semáforo: quem edita o projeto troca com um clique
@@ -196,19 +207,23 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         sortDescFirst: true,
         size: 160,
         cell: (project) => <ProjectUrgencyCell project={project} />,
-        filter: { label: t('tasks.fields.urgency'), options: urgencyOptions },
+        // botões (§37): da menor para a maior, e "sem urgência" no fim
+        filter: {
+          label: t('tasks.fields.urgency'),
+          variant: 'buttons',
+          options: PROJECT_URGENCY_FILTER_ORDER.map((u) => ({ value: u, label: t(`tasks.urgency.${u}`), count: count('urgency', u) })),
+        },
       },
       {
-        // área responsável: quem edita o projeto troca com um clique
+        // área responsável: quem edita o projeto troca com um clique (sem filtro na barra desde §37)
         id: 'area',
         header: t('tasks.fields.area'),
         sortable: true,
         size: 190,
         cell: (project) => <ProjectAreaCell project={project} areas={areas.data ?? []} />,
-        filter: { label: t('tasks.fields.area'), options: areaOptions },
       },
       {
-        // projeto pai (§34): filtra os subprojetos de um pai ou só os projetos principais
+        // projeto pai (§34; sem filtro na barra desde §37)
         id: 'parent',
         header: t('projects.parent.field'),
         size: 200,
@@ -220,7 +235,6 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
           ) : (
             <span className="text-subtle">—</span>
           ),
-        filter: { label: t('projects.parent.field'), options: parentOptions },
       },
       { id: 'members', header: t('projects.fields.members'), sortable: true, sortDescFirst: true, size: 110, align: 'end', cell: (project) => project.memberCount },
       {
@@ -235,7 +249,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, urgencyOptions, areas.data, areaOptions, parentOptions, view, showActivity, activity],
+    [t, locale, count, areas.data, view, showActivity, activity],
   )
 
   const emptyState =
@@ -290,8 +304,6 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         error={projects.isError ? { correlationId: isAppError(projects.error) ? projects.error.correlationId : undefined } : null}
         onRetry={() => void projects.refetch()}
         searchPlaceholder={t('projects.searchPlaceholder')}
-        // status, prioridade, urgência e área à vista
-        maxVisibleFilters={4}
         emptyState={emptyState}
         actions={{
           onView: setViewing,

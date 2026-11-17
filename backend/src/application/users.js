@@ -36,6 +36,8 @@ const UPDATE_SCHEMA = {
   locale: [rules.oneOf(userDomain.LOCALES)],
   theme: [rules.oneOf(userDomain.THEMES)],
   email_notifications: [rules.boolean()],
+  // página ao entrar (§38): '' = automática
+  home_page: [rules.oneOf(userDomain.HOME_PAGES)],
 }
 
 const LIST_SCHEMA = {
@@ -48,7 +50,7 @@ const LIST_SCHEMA = {
 const SORTABLE = { name: 'name', email: 'email', status: 'status', created_at: 'created', last_login_at: 'last_login_at' }
 
 /** Mapeamento entidade (camelCase) -> nome público (auditoria/API). */
-const PUBLIC_KEYS = { name: 'name', email: 'email', roleId: 'role_id', locale: 'locale', theme: 'theme', status: 'status', emailNotifications: 'email_notifications' }
+const PUBLIC_KEYS = { name: 'name', email: 'email', roleId: 'role_id', locale: 'locale', theme: 'theme', status: 'status', emailNotifications: 'email_notifications', homePage: 'home_page' }
 
 function toPublic(obj) {
   const out = {}
@@ -68,6 +70,10 @@ function fromPublic(data) {
   if (out.email_notifications !== undefined) {
     out.emailNotifications = out.email_notifications
     delete out.email_notifications
+  }
+  if (out.home_page !== undefined) {
+    out.homePage = out.home_page
+    delete out.home_page
   }
   return out
 }
@@ -184,12 +190,15 @@ function createUserService(deps) {
       if (isSelf && !rbac.isSuperAdmin(ctx.principal)) throw appError('FORBIDDEN')
       rbac.assertCan(ctx.principal, 'users.edit')
     }
+    // página ao entrar (§38): é configuração de acesso (Controle de acesso), exige users.edit — também para a própria
+    const current = Object.assign({}, target, { homePage: target.homePage || '' })
+    if (data.homePage !== undefined && data.homePage !== current.homePage) rbac.assertCan(ctx.principal, 'users.edit')
     if (data.roleId !== undefined && data.roleId !== target.roleId) await findAssignableRole(ctx.principal, data.roleId)
     if (data.email !== undefined && data.email !== target.email && (await deps.userRepository.emailExists(data.email, target.id))) {
       throw appError('EMAIL_ALREADY_IN_USE')
     }
 
-    const changes = diff(target, data, ['name', 'email', 'roleId', 'locale', 'theme', 'emailNotifications'])
+    const changes = diff(current, data, ['name', 'email', 'roleId', 'locale', 'theme', 'emailNotifications', 'homePage'])
     if (!changes) return toUserDto(target)
 
     const updated = await deps.unitOfWork.run(async (repos) => {

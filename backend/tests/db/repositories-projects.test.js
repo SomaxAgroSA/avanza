@@ -119,6 +119,27 @@ describe('repositórios de projetos e membros', () => {
     }
   })
 
+  it('§37: filtros com vários valores e contagens por grupo (cada grupo sem o próprio filtro)', async () => {
+    const scope = { userId: users.ana.id, viewAll: true }
+    const list = (extra) => projects.list(Object.assign({ scope, view: 'all', sort: [{ column: 'name', direction: 'ASC' }], pagination: page() }, extra))
+    assert.deepEqual(ids(await list({ priority: ['high', 'low'] })), ['ALP', 'BET'])
+    assert.deepEqual(ids(await list({ status: ['planning', 'active'], urgency: ['none'] })), ['ALP', 'BET', 'DEL'])
+    await projects.update(p.delta.id, { urgency: 'high' })
+    try {
+      assert.deepEqual(ids(await list({ urgency: ['none', 'high'] })), ['ALP', 'BET', 'DEL'])
+      assert.deepEqual(ids(await list({ urgency: ['high'], priority: ['medium', 'critical'] })), ['DEL'])
+      const facets = await projects.facets({ scope, view: 'all', status: ['active'] })
+      assert.deepEqual(facets.status, { active: 2, planning: 1 })
+      assert.deepEqual(facets.priority, { high: 1, medium: 1 })
+      assert.deepEqual(facets.urgency, { none: 1, high: 1 })
+      assert.deepEqual((await projects.facets({ scope, view: 'all', search: 'bet' })).priority, { low: 1 })
+      // arquivado não entra na visão "todos"; na de arquivados, só ele
+      assert.deepEqual((await projects.facets({ scope, view: 'archived' })).status, { active: 1 })
+    } finally {
+      assert.equal((await projects.update(p.delta.id, { urgency: null })).urgency, null)
+    }
+  })
+
   it('área: relação vazia é NULL, filtro pela área ou none = sem área', async () => {
     const base = { scope: { userId: users.ana.id, viewAll: true }, view: 'all', sort: [{ column: 'name', direction: 'ASC' }], pagination: page() }
     const list = (extra) => projects.list(Object.assign({}, base, extra))

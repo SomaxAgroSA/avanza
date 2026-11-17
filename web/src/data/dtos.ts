@@ -10,6 +10,7 @@ export interface UserDto {
   locale: string
   theme: string
   email_notifications?: boolean
+  home_page?: string
   created_at: string | null
   updated_at: string | null
   last_login_at: string | null

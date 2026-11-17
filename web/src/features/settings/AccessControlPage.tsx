@@ -38,7 +38,8 @@ import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { TabActionsSlotContext } from '@/presentation/common/tab-actions-slot'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useRepositories } from '@/presentation/common/repositories-context'
-import { useSession } from '@/features/auth/session'
+import { useCan, useSession } from '@/features/auth/session'
+import { automaticHomePath, homePageOptions } from '@/presentation/navigation/home-page'
 import { projectKeys, useMemberMutations, useProjects } from '@/features/projects/queries'
 import { useUpdateUser, useUsersList } from '@/features/users/queries'
 import { useCreateRole, useRoles, useUpdateRolePermissions } from './queries'
@@ -175,7 +176,50 @@ function UserHeader({ user, roles }: { user: User; roles: Role[] }) {
         }
         options={roles.map((r) => ({ value: r.id, label: r.name }))}
       />
+      <HomePageSelect user={user} role={role} />
     </div>
+  )
+}
+
+/** Valor do seletor para "automática" ('' no servidor; o seletor não aceita valor vazio). */
+const AUTO_HOME = 'auto'
+
+/**
+ * Página inicial da pessoa (§38): a tela que abre ao entrar no Avanza. Só as telas do menu que o perfil
+ * dela abre; "Automática" = como antes (Panorama para a gerência; senão, a lista de projetos).
+ */
+function HomePageSelect({ user, role }: { user: User; role: Role | undefined }) {
+  const { t } = useTranslation()
+  const errorMessage = useErrorMessage()
+  const update = useUpdateUser()
+  const canEdit = useCan('users.edit')
+  const perms: PermissionCode[] = role?.code === SUPER_ADMIN_ROLE ? [...PERMISSION_CODES] : (role?.permissions ?? [])
+  const options = homePageOptions(perms)
+  const labelOf = (path: string) => {
+    const option = options.find((o) => o.path === path) ?? homePageOptions([...PERMISSION_CODES]).find((o) => o.path === path)
+    return option ? option.labelKeys.map((key) => t(key)).join(' › ') : path
+  }
+  const auto = t('access.homePageAuto', { page: labelOf(automaticHomePath(perms)) })
+  const current = options.some((o) => o.path === user.homePage) ? user.homePage : AUTO_HOME
+  return (
+    <AppSelect
+      className="sm:w-72"
+      label={t('access.homePage')}
+      hint={t('access.homePageHint')}
+      disabled={!canEdit || update.isPending}
+      value={current}
+      onValueChange={(value) => {
+        const homePage = value === AUTO_HOME ? '' : value
+        update.mutate(
+          { id: user.id, data: { homePage } },
+          {
+            onSuccess: () => notify.success(t('access.homePageSaved', { name: user.name, page: homePage ? labelOf(homePage) : auto })),
+            onError: (error) => notify.error(errorMessage(error)),
+          },
+        )
+      }}
+      options={[{ value: AUTO_HOME, label: auto }, ...options.map((o) => ({ value: o.path, label: labelOf(o.path) }))]}
+    />
   )
 }
 

@@ -26,9 +26,9 @@ function isUniqueViolation(err, constraint) {
   return !!err && err.code === UNIQUE_VIOLATION && (!constraint || err.constraint === constraint)
 }
 
-const USER_FIELDS = { name: 'name', roleId: 'role_id', status: 'status', locale: 'locale', theme: 'theme' }
+const USER_FIELDS = { name: 'name', roleId: 'role_id', status: 'status', locale: 'locale', theme: 'theme', homePage: 'home_page' }
 // nunca carregar o hash da senha junto com o usuário
-const USER_COLUMNS = '"id", "name", "email", "avatar", "status", "role_id", "locale", "theme", "email_notifications_off", "created", "updated", "last_login_at"'
+const USER_COLUMNS = '"id", "name", "email", "avatar", "status", "role_id", "locale", "theme", "email_notifications_off", "home_page", "created", "updated", "last_login_at"'
 
 function createUserRepository(db, ctx) {
   const cost = (ctx && ctx.bcryptCost) || DEFAULT_BCRYPT_COST
@@ -45,6 +45,7 @@ function createUserRepository(db, ctx) {
       locale: row.locale || 'pt-BR',
       theme: row.theme || 'system',
       emailNotifications: !row.email_notifications_off,
+      homePage: row.home_page || '',
       createdAt: row.created,
       updatedAt: row.updated,
       lastLoginAt: row.last_login_at,

@@ -170,6 +170,24 @@ describe('application/users', () => {
     assert.deepEqual(entry.newValue, { name: 'Maria Silva', locale: 'es' })
   })
 
+  it('página inicial (§38): quem tem users.edit escolhe da lista; auditada; vazio = automática', async () => {
+    const deps = createFakeDeps()
+    const users = createUserService(deps)
+    const target = await seedUser(deps, { name: 'Diretor', roleCode: 'MEMBER' })
+    const admin = await ctxFor(deps, 'ADMIN')
+    const saved = await users.updateUser(admin, target.id, { home_page: '/projects/ongoing' })
+    assert.equal(saved.home_page, '/projects/ongoing')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['user.updated', { home_page: '' }, { home_page: '/projects/ongoing' }])
+    assert.equal((await users.updateUser(admin, target.id, { home_page: '' })).home_page, '')
+    await assert.rejects(() => users.updateUser(admin, target.id, { home_page: '/settings/access' }), { code: 'VALIDATION_ERROR' })
+    await assert.rejects(() => users.updateUser(admin, target.id, { home_page: 'https://exemplo.com' }), { code: 'VALIDATION_ERROR' })
+    // sem users.edit não muda — nem a própria
+    const own = await ctxFor(deps, 'MEMBER', target.id)
+    await assert.rejects(() => users.updateUser(own, target.id, { home_page: '/kanban' }), { code: 'FORBIDDEN' })
+    assert.equal((await users.updateUser(own, target.id, { name: 'Diretor Geral' })).home_page, '')
+  })
+
   it('usuário comum edita o próprio nome, mas não o próprio perfil de acesso', async () => {
     const deps = createFakeDeps()
     const users = createUserService(deps)

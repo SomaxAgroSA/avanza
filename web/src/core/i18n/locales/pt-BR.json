@@ -4095,6 +4095,10 @@
     "personalRoleName": "{{name}} (personalizado)",
     "personalRoleDescription": "Baseado em {{role}}, criado no Controle de acesso",
     "personalRoleCreated": "{{name}} agora tem um perfil próprio com a mudança.",
+    "homePage": "Página inicial",
+    "homePageAuto": "Automática ({{page}})",
+    "homePageHint": "O que abre ao entrar no Avanza. Depois a pessoa navega livremente.",
+    "homePageSaved": "{{name}} agora entra em {{page}}.",
     "summary": {
       "modules": "Módulos que vê",
       "projects": "Projetos em que entra",

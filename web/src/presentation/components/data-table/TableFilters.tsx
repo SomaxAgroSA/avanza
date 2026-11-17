@@ -1,19 +1,37 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ListFilter, X } from 'lucide-react'
+import { Check, ListFilter, X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { AppButton } from '../AppButton'
 import { AppPopover } from '../AppPopover'
-import { AppSelect, SELECT_ALL } from '../AppSelect'
+import { AppSelect, SELECT_ALL, type AppSelectOption } from '../AppSelect'
 import { filterTriggerClass } from './filter-styles'
 
 export interface TableFilterDef {
   id: string
   label: string
-  options: Array<{ value: string; label: string }>
+  /** `count`: quantos registros há com o valor, contando os demais filtros (§37). */
+  options: Array<{ value: string; label: string; count?: number }>
   /** Fica colado ao filtro (ex.: engrenagem do configurador do filtro de projetos). */
   addon?: ReactNode
+  /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
+  variant?: 'select' | 'buttons'
 }
+
+/** Opção do seletor com a quantidade à direita (quando a tela informa). */
+const selectOption = (option: TableFilterDef['options'][number]): AppSelectOption =>
+  option.count === undefined
+    ? option
+    : {
+        value: option.value,
+        textValue: option.label,
+        label: (
+          <span className="flex w-full items-center justify-between gap-4">
+            <span>{option.label}</span>
+            <span className="text-xs font-semibold tabular-nums text-muted">{option.count}</span>
+          </span>
+        ),
+      }
 
 interface FilterProps {
   filter: TableFilterDef
@@ -36,7 +54,7 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
       aria-label={filter.label}
       value={active ? value : SELECT_ALL}
       onValueChange={(next) => onChange(next === SELECT_ALL ? undefined : next)}
-      options={[{ value: SELECT_ALL, label: t('common.all') }, ...filter.options]}
+      options={[{ value: SELECT_ALL, label: t('common.all') }, ...filter.options.map(selectOption)]}
       renderValue={
         active ? (
           <>
@@ -55,6 +73,51 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
     <div className="flex items-center gap-2">
       {select}
       {filter.addon}
+    </div>
+  )
+}
+
+/**
+ * Filtro em botões (§37): o nome em cima e um botão por valor, que liga e desliga; vários ao mesmo tempo
+ * (o valor do filtro são os escolhidos unidos por vírgula). Ligado fica verde; com `count`, mostra a
+ * quantidade, e o valor sem registros fica apagado (continua clicável).
+ */
+export function FilterButtons({ filter, value, onChange }: FilterProps) {
+  const selected = value ? value.split(',') : []
+  const toggle = (option: string) => {
+    const next = selected.includes(option) ? selected.filter((v) => v !== option) : selected.concat(option)
+    onChange(next.length ? next.join(',') : undefined)
+  }
+  return (
+    <div role="group" aria-label={filter.label} className="flex flex-col gap-1">
+      <span aria-hidden className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+        {filter.label}
+      </span>
+      <div className="flex flex-wrap gap-1">
+        {filter.options.map((option) => {
+          const on = selected.includes(option.value)
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggle(option.value)}
+              className={cn(
+                'inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                on
+                  ? 'border-primary bg-primary text-primary-fg hover:bg-primary-hover'
+                  : // sem registros: apagado com a cor de texto suave (AA), não com transparência (que derruba o contraste)
+                    cn('border-border-strong bg-surface hover:border-primary hover:text-primary-text', option.count === 0 ? 'border-border text-muted' : 'text-fg'),
+              )}
+            >
+              {on && <Check className="size-3.5" aria-hidden />}
+              {option.label}
+              {/* ligado: a mesma cor do texto (branco sobre o verde passa no AA; com transparência não passa) */}
+              {option.count !== undefined && <span className={cn('text-xs font-semibold tabular-nums', on ? 'text-primary-fg' : 'text-muted')}>{option.count}</span>}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -4095,6 +4095,10 @@
     "personalRoleName": "{{name}} (custom)",
     "personalRoleDescription": "Based on {{role}}, created in Access control",
     "personalRoleCreated": "{{name}} now has a personal role with the change.",
+    "homePage": "Home page",
+    "homePageAuto": "Automatic ({{page}})",
+    "homePageHint": "What opens when signing in to Avanza. Then the person browses freely.",
+    "homePageSaved": "{{name}} now lands on {{page}}.",
     "summary": {
       "modules": "Modules they see",
       "projects": "Projects they join",
