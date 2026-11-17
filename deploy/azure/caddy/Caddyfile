@@ -1,7 +1,8 @@
 {
 	auto_https off
 	servers {
-		trusted_proxies static {$APPGW_SUBNET}
+		# Application Gateway → proxy de borda (rede edge) → este Caddy
+		trusted_proxies static {$APPGW_SUBNET} {$EDGE_SUBNET}
 	}
 }
 

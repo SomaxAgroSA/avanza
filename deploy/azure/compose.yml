@@ -1,22 +1,27 @@
 # Avanza na VM Azure (atrás do Application Gateway): Caddy + API + Storage (arquivos).
 # Perfis: "echo" (teste de rede) ou "app" (produção) — escolhidos por COMPOSE_PROFILES no .env da VM.
+# A porta 80 da VM é do proxy de borda compartilhado (SomaxAgroSA/somax-deploy): este Caddy não publica
+# porta; entra na rede "edge" e o proxy de borda encaminha avanza.somaxagro.com para ele (avanza-caddy-1:80).
 name: avanza
 networks:
   default:
     ipam:
       config: [{ subnet: 172.30.0.0/24 }]
+  edge:
+    external: true
 volumes:
   caddy_data:
 services:
   caddy:
     image: caddy:2.10
-    ports: ["80:80"]
     environment:
       UPSTREAM: ${UPSTREAM:-echo:8080}
       APPGW_SUBNET: ${APPGW_SUBNET:?defina APPGW_SUBNET no .env}
+      EDGE_SUBNET: ${EDGE_SUBNET:-172.31.0.0/24}
     volumes:
       - ./caddy:/etc/caddy:ro
       - caddy_data:/data
+    networks: [default, edge]
     restart: unless-stopped
 
   echo:
