@@ -6,6 +6,7 @@ import type {
   AuthRepository,
   CreateUserData,
   ProjectData,
+  ProjectFacets,
   ProjectRepository,
   Repositories,
   RoleData,
@@ -331,6 +332,7 @@ export function createHttpUserRepository(api: ApiClient): UserRepository {
       if (input.locale !== undefined) body.locale = input.locale
       if (input.theme !== undefined) body.theme = input.theme
       if (input.emailNotifications !== undefined) body.email_notifications = input.emailNotifications
+      if (input.homePage !== undefined) body.home_page = input.homePage
       const { data } = await api.patch<UserDto>(path(id), body)
       return toUser(data)
     },
@@ -439,7 +441,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
 
   return {
     async list(query) {
-      const { data, meta } = await api.get<ProjectDto[], PageMetaDto>('/projects', {
+      const { data, meta } = await api.get<ProjectDto[], PageMetaDto & { facets?: ProjectFacets }>('/projects', {
         query: {
           view: query.view,
           page: query.page,
@@ -452,6 +454,7 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
           area_id: query.filters.area,
           parent_id: query.filters.parent,
           owner_id: query.filters.owner_id,
+          facets: query.facets ? 'true' : undefined,
         },
       })
       return { items: data.map(toProject), ...meta }

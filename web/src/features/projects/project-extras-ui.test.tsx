@@ -71,7 +71,7 @@ const journal = (id: string, entryDate: string, content: string): JournalEntry =
 const timeline = (tasks: TaskSummary[], milestones: Milestone[] = []) => ({ tasks, milestones }) as unknown as Timeline
 
 describe('Projetos — urgência na lista', () => {
-  it('coluna com semáforo: quem edita troca com um clique; o filtro pede urgency à API', async () => {
+  it('coluna com semáforo: quem edita troca com um clique; o filtro (botões, §37) pede urgency à API', async () => {
     const list = vi.fn<ProjectRepository['list']>(() => Promise.resolve({ items: [project()], page: 1, perPage: 20, total: 1, totalPages: 1 }))
     const update = vi.fn<ProjectRepository['update']>(() => Promise.resolve(project({ urgency: 'medium' })))
     const repositories = fakeRepositories({ auth: { me: async () => makeCurrentUser(['projects.view', 'projects.edit']) }, projects: { list, update } })
@@ -80,8 +80,7 @@ describe('Projetos — urgência na lista', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Média' }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('p1', { urgency: 'medium' }))
 
-    await userEvent.click(screen.getByRole('combobox', { name: 'Urgência' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Sem urgência' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Urgência' })).getByRole('button', { name: /^Sem urgência/ }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { urgency: 'none' } })))
   })
 
@@ -101,7 +100,7 @@ describe('Projetos — urgência na lista', () => {
 describe('Projetos — área responsável na lista', () => {
   const ti = { id: 'a1', key: 'TI', name: 'Dpto. TI', description: '', color: 'blue' as const, order: 0, isActive: true, isDefault: false, createdAt: null, updatedAt: null }
 
-  it('coluna com a área: quem edita troca com um clique; o filtro pede area_id à API', async () => {
+  it('coluna com a área: quem edita troca com um clique; sem filtro de área na barra (§37)', async () => {
     const list = vi.fn<ProjectRepository['list']>(() => Promise.resolve({ items: [project()], page: 1, perPage: 20, total: 1, totalPages: 1 }))
     const update = vi.fn<ProjectRepository['update']>(() => Promise.resolve(project({ area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' } })))
     const repositories = fakeRepositories({
@@ -113,10 +112,7 @@ describe('Projetos — área responsável na lista', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Mudar área de CRM Corporativo (agora: Sem área)' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Dpto. TI' }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('p1', { areaId: 'a1' }))
-
-    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Dpto. TI' }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { area: 'a1' } })))
+    expect(screen.queryByRole('combobox', { name: 'Área' })).not.toBeInTheDocument()
   })
 
   it('quem não edita vê só o selo da área', async () => {
@@ -135,7 +131,7 @@ describe('Projetos — área responsável na lista', () => {
 describe('Projetos — projeto pai e subprojetos na lista (§34)', () => {
   const ref = { id: 'p9', key: 'PRG', name: 'Programa Comercial', icon: 'folder' as const, cover: 'blue' as const }
 
-  it('a linha mostra o pai (↳) e a quantidade de subprojetos; o filtro "Projeto pai" pede parent_id à API', async () => {
+  it('a linha mostra o pai (↳) e a quantidade de subprojetos; sem "Mais filtros" nem filtro de projeto pai (§37)', async () => {
     const list = vi.fn<ProjectRepository['list']>((query) =>
       Promise.resolve({
         items: query.filters.parent === 'none' ? [project({ id: 'p9', key: 'PRG', name: 'Programa Comercial', childCount: 2 })] : [project({ parent: ref }), project({ id: 'p9', key: 'PRG', name: 'Programa Comercial', childCount: 2 })],
@@ -151,11 +147,8 @@ describe('Projetos — projeto pai e subprojetos na lista (§34)', () => {
     expect(within(row).getByText(/Programa Comercial/)).toHaveAttribute('title', 'Faz parte de Programa Comercial')
     const parentRow = screen.getByRole('link', { name: 'Programa Comercial' }).closest('tr') as HTMLElement
     expect(within(parentRow).getByText(/2 subprojetos/)).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Mais filtros' }))
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Projeto pai' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'PRG · Programa Comercial' }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { parent: 'p9' } })))
+    expect(screen.queryByRole('button', { name: 'Mais filtros' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Projeto pai' })).not.toBeInTheDocument()
   })
 })
 

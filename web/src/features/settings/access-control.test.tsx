@@ -61,6 +61,24 @@ describe('Control de acceso', () => {
     expect(updatePermissions).not.toHaveBeenCalled()
   })
 
+  it('§38: página de inicio de la persona, junto al perfil; solo pantallas que ella puede abrir', async () => {
+    const { updateUser } = setup()
+    const select = await screen.findByRole('combobox', { name: 'Página de inicio' })
+    expect(select).toHaveTextContent('Automática (Proyectos › Todos mis proyectos)')
+    await userEvent.click(select)
+    // el perfil Miembro no ve Kanban ni Documentación: no se ofrecen
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
+      'Automática (Proyectos › Todos mis proyectos)',
+      'Panorama',
+      'Proyectos › Todos mis proyectos',
+      'Proyectos › En marcha',
+      'Proyectos › Terminados',
+      'Proyectos › Archivados',
+    ])
+    await userEvent.click(screen.getByRole('option', { name: 'Proyectos › En marcha' }))
+    await waitFor(() => expect(updateUser).toHaveBeenCalledWith('u2', { homePage: '/projects/ongoing' }))
+  })
+
   it('da acceso a un proyecto eligiendo el papel', async () => {
     const { addMember } = setup()
     const select = await screen.findByRole('combobox', { name: 'Acceso a Aplicación del productor' })

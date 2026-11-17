@@ -26,6 +26,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
     updatedAt: new Date('2026-01-01T10:00:00Z'),
     lastLoginAt: null,
     emailNotifications: true,
+    homePage: '',
     ...overrides,
   }
 }

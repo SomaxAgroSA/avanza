@@ -38,6 +38,22 @@ export const VIEW_STATUSES: Partial<Record<ProjectView, readonly ProjectStatus[]
 }
 
 /**
+ * Filtros das listas de projetos (regras §37): Estado no seletor; Prioridade e Urgência em botões, da menor
+ * para a maior (urgência termina em "sem urgência"). Departamento e Projeto pai saíram da barra.
+ */
+export const PROJECT_LIST_FILTERS = ['status', 'priority', 'urgency'] as const
+export const PROJECT_URGENCY_FILTER_ORDER = ['low', 'medium', 'high', 'none'] as const
+
+/** Só os filtros da barra: um filtro antigo guardado no navegador (ex.: Departamento) não pode filtrar escondido. */
+export function projectListFilters(filters: Record<string, string>): Record<string, string> {
+  const kept: Record<string, string> = {}
+  PROJECT_LIST_FILTERS.forEach((id) => {
+    if (filters[id]) kept[id] = filters[id]
+  })
+  return kept
+}
+
+/**
  * Seções do projeto que o perfil libera (regras §35: `projects.charter`, `projects.history`,
  * `projects.members`, `projects.report`); a Visão geral sempre aparece e o dono do projeto vê todas.
  * O servidor decide e manda em `capabilities.sections`.

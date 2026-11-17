@@ -24,6 +24,9 @@ describe('data/mappers', () => {
     expect(user.lastLoginAt).toBeNull()
     expect(user.locale).toBe('es')
     expect(user.theme).toBe('dark')
+    // §38: sem home_page (API antiga) = automática
+    expect(user.homePage).toBe('')
+    expect(toUser({ ...userDto, home_page: '/projects/ongoing' }).homePage).toBe('/projects/ongoing')
   })
 
   it('usa padrões seguros para valores desconhecidos', () => {

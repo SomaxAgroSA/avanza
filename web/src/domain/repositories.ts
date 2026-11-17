@@ -162,6 +162,8 @@ export interface UpdateUserData {
   locale?: Language
   theme?: ThemePreference
   emailNotifications?: boolean
+  /** Tela aberta ao entrar (§38); '' = automática. */
+  homePage?: string
 }
 
 export interface UserRepository {
@@ -208,7 +210,18 @@ export interface AuditRepository {
 
 export interface ProjectListQuery extends ListQuery {
   view: ProjectView
+  /** Pede também as contagens dos botões de filtro (§37). */
+  facets?: boolean
 }
+
+/** Quantos projetos há por valor de cada filtro (§37); valor sem projeto não aparece. */
+export interface ProjectFacets {
+  status: Record<string, number>
+  priority: Record<string, number>
+  urgency: Record<string, number>
+}
+
+export type ProjectPage = Page<Project> & { facets?: ProjectFacets }
 
 /** Datas no formato AAAA-MM-DD (somente data). */
 export interface ProjectData {
@@ -241,7 +254,7 @@ export interface ProjectCovers {
 }
 
 export interface ProjectRepository {
-  list(query: ProjectListQuery): Promise<Page<Project>>
+  list(query: ProjectListQuery): Promise<ProjectPage>
   get(id: string): Promise<Project>
   create(data: ProjectData & { key: string }): Promise<Project>
   update(id: string, data: Partial<ProjectData>): Promise<Project>

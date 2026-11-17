@@ -13,6 +13,7 @@ const user = (id: string, status: User['status'] = 'active'): User => ({
   locale: 'pt-BR',
   theme: 'system',
   emailNotifications: true,
+  homePage: '',
   createdAt: null,
   updatedAt: null,
   lastLoginAt: null,

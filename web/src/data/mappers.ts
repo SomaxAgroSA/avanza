@@ -80,6 +80,7 @@ export function toUser(dto: UserDto): User {
     locale: isSupportedLanguage(dto.locale) ? dto.locale : DEFAULT_LANGUAGE,
     theme: isThemePreference(dto.theme) ? dto.theme : 'system',
     emailNotifications: dto.email_notifications !== false,
+    homePage: dto.home_page ?? '',
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
     lastLoginAt: toDate(dto.last_login_at),
