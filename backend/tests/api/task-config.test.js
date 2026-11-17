@@ -43,14 +43,10 @@ describe('API /api/v1/task-types e /custom-fields', { timeout: 120000 }, () => {
       'BUG', 'DESENVOLVIMENTO', 'MELHORIA', 'ADEQUACAO', 'NOVA_FUNCIONALIDADE', 'INTEGRACAO', 'SUPORTE', 'DOCUMENTACAO',
     ])
     const bug = (await admin.get(`/task-types/${list.body.data[0].id}`)).body.data
+    // "Severidade" saiu dos tipos (migration 0022: repetia a Prioridade); o campo fica só na biblioteca
     assert.deepEqual(bug.fields.map((f) => f.field.name), [
-      'ambiente', 'versao', 'severidade', 'passos_para_reproducao', 'resultado_esperado', 'resultado_atual', 'evidencias', 'cliente_afetado', 'modulo',
+      'ambiente', 'versao', 'passos_para_reproducao', 'resultado_esperado', 'resultado_atual', 'evidencias', 'cliente_afetado', 'modulo',
     ])
-    const severidade = bug.fields.find((f) => f.field.name === 'severidade')
-    assert.equal(severidade.required, true)
-    assert.equal(severidade.show_on_card, true)
-    assert.deepEqual(severidade.field.options.map((o) => o.label), ['Crítica', 'Alta', 'Média', 'Baixa'])
-    assert.equal(severidade.field.default_value, severidade.field.options[2].id)
 
     const criterios = (await admin.get('/custom-fields?search=criterios')).body.data[0]
     assert.deepEqual(criterios.used_by.map((t) => t.key).sort(), ['DESENVOLVIMENTO', 'MELHORIA'])
