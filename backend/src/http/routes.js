@@ -119,7 +119,7 @@ function deleteRole(e) {
 /** Aceita apenas os campos públicos conhecidos do body. */
 function userInput(body) {
   const input = {}
-  ;['name', 'email', 'password', 'role_id', 'locale', 'theme', 'email_notifications', 'send_invite'].forEach((key) => {
+  ;['name', 'email', 'password', 'role_id', 'locale', 'theme', 'email_notifications', 'home_page', 'send_invite'].forEach((key) => {
     if (body[key] !== undefined) input[key] = body[key]
   })
   return input

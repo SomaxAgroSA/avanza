@@ -333,6 +333,17 @@ describe('API /api/v1', { timeout: 120000 }, () => {
     })
   })
 
+  describe('página inicial por pessoa (§38)', () => {
+    it('PATCH /users/:id grava home_page e devolve o valor salvo', async () => {
+      const { user } = await createUserAndLogin('MEMBER', 'pagina-inicial@kamban.test')
+      const res = await admin.patch(`/users/${user.id}`, { home_page: '/projects/ongoing' })
+      assert.equal(res.status, 200, JSON.stringify(res.body))
+      assert.equal(res.body.data.home_page, '/projects/ongoing')
+      assert.equal((await admin.get(`/users/${user.id}`)).body.data.home_page, '/projects/ongoing')
+      assert.equal((await admin.patch(`/users/${user.id}`, { home_page: '/settings/access' })).body.error.code, 'VALIDATION_ERROR')
+    })
+  })
+
   describe('consulta de auditoria', () => {
     it('lista com filtros e autor; histórico de usuário exige users.view', async () => {
       const { user } = await createUserAndLogin('MEMBER', 'historico@kamban.test')
