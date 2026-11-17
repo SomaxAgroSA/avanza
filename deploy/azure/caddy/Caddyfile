@@ -1,0 +1,20 @@
+{
+	auto_https off
+	servers {
+		trusted_proxies static {$APPGW_SUBNET}
+	}
+}
+
+# público (Application Gateway → VM): eco na fase 1, Avanza a partir da fase 3
+:80 {
+	reverse_proxy {$UPSTREAM} {
+		flush_interval -1
+	}
+}
+
+# interno (não publicado): caminho do Supabase Storage para a API
+:8000 {
+	handle_path /storage/v1/* {
+		reverse_proxy storage:5000
+	}
+}

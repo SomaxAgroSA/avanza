@@ -1,0 +1,70 @@
+# Avanza na VM Azure (atrás do Application Gateway): Caddy + API + Storage (arquivos).
+# Perfis: "echo" (teste de rede) ou "app" (produção) — escolhidos por COMPOSE_PROFILES no .env da VM.
+name: avanza
+networks:
+  default:
+    ipam:
+      config: [{ subnet: 172.30.0.0/24 }]
+volumes:
+  caddy_data:
+services:
+  caddy:
+    image: caddy:2.10
+    ports: ["80:80"]
+    environment:
+      UPSTREAM: ${UPSTREAM:-echo:8080}
+      APPGW_SUBNET: ${APPGW_SUBNET:?defina APPGW_SUBNET no .env}
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      - caddy_data:/data
+    restart: unless-stopped
+
+  echo:
+    image: mendhak/http-https-echo:latest
+    profiles: ["echo"]
+    restart: unless-stopped
+
+  avanza:
+    image: avanza:latest
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      KAMBAN_ENV: production
+      KAMBAN_HTTP: 0.0.0.0:8090
+      KAMBAN_SUPABASE_URL: http://caddy:8000
+    depends_on: [storage]
+    restart: unless-stopped
+
+  storage:
+    image: supabase/storage-api:${STORAGE_API_VERSION:-unset}
+    profiles: ["app"]
+    depends_on:
+      storage-db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://postgres:${STORAGE_DB_PASSWORD:-}@storage-db:5432/postgres
+      DB_INSTALL_ROLES: "true"
+      AUTH_JWT_SECRET: ${STORAGE_JWT_SECRET:-}
+      PGRST_JWT_SECRET: ${STORAGE_JWT_SECRET:-}
+      ANON_KEY: ${STORAGE_ANON_KEY:-}
+      SERVICE_KEY: ${KAMBAN_SUPABASE_SECRET_KEY:-}
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      FILE_SIZE_LIMIT: "52428800"
+      TENANT_ID: avanza
+      REGION: local
+      GLOBAL_S3_BUCKET: avanza
+    volumes: ["./data/storage:/var/lib/storage"]
+    ports: ["127.0.0.1:5000:5000"]
+    restart: unless-stopped
+
+  storage-db:
+    image: postgres:17-alpine
+    profiles: ["app"]
+    environment:
+      POSTGRES_PASSWORD: ${STORAGE_DB_PASSWORD:-}
+    volumes: ["./data/storage-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
