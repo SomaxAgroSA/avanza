@@ -22,8 +22,8 @@ export function AppFilterBar({ search, filters, actions, below, hasActiveFilters
   const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-2">
-      {/* alinhados por baixo: os filtros em botões têm o nome em cima (§37); a busca cede espaço antes de a linha quebrar */}
-      <div className="flex flex-wrap items-end gap-2">
+      {/* os filtros em botões levam o nome ao lado, na mesma linha (§37); a busca cede espaço antes de a linha quebrar */}
+      <div className="flex flex-wrap items-center gap-2">
         {search && <div className="w-full sm:w-auto sm:min-w-44 sm:max-w-64 sm:flex-1">{search}</div>}
         {filters}
         {hasActiveFilters && onReset && (

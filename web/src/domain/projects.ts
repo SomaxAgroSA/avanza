@@ -38,11 +38,12 @@ export const VIEW_STATUSES: Partial<Record<ProjectView, readonly ProjectStatus[]
 }
 
 /**
- * Filtros das listas de projetos (regras §37): Estado no seletor; Prioridade e Urgência em botões, da menor
- * para a maior (urgência termina em "sem urgência"). Departamento e Projeto pai saíram da barra.
+ * Filtros das listas de projetos (regras §37): Estado no seletor; Prioridade e Urgência em botões, da maior
+ * para a menor (urgência termina em "sem urgência"). Departamento e Projeto pai saíram da barra.
  */
 export const PROJECT_LIST_FILTERS = ['status', 'priority', 'urgency'] as const
-export const PROJECT_URGENCY_FILTER_ORDER = ['low', 'medium', 'high', 'none'] as const
+export const PROJECT_PRIORITY_FILTER_ORDER = ['critical', 'high', 'medium', 'low'] as const
+export const PROJECT_URGENCY_FILTER_ORDER = ['high', 'medium', 'low', 'none'] as const
 
 /** Só os filtros da barra: um filtro antigo guardado no navegador (ex.: Departamento) não pode filtrar escondido. */
 export function projectListFilters(filters: Record<string, string>): Record<string, string> {
