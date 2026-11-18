@@ -289,9 +289,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={t(TITLES[view])}
         description={t(`projects.descriptions.${view}`)}
         actions={
-          direction ? (
-            <span className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm text-muted">{t('direction.note')}</span>
-          ) : showActivity || createHere ? (
+          !direction && (showActivity || createHere) ? (
             <div className="flex flex-wrap items-center gap-2">
               {showActivity && (
                 <AppButton variant="secondary" leftIcon={<Users />} onClick={() => setTeamOpen(true)}>

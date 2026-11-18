@@ -4438,7 +4438,6 @@
     "tasksOf": "Tarefas de {{name}} em {{project}}"
   },
   "direction": {
-    "note": "Visão de consulta · sem editar, arquivar nem excluir",
     "loading": "Carregando o painel…",
     "kpi": {
       "label": "Indicadores dos projetos",

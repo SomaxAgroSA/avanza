@@ -4438,7 +4438,6 @@
     "tasksOf": "Tareas de {{name}} en {{project}}"
   },
   "direction": {
-    "note": "Vista de consulta · sin editar, archivar ni eliminar",
     "loading": "Cargando el panel…",
     "kpi": {
       "label": "Indicadores de los proyectos",

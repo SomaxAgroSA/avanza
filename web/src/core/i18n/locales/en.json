@@ -4438,7 +4438,6 @@
     "tasksOf": "{{name}}'s tasks in {{project}}"
   },
   "direction": {
-    "note": "View-only · no editing, archiving or deleting",
     "loading": "Loading the dashboard…",
     "kpi": {
       "label": "Project indicators",
