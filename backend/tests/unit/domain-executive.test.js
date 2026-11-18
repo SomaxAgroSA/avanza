@@ -138,6 +138,87 @@ describe('domain/executive', () => {
     assert.deepEqual(points.map((p) => p.tasks_overdue), [1, 2])
   })
 
+  it('Panorama: projeto só do período (concluído) entra nas entregas, na série e no que foi feito, mas não no portfólio', () => {
+    const out = executive.buildDashboard(
+      input({
+        projects: [
+          { id: 'a', key: 'AAA', name: 'A', ownerId: null, archivedAt: null, status: 'active' },
+          { id: 'c', key: 'CCC', name: 'C', ownerId: null, archivedAt: null, status: 'completed', periodOnly: true },
+        ],
+        period: { from: day('2026-10-01'), to: day('2026-10-29') },
+        taskRows: [
+          { id: 't1', projectId: 'a', statusId: 'done', completedAt: day('2026-10-05'), createdAt: day('2026-09-01') },
+          { id: 't2', projectId: 'c', statusId: 'done', completedAt: day('2026-10-06'), createdAt: day('2026-09-01') },
+          { id: 't3', projectId: 'c', statusId: 'open', createdAt: day('2026-09-01'), dueDate: day('2026-10-02') },
+        ],
+        milestones: [{ id: 'm1', projectId: 'c', name: 'Entregue', dueDate: '2026-10-10', state: 'done' }],
+      }),
+    )
+    assert.deepEqual(out.portfolio.map((r) => r.project.key), ['AAA'])
+    assert.equal(out.summary.active_projects, 1)
+    assert.deepEqual(out.summary.deliveries, { tasks: 2, plan_items: 0, milestones: 1 })
+    assert.equal(out.kanban.overdue, 0)
+    assert.equal(out.timeline.points.reduce((sum, p) => sum + p.tasks_completed, 0), 2)
+    // a série de estoque (em andamento/vencidas) é só da carteira
+    assert.equal(out.timeline.points.reduce((sum, p) => sum + p.tasks_overdue, 0), 0)
+    const done = out.achievements.find((a) => a.project.key === 'CCC')
+    assert.equal(done.tasks_done, 1)
+    assert.equal(done.project.status, 'completed')
+  })
+
+  it('Panorama: portfólio com o objetivo da ficha e a última atualização do projeto', () => {
+    const out = executive.buildDashboard(
+      input({
+        projects: [
+          { id: 'a', key: 'AAA', name: 'A', ownerId: null, archivedAt: null, updatedAt: new Date('2026-10-20T15:25:00Z') },
+          { id: 'b', key: 'BBB', name: 'B', ownerId: null, archivedAt: null },
+        ],
+        objectives: { a: 'Ofertas diretas aos clientes', b: '   ' },
+      }),
+    )
+    const byKey = Object.fromEntries(out.portfolio.map((r) => [r.project.key, r.project]))
+    assert.equal(byKey.AAA.objective, 'Ofertas diretas aos clientes')
+    assert.equal(byKey.AAA.updated_at, '2026-10-20T15:25:00.000Z')
+    assert.equal(byKey.BBB.objective, null)
+    assert.equal(byKey.BBB.updated_at, null)
+  })
+
+  it('Panorama: marcos vencidos (pendentes antes de hoje), do mais antigo, só da carteira ativa', () => {
+    const out = executive.buildDashboard(
+      input({
+        milestones: [
+          { id: 'm1', projectId: 'a', name: 'Vencido recente', dueDate: '2026-10-20', state: 'pending' },
+          { id: 'm2', projectId: 'b', name: 'Vencido antigo', dueDate: '2026-09-01', state: 'pending' },
+          { id: 'm3', projectId: 'a', name: 'Feito', dueDate: '2026-09-15', state: 'done' },
+          { id: 'm4', projectId: 'a', name: 'Hoje', dueDate: '2026-10-29', state: 'pending' },
+          { id: 'm5', projectId: 'z', name: 'Arquivado', dueDate: '2026-09-02', state: 'pending' },
+        ],
+      }),
+    )
+    assert.deepEqual(out.plan.overdue_milestones.map((m) => [m.name, m.project.key]), [['Vencido antigo', 'BBB'], ['Vencido recente', 'AAA']])
+    assert.equal(out.plan.overdue_milestones_total, 2)
+    assert.deepEqual(out.plan.upcoming_milestones.map((m) => m.name), ['Hoje'])
+  })
+
+  it('escopo: projetos, área (none = sem área), responsável (sem ele, o dono) e status só do período', () => {
+    const all = [
+      { id: 'a', status: 'active', areaId: 'ar1', leadId: 'u1', ownerId: 'u9' },
+      { id: 'b', status: 'paused', areaId: null, leadId: null, ownerId: 'u2' },
+      { id: 'c', status: 'completed', areaId: 'ar1', leadId: 'u1', ownerId: 'u9' },
+      { id: 'd', status: 'cancelled', areaId: 'ar1', leadId: 'u1', ownerId: 'u9' },
+    ]
+    const ids = (list) => list.map((p) => (p.periodOnly ? `${p.id}*` : p.id))
+    assert.deepEqual(ids(executive.scopeProjects(all, {})), ['a', 'b', 'c', 'd'])
+    assert.deepEqual(ids(executive.scopeProjects(all, { statuses: ['active', 'paused'], deliveryStatuses: ['completed'] })), ['a', 'b', 'c*'])
+    assert.deepEqual(ids(executive.scopeProjects(all, { areaIds: ['none'] })), ['b'])
+    assert.deepEqual(ids(executive.scopeProjects(all, { areaIds: ['ar1'], statuses: ['active'], deliveryStatuses: ['completed'] })), ['a', 'c*'])
+    assert.deepEqual(ids(executive.scopeProjects(all, { ownerIds: ['u2'] })), ['b'])
+    assert.deepEqual(ids(executive.scopeProjects(all, { ownerIds: ['u9'] })), [])
+    assert.deepEqual(ids(executive.scopeProjects(all, { projectIds: ['a', 'b'], ownerIds: ['u1'] })), ['a'])
+    // o objeto original não é alterado
+    assert.equal(all[2].periodOnly, undefined)
+  })
+
   it('nada no escopo: tudo zerado, sem erro', () => {
     const out = executive.buildDashboard(input({ projects: [] }))
     assert.equal(out.summary.active_projects, 0)

@@ -59,7 +59,7 @@ describe('painel executivo — leitura rápida', () => {
   const crm = { id: 'p1', key: 'CRM', name: 'CRM' }
   const erp = { id: 'p2', key: 'ERP', name: 'ERP' }
   const project = (ref: typeof crm, level: HealthLevel, factors: HealthFactor[] = []): PortfolioRow => ({
-    project: { ...ref, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', area: null, startDate: null, dueDate: null, owner: null },
+    project: { ...ref, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', area: null, startDate: null, dueDate: null, owner: null, objective: null, updatedAt: null },
     health: { level, factors },
     progress: null,
     plan: null,
@@ -95,6 +95,8 @@ describe('painel executivo — leitura rápida', () => {
         ],
         openIssuesTotal: 2,
         upcomingMilestones: [{ id: 'm1', name: 'Go-live', dueDate: '2026-11-10', project: crm }],
+        overdueMilestones: [],
+        overdueMilestonesTotal: 0,
       },
       kanban: kanban([task('T2', '2026-10-25'), task('T1', '2026-10-01')]),
     })

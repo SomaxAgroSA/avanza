@@ -4173,168 +4173,220 @@
   },
   "tracking": {
     "title": "Panorama",
-    "loading": "Cargando el seguimiento…",
-    "loadError": "No se pudo cargar el seguimiento",
-    "asOf": "Situación al {{time}}",
-    "scope": {
-      "all": "Alcance: toda la cartera",
-      "filtered_one": "Alcance: {{count}} proyecto",
-      "filtered_other": "Alcance: {{count}} proyectos"
-    },
-    "filters": {
-      "area": "Departamento",
-      "owner": "Responsable",
-      "allAreas": "Departamento: todos",
-      "allOwners": "Responsable: todos"
-    },
-    "noArea": "Sin departamento",
-    "noOwner": "Sin responsable",
-    "noDate": "Sin fecha",
-    "lateShort_one": "+{{count}} día",
-    "lateShort_other": "+{{count}} días",
+    "heading": "Panorama ejecutivo",
+    "loading": "Cargando el Panorama…",
+    "loadError": "No fue posible cargar el Panorama",
+    "updating": "Actualizando los números…",
     "print": "Imprimir o guardar en PDF",
-    "empty": "No hay proyectos en marcha",
+    "cutoff": "Corte de referencia: {{time}}",
+    "empty": "Ningún proyecto en marcha",
     "emptyHint": "Los proyectos en planificación, en curso o pausados aparecen aquí.",
-    "sections": {
-      "upcoming": "¿Qué se entrega en los próximos 30 días?"
-    },
-    "kpi": {
-      "active": "Proyectos en marcha",
-      "late": "Atrasados",
-      "blocked": "Bloqueados",
-      "risk": "En riesgo",
-      "help": "Atrasado: fecha objetivo vencida. Bloqueado: pausado o con tareas bloqueadas. En riesgo: el plan del proyecto (cronograma, avance o problemas abiertos) está fuera de lo previsto. Haga clic en un número para ver esos proyectos en la cartera."
-    },
-    "reasons": {
-      "late_one": "Fecha objetivo vencida hace {{count}} día",
-      "late_other": "Fecha objetivo vencida hace {{count}} días",
-      "paused": "Pausado",
-      "blockedTasks_one": "{{count}} tarea bloqueada",
-      "blockedTasks_other": "{{count}} tareas bloqueadas"
-    },
-    "situation": {
-      "risk": "En riesgo",
-      "watch": "Vigilar",
-      "ok": "En orden",
-      "none": "Sin plan"
-    },
-    "upcoming": {
-      "none": "No hay entregas en los próximos 30 días.",
-      "projectDue": "Fecha objetivo del proyecto"
-    },
-    "groupBy": "Agrupar por",
-    "groups": {
-      "priority": "Prioridad",
-      "area": "Departamento",
+    "emptyFiltered": "Ningún proyecto con estos filtros",
+    "emptyFilteredHint": "Cambiá el área, el responsable o el proyecto para ver otros números.",
+    "filters": {
+      "label": "Filtrar:",
+      "group": "Filtros del Panorama",
+      "area": "Área",
       "owner": "Responsable",
-      "status": "Estado"
-    },
-    "filtered": {
-      "late": "Mostrando solo los proyectos atrasados.",
-      "blocked": "Mostrando solo los proyectos bloqueados.",
-      "risk": "Mostrando solo los proyectos en riesgo.",
-      "clear": "Ver todos"
-    },
-    "portfolio": {
-      "none": "Ningún proyecto con este filtro.",
-      "count_one": "{{count}} proyecto",
-      "count_other": "{{count}} proyectos",
-      "late_one": "{{count}} atrasado",
-      "late_other": "{{count}} atrasados"
-    },
-    "columns": {
-      "priority": "Prioridad",
       "project": "Proyecto",
-      "area": "Departamento",
-      "owner": "Responsable",
-      "reason": "Motivo",
-      "date": "Fecha",
-      "delivery": "Entrega",
-      "status": "Estado",
-      "situation": "Situación",
-      "progress": "Avance",
-      "due": "Fecha objetivo",
-      "nextMilestone": "Próximo hito",
-      "tasks": "Tareas",
-      "tasksHint": "Tareas abiertas · en desarrollo"
+      "allAreas": "Área: todas",
+      "noArea": "Sin área",
+      "allOwners": "Responsable: todos",
+      "allProjects": "Proyecto: todos",
+      "from": "Desde",
+      "to": "Hasta",
+      "clear": "Limpiar filtros"
     },
     "period": {
       "label": "Período",
       "30d": "30 días",
       "90d": "90 días",
-      "year": "Este año"
+      "year": "Este año",
+      "custom": "Personalizado"
     },
-    "periodNumbers": {
-      "work": "Trabajo efectivo por tarea (promedio)"
+    "situation": {
+      "risk": "En riesgo",
+      "watch": "Atención",
+      "ok": "En orden",
+      "none": "Sin plan"
     },
-    "charts": {
-      "flowTitle": "Creadas y terminadas por semana",
-      "flowHint": "Si se crean más tareas de las que se terminan, el trabajo pendiente crece.",
-      "stockTitle": "Terminadas, en proceso y vencidas por semana",
-      "stockHint": "Terminadas: las concluidas en cada semana. En proceso y vencidas: las que había al cierre de cada semana.",
-      "created": "Creadas",
-      "done": "Terminadas",
-      "inProgress": "En proceso",
-      "overdue": "Vencidas",
-      "ongoingWeek": "* La última semana todavía está en curso."
+    "synthesis": {
+      "label": "Síntesis para la dirección",
+      "eyebrow": "Síntesis para la dirección",
+      "one": "{{first}}.",
+      "two": "{{first}} y {{second}}.",
+      "allGood": "Portafolio en orden.",
+      "facts": {
+        "risk_one": "{{count}} proyecto en riesgo",
+        "risk_other": "{{count}} proyectos en riesgo",
+        "blocked_one": "{{count}} tarea bloqueada",
+        "blocked_other": "{{count}} tareas bloqueadas",
+        "overdue_one": "{{count}} tarea vencida",
+        "overdue_other": "{{count}} tareas vencidas",
+        "late_one": "{{count}} proyecto con la fecha objetivo vencida",
+        "late_other": "{{count}} proyectos con la fecha objetivo vencida",
+        "attention_one": "{{count}} proyecto en atención",
+        "attention_other": "{{count}} proyectos en atención"
+      },
+      "ok_one": "{{ok}} de {{count}} proyecto en orden",
+      "ok_other": "{{ok}} de {{count}} proyectos en orden",
+      "overdueTasks_one": "{{count}} tarea vencida",
+      "overdueTasks_other": "{{count}} tareas vencidas",
+      "deliveries_one": "{{count}} tarea entregada en el período",
+      "deliveries_other": "{{count}} tareas entregadas en el período",
+      "priority": "Prioridad: {{text}}.",
+      "priorities": {
+        "risk": "recuperar los proyectos en riesgo",
+        "blocked": "destrabar los bloqueos",
+        "overdue": "poner al día las tareas vencidas",
+        "late": "replanificar las fechas objetivo vencidas",
+        "attention": "acompañar los proyectos en atención"
+      },
+      "link": "Ver proyectos que requieren atención"
     },
-    "teamReport": "Ver el informe de tareas del equipo",
-    "soon": "Próximamente: cumplimiento de compromisos, cambios de alcance y demandas pendientes de aclaración.",
-    "drawer": {
-      "start": "Inicio",
-      "open": "Tareas abiertas",
-      "inProgress": "En desarrollo",
-      "blocked": "Tareas bloqueadas",
-      "overdue": "Tareas vencidas",
-      "issues": "Problemas abiertos",
-      "openProject": "Abrir proyecto"
-    },
-    "periodLine": "Período considerado: {{from}} a {{to}}",
-    "hero": {
-      "label": "Resumen",
-      "today": "Hoy",
-      "period": "En el período",
-      "health": "Salud de la cartera",
-      "progress": "Avance medio",
-      "noProgress": "Todavía no hay avance medido en estos proyectos.",
-      "late": "Proyectos atrasados",
-      "lateHint_one": "{{count}} tarea vencida",
-      "lateHint_other": "{{count}} tareas vencidas",
-      "blocked": "Proyectos bloqueados",
-      "blockedHint_one": "{{count}} tarea bloqueada",
-      "blockedHint_other": "{{count}} tareas bloqueadas",
-      "deliveries": "Entregas",
-      "deliveriesHint_one": "tareas terminadas · {{count}} hito",
-      "deliveriesHint_other": "tareas terminadas · {{count}} hitos"
-    },
-    "attention": {
-      "title": "Requiere atención",
-      "more": "Ver más ({{count}})",
-      "less": "Ver menos",
-      "none": "Nada requiere atención: ningún proyecto atrasado, bloqueado ni en riesgo, y ninguna entrega en los próximos 7 días.",
-      "kinds": {
-        "risk": "En riesgo",
-        "late": "Atrasado",
-        "paused": "Pausado",
-        "blocked": "Tareas bloqueadas",
-        "soon_one": "Entrega en {{count}} día",
-        "soon_other": "Entrega en {{count}} días",
-        "soonToday": "Entrega hoy"
+    "kpi": {
+      "label": "Indicadores",
+      "action": "Ver en la tabla",
+      "supervised": {
+        "title": "Proyectos supervisados",
+        "how": "Proyectos en los filtros, en planificación, en curso o pausados."
+      },
+      "progress": {
+        "title": "Avance real promedio",
+        "planned": "Planificado {{value}} %",
+        "gap": "{{value}} pp",
+        "noData": "Sin datos",
+        "how_one": "Promedio de los {{withPlan}} de {{count}} proyecto con plan de gestión con fechas; los sin plan no entran.",
+        "how_other": "Promedio de los {{withPlan}} de {{count}} proyectos con plan de gestión con fechas; los sin plan no entran."
+      },
+      "risk": {
+        "title": "Proyectos en riesgo",
+        "attention_one": "+ {{count}} en atención",
+        "attention_other": "+ {{count}} en atención",
+        "how": "Según la salud del proyecto: el peor entre plazos, avance, detenidos y esfuerzo."
+      },
+      "blocked": {
+        "title": "Bloqueos activos",
+        "tasks_one": "proyectos · {{count}} tarea bloqueada",
+        "tasks_other": "proyectos · {{count}} tareas bloqueadas",
+        "how": "Tareas abiertas que esperan otra todavía abierta, contadas una sola vez. Los pausados no entran."
+      },
+      "overdue": {
+        "title": "Tareas vencidas",
+        "late_one": "{{count}} proyecto con la fecha objetivo vencida",
+        "late_other": "{{count}} proyectos con la fecha objetivo vencida",
+        "how": "Plazo anterior a hoy y no concluidas. Los pausados no entran."
       }
     },
-    "tabs": {
-      "label": "Vistas del panorama",
-      "portfolio": "Portafolio",
-      "portfolioHint": "dirección",
-      "team": "Equipo y tareas",
-      "teamHint": "coordinación",
-      "deliveries": "Entregas",
-      "deliveriesHint": "lo que ya se hizo"
+    "health": {
+      "title": "Salud del portafolio",
+      "hint": "Proyectos por situación · elegí una para filtrar la tabla.",
+      "all": "Ver todos",
+      "center_one": "proyecto",
+      "center_other": "proyectos",
+      "filter": "Filtrar la tabla: {{label}} ({{count}})"
     },
-    "done": {
-      "title": "Lo que ya se hizo en el período",
-      "row": "{{tasks}} entregas · {{milestones}} hitos",
-      "none": "Todavía no hay entregas en el período."
+    "execution": {
+      "title": "Ejecución vs. planificación",
+      "hint_one": "Avance real y planificado · solo el proyecto con plan.",
+      "hint_other": "Avance real y planificado · solo los {{count}} proyectos con plan.",
+      "real": "Real",
+      "planned": "Planificado",
+      "gap": "Desvío",
+      "gapValue": "{{value}} pp",
+      "noPlan": "Ningún proyecto de estos filtros tiene plan de gestión con fechas.",
+      "week": "Entregas por semana",
+      "month": "Entregas por mes",
+      "period": "Período",
+      "tasks_one": "{{count}} tarea",
+      "tasks_other": "{{count}} tareas",
+      "milestones_one": "{{count}} hito",
+      "milestones_other": "{{count}} hitos",
+      "noDeliveries": "Ninguna tarea concluida en el período.",
+      "weekOf": "Semana del {{date}}",
+      "monthOf": "{{date}}",
+      "tasksLabel": "Tareas concluidas",
+      "milestonesLabel": "Hitos concluidos",
+      "chart": "Tareas concluidas en el período"
+    },
+    "table": {
+      "title": "Proyectos que requieren atención",
+      "order": "Orden: en riesgo → fecha objetivo vencida → más bloqueos → atención",
+      "count_one": "{{count}} proyecto",
+      "count_other": "{{count}} proyectos",
+      "filtered": {
+        "risk": "Solo los proyectos en riesgo",
+        "watch": "Solo los proyectos en atención",
+        "ok": "Solo los proyectos en orden",
+        "none": "Solo los proyectos sin plan",
+        "blocked": "Solo los proyectos con bloqueos",
+        "overdue": "Solo los proyectos con tareas o fecha objetivo vencidas",
+        "all": "Todos los proyectos supervisados"
+      },
+      "clear": "Quitar filtro",
+      "none": "Ningún proyecto requiere atención ahora.",
+      "noneFiltered": "Ningún proyecto en este filtro.",
+      "columns": {
+        "project": "Proyecto",
+        "owner": "Responsable",
+        "situation": "Situación",
+        "progress": "Avance real / plan",
+        "blocked": "Bloqueos",
+        "due": "Fecha objetivo"
+      },
+      "open": "Ver resumen",
+      "openLabel": "Ver resumen de {{name}}",
+      "noDate": "Sin fecha",
+      "lateDue_one": "vencida hace {{count}} día",
+      "lateDue_other": "vencida hace {{count}} días",
+      "progressLabel": "Avance real {{real}} %, planificado {{planned}} %"
+    },
+    "causes": {
+      "late_one": "Fecha objetivo vencida hace {{count}} día",
+      "late_other": "Fecha objetivo vencida hace {{count}} días",
+      "blocked_one": "{{count}} tarea bloqueada",
+      "blocked_other": "{{count}} tareas bloqueadas",
+      "overdueTasks_one": "{{count}} tarea vencida",
+      "overdueTasks_other": "{{count}} tareas vencidas",
+      "paused": "Pausado",
+      "noPlan": "Sin plan de gestión",
+      "fine": "Sin pendientes"
+    },
+    "milestones": {
+      "title": "Próximos hitos relevantes",
+      "hint": "Hitos de la Gestión: los vencidos y los de los próximos 30 días.",
+      "none": "Ningún hito vencido ni en los próximos 30 días.",
+      "owner": "Resp. del proyecto: {{name}}",
+      "noOwner": "Sin responsable",
+      "overdue_one": "Vencido hace {{count}} día",
+      "overdue_other": "Vencido hace {{count}} días",
+      "today": "Hoy",
+      "soon_one": "En {{count}} día",
+      "soon_other": "En {{count}} días",
+      "planned": "En plazo",
+      "more_one": "+{{count}} hito vencido no listado",
+      "more_other": "+{{count}} hitos vencidos no listados"
+    },
+    "drawer": {
+      "objective": "Objetivo",
+      "noObjective": "Sin objetivo en la ficha del proyecto.",
+      "status": "Estado actual",
+      "progress": "Avance",
+      "progressValue": "{{real}} % real · {{planned}} % planificado",
+      "noPlan": "Sin plan de gestión con fechas",
+      "due": "Fecha objetivo",
+      "risks": "Bloqueos y pendientes",
+      "blocked_one": "{{count}} tarea bloqueada",
+      "blocked_other": "{{count}} tareas bloqueadas",
+      "overdue_one": "{{count}} tarea vencida",
+      "overdue_other": "{{count}} tareas vencidas",
+      "issues_one": "{{count}} problema abierto",
+      "issues_other": "{{count}} problemas abiertos",
+      "nextMilestone": "Próximo hito",
+      "none": "Ninguno",
+      "owner": "Responsable",
+      "updated": "Última actualización",
+      "openProject": "Abrir proyecto"
     }
   },
   "team": {

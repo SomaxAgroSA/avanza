@@ -98,4 +98,34 @@ describe('repositório do painel executivo', () => {
     expect(data.timeline).toEqual({ bucket: 'week', points: [{ start: '2026-09-01', tasksCreated: 30, tasksCompleted: 25, planItemsCompleted: 6, tasksInProgress: 0, tasksOverdue: 0 }] })
     expect(data.achievements[0]?.recent[0]).toEqual({ kind: 'plan_item', id: 'e3', code: null, title: 'Levantamento', completedAt: new Date('2026-10-20T10:00:00.000Z') })
   })
+  it('Panorama: manda área, responsável e status só do período; lê objetivo, atualização, marcos vencidos e catálogo', async () => {
+    const withPanorama: ExecutiveDto = {
+      ...dto,
+      projects: [{ id: 'p1', key: 'CRM', name: 'CRM', color: 'blue', icon: 'folder', status: 'active', archived: false, area: { id: 'a1', name: 'Comercial', color: null }, owner: { id: 'u1', name: 'Ana', avatar_url: null } }],
+      portfolio: dto.portfolio.map((row, i) => ({ ...row, project: { ...row.project, objective: i === 0 ? '  Vender mais  ' : '   ', updated_at: i === 0 ? '2026-10-20T15:25:00.000Z' : null } })),
+      plan: {
+        items: { total: 0, done: 0, open: 0, overdue: 0, stuck: 0, canceled: 0 },
+        status_distribution: [],
+        schedule: { on_time: 0, overdue: 0, unscheduled: 0, done: 0 },
+        effort: { estimated: null, actual: null, remaining: null },
+        issues: [],
+        open_issues_total: 0,
+        upcoming_milestones: [],
+        overdue_milestones: [{ id: 'm7', name: 'Protótipo', due_date: '2026-10-14', project: { id: 'p1', key: 'CRM', name: 'CRM' } }],
+        overdue_milestones_total: 3,
+      },
+      achievements: [{ ...dto.achievements[0]!, project: { id: 'p1', key: 'CRM', name: 'CRM', archived: false, status: 'completed' } }],
+    }
+    const { api, get } = apiReturning(withPanorama)
+    const data = await createHttpExecutiveRepository(api).get({ projectIds: [], statuses: ['active'], areaIds: ['a1', 'none'], ownerIds: ['u1'], deliveryStatuses: ['completed'], from: null, to: null, tzOffset: 0 })
+    expect(get).toHaveBeenCalledWith('/executive', { query: expect.objectContaining({ area_ids: 'a1,none', owner_ids: 'u1', delivery_statuses: 'completed' }) })
+    expect(data.projects[0]).toMatchObject({ area: { id: 'a1', name: 'Comercial' }, owner: { id: 'u1', name: 'Ana', avatarUrl: null } })
+    expect(data.portfolio.map((r) => [r.project.objective, r.project.updatedAt])).toEqual([
+      ['Vender mais', new Date('2026-10-20T15:25:00.000Z')],
+      [null, null],
+    ])
+    expect(data.plan?.overdueMilestones).toEqual([{ id: 'm7', name: 'Protótipo', dueDate: '2026-10-14', project: { id: 'p1', key: 'CRM', name: 'CRM' } }])
+    expect(data.plan?.overdueMilestonesTotal).toBe(3)
+    expect(data.achievements[0]?.project.status).toBe('completed')
+  })
 })

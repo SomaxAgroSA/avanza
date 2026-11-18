@@ -749,6 +749,7 @@ function createFakeRepositories(store) {
 
   const charterRepository = {
     findByProject: (projectId) => store.charters.find((c) => c.projectId === projectId) || null,
+    listByProjects: (projectIds) => store.charters.filter((c) => projectIds.indexOf(c.projectId) >= 0),
     upsert: (projectId, patch) => {
       let found = charterRepository.findByProject(projectId)
       if (!found) {

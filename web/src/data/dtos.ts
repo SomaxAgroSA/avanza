@@ -846,8 +846,18 @@ export interface ExecutivePersonDto {
 export interface ExecutiveDto {
   generated_at: string
   period: { from: string | null; to: string }
-  filters?: { project_ids?: string[]; statuses?: string[] }
-  projects: Array<ExecutiveProjectRefDto & { color: string | null; icon: string | null; status?: string | null; archived: boolean; member?: boolean }>
+  filters?: { project_ids?: string[]; statuses?: string[]; area_ids?: string[]; owner_ids?: string[]; delivery_statuses?: string[] }
+  projects: Array<
+    ExecutiveProjectRefDto & {
+      color: string | null
+      icon: string | null
+      status?: string | null
+      archived: boolean
+      member?: boolean
+      area?: { id: string; name: string; color: string | null } | null
+      owner?: ExecutivePersonDto | null
+    }
+  >
   summary: {
     active_projects: number
     health: Partial<Record<string, number>>
@@ -868,6 +878,8 @@ export interface ExecutiveDto {
       start_date: string | null
       due_date: string | null
       owner: ExecutivePersonDto | null
+      objective?: string | null
+      updated_at?: string | null
     }
     health: { level: string; factors: Array<{ key: string; level: string; value: number | null; count?: number; of?: number; planned?: number | null; actual?: number | null; hours?: number | null }> }
     progress: { value: number | null; source: string | null } | null
@@ -884,6 +896,8 @@ export interface ExecutiveDto {
     issues: Array<{ id: string; number: number; description: string; state: string; opened_on: string | null; project: ExecutiveProjectRefDto; owner?: ExecutivePersonDto | null }>
     open_issues_total: number
     upcoming_milestones: Array<{ id: string; name: string; due_date: string; project: ExecutiveProjectRefDto }>
+    overdue_milestones?: Array<{ id: string; name: string; due_date: string; project: ExecutiveProjectRefDto }>
+    overdue_milestones_total?: number
   } | null
   kanban: {
     funnel: Partial<Record<string, number>>
@@ -905,7 +919,7 @@ export interface ExecutiveDto {
   }
   timeline: { bucket: string; points: Array<{ start: string; tasks_created: number; tasks_completed: number; plan_items_completed: number; tasks_in_progress?: number; tasks_overdue?: number }> }
   achievements: Array<{
-    project: ExecutiveProjectRefDto & { archived: boolean }
+    project: ExecutiveProjectRefDto & { archived: boolean; status?: string | null }
     tasks_done: number
     plan_items_done: number
     milestones_done: Array<{ id: string; name: string; due_date: string | null }>
