@@ -139,4 +139,20 @@ describe('application/team-activity — Equipo ahora', () => {
     const noTasks = { ...s.ctx.douglas, principal: { ...s.ctx.douglas.principal, permissions: s.ctx.douglas.principal.permissions.filter((code) => code !== 'tasks.view') } }
     assert.deepEqual((await s.service.getTeamActivity(noTasks)).people, [])
   })
+
+  it('§41: tarefas por projeto (executadas e faltantes) dos projetos abertos que a pessoa vê por inteiro, sem as canceladas', async () => {
+    const s = await scenario()
+    s.deps.store.statuses.push({ id: 'cancel', key: 'CANCEL', name: 'Cancelada', color: 'gray', category: 'cancelled', order: 0, isActive: true })
+    await s.deps.taskRepository.create({ projectId: s.ds.id, code: 'DS-99', title: 'Cancelada', number: 99, statusId: 'cancel', assigneeId: s.users.douglas.id })
+    const byKey = async (ctx) => {
+      const data = await s.service.getProjectTaskCounts(ctx)
+      const keys = { [s.ds.id]: 'DS', [s.gcs.id]: 'GCS', [s.old.id]: 'OLD', [s.secret.id]: 'SEC' }
+      return Object.fromEntries(data.projects.map((p) => [keys[p.project_id], [p.done, p.open]]))
+    }
+    // DS: 1 concluída, 2 en curso; GCS: 2 concluídas, 2 abiertas; OLD (concluido) también cuenta; la cancelada no
+    assert.deepEqual(await byKey(s.ctx.douglas), { DS: [1, 2], GCS: [2, 2], OLD: [0, 1] })
+    // sin tasks.view, vacío
+    const noTasks = { ...s.ctx.douglas, principal: { ...s.ctx.douglas.principal, permissions: s.ctx.douglas.principal.permissions.filter((code) => code !== 'tasks.view') } }
+    assert.deepEqual((await s.service.getProjectTaskCounts(noTasks)).projects, [])
+  })
 })

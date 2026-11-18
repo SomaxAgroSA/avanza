@@ -247,6 +247,22 @@ function createTaskRepository(db) {
       return countMap(rows, 'status_id')
     },
 
+    /** Tarefas por projeto e categoria de status: { [projectId]: { [category]: total } } (painel §41). */
+    async countByProject(projectIds) {
+      if (!projectIds || projectIds.length === 0) return {}
+      const rows = await db.query(
+        `SELECT t.project_id, s.category, COUNT(*) AS total FROM tasks t JOIN task_statuses s ON s.id = t.status_id
+         WHERE t.project_id = ANY($1::text[]) GROUP BY t.project_id, s.category`,
+        [projectIds],
+      )
+      const out = {}
+      rows.forEach((row) => {
+        out[row.project_id] = out[row.project_id] || {}
+        out[row.project_id][row.category] = Number(row.total)
+      })
+      return out
+    },
+
     /** Todas as tarefas do projeto (timeline), pela numeração, até `limit` (0 = todas). */
     async listByProject(projectId, limit) {
       const rows = await db.query('SELECT * FROM tasks WHERE project_id = $1 ORDER BY number ASC LIMIT $2', [projectId, limit || null])

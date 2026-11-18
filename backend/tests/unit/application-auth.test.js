@@ -180,6 +180,7 @@ describe('application/auth — logout e sessões', () => {
     const me = await auth.getMe(Object.assign({ principal, session }, ctx))
     assert.equal(me.user.email, 'ana@example.com')
     assert.equal(me.role.code, 'MEMBER')
+    assert.equal(me.role.ongoing_view, '', '§41: a vista de Em andamento do perfil viaja em /auth/me')
     assert.ok(Array.isArray(me.permissions))
     assert.ok(me.session.expires_at)
   })

@@ -208,6 +208,7 @@ function createRoleRepository(db) {
       name: row.name,
       description: row.description,
       isSystem: row.is_system,
+      ongoingView: row.ongoing_view || '',
     }
   }
 
@@ -249,7 +250,7 @@ function createRoleRepository(db) {
 
     async create(data) {
       try {
-        const row = await insertRow(db, 'roles', { code: text(data.code), name: text(data.name), description: text(data.description), is_system: false })
+        const row = await insertRow(db, 'roles', { code: text(data.code), name: text(data.name), description: text(data.description), is_system: false, ongoing_view: text(data.ongoingView) })
         return toEntity(row)
       } catch (err) {
         if (isUniqueViolation(err, 'idx_roles_code')) throw appError('ROLE_CODE_IN_USE')
@@ -261,6 +262,7 @@ function createRoleRepository(db) {
       const values = {}
       if (patch.name !== undefined) values.name = text(patch.name)
       if (patch.description !== undefined) values.description = text(patch.description)
+      if (patch.ongoingView !== undefined) values.ongoing_view = text(patch.ongoingView)
       return toEntity(mustExist(await updateRow(db, 'roles', id, values), 'roles', id))
     },
 

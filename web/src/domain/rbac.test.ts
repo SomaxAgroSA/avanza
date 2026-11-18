@@ -21,7 +21,7 @@ const user = (id: string, status: User['status'] = 'active'): User => ({
 
 const current = (roleCode: string, permissions: PermissionCode[], roleId = `role-${roleCode}`): CurrentUser => ({
   user: user('me'),
-  role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true },
+  role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '' },
   permissions,
   session: null,
 })
@@ -31,6 +31,7 @@ const role = (code: string, permissions: PermissionCode[] = []): Role => ({
   code,
   name: code,
   description: '',
+  ongoingView: '',
   isSystem: true,
   permissions,
   userCount: 0,

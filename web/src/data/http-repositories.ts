@@ -23,8 +23,8 @@ import type { CharterItemInput } from '@/domain/charter'
 import type { Urgency } from '@/domain/urgency'
 import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
 import { toCharterItem, toCharterMeasurement, toProjectBrief, toProjectCharter } from './mappers'
-import { toTeamActivity } from './mappers'
-import type { TeamActivityDto } from './dtos'
+import { toProjectTaskCounts, toTeamActivity } from './mappers'
+import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
 import { toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
@@ -377,11 +377,13 @@ export function createHttpRoleRepository(api: ApiClient): RoleRepository {
       return data.map(toPermission).filter((p): p is Permission => p !== null)
     },
     async create(input: RoleData) {
-      const { data } = await api.post<RoleDto>('/roles', input)
+      const { ongoingView, ...rest } = input
+      const { data } = await api.post<RoleDto>('/roles', ongoingView === undefined ? rest : { ...rest, ongoing_view: ongoingView })
       return toRole(data)
     },
     async update(id, input) {
-      const { data } = await api.patch<RoleDto>(path(id), input)
+      const { ongoingView, ...rest } = input
+      const { data } = await api.patch<RoleDto>(path(id), ongoingView === undefined ? rest : { ...rest, ongoing_view: ongoingView })
       return toRole(data)
     },
     async updatePermissions(id, permissions) {
@@ -475,6 +477,9 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
     },
     async teamActivity() {
       return toTeamActivity((await api.get<TeamActivityDto>('/team-activity')).data)
+    },
+    async taskCounts() {
+      return toProjectTaskCounts((await api.get<ProjectTaskCountsDto>('/project-task-counts')).data)
     },
     addMember: (id, userId, role) => members(api.post<ProjectMemberDto[]>(`${path(id)}/members`, { user_id: userId, role })),
     updateMemberRole: (id, userId, role) => members(api.patch<ProjectMemberDto[]>(memberPath(id, userId), { role })),

@@ -22,6 +22,7 @@ export interface RoleDto {
   name: string
   description: string
   is_system: boolean
+  ongoing_view?: string
   permissions?: string[]
   user_count?: number
 }
@@ -938,6 +939,10 @@ export interface PreferenceDto<T> {
 export interface ProjectFilterDto {
   statuses: string[]
   members_only: boolean
+}
+
+export interface ProjectTaskCountsDto {
+  projects: Array<{ project_id: string; done: number; open: number }>
 }
 
 export interface TeamActivityDto {

@@ -237,6 +237,7 @@ const configAction = (service, fn, status) => (e) =>
   }))
 
 const getTeamActivity = configAction('teamActivity', (s, ctx) => s.getTeamActivity(ctx))
+const getProjectTaskCounts = configAction('teamActivity', (s, ctx) => s.getProjectTaskCounts(ctx))
 const listCustomFields = configAction('customFields', (s, ctx, r) => s.listFields(ctx, r.query()))
 const getCustomField = configAction('customFields', (s, ctx, r) => s.getField(ctx, r.id))
 const createCustomField = configAction('customFields', (s, ctx, r) => s.createField(ctx, r.body()), 201)
@@ -684,6 +685,7 @@ module.exports = {
   createProject,
   projectCovers,
   getTeamActivity,
+  getProjectTaskCounts,
   updateProject,
   archiveProject,
   unarchiveProject,

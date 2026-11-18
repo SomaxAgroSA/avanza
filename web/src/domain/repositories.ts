@@ -1,4 +1,4 @@
-import type { AuditEntry, CurrentUser, Permission, Role, Session, User, UserStatus } from './entities'
+import type { AuditEntry, CurrentUser, OngoingView, Permission, Role, Session, User, UserStatus } from './entities'
 import type { ListQuery, Page } from './pagination'
 import type { PermissionCode } from './permissions'
 import type { CustomField, FieldConfig, FieldOption, FieldType, FieldValue, OptionColor, TaskType, TaskTypeDetail, TaskTypeIcon, TranslatedLocale, TypeTexts } from './task-config'
@@ -49,6 +49,7 @@ import type {
   ProjectPriority,
   ProjectStatus,
   ProjectView,
+  ProjectTaskCount,
   TeamActivity,
   UserSummary,
 } from './projects'
@@ -186,6 +187,8 @@ export interface RoleData {
   code: string
   name: string
   description: string
+  /** Vista da lista Em andamento (§41); sem o campo, não muda. */
+  ongoingView?: OngoingView
   permissions?: PermissionCode[]
 }
 
@@ -193,7 +196,7 @@ export interface RoleRepository {
   list(): Promise<Role[]>
   listPermissions(): Promise<Permission[]>
   create(data: RoleData): Promise<Role>
-  update(id: string, data: Pick<RoleData, 'name' | 'description'>): Promise<Role>
+  update(id: string, data: Pick<RoleData, 'name' | 'description' | 'ongoingView'>): Promise<Role>
   updatePermissions(id: string, permissions: PermissionCode[]): Promise<Role>
   remove(id: string): Promise<void>
 }
@@ -268,6 +271,8 @@ export interface ProjectRepository {
   covers(exclude?: string): Promise<ProjectCovers>
   /** Equipo ahora: em que projeto cada pessoa está trabalhando. */
   teamActivity(): Promise<TeamActivity>
+  /** Tarefas executadas e faltantes por projeto (painel Direção e gerência, §41); projeto sem tarefas não vem. */
+  taskCounts(): Promise<ProjectTaskCount[]>
   addMember(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   updateMemberRole(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   removeMember(id: string, userId: string): Promise<void>

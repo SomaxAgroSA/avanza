@@ -80,6 +80,8 @@ export interface DataTableRowActions<T> {
   /** "danger" (padrão) para ações destrutivas; "ghost" para reversíveis (ex.: arquivar). */
   deleteTone?: (row: T) => 'danger' | 'ghost'
   more?: (row: T) => AppDropdownItem[]
+  /** Sem o menu "⋯" (telas só de consulta, como o Em andamento da Direção). */
+  hideMore?: boolean
 }
 
 export interface AppDataTableProps<T extends RowData> {
@@ -522,18 +524,20 @@ function RowActions<T extends RowData>({ row, actions }: { row: T; actions: Data
           onClick={() => actions.onDelete?.(row)}
         />
       )}
-      <AppDropdown
-        items={moreItems.length > 0 ? moreItems : [{ type: 'label', key: 'none', label: t('table.noMoreActions') }]}
-        trigger={
-          <button
-            type="button"
-            aria-label={t('common.more')}
-            className="inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-surface-3 hover:text-fg"
-          >
-            <MoreHorizontal className="size-3.5" />
-          </button>
-        }
-      />
+      {!actions.hideMore && (
+        <AppDropdown
+          items={moreItems.length > 0 ? moreItems : [{ type: 'label', key: 'none', label: t('table.noMoreActions') }]}
+          trigger={
+            <button
+              type="button"
+              aria-label={t('common.more')}
+              className="inline-flex size-7 items-center justify-center rounded-md text-muted hover:bg-surface-3 hover:text-fg"
+            >
+              <MoreHorizontal className="size-3.5" />
+            </button>
+          }
+        />
+      )}
     </div>
   )
 }

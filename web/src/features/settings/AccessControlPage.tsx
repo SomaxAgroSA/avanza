@@ -177,6 +177,12 @@ function UserHeader({ user, roles }: { user: User; roles: Role[] }) {
         options={roles.map((r) => ({ value: r.id, label: r.name }))}
       />
       <HomePageSelect user={user} role={role} />
+      {/* a vista de Em andamento é do perfil (§41): aqui só se mostra, muda-se em Perfis */}
+      {role && (
+        <p className="basis-full text-xs text-muted">
+          {t('roles.ongoingView.inherited', { view: t(role.ongoingView === 'executive' ? 'roles.ongoingView.executive' : 'roles.ongoingView.management') })}
+        </p>
+      )}
     </div>
   )
 }
@@ -302,7 +308,7 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
     if (!pending || !role) return
     const code = personalRoleCode(user.name, roles.map((r) => r.code))
     createRole.mutate(
-      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms },
+      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, ongoingView: role.ongoingView },
       {
         onSuccess: (created) =>
           updateUser.mutate(

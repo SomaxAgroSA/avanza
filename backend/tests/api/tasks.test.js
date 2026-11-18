@@ -215,4 +215,18 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     const done = statuses.find((s) => s.key === 'CONCLUIDO')
     assert.equal((await admin.del(`/statuses/${done.id}`)).body.error.code, 'STATUS_IN_USE')
   })
+
+  it('§41: GET /project-task-counts conta executadas e faltantes por projeto (só quem vê o projeto por inteiro)', async () => {
+    const counted = (await admin.post('/projects', { name: 'Contagem', key: 'CNT' })).body.data
+    await admin.post(`/projects/${counted.id}/members`, { user_id: member.user.id, role: 'member' })
+    const made = await Promise.all(['Primeira', 'Segunda'].map((title) => member.client.post('/tasks', { project_id: counted.id, task_type_id: doc.id, title })))
+    made.forEach((res) => assert.equal(res.status, 201, JSON.stringify(res.body)))
+    const done = statuses.find((x) => x.key === 'CONCLUIDO')
+    assert.equal((await member.client.patch(`/tasks/${made[0].body.data.id}`, { status_id: done.id })).status, 200)
+
+    const mine = (await member.client.get('/project-task-counts')).body.data.projects
+    assert.deepEqual(mine.find((p) => p.project_id === counted.id), { project_id: counted.id, done: 1, open: 1 })
+    assert.equal((await outsider.client.get('/project-task-counts')).body.data.projects.some((p) => p.project_id === counted.id), false)
+    assert.equal((await createClient(pb.api).get('/project-task-counts')).status, 401)
+  })
 })

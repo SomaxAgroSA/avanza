@@ -225,6 +225,13 @@ export interface TeamActivityProject {
   tasks: TeamActivityTask[]
 }
 
+/** Tarefas de um projeto (painel Direção e gerência, §41): executadas e as que faltam (sem as canceladas). */
+export interface ProjectTaskCount {
+  projectId: string
+  done: number
+  open: number
+}
+
 export interface TeamActivityPerson {
   user: UserSummary
   projects: TeamActivityProject[]
