@@ -477,3 +477,116 @@ describe('application/tasks — área responsável (§32)', () => {
     assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, task.id, { area_id: 'nada' })), 'VALIDATION_ERROR:{"area_id":"invalid_option"}')
   })
 })
+
+describe('application/tasks — etapa da Gestão (§28, ADR-052)', () => {
+  /** Etapas do CRM: 1.0 Base de clientes (com o subgrupo 1.1 Critérios); uma etapa no SAP. */
+  async function withStages() {
+    const s = await setup()
+    const group = (projectId, name, position, parentId) => s.deps.projectGroupRepository.create({ projectId, name, color: 'blue', position, parentId: parentId || null })
+    const base = await group(s.project.id, 'Base de clientes', 1024)
+    const criterios = await group(s.project.id, 'Critérios', 1024, base.id)
+    const sap = await group(s.other.id, 'Fase SAP', 1024)
+    return Object.assign(s, { stages: { base, criterios, sap } })
+  }
+  const doc = (s, extra) => Object.assign({ project_id: s.project.id, task_type_id: s.types.doc.id, title: 'Unir a base de clientes' }, extra)
+  const rowsOf = (s, groupId) => s.deps.store.planItems.filter((i) => i.groupId === groupId)
+  /** O mesmo contexto sem uma permissão (perfil personalizado). */
+  const without = (ctx, code) =>
+    Object.assign({}, ctx, { principal: createPrincipal({ userId: ctx.principal.userId, roleId: 'r', roleCode: 'CUSTOM', permissions: Array.from(ctx.principal.permissions).filter((p) => p !== code) }) })
+
+  it('criar com etapa: nasce uma linha na etapa com título, datas e responsável da tarefa, e a tarefa fica ligada a ela', async () => {
+    const s = await withStages()
+    const task = await s.tasks.createTask(
+      s.ctx.mario,
+      doc(s, { plan_group_id: s.stages.criterios.id, start_date: '2026-01-12', due_date: '2026-01-30', assignee_id: s.users.mario.id }),
+    )
+    const rows = rowsOf(s, s.stages.criterios.id)
+    assert.equal(rows.length, 1)
+    assert.equal(rows[0].name, 'Unir a base de clientes')
+    assert.equal(rows[0].projectId, s.project.id)
+    assert.equal(rows[0].parentId, null)
+    assert.equal(rows[0].startDate, '2026-01-12')
+    assert.equal(rows[0].endDate, '2026-01-30')
+    assert.equal(rows[0].ownerId, s.users.mario.id)
+    assert.equal(rows[0].statusId, null)
+    assert.equal(rows[0].createdBy, s.users.mario.id)
+    assert.deepEqual(task.plan_item, { id: rows[0].id, name: 'Unir a base de clientes' })
+    // histórico dos dois lados, como se a linha fosse criada no quadro
+    const created = s.deps.store.audit.find((a) => a.action === 'plan_item.created')
+    assert.equal(created.entityId, rows[0].id)
+    assert.equal(created.newValue.plan_group, 'Critérios')
+    assert.equal(created.newValue.name, 'Unir a base de clientes')
+    assert.equal(s.deps.store.audit.at(-1).action, 'task.created')
+    assert.equal(s.deps.store.audit.at(-1).newValue.plan_item, 'Unir a base de clientes')
+  })
+
+  it('sem datas: a linha começa hoje e termina no mesmo dia; vai para o fim da etapa', async () => {
+    const s = await withStages()
+    await s.tasks.createTask(s.ctx.mario, doc(s, { title: 'Primeira', plan_group_id: s.stages.base.id }))
+    await s.tasks.createTask(s.ctx.mario, doc(s, { title: 'Segunda', plan_group_id: s.stages.base.id }))
+    const [first, second] = rowsOf(s, s.stages.base.id)
+    assert.equal(first.startDate, '2026-01-10')
+    assert.equal(first.endDate, '2026-01-10')
+    assert.equal(first.ownerId, null)
+    assert.ok(second.position > first.position)
+  })
+
+  it('editar a tarefa depois não muda a linha (cópia só na criação)', async () => {
+    const s = await withStages()
+    const task = await s.tasks.createTask(s.ctx.mario, doc(s, { plan_group_id: s.stages.base.id, due_date: '2026-01-20' }))
+    await s.tasks.updateTask(s.ctx.mario, task.id, { title: 'Outro título', due_date: '2026-02-20' })
+    const [row] = rowsOf(s, s.stages.base.id)
+    assert.equal(row.name, 'Unir a base de clientes')
+    assert.equal(row.endDate, '2026-01-20')
+  })
+
+  it('etapa de outro projeto ou inexistente é recusada; etapa e elemento juntos também (nada é criado)', async () => {
+    const s = await withStages()
+    assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.mario, doc(s, { plan_group_id: s.stages.sap.id }))), 'VALIDATION_ERROR:{"plan_group_id":"invalid_option"}')
+    assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.mario, doc(s, { plan_group_id: 'naoexiste' }))), 'VALIDATION_ERROR:{"plan_group_id":"invalid_option"}')
+    const item = await s.deps.planItemRepository.create({ projectId: s.project.id, groupId: s.stages.base.id, name: 'Já existe', position: 1 })
+    assert.equal(
+      await codeOf(() => s.tasks.createTask(s.ctx.mario, doc(s, { plan_group_id: s.stages.base.id, plan_item_id: item.id }))),
+      'VALIDATION_ERROR:{"plan_group_id":"exclusive"}',
+    )
+    assert.equal(s.deps.store.planItems.length, 1)
+    assert.equal(s.deps.store.tasks.length, 0)
+  })
+
+  it('exige ver a Gestão (plan.view): sem ela, FORBIDDEN — não precisa de plan.edit', async () => {
+    const s = await withStages()
+    assert.equal(await codeOf(() => s.tasks.createTask(without(s.ctx.mario, 'plan.view'), doc(s, { plan_group_id: s.stages.base.id }))), 'FORBIDDEN')
+    assert.equal(s.deps.store.tasks.length, 0)
+    const task = await s.tasks.createTask(without(s.ctx.mario, 'plan.edit'), doc(s, { plan_group_id: s.stages.base.id }))
+    assert.equal(task.plan_item.name, 'Unir a base de clientes')
+    // leitor do projeto não cria tarefa, com ou sem etapa
+    assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.lia, doc(s, { plan_group_id: s.stages.base.id }))), 'FORBIDDEN')
+  })
+
+  it('PATCH com etapa: só quando a tarefa ainda não está na Gestão; cria a linha com os dados atuais', async () => {
+    const s = await withStages()
+    const loose = await s.tasks.createTask(s.ctx.mario, doc(s, { title: 'Sem etapa' }))
+    const placed = await s.tasks.updateTask(s.ctx.mario, loose.id, { plan_group_id: s.stages.criterios.id, due_date: '2026-01-25' })
+    const [row] = rowsOf(s, s.stages.criterios.id)
+    assert.equal(row.name, 'Sem etapa')
+    assert.equal(row.endDate, '2026-01-25')
+    assert.deepEqual(placed.plan_item, { id: row.id, name: 'Sem etapa' })
+    const audit = s.deps.store.audit.at(-1)
+    assert.equal(audit.action, 'task.updated')
+    assert.deepEqual([audit.oldValue.plan_item, audit.newValue.plan_item], [null, 'Sem etapa'])
+    assert.ok(s.deps.store.audit.some((a) => a.action === 'plan_item.created' && a.entityId === row.id))
+    // já ligada: recusa (trocar de elemento continua pelo painel da Gestão)
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, loose.id, { plan_group_id: s.stages.base.id })), 'VALIDATION_ERROR:{"plan_group_id":"already_linked"}')
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, loose.id, { plan_group_id: s.stages.base.id, plan_item_id: null })), 'VALIDATION_ERROR:{"plan_group_id":"exclusive"}')
+    assert.equal(rowsOf(s, s.stages.base.id).length, 0)
+  })
+
+  it('PATCH com etapa de outro projeto, sem plan.view ou por leitor é recusado', async () => {
+    const s = await withStages()
+    const loose = await s.tasks.createTask(s.ctx.mario, doc(s))
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.mario, loose.id, { plan_group_id: s.stages.sap.id })), 'VALIDATION_ERROR:{"plan_group_id":"invalid_option"}')
+    assert.equal(await codeOf(() => s.tasks.updateTask(without(s.ctx.mario, 'plan.view'), loose.id, { plan_group_id: s.stages.base.id })), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.lia, loose.id, { plan_group_id: s.stages.base.id })), 'FORBIDDEN')
+    assert.equal(s.deps.store.planItems.length, 0)
+  })
+})

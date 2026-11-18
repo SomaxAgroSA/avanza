@@ -128,7 +128,9 @@
     "has_children": "A project with subprojects cannot have a parent",
     "parent_archived": "The parent project is archived",
     "color_in_use": "Another project already uses this color",
-    "not_a_member": "Choose the owner or a project member (manager or member)."
+    "not_a_member": "Choose the owner or a project member (manager or member).",
+    "exclusive": "Choose only one: the stage or the Management item",
+    "already_linked": "The task is already in Management"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -1764,9 +1766,13 @@
     "planLink": {
       "label": "Management item",
       "short": "Item",
-      "none": "None",
-      "hint": "Plan phase or deliverable this task carries out.",
       "open": "Open {{name}} in Management"
+    },
+    "stage": {
+      "label": "Management stage",
+      "none": "No stage",
+      "hint": "On create, the task shows up in that Management stage on its own, as a new row with its title and dates.",
+      "linkedHint": "In Management: {{path}}. To change or unlink it, use the item panel in Management."
     },
     "report": {
       "add": "Include in the project report",

@@ -186,7 +186,7 @@ const TOOLS = [
     name: 'get_plan',
     title: 'Project management board',
     description:
-      'Returns the project management board (Gestão de projetos) of a project, compact: plan statuses, resources, custom columns (with dropdown options), groups (phases, numbered like 1.0/1.1, with totals), dependency links and the elements with their subitems (status, owner, dates, progress, hours, resource names, custom values keyed by column id). Empty fields are omitted. This board is separate from tasks. Use get_plan_item for the full detail of one item.',
+      'Returns the project management board (Gestão de projetos) of a project, compact: plan statuses, resources, custom columns (with dropdown options), groups (phases, numbered like 1.0/1.1, with totals), dependency links and the elements with their subitems (status, owner, dates, progress, hours, resource names, custom values keyed by column id). Empty fields are omitted. Tasks link to its elements (plan_item_id) or are placed in a group as a new element (plan_group_id in create_task/update_task). Use get_plan_item for the full detail of one item.',
     inputSchema: schema(
       {
         project_id: PROJECT_ID,

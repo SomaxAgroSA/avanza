@@ -236,6 +236,30 @@ function itemInput(input, partial) {
   return { issues, data }
 }
 
+const dayText = (value) => {
+  if (!value) return null
+  if (typeof value === 'string') return value.slice(0, 10)
+  return isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10)
+}
+
+/**
+ * Linha nova na etapa da Gestão a partir da tarefa (§28, ADR-052): nome = título; início = início
+ * planejado (sem ele, hoje — ou o prazo, se já venceu, para o fim nunca ficar antes do início); fim =
+ * prazo (sem ele, o próprio início); responsável = o da tarefa. Só na criação do vínculo: depois, cada
+ * lado segue com os seus dados (o progresso já vem das tarefas).
+ */
+function itemFromTask(task, today) {
+  const due = dayText(task.dueDate)
+  let start = dayText(task.startDate)
+  if (!start) start = due && due < today ? due : today
+  return {
+    name: String(task.title || '').slice(0, ITEM_NAME_MAX),
+    startDate: start,
+    endDate: due || start,
+    ownerId: task.assigneeId || null,
+  }
+}
+
 /** Início ≤ fim (com o que já está salvo). */
 function datesIssue(start, end) {
   return start && end && start > end ? 'end_before_start' : null
@@ -498,6 +522,7 @@ module.exports = {
   progressIssue,
   itemInput,
   datesIssue,
+  itemFromTask,
   parentIssue,
   durationOf,
   weighted,

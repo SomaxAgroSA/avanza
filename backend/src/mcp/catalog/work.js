@@ -51,6 +51,9 @@ const TASK_FIELDS = {
   },
 }
 
+const PLAN_GROUP =
+  'Project management stage (group or subgroup id from get_plan, same project): creates a new element in that stage named after the task, with its planned start (or today) and due date (or the start), owned by the assignee, and links the task to it. Copied only at that moment. Needs plan view permission (not plan edit).'
+
 const TASK_CREATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   assignee_id: id('Assignee user id (a project member, see list_project_members).'),
   reporter_id: id('Reporter user id (a project member).'),
@@ -60,7 +63,8 @@ const TASK_CREATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   actual_hours: hours('Hours spent (> 0).'),
   sprint_id: id('Sprint id (from list_sprints).'),
   parent_task_id: id('Parent task id, to create a subtask (same project).'),
-  plan_item_id: id('Project management element (or subelement) this task executes, from get_plan (same project). Linked tasks drive the element progress.'),
+  plan_item_id: id('Project management element (or subelement) this task executes, from get_plan (same project). Linked tasks drive the element progress. Not together with plan_group_id.'),
+  plan_group_id: id(PLAN_GROUP),
   urgency: urgency(),
   area_id: id(AREA),
 })
@@ -75,7 +79,8 @@ const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   actual_hours: nullableHours('Hours spent (> 0).'),
   sprint_id: nullableId('Sprint id (from list_sprints).'),
   parent_task_id: nullableId('Parent task id (same project).'),
-  plan_item_id: nullableId('Project management element (or subelement) this task executes, from get_plan (same project).'),
+  plan_item_id: nullableId('Project management element (or subelement) this task executes, from get_plan (same project). Not together with plan_group_id.'),
+  plan_group_id: id(`${PLAN_GROUP} Only for a task not linked to any element yet (otherwise VALIDATION_ERROR).`),
   urgency: nullableUrgency(),
   area_id: nullableId(AREA),
 })

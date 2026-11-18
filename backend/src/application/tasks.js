@@ -28,10 +28,12 @@ const taskDomain = require('../domain/task')
 const workflow = require('../domain/workflow')
 const sprintDomain = require('../domain/sprint')
 const relationDomain = require('../domain/relation')
+const planDomain = require('../domain/plan')
 const { buildAuditEntry, truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createCustomFieldService } = require('./custom-fields')
 const { createNotifier } = require('./notifications')
+const { createPlanSupport } = require('./plan-support')
 
 const MAX_HOURS = 100000
 const MAX_TAGS = 20
@@ -60,6 +62,8 @@ const BASE_RULES = {
   sprint_id: [idRule],
   parent_task_id: [idRule],
   plan_item_id: [idRule],
+  // etapa da Gestão (§28, ADR-052): cria a linha na etapa e liga a tarefa a ela (não é guardada na tarefa)
+  plan_group_id: [idRule],
   urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS)],
   // área responsável (§32): só área ativa; null limpa
   area_id: [idRule],
@@ -128,6 +132,7 @@ function createTaskService(deps) {
   const values = deps.taskValueRepository
   const fieldService = createCustomFieldService(deps)
   const notifier = createNotifier(deps)
+  const planSupport = createPlanSupport(deps)
 
   // ---------------------------------------------------------------- apoio
 
@@ -203,6 +208,63 @@ function createTaskService(deps) {
   async function assertPlanItem(project, planItemId) {
     const item = await deps.planItemRepository.findById(planItemId)
     if (!item || item.projectId !== project.id) throw invalid({ plan_item_id: 'invalid_option' })
+    return item
+  }
+
+  /**
+   * Etapa da Gestão (§28, ADR-052): grupo ou subgrupo do quadro do mesmo projeto. Basta ver a Gestão
+   * (`plan.view` + ver o projeto): a linha é criada pelo sistema em nome de quem cria a tarefa, sem
+   * exigir `plan.edit`. O Responsável TI não vê a Gestão (ADR-051): recusado.
+   */
+  async function assertPlanGroup(ctx, project, access, groupId) {
+    if (access.scoped || !access.canView || !rbac.can(ctx.principal, 'plan.view')) throw appError('FORBIDDEN')
+    const group = await deps.projectGroupRepository.findById(groupId)
+    if (!group || group.projectId !== project.id) throw invalid({ plan_group_id: 'invalid_option' })
+    return group
+  }
+
+  /** Etapa e elemento juntos não: um cria a linha, o outro aponta para uma que já existe. */
+  function assertOneLink(data, cleared) {
+    if (data.plan_group_id && (data.plan_item_id !== undefined || cleared.indexOf('plan_item_id') >= 0)) throw invalid({ plan_group_id: 'exclusive' })
+  }
+
+  /** Linha da etapa a partir da tarefa (regra em domain/plan.js#itemFromTask); responsável só se ainda participa. */
+  async function stageRow(project, group, source) {
+    const row = planDomain.itemFromTask(source, deps.clock.now().toISOString().slice(0, 10))
+    if (row.ownerId) {
+      const user = await deps.userRepository.findById(row.ownerId)
+      const member = user ? await deps.projectMemberRepository.find(project.id, user.id) : null
+      if (!user || user.status !== 'active' || (project.ownerId !== user.id && !member)) row.ownerId = null
+    }
+    return { group, row }
+  }
+
+  /** Grava a linha no fim da etapa, com o histórico do elemento como se fosse criada no quadro. */
+  async function createStageRow(repos, ctx, project, stage) {
+    const item = await repos.planItemRepository.create(
+      Object.assign(
+        {
+          projectId: project.id,
+          groupId: stage.group.id,
+          parentId: null,
+          statusId: null,
+          resourceIds: [],
+          metrics: {},
+          progress: 0,
+          progressSet: false,
+          position: ((await repos.planItemRepository.maxPosition(stage.group.id, null)) || 0) + planDomain.POSITION_STEP,
+          custom: {},
+          createdBy: ctx.principal.userId,
+        },
+        stage.row,
+      ),
+    )
+    const after = await planSupport.snapshot(item, [])
+    const filled = {}
+    Object.keys(after).forEach((key) => {
+      if (after[key] !== null) filled[key] = after[key]
+    })
+    await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'plan_item', entityId: item.id, action: 'plan_item.created', oldValue: null, newValue: filled }))
     return item
   }
 
@@ -643,7 +705,16 @@ function createTaskService(deps) {
     if (data.reporter_id) await assertParticipant(project, data.reporter_id, 'reporter_id', true)
     if (data.sprint_id) await assertSprint(project, data.sprint_id)
     if (data.parent_task_id) await assertParent(project, null, data.parent_task_id)
+    assertOneLink(data, parsed.cleared)
     if (data.plan_item_id) await assertPlanItem(project, data.plan_item_id)
+    const stage = data.plan_group_id
+      ? await stageRow(project, await assertPlanGroup(ctx, project, access, data.plan_group_id), {
+          title: data.title,
+          startDate: data.start_date || null,
+          dueDate: data.due_date || null,
+          assigneeId: data.assignee_id || null,
+        })
+      : null
 
     // valores padrão dos campos visíveis que não vieram no corpo
     const links = await typeLinks(type.id)
@@ -662,6 +733,8 @@ function createTaskService(deps) {
     const dates = taskDomain.statusDates({}, null, status.category, now)
     const created = await deps.unitOfWork.run(async (repos) => {
       const number = await repos.taskRepository.nextNumber(project.id)
+      // etapa escolhida: a linha nasce antes, na mesma transação, e a tarefa já sai ligada a ela
+      const row = stage ? await createStageRow(repos, ctx, project, stage) : null
       const task = await repos.taskRepository.create({
         projectId: project.id,
         number,
@@ -677,7 +750,7 @@ function createTaskService(deps) {
         parentTaskId: data.parent_task_id || null,
         forkedFromTaskId: forkedFrom ? forkedFrom.id : null,
         sprintId: data.sprint_id || null,
-        planItemId: data.plan_item_id || null,
+        planItemId: row ? row.id : data.plan_item_id || null,
         urgency: data.urgency || null,
         areaId: area ? area.id : null,
         startDate: data.start_date || null,
@@ -750,6 +823,13 @@ function createTaskService(deps) {
       if (planItemChange) await assertPlanItem(project, planItemChange)
       patch.planItemId = planItemChange
     }
+    // etapa da Gestão: só para a tarefa que ainda não está na Gestão (trocar é pelo painel do elemento)
+    assertOneLink(data, cleared)
+    let stageGroup = null
+    if (data.plan_group_id) {
+      if (task.planItemId) throw invalid({ plan_group_id: 'already_linked' })
+      stageGroup = await assertPlanGroup(ctx, project, access, data.plan_group_id)
+    }
     const urgencyChange = cleared.indexOf('urgency') >= 0 ? null : data.urgency
     if (urgencyChange !== undefined && urgencyChange !== (task.urgency || null)) patch.urgency = urgencyChange
     if (cleared.indexOf('start_date') >= 0) patch.startDate = null
@@ -808,10 +888,15 @@ function createTaskService(deps) {
     const next = Object.assign({}, task, patch, { tagIds: nextTags })
     const userIds = userIdsInValues(previousLinks, saved).concat(userIdsInValues(links, checked.values))
     const auditRefs = await refsFor([before, next], userIds)
-    const change = changes(await snapshot(before, saved, previousLinks, auditRefs), await snapshot(next, checked.values, links, auditRefs))
+    // a linha da etapa nasce com os dados que a tarefa vai ter (título, datas e responsável já editados)
+    const stage = stageGroup ? await stageRow(project, stageGroup, next) : null
+    const afterSnapshot = await snapshot(next, checked.values, links, auditRefs)
+    if (stage) afterSnapshot.plan_item = stage.row.name
+    const change = changes(await snapshot(before, saved, previousLinks, auditRefs), afterSnapshot)
     if (!change) return presentDetail(ctx, task, project, access)
 
     const updated = await deps.unitOfWork.run(async (repos) => {
+      if (stage) patch.planItemId = (await createStageRow(repos, ctx, project, stage)).id
       // atualizar a tarefa mesmo sem mudança de coluna própria renova o "updated" (ordenação por atividade)
       const result = await repos.taskRepository.update(task.id, patch)
       if (tagsChanged) await repos.taskTagRepository.replace(task.id, nextTags)

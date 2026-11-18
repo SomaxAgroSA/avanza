@@ -128,7 +128,9 @@
     "has_children": "Un proyecto con subproyectos no puede tener padre",
     "parent_archived": "El proyecto padre está archivado",
     "color_in_use": "Otro proyecto ya usa este color",
-    "not_a_member": "Elija al dueño o a un miembro del proyecto (gestor o miembro)."
+    "not_a_member": "Elija al dueño o a un miembro del proyecto (gestor o miembro).",
+    "exclusive": "Elija solo uno: la etapa o el elemento de la Gestión",
+    "already_linked": "La tarea ya está en la Gestión"
   },
   "errors": {
     "VALIDATION_ERROR": "Revise los campos destacados.",
@@ -1764,9 +1766,13 @@
     "planLink": {
       "label": "Elemento de la Gestión",
       "short": "Elemento",
-      "none": "Ninguno",
-      "hint": "Fase o entrega del plan que ejecuta esta tarea.",
       "open": "Abrir {{name}} en la Gestión"
+    },
+    "stage": {
+      "label": "Etapa de la gestión",
+      "none": "Sin etapa",
+      "hint": "Al crear, la tarea aparece sola en esa etapa de la Gestión, como una fila nueva con su título y sus fechas.",
+      "linkedHint": "En la Gestión: {{path}}. Para cambiarla o desvincularla, use el panel del elemento en la Gestión."
     },
     "report": {
       "add": "Incluir en el informe del proyecto",

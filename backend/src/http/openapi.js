@@ -1692,7 +1692,12 @@ function build() {
             task_type_id: { type: 'string', description: 'Trocar o tipo descarta valores de campos que o novo tipo não tem' },
             parent_task_id: { type: ['string', 'null'], description: 'Subtarefa: pai do mesmo projeto, sem ciclo; null solta' },
             sprint_id: { type: ['string', 'null'], description: 'Sprint aberto do mesmo projeto; null tira da sprint' },
-            plan_item_id: { type: ['string', 'null'], description: 'Elemento (ou subelemento) da Gestão de projetos do mesmo projeto que a tarefa executa (ADR-050); null desliga' },
+            plan_item_id: { type: ['string', 'null'], description: 'Elemento (ou subelemento) da Gestão de projetos do mesmo projeto que a tarefa executa (ADR-050); null desliga. Não junto com plan_group_id (exclusive)' },
+            plan_group_id: {
+              type: 'string',
+              description:
+                'Etapa da Gestão (grupo ou subgrupo do mesmo projeto, ADR-052): cria na mesma transação uma linha nessa etapa com o título, o início planejado (ou hoje), o prazo (ou o início) e o responsável da tarefa, e liga a tarefa a ela. Cópia só nesse momento. Exige plan.view (não plan.edit); FORBIDDEN sem ela e para o Responsável TI. Não junto com plan_item_id (exclusive); no PATCH, só para a tarefa ainda sem elemento (already_linked)',
+            },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null limpa. Para trocar sem exigir os obrigatórios do status, use PUT /tasks/{id}/urgency' },
             area_id: { type: ['string', 'null'], description: 'área responsável ativa de /areas; null limpa. Para trocar sem exigir os obrigatórios do status, use PUT /tasks/{id}/area' },
             title: { type: 'string', maxLength: 200 },
