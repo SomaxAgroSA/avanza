@@ -25,6 +25,8 @@ export interface NavItem {
   end?: boolean
   /** Fora do menu lateral; continua no breadcrumb e na paleta de comandos (a página segue existindo). */
   hidden?: boolean
+  /** A própria página (caminho exato) não mostra a trilha no topo: o título dela já diz onde a pessoa está. */
+  noBreadcrumb?: boolean
 }
 
 /** Estrutura de navegação (diretriz §36). Fonte única para sidebar, breadcrumb e command palette. */
@@ -40,10 +42,11 @@ export const NAV_ITEMS: NavItem[] = [
     anyOf: ['projects.view'],
     children: [
       // no menu: todos, em andamento, concluídos e arquivados; "Meus projetos" segue pelo card do Dashboard
-      { id: 'projects-all', labelKey: 'nav.projectsAll', to: '/projects', end: true },
-      { id: 'projects-ongoing', labelKey: 'nav.projectsOngoing', to: '/projects/ongoing' },
-      { id: 'projects-finished', labelKey: 'nav.projectsFinished', to: '/projects/finished' },
-      { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived' },
+      // as quatro listas sem a trilha no topo (repetia o título; ajuste 18/11)
+      { id: 'projects-all', labelKey: 'nav.projectsAll', to: '/projects', end: true, noBreadcrumb: true },
+      { id: 'projects-ongoing', labelKey: 'nav.projectsOngoing', to: '/projects/ongoing', noBreadcrumb: true },
+      { id: 'projects-finished', labelKey: 'nav.projectsFinished', to: '/projects/finished', noBreadcrumb: true },
+      { id: 'projects-archived', labelKey: 'nav.projectsArchived', to: '/projects/archived', noBreadcrumb: true },
       { id: 'projects-mine', labelKey: 'nav.projectsMine', to: '/projects/mine', hidden: true },
     ],
   },
@@ -84,6 +87,13 @@ export function visibleNavItems(permissions: readonly string[], items: NavItem[]
     .filter((item) => !item.anyOf || canAny(permissions, item.anyOf))
     .map((item) => (item.children ? { ...item, children: visibleNavItems(permissions, item.children) } : item))
     .filter((item) => !item.children || item.children.length > 0)
+}
+
+/** A página do caminho mostra a trilha no topo? Não nas marcadas `noBreadcrumb` (só no caminho exato delas). */
+export function showsBreadcrumb(pathname: string, items: NavItem[] = NAV_ITEMS): boolean {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const hides = (list: NavItem[]): boolean => list.some((item) => (item.noBreadcrumb && item.to === path) || (!!item.children && hides(item.children)))
+  return !hides(items)
 }
 
 /** Trilha de navegação para um caminho (usado no breadcrumb). Prefere a correspondência mais específica. */

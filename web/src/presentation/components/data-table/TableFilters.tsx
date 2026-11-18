@@ -1,37 +1,19 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ListFilter, X } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
-import { AppButton } from '../AppButton'
-import { AppPopover } from '../AppPopover'
-import { AppSelect, SELECT_ALL, type AppSelectOption } from '../AppSelect'
+import { AppSelect, SELECT_ALL } from '../AppSelect'
 import { filterTriggerClass } from './filter-styles'
 
 export interface TableFilterDef {
   id: string
   label: string
-  /** `count`: quantos registros há com o valor, contando os demais filtros (§37). */
-  options: Array<{ value: string; label: string; count?: number }>
+  options: Array<{ value: string; label: string }>
   /** Fica colado ao filtro (ex.: engrenagem do configurador do filtro de projetos). */
   addon?: ReactNode
   /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
   variant?: 'select' | 'buttons'
 }
-
-/** Opção do seletor com a quantidade à direita (quando a tela informa). */
-const selectOption = (option: TableFilterDef['options'][number]): AppSelectOption =>
-  option.count === undefined
-    ? option
-    : {
-        value: option.value,
-        textValue: option.label,
-        label: (
-          <span className="flex w-full items-center justify-between gap-4">
-            <span>{option.label}</span>
-            <span className="text-xs font-semibold tabular-nums text-muted">{option.count}</span>
-          </span>
-        ),
-      }
 
 interface FilterProps {
   filter: TableFilterDef
@@ -54,7 +36,7 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
       aria-label={filter.label}
       value={active ? value : SELECT_ALL}
       onValueChange={(next) => onChange(next === SELECT_ALL ? undefined : next)}
-      options={[{ value: SELECT_ALL, label: t('common.all') }, ...filter.options.map(selectOption)]}
+      options={[{ value: SELECT_ALL, label: t('common.all') }, ...filter.options]}
       renderValue={
         active ? (
           <>
@@ -79,8 +61,10 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
 
 /**
  * Filtro em botões (§37): o nome ao lado, na mesma linha, e um botão por valor, que liga e desliga; vários ao mesmo tempo
- * (o valor do filtro são os escolhidos unidos por vírgula). Ligado fica verde; com `count`, mostra a
- * quantidade, e o valor sem registros fica apagado (continua clicável).
+ * (o valor do filtro são os escolhidos unidos por vírgula). Cada grupo tem um traço à esquerda e não quebra por dentro
+ * (a linha quebra entre os grupos). Estados distintos: parado neutro; mouse em cima, fundo cinza (sem verde — o
+ * `hover:` do Tailwind 4 só vale em aparelho com mouse); ligado, verde cheio com o ✓; ao clicar, encolhe um pouco
+ * (não com movimento reduzido); com o teclado, contorno verde.
  */
 export function FilterButtons({ filter, value, onChange }: FilterProps) {
   const selected = value ? value.split(',') : []
@@ -89,11 +73,11 @@ export function FilterButtons({ filter, value, onChange }: FilterProps) {
     onChange(next.length ? next.join(',') : undefined)
   }
   return (
-    <div role="group" aria-label={filter.label} className="ml-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span aria-hidden className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted">
+    <div role="group" aria-label={filter.label} className="ml-1 flex flex-nowrap items-center gap-2 border-l border-border pl-3">
+      <span aria-hidden className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">
         {filter.label}
       </span>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-nowrap gap-1">
         {filter.options.map((option) => {
           const on = selected.includes(option.value)
           return (
@@ -103,90 +87,18 @@ export function FilterButtons({ filter, value, onChange }: FilterProps) {
               aria-pressed={on}
               onClick={() => toggle(option.value)}
               className={cn(
-                'inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                on
-                  ? 'border-primary bg-primary text-primary-fg hover:bg-primary-hover'
-                  : // sem registros: apagado com a cor de texto suave (AA), não com transparência (que derruba o contraste)
-                    cn('border-border-strong bg-surface hover:border-primary hover:text-primary-text', option.count === 0 ? 'border-border text-muted' : 'text-fg'),
+                'inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-sm font-medium',
+                'transition-[transform,background-color,border-color,color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-safe:active:scale-[0.97]',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                on ? 'border-primary bg-primary text-primary-fg hover:bg-primary-hover' : 'border-border-strong bg-surface text-fg hover:bg-surface-2',
               )}
             >
               {on && <Check className="size-3.5" aria-hidden />}
               {option.label}
-              {/* ligado: a mesma cor do texto (branco sobre o verde passa no AA; com transparência não passa) */}
-              {option.count !== undefined && <span className={cn('text-xs font-semibold tabular-nums', on ? 'text-primary-fg' : 'text-muted')}>{option.count}</span>}
             </button>
           )
         })}
       </div>
     </div>
-  )
-}
-
-/** "Mais filtros": os filtros menos usados num painel, com a quantidade de ativos no botão. */
-export function MoreFilters({ filters, values, onChange }: { filters: TableFilterDef[]; values: Record<string, string>; onChange: (id: string, value: string | undefined) => void }) {
-  const { t } = useTranslation()
-  if (filters.length === 0) return null
-  const activeCount = filters.filter((f) => values[f.id]).length
-  return (
-    <AppPopover
-      label={t('table.moreFilters')}
-      align="start"
-      className="w-[min(22rem,calc(100vw-2rem))] p-3"
-      trigger={
-        <AppButton
-          variant="secondary"
-          leftIcon={<ListFilter />}
-          aria-label={activeCount ? t('table.moreFiltersActive', { count: activeCount }) : t('table.moreFilters')}
-          className={cn(activeCount > 0 && 'border-primary-border bg-primary-soft text-primary-soft-fg')}
-        >
-          {t('table.moreFilters')}
-          {activeCount > 0 && <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[10px] font-semibold leading-4 text-primary-fg">{activeCount}</span>}
-        </AppButton>
-      }
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        {filters.map((filter) => (
-          <div key={filter.id} className="flex items-end gap-2">
-            <AppSelect
-              className="min-w-0 flex-1"
-              label={filter.label}
-              value={values[filter.id] ?? SELECT_ALL}
-              onValueChange={(next) => onChange(filter.id, next === SELECT_ALL ? undefined : next)}
-              options={[{ value: SELECT_ALL, label: t('common.all') }, ...filter.options]}
-            />
-            {filter.addon}
-          </div>
-        ))}
-      </div>
-    </AppPopover>
-  )
-}
-
-/** Fichas dos filtros ativos que estão dentro de "Mais filtros" (cada uma com o seu ×). */
-export function FilterChips({ filters, values, onChange }: { filters: TableFilterDef[]; values: Record<string, string>; onChange: (id: string, value: string | undefined) => void }) {
-  const { t } = useTranslation()
-  const active = filters.filter((f) => values[f.id])
-  if (active.length === 0) return null
-  return (
-    <ul className="flex flex-wrap items-center gap-1.5" aria-label={t('table.activeFilters')}>
-      {active.map((filter) => {
-        const text = `${filter.label}: ${optionLabel(filter, values[filter.id]) ?? values[filter.id]}`
-        return (
-          <li key={filter.id}>
-            <span className="inline-flex h-7 items-center gap-1 rounded-full border border-primary-border bg-primary-soft pl-2.5 pr-1 text-xs font-medium text-primary-soft-fg">
-              {text}
-              <button
-                type="button"
-                aria-label={t('table.removeFilter', { filter: text })}
-                onClick={() => onChange(filter.id, undefined)}
-                className="flex size-5 items-center justify-center rounded-full hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-ring"
-              >
-                <X className="size-3.5" aria-hidden />
-              </button>
-            </span>
-          </li>
-        )
-      })}
-    </ul>
   )
 }

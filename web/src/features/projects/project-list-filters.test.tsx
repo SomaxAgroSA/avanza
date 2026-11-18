@@ -33,31 +33,47 @@ function setup(view: ProjectView = 'ongoing') {
 const texts = (elements: HTMLElement[]) => elements.map((e) => e.textContent)
 
 describe('Listas de proyectos: filtros en una línea (§37)', () => {
-  it('Estado en selector; Prioridad y Urgencia en botones con cantidades; sin Departamento ni "Más filtros"', async () => {
+  it('Estado en selector; Prioridad y Urgencia en botones sin cantidades; sin Departamento ni "Más filtros"', async () => {
     const { list } = setup()
     const prioridad = await screen.findByRole('group', { name: 'Prioridad' })
-    // de mayor a menor (Crítica → Baja), con la cantidad de cada uno (sin proyectos = 0) cuando llega la respuesta
-    await waitFor(() => expect(texts(within(prioridad).getAllByRole('button'))).toEqual(['Crítica0', 'Alta7', 'Media13', 'Baja1']))
+    // de mayor a menor (Crítica → Baja), sin cantidades (ajuste 18/11): la lista no pide los conteos
+    expect(texts(within(prioridad).getAllByRole('button'))).toEqual(['Crítica', 'Alta', 'Media', 'Baja'])
     const urgencia = screen.getByRole('group', { name: 'Urgencia' })
-    expect(texts(within(urgencia).getAllByRole('button'))).toEqual(['Alta3', 'Media8', 'Baja8', 'Sin urgencia2'])
+    expect(texts(within(urgencia).getAllByRole('button'))).toEqual(['Alta', 'Media', 'Baja', 'Sin urgencia'])
     expect(screen.getByRole('combobox', { name: 'Estado' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Departamento' })).toBeNull()
     expect(screen.queryByRole('button', { name: /Más filtros/ })).toBeNull()
-    expect(list).toHaveBeenCalledWith(expect.objectContaining({ view: 'ongoing', facets: true }))
+    await waitFor(() => expect(list).toHaveBeenCalledWith(expect.objectContaining({ view: 'ongoing' })))
+    list.mock.calls.forEach(([query]) => expect(query.facets).toBeUndefined())
 
-    await userEvent.click(within(prioridad).getByRole('button', { name: /^Alta/ }))
-    await userEvent.click(within(prioridad).getByRole('button', { name: /^Crítica/ }))
+    await userEvent.click(within(prioridad).getByRole('button', { name: 'Alta' }))
+    await userEvent.click(within(prioridad).getByRole('button', { name: 'Crítica' }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { priority: 'high,critical' } })))
 
-    // Estado: solo los estados de esta lista, con cantidades
+    // Estado: solo los estados de esta lista, sin cantidades
     await userEvent.click(screen.getByRole('combobox', { name: 'Estado' }))
-    expect(texts(await screen.findAllByRole('option'))).toEqual(['Todos', 'Planificación10', 'En curso6', 'Pausado5'])
+    expect(texts(await screen.findAllByRole('option'))).toEqual(['Todos', 'Planificación', 'En curso', 'Pausado'])
+  })
+
+  it('"Limpiar (n)" junto a Columnas cuenta los valores marcados y los quita todos', async () => {
+    const { list } = setup()
+    const prioridad = await screen.findByRole('group', { name: 'Prioridad' })
+    expect(screen.queryByRole('button', { name: /^Limpiar/ })).toBeNull()
+    await userEvent.click(within(prioridad).getByRole('button', { name: 'Alta' }))
+    await userEvent.click(within(prioridad).getByRole('button', { name: 'Crítica' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Urgencia' })).getByRole('button', { name: 'Media' }))
+    const clear = screen.getByRole('button', { name: 'Limpiar 3 filtros' })
+    expect(clear).toHaveTextContent('Limpiar (3)')
+    expect(clear.parentElement).toContainElement(screen.getByRole('button', { name: 'Columnas' }))
+    await userEvent.click(clear)
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: {} })))
+    expect(screen.queryByRole('button', { name: /^Limpiar/ })).toBeNull()
   })
 
   it('Terminados ofrece en Estado solo Completado y Cancelado', async () => {
     setup('finished')
     await userEvent.click(await screen.findByRole('combobox', { name: 'Estado' }))
-    expect(texts(await screen.findAllByRole('option'))).toEqual(['Todos', 'Completado0', 'Cancelado0'])
+    expect(texts(await screen.findAllByRole('option'))).toEqual(['Todos', 'Completado', 'Cancelado'])
   })
 
   it('un filtro de Departamento o de Proyecto padre guardado en el navegador no filtra a escondidas', async () => {

@@ -1,39 +1,56 @@
 import type { ReactNode } from 'react'
-import { FilterX } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/core/utils/cn'
 import { AppButton } from './AppButton'
 
 export interface AppFilterBarProps {
   search?: ReactNode
   filters?: ReactNode
   actions?: ReactNode
-  /** Linha de baixo (ex.: fichas dos filtros ativos que estão em "Mais filtros"); some quando vazia. */
-  below?: ReactNode
   hasActiveFilters?: boolean
+  /**
+   * Quantos filtros estão ativos: o botão vira "Limpar (3)" e, sem filtro, fica no lugar escondido (a
+   * barra não pula). Sem ele, "Limpar filtros" só aparece com filtro ativo.
+   */
+  activeFilterCount?: number
   onReset?: () => void
 }
 
 /**
- * Barra padrão de uma listagem numa linha só: busca e filtros à esquerda, ações (colunas e a ação
- * principal) à direita, todos com a mesma altura. Em telas estreitas a linha quebra, com as ações
- * sempre juntas.
+ * Barra padrão de uma listagem numa linha só: busca e filtros à esquerda; "Limpar" e as ações (colunas e
+ * a ação principal) juntos à direita, todos com a mesma altura. Em telas estreitas a linha quebra entre
+ * os grupos, com as ações sempre juntas.
  */
-export function AppFilterBar({ search, filters, actions, below, hasActiveFilters, onReset }: AppFilterBarProps) {
+export function AppFilterBar({ search, filters, actions, hasActiveFilters, activeFilterCount, onReset }: AppFilterBarProps) {
   const { t } = useTranslation()
+  const active = !!hasActiveFilters
+  const counted = activeFilterCount !== undefined
+  const showReset = !!onReset && (active || counted)
   return (
-    <div className="flex flex-col gap-2">
-      {/* os filtros em botões levam o nome ao lado, na mesma linha (§37); a busca cede espaço antes de a linha quebrar */}
-      <div className="flex flex-wrap items-center gap-2">
-        {search && <div className="w-full sm:w-auto sm:min-w-44 sm:max-w-64 sm:flex-1">{search}</div>}
-        {filters}
-        {hasActiveFilters && onReset && (
-          <AppButton variant="ghost" leftIcon={<FilterX />} onClick={onReset}>
-            {t('table.clearFilters')}
-          </AppButton>
-        )}
-        {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
-      </div>
-      {below}
+    // os filtros em botões levam o nome ao lado, na mesma linha (§37); a busca cede espaço antes de a linha quebrar
+    <div className="flex flex-wrap items-center gap-2">
+      {search && <div className="w-full sm:w-auto sm:min-w-44 sm:max-w-64 sm:flex-1">{search}</div>}
+      {filters}
+      {(showReset || actions) && (
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {showReset && (
+            <AppButton
+              variant="ghost"
+              leftIcon={<X />}
+              onClick={onReset}
+              // sem filtro ativo: guarda o lugar, mas fica fora da leitura de tela e do teclado
+              aria-hidden={active ? undefined : true}
+              tabIndex={active ? undefined : -1}
+              aria-label={counted && active ? t('table.clearCountLabel', { count: activeFilterCount }) : undefined}
+              className={cn('px-2.5 font-semibold text-primary-text hover:bg-primary-soft hover:text-primary-text', !active && 'invisible')}
+            >
+              {counted ? t('table.clearCount', { count: activeFilterCount }) : t('table.clearFilters')}
+            </AppButton>
+          )}
+          {actions}
+        </div>
+      )}
     </div>
   )
 }
