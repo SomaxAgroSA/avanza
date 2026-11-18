@@ -105,13 +105,12 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(await screen.findByRole('button', { name: 'Nuevo proyecto' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Equipo ahora' })).toBeInTheDocument()
     expect(screen.queryByTestId('direction-panel')).toBeNull()
-    expect(screen.queryByText(/Vista de consulta/)).toBeNull()
   })
 
-  it('Dirección: título, aviso de consulta, sin Nuevo proyecto ni botón Equipo ahora, y 5 indicadores con cantidad y porcentaje', async () => {
+  it('Dirección: título y 5 indicadores con cantidad y porcentaje, sin aviso ni acciones de cabecera', async () => {
     const { list } = setup()
     expect(await screen.findByRole('heading', { level: 1, name: 'En marcha' })).toBeInTheDocument()
-    expect(await screen.findByText('Vista de consulta · sin editar, archivar ni eliminar')).toBeInTheDocument()
+    expect(screen.queryByText('Vista de consulta · sin editar, archivar ni eliminar')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nuevo proyecto' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Equipo ahora' })).toBeNull()
     const panel = await screen.findByTestId('direction-panel')
