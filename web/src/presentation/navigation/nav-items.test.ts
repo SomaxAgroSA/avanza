@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findNavTrail, visibleNavItems } from './nav-items'
+import { findNavTrail, showsBreadcrumb, visibleNavItems } from './nav-items'
 
 describe('navegação', () => {
   it('esconde módulos sem permissão e grupos sem filhos visíveis', () => {
@@ -44,5 +44,10 @@ describe('navegação', () => {
     // abas do projeto ficam sob Projetos
     expect(findNavTrail('/projects/p1/kanban').map((i) => i.id)).toEqual(['projects'])
     expect(findNavTrail('/desconhecido')).toEqual([])
+  })
+
+  it('as quatro listas de projetos não mostram a trilha (repetiria o título da página); as demais páginas, sim', () => {
+    expect(['/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/projects/ongoing/'].map((path) => showsBreadcrumb(path))).toEqual([false, false, false, false, false])
+    expect(['/projects/mine', '/projects/p1', '/projects/p1/kanban', '/kanban', '/settings/access', '/desconhecido'].map((path) => showsBreadcrumb(path))).toEqual([true, true, true, true, true, true])
   })
 })

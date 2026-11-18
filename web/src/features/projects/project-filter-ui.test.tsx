@@ -8,7 +8,6 @@ import type { Project, ProjectRole, ProjectStatus } from '@/domain/projects'
 import type { PreferenceRepository, ReportRepository } from '@/domain/repositories'
 import { notify } from '@/presentation/components'
 import { ReportsPage } from '@/features/reports/ReportsPage'
-import { TasksTable } from '@/features/tasks/TasksTable'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ProjectFilterSettingsButton } from './ProjectFilterSettings'
 
@@ -122,13 +121,5 @@ describe('Configurador do filtro de projetos', () => {
     await gear(true)
     await userEvent.click(screen.getByRole('combobox', { name: 'Projeto' }))
     await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Projeto: todos', 'ERP · Projeto ERP']))
-  })
-
-  it('Tarefas: a lista do filtro de projeto respeita a configuração da tela', async () => {
-    const { getProjectFilter } = setup(<TasksTable tableId="tasks-filter-test" />, { statuses: [], membersOnly: true })
-    await waitFor(() => expect(getProjectFilter).toHaveBeenCalledWith('tasks'))
-    await gear(true)
-    await userEvent.click(screen.getByRole('combobox', { name: 'Projeto' }))
-    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Todos', 'CRM · Projeto CRM', 'OLD · Projeto OLD']))
   })
 })

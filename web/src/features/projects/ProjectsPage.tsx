@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Archive, ArchiveRestore, Copy, ExternalLink, FolderPlus, Users } from 'lucide-react'
@@ -81,8 +81,8 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       .filter((id) => !(id in filters))
       .forEach((id) => setFilter(id, undefined))
   }, [table.state.filters, filters, setFilter])
-  const projects = useProjects({ ...table.query, filters, view, facets: true })
-  const facets = projects.data?.facets
+  // sem as quantidades nos botões (ajuste 18/11): a lista não pede `facets` (a API continua oferecendo)
+  const projects = useProjects({ ...table.query, filters, view })
   const lifecycle = useProjectLifecycle()
 
   const [viewing, setViewing] = useState<Project | null>(null)
@@ -110,8 +110,6 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
     })
   }
 
-  // quantidade de projetos por valor (§37): com os demais filtros e a busca; sem projetos = 0
-  const count = useCallback((group: 'status' | 'priority' | 'urgency', value: string) => (facets ? (facets[group][value] ?? 0) : undefined), [facets])
   const areas = useAreas(false)
   const columns = useMemo<DataTableColumn<Project>[]>(
     () => [
@@ -156,11 +154,11 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         size: 140,
         cell: (project) => <ProjectStatusBadge status={project.status} />,
         // seletor só com os status desta lista (§37)
-        filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`), count: count('status', s) })) },
+        filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
       },
       // Gestión, Desarrollo y Trabajando junto al estado: se ven sin desplazar la tabla
       {
-        // quem gerencia o projeto (o dono continua nos Detalhes do projeto)
+        // quem gerencia o projeto (o dono aparece em Membros, com a coroa, e se troca em Configurações)
         id: 'lead',
         header: t('projects.fields.lead'),
         sortable: true,
@@ -196,7 +194,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         filter: {
           label: t('projects.fields.priority'),
           variant: 'buttons',
-          options: PROJECT_PRIORITY_FILTER_ORDER.map((p) => ({ value: p, label: t(`projects.priority.${p}`), count: count('priority', p) })),
+          options: PROJECT_PRIORITY_FILTER_ORDER.map((p) => ({ value: p, label: t(`projects.priority.${p}`) })),
         },
       },
       {
@@ -211,7 +209,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         filter: {
           label: t('tasks.fields.urgency'),
           variant: 'buttons',
-          options: PROJECT_URGENCY_FILTER_ORDER.map((u) => ({ value: u, label: t(`tasks.urgency.${u}`), count: count('urgency', u) })),
+          options: PROJECT_URGENCY_FILTER_ORDER.map((u) => ({ value: u, label: t(`tasks.urgency.${u}`) })),
         },
       },
       {
@@ -249,7 +247,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, count, areas.data, view, showActivity, activity],
+    [t, locale, areas.data, view, showActivity, activity],
   )
 
   const emptyState =

@@ -45,14 +45,13 @@
     "noMatches": "Nenhum resultado para os filtros",
     "noMatchesHint": "Ajuste a busca ou limpe os filtros para ver mais registros.",
     "empty": "Nada por aqui ainda",
+    "clearCount": "Limpar ({{count}})",
+    "clearCountLabel_one": "Limpar {{count}} filtro",
+    "clearCountLabel_other": "Limpar {{count}} filtros",
     "clearFilters": "Limpar filtros",
     "noMoreActions": "Nenhuma outra ação",
     "resetColumns": "Restaurar colunas",
-    "openHint": "Clique para visualizar · duplo clique para abrir",
-    "moreFilters": "Mais filtros",
-    "moreFiltersActive": "Mais filtros ({{count}} ativos)",
-    "activeFilters": "Filtros ativos",
-    "removeFilter": "Remover filtro {{filter}}"
+    "openHint": "Clique para visualizar · duplo clique para abrir"
   },
   "validation": {
     "required": "Campo obrigatório",

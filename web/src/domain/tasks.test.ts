@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours } from './tasks'
+import { isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, taskListFilters } from './tasks'
 
 describe('domain/tasks — menções', () => {
   const carla = { id: 'u7', name: 'Carla Mendes' }
@@ -40,5 +40,14 @@ describe('domain/tasks — utilitários', () => {
     const open = { dueDate: due, status: { id: 's', key: 'S', name: 'S', color: 'gray' as const, category: 'todo' as const } }
     expect(isOverdue(open, today)).toBe(true)
     expect(isOverdue({ ...open, status: { ...open.status, category: 'done' as const } }, today)).toBe(false)
+  })
+})
+
+describe('domain/tasks — filtros da lista (ajuste 18/11)', () => {
+  it('ficam só Status, Prioridade, Urgência e Responsável; os que saíram da barra são descartados', () => {
+    expect(
+      taskListFilters({ status: 's1', priority: 'p1', urgency: 'high', assignee: 'me', area: 'a1', category: 'done,cancelled', type: 't1', project: 'p9', tags: 'g1', in_report: 'true', it_visible: 'false', other: '' }),
+    ).toEqual({ status: 's1', priority: 'p1', urgency: 'high', assignee: 'me' })
+    expect(taskListFilters({ status: '' })).toEqual({})
   })
 })

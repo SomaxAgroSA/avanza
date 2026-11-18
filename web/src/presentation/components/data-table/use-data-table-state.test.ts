@@ -26,3 +26,20 @@ describe('useDataTableState — filtros', () => {
     expect(result.current.hasActiveFilters).toBe(false)
   })
 })
+
+describe('useDataTableState — quantos filtros estão ativos ("Limpar (n)")', () => {
+  it('conta cada valor escolhido (os vários de um filtro em botões contam um a um) e a busca; o padrão da tabela não conta', () => {
+    const { result } = renderHook(() => useDataTableState('n', { filters: { category: 'open' } }))
+    expect(result.current.activeFilterCount).toBe(0)
+    act(() => result.current.setFilter('priority', 'high,critical'))
+    act(() => result.current.setFilter('status', 's1'))
+    expect(result.current.activeFilterCount).toBe(3)
+    act(() => result.current.setSearch('login'))
+    expect(result.current.activeFilterCount).toBe(4)
+    // tirar o filtro padrão também é uma mudança (Limpar volta a ele)
+    act(() => result.current.setFilter('category', undefined))
+    expect(result.current.activeFilterCount).toBe(5)
+    act(() => result.current.resetFilters())
+    expect(result.current.activeFilterCount).toBe(0)
+  })
+})

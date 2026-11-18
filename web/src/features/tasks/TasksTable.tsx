@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ExternalLink, FileCheck2, FileX2, Laptop, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
-import { isClosed, type TaskSummary } from '@/domain/tasks'
+import { isClosed, taskListFilters, type TaskSummary } from '@/domain/tasks'
 import {
   AppBadge,
   AppButton,
@@ -18,11 +18,7 @@ import {
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan, useSession } from '@/features/auth/session'
 import { managementLink } from '@/features/plan/paths'
-import { ProjectFilterSettingsButton } from '@/features/projects/ProjectFilterSettings'
-import { useScreenProjects } from '@/features/projects/use-project-filter'
-import { useTaskTypes } from '@/features/task-config/queries'
 import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
-import { useAreaFilterOptions } from '@/features/workflow/area-options'
 import { useTaskMutations, useTasksList } from './queries'
 import { TaskEditDialog } from './TaskEditDialog'
 import { TaskPreviewDrawer } from './TaskPreviewDrawer'
@@ -31,18 +27,14 @@ import { AreaCell } from './TaskArea'
 import { useUrgencyFilterOptions } from './urgency-options'
 import { useMineFirst } from './use-mine-first'
 import { DueDate, PersonCell, TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
-import { useTags } from '@/features/tags/queries'
 import { TagList } from '@/features/tags/tag-visuals'
 
 const EMPTY: TaskSummary[] = []
-const OPEN = 'backlog,todo,in_progress'
-const CLOSED = 'done,cancelled'
-const REPORT_OPTIONS = ['true', 'false'] as const
 
 export interface TasksTableProps {
   /** Chave do estado persistido da tabela. */
   tableId: string
-  /** Lista só as tarefas deste projeto (a coluna/filtro de projeto some). */
+  /** Lista só as tarefas deste projeto (a coluna de projeto some). */
   projectId?: string
   /** Busca aplicada de fora (ex.: /tasks?search=… da command palette). */
   search?: string | null
@@ -68,9 +60,16 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
 
   const table = useDataTableState(tableId, {
     sort: { id: 'updated_at', direction: 'desc' },
-    filters: { category: OPEN },
     columnVisibility: { category: false, tags: false, plan_item: false, in_report: false, it_visible: false },
   })
+  // só os filtros da barra (ajuste 18/11): Área, Situação, Tipo, Projeto… guardados de antes não filtram escondidos — e saem do navegador
+  const filters = useMemo(() => taskListFilters(table.query.filters), [table.query.filters])
+  const { setFilter } = table
+  useEffect(() => {
+    Object.keys(table.state.filters)
+      .filter((id) => !(id in filters))
+      .forEach((id) => setFilter(id, undefined))
+  }, [table.state.filters, filters, setFilter])
   // busca vinda de fora (command palette): aplica uma vez e avisa para limpar o endereço
   const { setSearch } = table
   useEffect(() => {
@@ -81,21 +80,15 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   // minhas tarefas primeiro (padrão ligado): o servidor ordena; as da pessoa ganham a marca "Tuya"
   const [mineFirst, setMineFirst] = useMineFirst()
   const me = useSession().current?.user.id
-  const tasks = useTasksList(table.query, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
+  const tasks = useTasksList({ ...table.query, filters }, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
   const statuses = useStatuses(true)
   const priorities = usePriorities(true)
-  const types = useTaskTypes(true)
-  const tags = useTags()
-  // configurador do filtro de projetos (por pessoa): restringe as opções; o projeto escolhido não some
-  const chosenProject = table.state.filters.project
-  const projects = useScreenProjects('tasks', chosenProject ? [chosenProject] : [], !projectId)
   const { remove, setInReport, setItVisible } = useTaskMutations()
   const markReport = !!projectId && !!marks?.report
   const markIt = !!projectId && !!marks?.itVisible
   const urgencyOptions = useUrgencyFilterOptions()
-  // áreas ativas: opções do clique e do filtro (uma consulta só para a lista inteira)
+  // áreas ativas: opções do clique na célula (uma consulta só para a lista inteira)
   const areas = useAreas(false)
-  const areaOptions = useAreaFilterOptions(areas.data)
 
   const [viewing, setViewing] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -135,7 +128,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         sortable: true,
         size: 170,
         cell: (task) => <TaskStatusBadge status={task.status} />,
-        filter: { label: t('tasks.fields.status'), primary: true, options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
+        filter: { label: t('tasks.fields.status'), options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
       },
       {
         id: 'priority',
@@ -143,7 +136,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         sortable: true,
         size: 140,
         cell: (task) => <TaskPriorityBadge priority={task.priority} />,
-        filter: { label: t('tasks.fields.priority'), primary: true, options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
+        filter: { label: t('tasks.fields.priority'), options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
       },
       {
         // semáforo: quem edita troca com um clique, sem abrir a tarefa
@@ -151,14 +144,14 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.urgency'),
         size: 170,
         cell: (task) => <UrgencyCell task={task} canEdit={canEdit} />,
-        filter: { label: t('tasks.fields.urgency'), primary: true, options: urgencyOptions },
+        filter: { label: t('tasks.fields.urgency'), options: urgencyOptions },
       },
       {
         id: 'assignee',
         header: t('tasks.fields.assignee'),
         size: 180,
         cell: (task) => <PersonCell person={task.assignee} />,
-        filter: { label: t('tasks.fields.assignee'), primary: true, options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
+        filter: { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
       },
       {
         // área responsável: quem edita troca com um clique, sem abrir a tarefa
@@ -166,14 +159,12 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.area'),
         size: 190,
         cell: (task) => <AreaCell task={task} areas={areas.data ?? []} canEdit={canEdit} />,
-        filter: { label: t('tasks.fields.area'), primary: true, options: areaOptions },
       },
       {
         id: 'type',
         header: t('tasks.fields.type'),
         size: 160,
         cell: (task) => <span className="truncate text-muted">{task.type?.name ?? '—'}</span>,
-        filter: { label: t('tasks.fields.type'), options: (types.data ?? []).map((x) => ({ value: x.id, label: x.name })) },
       },
       ...(projectId
         ? []
@@ -183,12 +174,6 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
               header: t('tasks.fields.project'),
               size: 170,
               cell: (task: TaskSummary) => <span className="truncate text-muted">{task.project?.name ?? '—'}</span>,
-              filter: {
-                label: t('tasks.fields.project'),
-                options: projects.items.map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` })),
-                addon: <ProjectFilterSettingsButton screen="tasks" />,
-                primary: true,
-              },
             } satisfies DataTableColumn<TaskSummary>,
           ]),
       {
@@ -221,21 +206,12 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.tags'),
         size: 200,
         cell: (task) => (task.tags.length ? <TagList tags={task.tags} max={2} /> : <span className="text-subtle">—</span>),
-        filter: { label: t('tasks.fields.tags'), options: (tags.data ?? []).map((tag) => ({ value: tag.id, label: tag.name })) },
       },
       {
         id: 'category',
         header: t('tasks.fields.situation'),
         size: 120,
         cell: (task) => <span className="text-muted">{isClosed(task) ? t('tasks.closed') : t('tasks.open')}</span>,
-        filter: {
-          label: t('tasks.fields.situation'),
-          primary: true,
-          options: [
-            { value: OPEN, label: t('tasks.open') },
-            { value: CLOSED, label: t('tasks.closed') },
-          ],
-        },
       },
       // na aba do projeto: o que entra no informe e o que o Responsável TI vê (ocultas por padrão; os botões da linha ligam/desligam)
       ...(projectId
@@ -245,20 +221,12 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
               header: t('tasks.fields.itVisible'),
               size: 140,
               cell: (task: TaskSummary) => <span className="text-muted">{task.itVisible ? t('audit.yes') : t('audit.no')}</span>,
-              filter: {
-                label: t('tasks.fields.itVisible'),
-                options: REPORT_OPTIONS.map((value) => ({ value, label: value === 'true' ? t('audit.yes') : t('audit.no') })),
-              },
             } satisfies DataTableColumn<TaskSummary>,
             {
               id: 'in_report',
               header: t('tasks.fields.inReport'),
               size: 130,
               cell: (task: TaskSummary) => <span className="text-muted">{task.inReport ? t('audit.yes') : t('audit.no')}</span>,
-              filter: {
-                label: t('tasks.fields.inReport'),
-                options: REPORT_OPTIONS.map((value) => ({ value, label: value === 'true' ? t('audit.yes') : t('audit.no') })),
-              },
             } satisfies DataTableColumn<TaskSummary>,
           ]
         : []),
@@ -274,7 +242,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, types.data, tags.data, projects.items, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, areaOptions, mineFirst, me],
+    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, mineFirst, me],
   )
 
   return (

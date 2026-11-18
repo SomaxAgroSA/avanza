@@ -239,6 +239,18 @@ describe('Página do projeto — abas com endereço', () => {
   })
 })
 
+describe('Trilha de navegação no topo', () => {
+  it('some nas listas de projetos (o título já diz onde está) e continua na página do projeto', async () => {
+    const list = setup('/projects/ongoing')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Em andamento' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Trilha de navegação' })).not.toBeInTheDocument()
+    list.unmount()
+
+    setup('/projects/p1')
+    expect(await screen.findByRole('navigation', { name: 'Trilha de navegação' })).toHaveTextContent('Projetos')
+  })
+})
+
 describe('Página do projeto — saúde na visão geral', () => {
   it('com quadro de gestão: nível, cada fator com o valor e o resumo de progresso, cronograma e esforço', async () => {
     const { planReport } = setup('/projects/p1')
@@ -273,6 +285,23 @@ describe('Página do projeto — saúde na visão geral', () => {
     expect(await screen.findByText('Implantação do CRM')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Saúde do projeto' })).not.toBeInTheDocument()
     expect(planReport).not.toHaveBeenCalled()
+  })
+})
+
+describe('Página do projeto — visão geral (ajuste 18/11)', () => {
+  it('Saúde primeiro, depois Descrição; os Detalhes sem a linha Dono (o dono fica em Membros)', async () => {
+    setup('/projects/p1')
+    const health = await screen.findByRole('region', { name: 'Saúde do projeto' })
+    const description = screen.getByRole('heading', { name: 'Descrição' })
+    // a saúde abre a coluna principal (com a Descrição embaixo); os Detalhes ficam na coluna lateral
+    const main = health.parentElement!
+    expect(main).toContainElement(description)
+    expect(health.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const details = screen.getByRole('heading', { name: 'Detalhes' }).closest('section')!
+    expect(main).not.toContainElement(details)
+    expect(within(details).getByText('Status')).toBeInTheDocument()
+    expect(within(details).getByText('Gestão')).toBeInTheDocument()
+    expect(within(details).queryByText('Dono')).not.toBeInTheDocument()
   })
 })
 
