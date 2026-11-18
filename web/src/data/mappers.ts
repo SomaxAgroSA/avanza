@@ -3,7 +3,7 @@ import type { PlanFile, PlanUpdate } from '@/domain/plan-updates'
 import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanReportDto, PlanReportItemDto, PlanUpdateDto } from './dtos'
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
-import type { TeamActivityDto } from './dtos'
+import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
 import type { ApiToken, ApiTokenState } from '@/domain/api-tokens'
 import type { WebhookDto, WebhookDeliveryDto } from './dtos'
 import type { Webhook, WebhookDelivery, WebhookDeliveryStatus } from '@/domain/webhooks'
@@ -54,6 +54,7 @@ import {
   type ProjectMember,
   type ProjectRole,
   type ProjectStatus,
+  type ProjectTaskCount,
   type TeamActivity,
   type UserSummary,
 } from '@/domain/projects'
@@ -88,7 +89,7 @@ export function toUser(dto: UserDto): User {
 }
 
 export function toRoleSummary(dto: RoleDto): RoleSummary {
-  return { id: dto.id, code: dto.code, name: dto.name, description: dto.description, isSystem: dto.is_system }
+  return { id: dto.id, code: dto.code, name: dto.name, description: dto.description, isSystem: dto.is_system, ongoingView: dto.ongoing_view === 'executive' ? 'executive' : '' }
 }
 
 export function toRole(dto: RoleDto): Role {
@@ -1306,6 +1307,10 @@ export function toProjectBrief(dto: ProjectBriefDto): ProjectBrief {
 }
 
 const TEAM_STATES = ['working', 'active', 'idle'] as const
+export function toProjectTaskCounts(dto: ProjectTaskCountsDto): ProjectTaskCount[] {
+  return dto.projects.map((row) => ({ projectId: row.project_id, done: row.done, open: row.open }))
+}
+
 export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
   return {
     windowDays: dto.window_days,

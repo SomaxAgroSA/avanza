@@ -38,6 +38,8 @@ function toRoleDto(role, extra) {
     name: role.name,
     description: role.description || '',
     is_system: !!role.isSystem,
+    // vista de "Em andamento" do perfil (§41); '' = Gestão
+    ongoing_view: role.ongoingView || '',
   }
   if (extra && extra.permissions) dto.permissions = extra.permissions.slice().sort()
   if (extra && typeof extra.userCount === 'number') dto.user_count = extra.userCount

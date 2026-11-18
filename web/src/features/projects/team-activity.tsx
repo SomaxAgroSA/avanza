@@ -8,6 +8,7 @@ import type { TeamActivityProject, TeamActivityState, UserSummary } from '@/doma
 import { AppAvatar, AppBadge, AppDrawer, AppEmptyState, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { ProjectAvatar } from './project-visuals'
 import { useTeamActivity } from './queries'
+import { teamMetric } from './team-activity-data'
 
 const firstName = (name: string) => name.split(' ')[0] ?? name
 
@@ -117,15 +118,7 @@ function PersonBlock({ user, projects }: { user: UserSummary; projects: TeamActi
 function ProjectRow({ row, userName }: { row: TeamActivityProject; userName: string }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
-  const when = formatRelative(row.lastActivity, i18n.language)
-  const metric =
-    row.state === 'working'
-      ? t('team.metric.working', { count: row.inProgress })
-      : row.state === 'active'
-        ? t('team.metric.active', { count: row.recent, when })
-        : row.stale
-          ? t('team.metric.stale', { count: row.inProgress, when })
-          : t('team.metric.idle', { count: row.open, when })
+  const metric = teamMetric(t, row, i18n.language)
   const panelId = `team-tasks-${row.project.id}-${userName.replace(/\W+/g, '')}`
   return (
     <li className="py-1">

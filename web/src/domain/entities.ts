@@ -22,17 +22,23 @@ export interface User {
   lastLoginAt: Date | null
 }
 
+/** Vista da lista "Em andamento" de um perfil (§41): '' = Gestão (padrão); 'executive' = Direção e gerência (consulta). */
+export const ONGOING_VIEWS = ['', 'executive'] as const
+export type OngoingView = (typeof ONGOING_VIEWS)[number]
+
 export interface Role {
   id: string
   code: string
   name: string
   description: string
   isSystem: boolean
+  /** Vista da lista Em andamento de quem tem este perfil (§41). */
+  ongoingView: OngoingView
   permissions: PermissionCode[]
   userCount: number
 }
 
-export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem'>
+export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'ongoingView'>
 
 export interface Permission {
   id: string

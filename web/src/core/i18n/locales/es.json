@@ -540,6 +540,13 @@
       "permissions": "Permisos",
       "users": "Usuarios",
       "type": "Tipo"
+    },
+    "ongoingView": {
+      "label": "Vista de En marcha",
+      "management": "Gestión",
+      "executive": "Dirección y gerencia",
+      "hint": "Gestión: la lista de siempre. Dirección y gerencia: panel de consulta (indicadores, línea de tiempo, equipo y tabla) sin acciones de editar. Para bloquear la edición en todo Avanza, apaga los permisos de edición de este perfil.",
+      "inherited": "Vista de En marcha: {{view}} (se cambia en el perfil)"
     }
   },
   "permissions": {
@@ -4429,5 +4436,76 @@
     "showTasks": "Ver las tareas de {{name}} en {{project}}",
     "hideTasks": "Ocultar las tareas de {{name}} en {{project}}",
     "tasksOf": "Tareas de {{name}} en {{project}}"
+  },
+  "direction": {
+    "note": "Vista de consulta · sin editar, archivar ni eliminar",
+    "loading": "Cargando el panel…",
+    "kpi": {
+      "label": "Indicadores de los proyectos",
+      "ongoing": "En marcha",
+      "planning": "En planificación",
+      "active": "En ejecución",
+      "high": "Alta prioridad",
+      "completed": "Finalizados",
+      "hintOngoing": "planificación + en curso + pausados",
+      "hintHigh": "alta o crítica, en marcha",
+      "hintTotal_one": "del total de {{count}} proyecto",
+      "hintTotal_other": "del total de {{count}} proyectos"
+    },
+    "band": {
+      "text_one": "Filtrando todo el panel: {{filters}} ({{count}} proyecto)",
+      "text_other": "Filtrando todo el panel: {{filters}} ({{count}} proyectos)",
+      "clear": "Quitar filtro"
+    },
+    "timeline": {
+      "title": "Línea de tiempo de los proyectos",
+      "project": "Proyecto",
+      "today": "Hoy",
+      "late": "Entrega vencida",
+      "tip": "{{name}} · {{status}} · entrega {{date}}",
+      "tipLate": "{{name}} · {{status}} · entrega {{date}} (vencida)",
+      "empty": "Ningún proyecto del filtro tiene fechas de inicio y entrega."
+    },
+    "departments": {
+      "title": "Proyectos por departamento",
+      "hint_one": "Proyectos del filtro ({{count}}). Toca un departamento para filtrar todo.",
+      "hint_other": "Proyectos del filtro ({{count}}). Toca un departamento para filtrar todo.",
+      "none": "Sin departamento",
+      "chart": "Gráfico de proyectos por departamento",
+      "slice_one": "{{name}}: {{count}} proyecto ({{percent}} %)",
+      "slice_other": "{{name}}: {{count}} proyectos ({{percent}} %)",
+      "empty": "No hay proyectos en este filtro."
+    },
+    "tasks": {
+      "title": "Tareas por proyecto",
+      "done": "Ejecutadas",
+      "open": "Faltan",
+      "tip": "{{name}}: {{done}} de {{total}} tareas ejecutadas ({{percent}} %) · faltan {{open}}",
+      "empty": "Ningún proyecto del filtro tiene tareas."
+    },
+    "status": {
+      "title": "Estado de ejecución",
+      "count_one": "{{count}} proyecto",
+      "count_other": "{{count}} proyectos",
+      "bar": "Proyectos por estado de ejecución",
+      "segment": "{{label}}: {{count}} ({{percent}} %) · clic para filtrar"
+    },
+    "team": {
+      "idle": "Con tareas abiertas sin movimiento",
+      "detail": "Ver el detalle de {{project}} ({{name}})"
+    },
+    "drawer": {
+      "title": "Detalle del proyecto",
+      "tasks": "Tareas",
+      "done": "ejecutadas",
+      "open": "faltan",
+      "progress": "avance",
+      "noTasks": "Este proyecto aún no tiene tareas.",
+      "recent": "Tareas recientes",
+      "noRecent": "Sin tareas recientes.",
+      "who": "Quién está trabajando",
+      "nobody": "Nadie movió tareas de este proyecto en los últimos 7 días.",
+      "openProject": "Abrir el proyecto"
+    }
   }
 }

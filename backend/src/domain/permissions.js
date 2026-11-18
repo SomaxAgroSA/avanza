@@ -105,4 +105,11 @@ function isKnownPermission(code) {
   return ALL_CODES.indexOf(code) >= 0
 }
 
-module.exports = { PERMISSIONS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }
+/**
+ * Vista da lista "Em andamento" por perfil (§41), escolhida em Controle de acesso → Perfis. '' = Gestão
+ * (a tela de sempre); 'executive' = Direção e gerência (painel de consulta). Só muda a tela, não o que a
+ * pessoa pode fazer: isso continua nas permissões do perfil.
+ */
+const ONGOING_VIEWS = Object.freeze(['', 'executive'])
+
+module.exports = { PERMISSIONS, ONGOING_VIEWS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }

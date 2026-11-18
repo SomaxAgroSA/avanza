@@ -21,6 +21,8 @@ import {
   AppButton,
   AppDataTable,
   AppEmptyState,
+  AppErrorState,
+  AppSkeleton,
   notify,
   useDataTableState,
   type DataTableColumn,
@@ -28,18 +30,20 @@ import {
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCopy } from '@/presentation/common/use-copy'
-import { useCan } from '@/features/auth/session'
+import { useCan, useSession } from '@/features/auth/session'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { DeleteProjectDialog } from './DeleteProjectDialog'
 import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
-import { useProjectLifecycle, useProjects, useTeamActivity, useUpdateProject } from './queries'
+import { useAllOpenProjects, useProjectLifecycle, useProjectTaskCounts, useProjects, useTeamActivity, useUpdateProject } from './queries'
 import { ActivityCell, TeamActivityDrawer } from './team-activity'
 import { activityByProject } from './team-activity-data'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
 import { AreaPicker } from '@/features/workflow/area-visuals'
 import { useAreas } from '@/features/workflow/queries'
 import type { Area } from '@/domain/workflow'
+import { DirectionPanel } from './direction/DirectionPanel'
+import { DEFAULT_PANEL, ONGOING_STATUSES, tableFilters, type PanelFilter } from './direction/direction-data'
 
 const EMPTY: Project[] = []
 
@@ -64,12 +68,16 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const errorMessage = useErrorMessage()
   const copy = useCopy()
   const canCreate = useCan('projects.create')
+  // Vista de En marcha do perfil (§41): Direção e gerência = painel de consulta; senão, a lista de gestão de sempre
+  const { current: session } = useSession()
+  const direction = view === 'ongoing' && session?.role?.ongoingView === 'executive'
+  const [panel, setPanel] = useState<PanelFilter>(DEFAULT_PANEL)
   // Equipo ahora: quién está trabajando en cada proyecto (solo en las listas de proyectos en marcha)
   const showActivity = useCan('tasks.view') && view !== 'archived' && view !== 'finished'
   const team = useTeamActivity(showActivity)
   const activity = useMemo(() => activityByProject(team.data), [team.data])
   const [teamOpen, setTeamOpen] = useState(false)
-  const createHere = canCreate && view !== 'archived' && view !== 'finished'
+  const createHere = canCreate && view !== 'archived' && view !== 'finished' && !direction
   const [params, setParams] = useSearchParams()
 
   const table = useDataTableState(`projects-${view}`, { sort: { id: 'name', direction: 'asc' }, columnVisibility: { parent: false } })
@@ -82,7 +90,13 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       .forEach((id) => setFilter(id, undefined))
   }, [table.state.filters, filters, setFilter])
   // sem as quantidades nos botões (ajuste 18/11): a lista não pede `facets` (a API continua oferecendo)
-  const projects = useProjects({ ...table.query, filters, view })
+  // na Direção e gerência o painel (indicador, estado, departamento) soma-se à barra; sem projeto possível, a tabela fica vazia
+  const merged = direction ? tableFilters(panel, filters) : null
+  const projects = useProjects({ ...table.query, filters: merged ? merged.filters : filters, view: direction ? 'all' : view }, !merged?.empty)
+  const rows = merged?.empty ? EMPTY : (projects.data?.items ?? EMPTY)
+  const overview = useAllOpenProjects(direction)
+  const canSeeTasks = useCan('tasks.view')
+  const taskCounts = useProjectTaskCounts(direction && canSeeTasks)
   const lifecycle = useProjectLifecycle()
 
   const [viewing, setViewing] = useState<Project | null>(null)
@@ -91,7 +105,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const [deleting, setDeleting] = useState<Project | null>(null)
 
   // "Criar projeto" vindo da command palette / dashboard (/projects?new=1)
-  const creatingFromUrl = canCreate && params.get('new') === '1'
+  const creatingFromUrl = canCreate && !direction && params.get('new') === '1'
 
   function archive(project: Project) {
     lifecycle.archive.mutate(project.id, {
@@ -153,8 +167,11 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         sortable: true,
         size: 140,
         cell: (project) => <ProjectStatusBadge status={project.status} />,
-        // seletor só com os status desta lista (§37)
-        filter: { label: t('projects.fields.status'), options: (VIEW_STATUSES[view] ?? PROJECT_STATUSES).map((s) => ({ value: s, label: t(`projects.status.${s}`) })) },
+        // seletor só com os status desta lista (§37); na Direção e gerência, os do indicador escolhido
+        filter: {
+          label: t('projects.fields.status'),
+          options: (direction ? (panel.kpi === 'completed' ? (['completed'] as const) : ONGOING_STATUSES) : (VIEW_STATUSES[view] ?? PROJECT_STATUSES)).map((s) => ({ value: s, label: t(`projects.status.${s}`) })),
+        },
       },
       // Gestión, Desarrollo y Trabajando junto al estado: se ven sin desplazar la tabla
       {
@@ -204,7 +221,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         sortable: true,
         sortDescFirst: true,
         size: 160,
-        cell: (project) => <ProjectUrgencyCell project={project} />,
+        cell: (project) => <ProjectUrgencyCell project={project} readOnly={direction} />,
         // botões (§37): da menor para a maior, e "sem urgência" no fim
         filter: {
           label: t('tasks.fields.urgency'),
@@ -218,7 +235,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         header: t('tasks.fields.area'),
         sortable: true,
         size: 190,
-        cell: (project) => <ProjectAreaCell project={project} areas={areas.data ?? []} />,
+        cell: (project) => <ProjectAreaCell project={project} areas={areas.data ?? []} readOnly={direction} />,
       },
       {
         // projeto pai (§34; sem filtro na barra desde §37)
@@ -247,7 +264,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ),
       },
     ],
-    [t, locale, areas.data, view, showActivity, activity],
+    [t, locale, areas.data, view, showActivity, activity, direction, panel.kpi],
   )
 
   const emptyState =
@@ -257,7 +274,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={view === 'mine' ? t('projects.emptyMine') : view === 'ongoing' || view === 'finished' ? t(`projects.empty_${view}`) : t('projects.empty')}
         description={t('projects.emptyDescription')}
         action={
-          canCreate ? (
+          canCreate && !direction ? (
             <AppButton leftIcon={<FolderPlus />} onClick={() => setCreating(true)}>
               {t('projects.create')}
             </AppButton>
@@ -272,7 +289,9 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={t(TITLES[view])}
         description={t(`projects.descriptions.${view}`)}
         actions={
-          showActivity || createHere ? (
+          direction ? (
+            <span className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm text-muted">{t('direction.note')}</span>
+          ) : showActivity || createHere ? (
             <div className="flex flex-wrap items-center gap-2">
               {showActivity && (
                 <AppButton variant="secondary" leftIcon={<Users />} onClick={() => setTeamOpen(true)}>
@@ -288,56 +307,82 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
           ) : undefined
         }
       />
-      {showActivity && <TeamActivityDrawer open={teamOpen} onOpenChange={setTeamOpen} />}
+      {showActivity && !direction && <TeamActivityDrawer open={teamOpen} onOpenChange={setTeamOpen} />}
+      {direction &&
+        (overview.isPending ? (
+          <div className="mb-6 flex flex-col gap-3" role="status" aria-label={t('direction.loading')}>
+            <AppSkeleton className="h-24 rounded-xl" />
+            <AppSkeleton className="h-52 rounded-xl" />
+          </div>
+        ) : overview.isError ? (
+          <AppErrorState onRetry={() => void overview.refetch()} />
+        ) : (
+          <DirectionPanel
+            projects={overview.data}
+            filter={panel}
+            onFilter={setPanel}
+            taskCounts={canSeeTasks ? taskCounts.data : undefined}
+            team={showActivity ? { data: team.data, pending: team.isPending, error: team.isError, retry: () => void team.refetch() } : null}
+          />
+        ))}
 
       <AppDataTable
         caption={t(TITLES[view])}
         columns={columns}
-        data={projects.data?.items ?? EMPTY}
-        total={projects.data?.total ?? 0}
+        data={rows}
+        total={merged?.empty ? 0 : (projects.data?.total ?? 0)}
         getRowId={(project) => project.id}
         table={table}
-        loading={projects.isPending}
+        loading={projects.isPending && !merged?.empty}
         fetching={projects.isFetching}
         error={projects.isError ? { correlationId: isAppError(projects.error) ? projects.error.correlationId : undefined } : null}
         onRetry={() => void projects.refetch()}
         searchPlaceholder={t('projects.searchPlaceholder')}
         emptyState={emptyState}
-        actions={{
-          onView: setViewing,
-          onOpen: (project) => navigate(`/projects/${project.id}`),
-          onEdit: setEditing,
-          canEdit: (project) => project.capabilities.edit,
-          onDelete: (project) => (project.archivedAt ? setDeleting(project) : archive(project)),
-          canDelete: (project) => (project.archivedAt ? project.capabilities.delete : project.capabilities.archive),
-          deleteLabel: (project) => (project.archivedAt ? t('common.delete') : t('projects.archive')),
-          deleteIcon: (project) => (project.archivedAt ? undefined : <Archive />),
-          deleteTone: (project) => (project.archivedAt ? 'danger' : 'ghost'),
-          more: (project) => [
-            { key: 'open', label: t('projects.open'), icon: <ExternalLink />, onSelect: () => navigate(`/projects/${project.id}`) },
-            {
-              key: 'copy',
-              label: t('projects.copyKey'),
-              icon: <Copy />,
-              onSelect: () => void copy(project.key),
-            },
-            ...(project.archivedAt && project.capabilities.archive
-              ? [{ key: 'unarchive', label: t('projects.unarchive'), icon: <ArchiveRestore />, onSelect: () => unarchive(project) }]
-              : []),
-            ...(!project.archivedAt && project.capabilities.archive
-              ? [{ key: 'archive', label: t('projects.archive'), icon: <Archive />, onSelect: () => archive(project) }]
-              : []),
-          ],
-        }}
+        // Direção e gerência: só consulta (o olho); o resto das ações some. As permissões reais continuam as do perfil
+        actions={
+          direction
+            ? { onView: setViewing, hideMore: true }
+            : {
+              onView: setViewing,
+              onOpen: (project) => navigate(`/projects/${project.id}`),
+              onEdit: setEditing,
+              canEdit: (project) => project.capabilities.edit,
+              onDelete: (project) => (project.archivedAt ? setDeleting(project) : archive(project)),
+              canDelete: (project) => (project.archivedAt ? project.capabilities.delete : project.capabilities.archive),
+              deleteLabel: (project) => (project.archivedAt ? t('common.delete') : t('projects.archive')),
+              deleteIcon: (project) => (project.archivedAt ? undefined : <Archive />),
+              deleteTone: (project) => (project.archivedAt ? 'danger' : 'ghost'),
+              more: (project) => [
+                { key: 'open', label: t('projects.open'), icon: <ExternalLink />, onSelect: () => navigate(`/projects/${project.id}`) },
+                {
+                  key: 'copy',
+                  label: t('projects.copyKey'),
+                  icon: <Copy />,
+                  onSelect: () => void copy(project.key),
+                },
+                ...(project.archivedAt && project.capabilities.archive
+                  ? [{ key: 'unarchive', label: t('projects.unarchive'), icon: <ArchiveRestore />, onSelect: () => unarchive(project) }]
+                  : []),
+                ...(!project.archivedAt && project.capabilities.archive
+                  ? [{ key: 'archive', label: t('projects.archive'), icon: <Archive />, onSelect: () => archive(project) }]
+                  : []),
+              ],
+            }
+        }
       />
 
       <ProjectPreviewDrawer
         project={viewing}
         onOpenChange={(open) => !open && setViewing(null)}
-        onEdit={(project) => {
-          setViewing(null)
-          setEditing(project)
-        }}
+        onEdit={
+          direction
+            ? undefined
+            : (project) => {
+                setViewing(null)
+                setEditing(project)
+              }
+        }
       />
       <ProjectFormDialog
         open={creating || creatingFromUrl || !!editing}
@@ -368,7 +413,7 @@ function PersonCell({ person }: { person: UserSummary | null }) {
 
 /** Urgência do projeto na lista: semáforo que quem edita o projeto troca com um clique. */
 /** Área responsável do projeto na lista: quem edita o projeto troca com um clique. */
-function ProjectAreaCell({ project, areas }: { project: Project; areas: Area[] }) {
+function ProjectAreaCell({ project, areas, readOnly }: { project: Project; areas: Area[]; readOnly: boolean }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const update = useUpdateProject()
@@ -376,7 +421,7 @@ function ProjectAreaCell({ project, areas }: { project: Project; areas: Area[] }
     <AreaPicker
       value={project.area}
       areas={areas}
-      canEdit={project.capabilities.edit && !project.archivedAt}
+      canEdit={project.capabilities.edit && !project.archivedAt && !readOnly}
       pending={update.isPending}
       changeLabel={t('areas.change', { name: project.name, area: project.area?.name ?? t('areas.none') })}
       onChoose={(areaId) =>
@@ -392,7 +437,7 @@ function ProjectAreaCell({ project, areas }: { project: Project; areas: Area[] }
   )
 }
 
-function ProjectUrgencyCell({ project }: { project: Project }) {
+function ProjectUrgencyCell({ project, readOnly }: { project: Project; readOnly: boolean }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const update = useUpdateProject()
@@ -400,7 +445,7 @@ function ProjectUrgencyCell({ project }: { project: Project }) {
   return (
     <UrgencyPicker
       value={project.urgency}
-      canEdit={project.capabilities.edit && !project.archivedAt}
+      canEdit={project.capabilities.edit && !project.archivedAt && !readOnly}
       pending={update.isPending}
       changeLabel={t('projects.urgencyChange', { name: project.name, urgency: label })}
       onChoose={(urgency) =>

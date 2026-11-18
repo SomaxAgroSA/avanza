@@ -12,7 +12,7 @@ beforeAll(async () => {
   await i18n.changeLanguage('es')
 })
 
-const role = (id: string, code: string, name: string, permissions: Role['permissions'], userCount: number): Role => ({ id, code, name, description: '', isSystem: false, permissions, userCount })
+const role = (id: string, code: string, name: string, permissions: Role['permissions'], userCount: number): Role => ({ id, code, name, description: '', isSystem: false, ongoingView: '', permissions, userCount })
 const admin = role('role-admin', 'ADMIN', 'Admin', [...PERMISSION_CODES], 1)
 const memberRole = role('role-member', 'MEMBER', 'Miembro', ['projects.view', 'tasks.view', 'tasks.edit', 'reports.view'], 2)
 const douglas = makeUser({ id: 'u2', name: 'Douglas Martins', email: 'douglas@x.test', roleId: 'role-member' })
@@ -115,5 +115,72 @@ describe('Control de acceso', () => {
     // la matriz ya no es pestaña (repetía "Por persona"): se abre desde cada perfil
     expect(within(tabs).queryByRole('link', { name: 'Permisos por perfil' })).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: i18n.t('roles.create') })).toBeInTheDocument()
+  })
+})
+
+describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
+  function setupRoles(initial: Role[], initialPath = '/settings/access?tab=roles') {
+    let roles = initial
+    const update = vi.fn((id: string, data: { name: string; description: string; ongoingView?: Role['ongoingView'] }) => {
+      roles = roles.map((r) => (r.id === id ? { ...r, ...data } : r))
+      return Promise.resolve(roles.find((r) => r.id === id)!)
+    })
+    const createRole = vi.fn(() => Promise.resolve(role('role-custom', 'USR_DOUGLAS_MARTINS', 'Douglas Martins (personalizado)', [], 0)))
+    const updateUser = vi.fn(() => Promise.resolve(douglas))
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser([...PERMISSION_CODES]) },
+      users: { list: () => Promise.resolve({ items: [douglas, makeUser()], page: 1, perPage: 100, total: 2, totalPages: 1 }), update: updateUser },
+      roles: { list: () => Promise.resolve(roles), update, create: createRole },
+      projects: { list: () => Promise.resolve({ items: [project('p1', 'GCS', 'Gestión Comercial')], page: 1, perPage: 100, total: 1, totalPages: 1 }), listMembers: () => Promise.resolve([owner]) },
+    })
+    renderRoutes([{ path: '/settings/access', element: <AccessControlPage /> }], { repositories, initialPath })
+    return { update, createRole }
+  }
+
+  it('el perfil se edita con "Vista de En marcha" (Gestión por defecto): guarda y vuelve a leerse', async () => {
+    const { update } = setupRoles([admin, memberRole])
+    const row = (await screen.findByText('Miembro')).closest('tr')!
+    await userEvent.click(within(row).getByRole('button', { name: 'Editar' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar perfil' })
+    const select = within(dialog).getByRole('combobox', { name: 'Vista de En marcha' })
+    expect(select).toHaveTextContent('Gestión')
+    expect(within(dialog).getByText(/panel de consulta/)).toBeInTheDocument()
+    await userEvent.click(select)
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Gestión', 'Dirección y gerencia'])
+    await userEvent.click(screen.getByRole('option', { name: 'Dirección y gerencia' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: 'executive' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
+    // vuelve a leerse del servidor
+    await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
+    expect(await screen.findByRole('combobox', { name: 'Vista de En marcha' })).toHaveTextContent('Dirección y gerencia')
+  })
+
+  it('un perfil nuevo también elige la vista', async () => {
+    const { createRole } = setupRoles([admin, memberRole])
+    await userEvent.click(await screen.findByRole('button', { name: 'Nuevo perfil' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Nuevo perfil' })
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /Código/ }), 'diretoria')
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /Nombre/ }), 'Dirección')
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Vista de En marcha' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Dirección y gerencia' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledWith({ code: 'DIRETORIA', name: 'Dirección', description: '', permissions: [], ongoingView: 'executive' }))
+  })
+
+  it('Por persona muestra la vista heredada del perfil (solo lectura; no hay opción por persona)', async () => {
+    setup()
+    expect(await screen.findByText('Vista de En marcha: Gestión (se cambia en el perfil)')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Vista de En marcha' })).toBeNull()
+  })
+
+  it('el perfil propio de una persona hereda la vista del perfil compartido', async () => {
+    const { createRole } = setupRoles([admin, { ...memberRole, ongoingView: 'executive' }], '/settings/access')
+    expect(await screen.findByText('Vista de En marcha: Dirección y gerencia (se cambia en el perfil)')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Ficha' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Crear perfil propio para Douglas' }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledOnce())
+    const [data] = createRole.mock.calls[0] as unknown as [{ ongoingView: string }]
+    expect(data.ongoingView).toBe('executive')
   })
 })

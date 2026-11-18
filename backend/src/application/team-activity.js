@@ -98,7 +98,37 @@ function createTeamActivityService(deps) {
     return { window_days: WINDOW_DAYS, generated_at: iso(now), people }
   }
 
-  return { getTeamActivity }
+  /**
+   * Tarefas por projeto para o painel "Direção e gerência" (§41): de cada projeto não arquivado que a pessoa vê
+   * por inteiro, quantas tarefas estão executadas (categoria done) e quantas faltam (as demais, sem as
+   * canceladas). Exige tasks.view (sem ele, lista vazia); projeto sem tarefas não aparece.
+   */
+  async function getProjectTaskCounts(ctx) {
+    rbac.assertAuthenticated(ctx.principal)
+    rbac.assertCan(ctx.principal, 'projects.view')
+    const empty = { projects: [] }
+    if (!rbac.can(ctx.principal, 'tasks.view')) return empty
+    const all = (await deps.projectRepository.listAll()).filter((p) => !p.archivedAt)
+    const roles = all.length ? await deps.projectMemberRepository.rolesForUser(ctx.principal.userId, all.map((p) => p.id)) : {}
+    const ids = all
+      .filter((p) => {
+        const access = projectDomain.resolveAccess(ctx.principal, p, roles[p.id] ? { role: roles[p.id] } : null)
+        return access.canView && !access.limited
+      })
+      .map((p) => p.id)
+    if (ids.length === 0) return empty
+    const counts = await deps.taskRepository.countByProject(ids)
+    const projects = []
+    for (const id of ids) {
+      const byCategory = counts[id] || {}
+      const done = byCategory.done || 0
+      const open = Object.keys(byCategory).reduce((sum, category) => (CLOSED.indexOf(category) >= 0 ? sum : sum + byCategory[category]), 0)
+      if (done + open > 0) projects.push({ project_id: id, done, open })
+    }
+    return { projects }
+  }
+
+  return { getTeamActivity, getProjectTaskCounts }
 }
 
 module.exports = { createTeamActivityService }

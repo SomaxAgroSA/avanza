@@ -333,6 +333,30 @@ describe('API /api/v1', { timeout: 120000 }, () => {
     })
   })
 
+  describe('vista de Em andamento por perfil (§41)', () => {
+    it('PATCH /roles/:id grava ongoing_view, sai em /roles e em /auth/me de quem tem o perfil', async () => {
+      const { client } = await createUserAndLogin('MEMBER', 'vista-perfil@kamban.test')
+      assert.equal((await client.get('/auth/me')).body.data.role.ongoing_view, '')
+      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: 'executive' })
+      assert.equal(res.status, 200, JSON.stringify(res.body))
+      assert.equal(res.body.data.ongoing_view, 'executive')
+      assert.equal((await admin.get(`/roles/${roleId('MEMBER')}`)).body.data.ongoing_view, 'executive')
+      assert.equal((await client.get('/auth/me')).body.data.role.ongoing_view, 'executive')
+      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: 'tudo' })).body.error.code, 'VALIDATION_ERROR')
+      assert.equal((await client.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: '' })).status, 403, 'só quem gerencia permissões')
+      assert.equal((await admin.patch(`/roles/${roleId('SUPER_ADMIN')}`, { name: 'Super Admin', ongoing_view: 'executive' })).body.error.code, 'ROLE_IMMUTABLE')
+      const back = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: '' })
+      assert.equal(back.body.data.ongoing_view, '')
+    })
+
+    it('POST /roles aceita ongoing_view', async () => {
+      const created = await admin.post('/roles', { code: 'diretoria', name: 'Diretoria', ongoing_view: 'executive' })
+      assert.equal(created.status, 201, JSON.stringify(created.body))
+      assert.equal(created.body.data.ongoing_view, 'executive')
+      await admin.del(`/roles/${created.body.data.id}`)
+    })
+  })
+
   describe('página inicial por pessoa (§38)', () => {
     it('PATCH /users/:id grava home_page e devolve o valor salvo', async () => {
       const { user } = await createUserAndLogin('MEMBER', 'pagina-inicial@kamban.test')

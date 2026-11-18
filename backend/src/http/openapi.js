@@ -4,6 +4,7 @@
  */
 
 const { HOME_PAGES } = require('../domain/user')
+const { ONGOING_VIEWS } = require('../domain/permissions')
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` })
 
@@ -189,9 +190,12 @@ function build() {
       },
       '/roles/{id}': {
         get: op('Detalhe do perfil', ['rbac'], { 200: ok('Perfil', ref('Role')), 404: errorResponse('ROLE_NOT_FOUND') }, { parameters: [idParam] }),
-        patch: op('Atualiza nome/descrição', ['rbac'], { 200: ok('Atualizado', ref('Role')) }, {
+        patch: op('Atualiza nome, descrição e vista de Em andamento (permissions.manage)', ['rbac'], { 200: ok('Atualizado', ref('Role')) }, {
           parameters: [idParam, csrfHeader],
-          requestBody: jsonBody({ type: 'object', properties: { name: { type: 'string' }, description: { type: 'string' } } }),
+          requestBody: jsonBody({
+            type: 'object',
+            properties: { name: { type: 'string' }, description: { type: 'string' }, ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista de Em andamento do perfil (§41); "" = Gestão' } },
+          }),
         }),
         delete: op('Exclui perfil customizado', ['rbac'], { 200: ok('Excluído', { type: 'object' }), 409: errorResponse('ROLE_IN_USE') }, {
           parameters: [idParam, csrfHeader],
@@ -276,6 +280,14 @@ function build() {
               generated_at: { type: 'string', format: 'date-time' },
               people: { type: 'array', items: { type: 'object', description: 'user + projects[{ project, state: working|active|idle, in_progress, recent, open, stale, last_activity, tasks[] }]' } },
             },
+          }),
+        }),
+      },
+      '/project-task-counts': {
+        get: op('Tarefas por projeto (§41): de cada projeto não arquivado que a pessoa vê por inteiro, quantas estão executadas (done) e quantas faltam (as demais, sem as canceladas). Alimenta o painel Direção e gerência de Em andamento; exige tasks.view (sem ele, lista vazia); projeto sem tarefas não aparece', ['projects'], {
+          200: ok('Contagens', {
+            type: 'object',
+            properties: { projects: { type: 'array', items: { type: 'object', properties: { project_id: { type: 'string' }, done: { type: 'integer' }, open: { type: 'integer' } } } } },
           }),
         }),
       },
@@ -1289,6 +1301,7 @@ function build() {
             name: { type: 'string' },
             description: { type: 'string' },
             is_system: { type: 'boolean' },
+            ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "executive" = Direção e gerência' },
             permissions: { type: 'array', items: { type: 'string' } },
             user_count: { type: 'integer' },
           },
@@ -1301,6 +1314,7 @@ function build() {
             name: { type: 'string' },
             description: { type: 'string' },
             permissions: { type: 'array', items: { type: 'string' } },
+            ongoing_view: { type: 'string', enum: ONGOING_VIEWS },
           },
         },
         Permission: { type: 'object', properties: { id: { type: 'string' }, code: { type: 'string' }, module: { type: 'string' } } },

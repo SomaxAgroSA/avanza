@@ -13,6 +13,8 @@ export const projectKeys = {
   files: (id: string) => ['projects', 'files', id] as const,
   covers: (exclude: string) => ['projects', 'covers', exclude] as const,
   team: ['projects', 'team-activity'] as const,
+  taskCounts: ['projects', 'task-counts'] as const,
+  overview: ['projects', 'overview'] as const,
 }
 
 /** Lista geral dos filtros de projeto (seletor das visões, Tarefas, Relatórios): ativos, pelo nome. */
@@ -21,6 +23,31 @@ export const PROJECT_OPTIONS_QUERY: ProjectListQuery = { view: 'all', page: 1, p
 export function useProjects(query: ProjectListQuery, enabled = true) {
   const { projects } = useRepositories()
   return useQuery({ queryKey: projectKeys.list(query), queryFn: () => projects.list(query), placeholderData: keepPreviousData, enabled })
+}
+
+/**
+ * Todos os projetos não arquivados que a pessoa vê (todas as páginas): a base do painel Direção e gerência
+ * (indicadores, linha do tempo, gráficos), que não pagina como a tabela.
+ */
+export function useAllOpenProjects(enabled = true) {
+  const { projects } = useRepositories()
+  return useQuery({
+    queryKey: projectKeys.overview,
+    enabled,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const first = await projects.list(PROJECT_OPTIONS_QUERY)
+      const items = [...first.items]
+      for (let page = 2; page <= Math.min(first.totalPages, 20); page++) items.push(...(await projects.list({ ...PROJECT_OPTIONS_QUERY, page })).items)
+      return items
+    },
+  })
+}
+
+/** Tarefas executadas e faltantes por projeto (painel Direção e gerência, §41). */
+export function useProjectTaskCounts(enabled = true) {
+  const { projects } = useRepositories()
+  return useQuery({ queryKey: projectKeys.taskCounts, queryFn: () => projects.taskCounts(), enabled, staleTime: 60_000 })
 }
 
 export function useProject(id: string | undefined) {

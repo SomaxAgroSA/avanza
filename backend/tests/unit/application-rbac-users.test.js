@@ -66,6 +66,46 @@ describe('application/roles', () => {
     })
   })
 
+  it('§41: vista de Em andamento do perfil: padrão Gestão, muda com permissions.manage e fica no histórico', async () => {
+    const deps = createFakeDeps()
+    const roles = createRoleService(deps)
+    const admin = await ctxFor(deps, 'ADMIN')
+    const viewer = await deps.roleRepository.findByCode('VIEWER')
+    assert.equal((await roles.getRole(admin, viewer.id)).ongoing_view, '')
+
+    const saved = await roles.updateRole(admin, viewer.id, { name: viewer.name, ongoing_view: 'executive' })
+    assert.equal(saved.ongoing_view, 'executive')
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['role.updated', { ongoing_view: '' }, { ongoing_view: 'executive' }])
+    assert.equal((await roles.getRole(admin, viewer.id)).ongoing_view, 'executive')
+
+    // sem mudança: não grava nada no histórico
+    const count = deps.store.audit.length
+    await roles.updateRole(admin, viewer.id, { name: viewer.name, ongoing_view: 'executive' })
+    assert.equal(deps.store.audit.length, count)
+
+    // omitir o campo não o apaga
+    assert.equal((await roles.updateRole(admin, viewer.id, { name: 'Consulta' })).ongoing_view, 'executive')
+    assert.equal((await roles.updateRole(admin, viewer.id, { name: 'Consulta', ongoing_view: '' })).ongoing_view, '')
+
+    await assert.rejects(() => roles.updateRole(admin, viewer.id, { name: 'Consulta', ongoing_view: 'tudo' }), { code: 'VALIDATION_ERROR' })
+    await assert.rejects(async () => roles.updateRole(await ctxFor(deps, 'MANAGER'), viewer.id, { name: 'X', ongoing_view: 'executive' }), { code: 'FORBIDDEN' })
+  })
+
+  it('§41: SUPER_ADMIN continua imutável (fica em Gestão) e o perfil novo aceita a vista', async () => {
+    const deps = createFakeDeps()
+    const roles = createRoleService(deps)
+    const admin = await ctxFor(deps, 'ADMIN')
+    const sa = await deps.roleRepository.findByCode('SUPER_ADMIN')
+    await assert.rejects(() => roles.updateRole(admin, sa.id, { name: sa.name, ongoing_view: 'executive' }), { code: 'ROLE_IMMUTABLE' })
+    assert.equal((await roles.getRole(admin, sa.id)).ongoing_view, '')
+
+    const created = await roles.createRole(admin, { code: 'DIRETORIA', name: 'Diretoria', ongoing_view: 'executive' })
+    assert.equal(created.ongoing_view, 'executive')
+    assert.equal((await roles.createRole(admin, { code: 'OUTRA', name: 'Outra' })).ongoing_view, '')
+    await assert.rejects(() => roles.createRole(admin, { code: 'RUIM', name: 'Ruim', ongoing_view: 'x' }), { code: 'VALIDATION_ERROR' })
+  })
+
   it('não exclui perfil de sistema nem perfil em uso', async () => {
     const deps = createFakeDeps()
     const roles = createRoleService(deps)

@@ -599,6 +599,17 @@ function createFakeRepositories(store) {
         })
     },
     findManyByIds: (ids) => store.tasks.filter((t) => ids.includes(t.id)),
+    countByProject: (projectIds) => {
+      const out = {}
+      store.tasks
+        .filter((t) => projectIds.includes(t.projectId))
+        .forEach((t) => {
+          const category = (store.statuses.find((x) => x.id === t.statusId) || { category: 'todo' }).category
+          out[t.projectId] = out[t.projectId] || {}
+          out[t.projectId][category] = (out[t.projectId][category] || 0) + 1
+        })
+      return out
+    },
     listActivity: (projectIds, since) =>
       store.tasks
         .filter((t) => projectIds.includes(t.projectId) && t.assigneeId)

@@ -92,6 +92,8 @@ export const roleSchema = z.object({
     .pipe(z.string().regex(/^[A-Z][A-Z0-9_]{1,31}$/, 'invalid_format')),
   name: z.string().trim().min(1, 'required').max(60, 'too_long'),
   description: z.string().trim().max(255, 'too_long'),
+  /** Vista da lista Em andamento do perfil (§41): '' = Gestão. */
+  ongoingView: z.enum(['', 'executive']),
 })
 export type RoleInput = z.input<typeof roleSchema>
 

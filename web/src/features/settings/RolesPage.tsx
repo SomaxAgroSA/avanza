@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import { Lock, Plus, ShieldCheck } from 'lucide-react'
@@ -15,6 +15,7 @@ import {
   AppDataTable,
   AppDialog,
   AppDrawer,
+  AppSelect,
   AppTextField,
   notify,
   useDataTableState,
@@ -183,6 +184,9 @@ function RoleDetailsDrawer({ role, onOpenChange }: { role: Role | null; onOpenCh
             <AppBadge tone={role.isSystem ? 'neutral' : 'info'}>{role.isSystem ? t('roles.system') : t('roles.custom')}</AppBadge>
             <AppBadge tone="primary">{t('roles.userCount', { count: role.userCount })}</AppBadge>
           </div>
+          <p className="text-sm text-muted">
+            {t('roles.ongoingView.label')}: <span className="font-medium text-fg">{t(role.ongoingView === 'executive' ? 'roles.ongoingView.executive' : 'roles.ongoingView.management')}</span>
+          </p>
           {role.code === 'SUPER_ADMIN' ? (
             <p className="text-sm text-muted">{t('roles.superAdminNote')}</p>
           ) : groups.length === 0 ? (
@@ -214,14 +218,16 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
   const updateRole = useUpdateRole()
   const isEdit = !!role
   const pending = createRole.isPending || updateRole.isPending
-  const { register, handleSubmit, reset, setError, formState } = useForm<RoleInput>({
+  const { register, handleSubmit, reset, setError, setValue, control, formState } = useForm<RoleInput>({
     resolver: zodResolver(roleSchema),
-    defaultValues: { code: '', name: '', description: '' },
+    defaultValues: { code: '', name: '', description: '', ongoingView: '' },
   })
 
   useEffect(() => {
-    if (open) reset({ code: role?.code ?? '', name: role?.name ?? '', description: role?.description ?? '' })
+    if (open) reset({ code: role?.code ?? '', name: role?.name ?? '', description: role?.description ?? '', ongoingView: role?.ongoingView ?? '' })
   }, [open, role, reset])
+  // vista da lista Em andamento de quem tem este perfil (§41); '' = Gestão
+  const ongoingView = useWatch({ control, name: 'ongoingView' })
 
   const onSubmit = handleSubmit((values) => {
     const onError = (error: unknown) => {
@@ -235,8 +241,8 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
       notify.success(isEdit ? t('roles.updated') : t('roles.created'))
       onOpenChange(false)
     }
-    if (role) updateRole.mutate({ id: role.id, data: { name: values.name, description: values.description } }, { onSuccess, onError })
-    else createRole.mutate({ code: values.code, name: values.name, description: values.description, permissions: [] }, { onSuccess, onError })
+    if (role) updateRole.mutate({ id: role.id, data: { name: values.name, description: values.description, ongoingView: values.ongoingView } }, { onSuccess, onError })
+    else createRole.mutate({ code: values.code, name: values.name, description: values.description, permissions: [], ongoingView: values.ongoingView }, { onSuccess, onError })
   })
 
   return (
@@ -268,6 +274,16 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
         />
         <AppTextField label={t('roles.fields.name')} required error={formState.errors.name?.message} {...register('name')} />
         <AppTextField label={t('roles.fields.description')} error={formState.errors.description?.message} {...register('description')} />
+        <AppSelect
+          label={t('roles.ongoingView.label')}
+          hint={t('roles.ongoingView.hint')}
+          value={ongoingView === 'executive' ? 'executive' : 'management'}
+          onValueChange={(value) => setValue('ongoingView', value === 'executive' ? 'executive' : '', { shouldDirty: true })}
+          options={[
+            { value: 'management', label: t('roles.ongoingView.management') },
+            { value: 'executive', label: t('roles.ongoingView.executive') },
+          ]}
+        />
       </form>
     </AppDialog>
   )

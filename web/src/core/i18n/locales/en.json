@@ -540,6 +540,13 @@
       "permissions": "Permissions",
       "users": "Users",
       "type": "Type"
+    },
+    "ongoingView": {
+      "label": "Ongoing view",
+      "management": "Management",
+      "executive": "Direction and management",
+      "hint": "Management: the usual list. Direction and management: a view-only dashboard (indicators, timeline, team and table) without edit actions. To block editing everywhere in Avanza, turn off this profile's edit permissions.",
+      "inherited": "Ongoing view: {{view}} (change it in the profile)"
     }
   },
   "permissions": {
@@ -4429,5 +4436,76 @@
     "showTasks": "Show {{name}}'s tasks in {{project}}",
     "hideTasks": "Hide {{name}}'s tasks in {{project}}",
     "tasksOf": "{{name}}'s tasks in {{project}}"
+  },
+  "direction": {
+    "note": "View-only · no editing, archiving or deleting",
+    "loading": "Loading the dashboard…",
+    "kpi": {
+      "label": "Project indicators",
+      "ongoing": "Ongoing",
+      "planning": "In planning",
+      "active": "In execution",
+      "high": "High priority",
+      "completed": "Finished",
+      "hintOngoing": "planning + in progress + paused",
+      "hintHigh": "high or critical, ongoing",
+      "hintTotal_one": "of {{count}} project in total",
+      "hintTotal_other": "of {{count}} projects in total"
+    },
+    "band": {
+      "text_one": "Filtering the whole dashboard: {{filters}} ({{count}} project)",
+      "text_other": "Filtering the whole dashboard: {{filters}} ({{count}} projects)",
+      "clear": "Clear filter"
+    },
+    "timeline": {
+      "title": "Project timeline",
+      "project": "Project",
+      "today": "Today",
+      "late": "Overdue",
+      "tip": "{{name}} · {{status}} · due {{date}}",
+      "tipLate": "{{name}} · {{status}} · due {{date}} (overdue)",
+      "empty": "No project in the filter has start and due dates."
+    },
+    "departments": {
+      "title": "Projects by department",
+      "hint_one": "Projects in the filter ({{count}}). Tap a department to filter everything.",
+      "hint_other": "Projects in the filter ({{count}}). Tap a department to filter everything.",
+      "none": "No department",
+      "chart": "Chart of projects by department",
+      "slice_one": "{{name}}: {{count}} project ({{percent}} %)",
+      "slice_other": "{{name}}: {{count}} projects ({{percent}} %)",
+      "empty": "There are no projects in this filter."
+    },
+    "tasks": {
+      "title": "Tasks per project",
+      "done": "Done",
+      "open": "Remaining",
+      "tip": "{{name}}: {{done}} of {{total}} tasks done ({{percent}} %) · {{open}} remaining",
+      "empty": "No project in the filter has tasks."
+    },
+    "status": {
+      "title": "Execution status",
+      "count_one": "{{count}} project",
+      "count_other": "{{count}} projects",
+      "bar": "Projects by execution status",
+      "segment": "{{label}}: {{count}} ({{percent}} %) · click to filter"
+    },
+    "team": {
+      "idle": "Open tasks with no movement",
+      "detail": "See the detail of {{project}} ({{name}})"
+    },
+    "drawer": {
+      "title": "Project detail",
+      "tasks": "Tasks",
+      "done": "done",
+      "open": "remaining",
+      "progress": "progress",
+      "noTasks": "This project has no tasks yet.",
+      "recent": "Recent tasks",
+      "noRecent": "No recent tasks.",
+      "who": "Who is working on it",
+      "nobody": "Nobody moved tasks of this project in the last 7 days.",
+      "openProject": "Open the project"
+    }
   }
 }

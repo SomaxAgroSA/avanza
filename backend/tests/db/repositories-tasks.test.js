@@ -301,6 +301,12 @@ describe('repositórios de tarefas (Postgres)', () => {
     assert.deepEqual(await r.tasks.countByStatusIn(both), { [dev]: 4, [status.CONCLUIDO]: 4 })
     assert.deepEqual(await r.tasks.countByStatusIn([other.id]), { [dev]: 1, [status.CONCLUIDO]: 1 })
     assert.deepEqual(await r.tasks.countByStatusIn([]), {})
+    // §41: por projeto e categoria do status
+    const perProject = await r.tasks.countByProject(both)
+    const sum = (byCategory) => Object.values(byCategory).reduce((a, b) => a + b, 0)
+    assert.deepEqual([perProject[project.id].done, sum(perProject[project.id])], [3, 6])
+    assert.deepEqual([perProject[other.id].done, sum(perProject[other.id])], [1, 2])
+    assert.deepEqual(await r.tasks.countByProject([]), {})
     assert.equal(await r.tasks.maxPosition(project.id, dev), 3000)
     assert.equal(await r.tasks.maxPosition(project.id, status.ANALISE), null)
 
