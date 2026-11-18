@@ -129,7 +129,9 @@
     "has_children": "Um projeto com subprojetos não pode ter pai",
     "parent_archived": "O projeto pai está arquivado",
     "color_in_use": "Outro projeto já usa esta cor",
-    "not_a_member": "Escolha o dono ou um membro do projeto (gestor ou membro)."
+    "not_a_member": "Escolha o dono ou um membro do projeto (gestor ou membro).",
+    "exclusive": "Escolha só um: a etapa ou o elemento da Gestão",
+    "already_linked": "A tarefa já está na Gestão"
   },
   "errors": {
     "VALIDATION_ERROR": "Verifique os campos destacados.",
@@ -1765,9 +1767,13 @@
     "planLink": {
       "label": "Elemento da Gestão",
       "short": "Elemento",
-      "none": "Nenhum",
-      "hint": "Fase ou entrega do plano que esta tarefa executa.",
       "open": "Abrir {{name}} na Gestão"
+    },
+    "stage": {
+      "label": "Etapa da gestão",
+      "none": "Sem etapa",
+      "hint": "Ao criar, a tarefa aparece sozinha nessa etapa da Gestão, como uma linha nova com o título e as datas dela.",
+      "linkedHint": "Na Gestão: {{path}}. Para trocar ou desligar, use o painel do elemento na Gestão."
     },
     "report": {
       "add": "Incluir no informe do projeto",

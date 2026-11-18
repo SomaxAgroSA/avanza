@@ -52,6 +52,7 @@ const plan: Plan = {
   groups: [
     { id: 'g1', parentId: null, name: 'Iniciação', color: 'blue', position: 0, number: '1.0', summary: null },
     { id: 'g2', parentId: null, name: 'Planejamento', color: 'green', position: 1, number: '2.0', summary: null },
+    { id: 'g21', parentId: 'g2', name: 'Plano do projeto', color: 'green', position: 0, number: '2.1', summary: null },
   ],
   items: [item('i1', 'g1', 'Kickoff', { subitems: 1 }), item('s1', 'g1', 'Montar apresentação', { parentId: 'i1' }), item('i2', 'g2', 'Plano v6')],
   links: [],
@@ -108,68 +109,146 @@ const detail: TaskDetail = {
 
 const ALL: PermissionCode[] = ['tasks.view', 'tasks.edit', 'tasks.assign', 'projects.view', 'plan.view']
 
-function repositories(permissions: PermissionCode[], tasks: Partial<TaskRepository>) {
+function repositories(permissions: PermissionCode[], tasks: Partial<TaskRepository>, board: Plan = plan) {
   return fakeRepositories({
     auth: { me: async () => makeCurrentUser(permissions) },
     taskTypes: { list: () => Promise.resolve([taskType]), get: () => Promise.resolve(typeDetail) },
-    plan: { get: () => Promise.resolve(plan) },
+    plan: { get: () => Promise.resolve(board) },
     tasks,
   })
 }
 
+function createForm(permissions: PermissionCode[] = ALL, board: Plan = plan) {
+  const create = vi.fn<TaskRepository['create']>(() => Promise.resolve(detail))
+  renderRoutes([{ path: '/', element: <TaskFormDialog open projectId="p1" onOpenChange={() => {}} /> }], {
+    repositories: repositories(permissions, { create }, board),
+    initialPath: '/',
+  })
+  return { create }
+}
+
 function editForm(permissions: PermissionCode[] = ALL, task: TaskDetail = detail) {
   const update = vi.fn<TaskRepository['update']>(() => Promise.resolve(task))
-  renderRoutes([{ path: '/', element: <TaskFormDialog open task={task} onOpenChange={() => {}} /> }], { repositories: repositories(permissions, { update }), initialPath: '/' })
+  renderRoutes([{ path: '/', element: <TaskFormDialog open task={task} onOpenChange={() => {}} /> }], {
+    repositories: repositories(permissions, { update }),
+    initialPath: '/',
+  })
   return { update }
 }
 
-const field = () => screen.findByRole('combobox', { name: /^Elemento da Gestão/ })
+const STAGE = /^Etapa da gestão/
+const field = () => screen.findByRole('combobox', { name: STAGE })
 
-describe('Tarefa: campo "Elemento da Gestão"', () => {
-  it('lista os elementos e subelementos agrupados por grupo; escolher envia o planItemId', async () => {
-    const { update } = editForm()
+async function fillRequired() {
+  const form = await screen.findByRole('dialog', { name: 'Nova tarefa' })
+  await userEvent.click(within(form).getByRole('combobox', { name: /^Tipo/ }))
+  await userEvent.click(await screen.findByRole('option', { name: 'Tarefa' }))
+  await userEvent.type(within(form).getByLabelText(/^Título/), 'Unir a base de clientes')
+  return form
+}
+
+describe('Nova tarefa: campo "Etapa da gestão"', () => {
+  it('fica na coluna da esquerda, logo abaixo de Tags (Etiquetas), com as etapas numeradas e "Sem etapa" como padrão', async () => {
+    createForm()
     const combo = await field()
-    await waitFor(() => expect(combo).toHaveTextContent('Kickoff'))
+    expect(combo).toHaveTextContent('Sem etapa')
+    expect(within(screen.getByRole('complementary', { name: 'Propriedades' })).queryByRole('combobox', { name: STAGE })).not.toBeInTheDocument()
+    const tags = screen.getByText('Tags')
+    const stage = screen.getByText('Etapa da gestão')
+    expect(tags.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText(/aparece sozinha nessa etapa da Gestão/)).toBeInTheDocument()
     await userEvent.click(combo)
-    const listbox = await screen.findByRole('listbox')
-    expect(within(listbox).getByText('1.0 Iniciação')).toBeInTheDocument()
-    expect(within(listbox).getByText('2.0 Planejamento')).toBeInTheDocument()
-    await userEvent.click(within(listbox).getByRole('button', { name: 'Montar apresentação' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(update).toHaveBeenCalledOnce())
-    expect(update.mock.calls[0]?.[1]).toMatchObject({ planItemId: 's1' })
+    const options = (await screen.findAllByRole('option')).map((o) => o.textContent)
+    expect(options).toEqual(['Sem etapa', '1.0 Iniciação', '2.0 Planejamento', '2.1 Plano do projeto'])
   })
 
-  it('"Nenhum" desvincula (planItemId null)', async () => {
-    const { update } = editForm()
-    const combo = await field()
-    await waitFor(() => expect(combo).toHaveTextContent('Kickoff'))
-    await userEvent.click(combo)
-    await userEvent.click(within(await screen.findByRole('listbox')).getByRole('button', { name: 'Nenhum' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(update).toHaveBeenCalledOnce())
-    expect(update.mock.calls[0]?.[1]).toMatchObject({ planItemId: null })
+  it('escolher a etapa envia planGroupId na criação', async () => {
+    const { create } = createForm()
+    const form = await fillRequired()
+    await userEvent.click(await field())
+    await userEvent.click(await screen.findByRole('option', { name: '2.1 Plano do projeto' }))
+    await userEvent.click(within(form).getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ projectId: 'p1', title: 'Unir a base de clientes', planGroupId: 'g21' })
   })
 
-  it('sem mudar o campo (ou sem plan.view, sem o campo), o vínculo não vai no envio', async () => {
-    const { update } = editForm(['tasks.view', 'tasks.edit', 'projects.view'])
-    await screen.findByRole('dialog')
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+  it('"Sem etapa" (padrão) não manda etapa nem elemento', async () => {
+    const { create } = createForm()
+    const form = await fillRequired()
+    await field()
+    await userEvent.click(within(form).getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0].planGroupId).toBeUndefined()
+    expect(create.mock.calls[0]?.[0].planItemId).toBeUndefined()
+  })
+
+  it('sem plan.view o campo não aparece', async () => {
+    createForm(['tasks.view', 'tasks.create', 'tasks.edit', 'projects.view'])
+    await screen.findByRole('dialog', { name: 'Nova tarefa' })
+    await screen.findByText('Tags')
+    expect(screen.queryByRole('combobox', { name: STAGE })).not.toBeInTheDocument()
+  })
+
+  it('quadro sem etapas: o campo não aparece', async () => {
+    createForm(ALL, { ...plan, groups: [], items: [] })
+    await screen.findByRole('dialog', { name: 'Nova tarefa' })
+    await waitFor(() => expect(screen.queryByRole('combobox', { name: STAGE })).not.toBeInTheDocument())
+  })
+
+  it('o antigo campo "Elemento da Gestão" saiu do formulário', async () => {
+    createForm()
+    await field()
     expect(screen.queryByRole('combobox', { name: /^Elemento da Gestão/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('Editar tarefa: etapa da gestão', () => {
+  it('tarefa já na Gestão: mostra a etapa só para leitura, com o caminho até a linha; salvar não mexe no vínculo', async () => {
+    const { update } = editForm()
+    const combo = await field()
+    await waitFor(() => expect(combo).toHaveTextContent('1.0 Iniciação'))
+    expect(combo).toBeDisabled()
+    expect(screen.getByText(/1\.0 Iniciação › Kickoff\./)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+    expect(update.mock.calls[0]?.[1].planGroupId).toBeUndefined()
     expect(update.mock.calls[0]?.[1].planItemId).toBeUndefined()
   })
 
-  it('erro do servidor (elemento de outro projeto) volta ao campo', async () => {
-    const update = vi.fn<TaskRepository['update']>(() =>
-      Promise.reject(new AppError({ code: 'VALIDATION_ERROR', message: 'x', status: 400, details: { fields: { plan_item_id: 'invalid_option' } } })),
-    )
-    renderRoutes([{ path: '/', element: <TaskFormDialog open task={detail} onOpenChange={() => {}} /> }], { repositories: repositories(ALL, { update }), initialPath: '/' })
+  it('subelemento: o caminho mostra o elemento pai', async () => {
+    editForm(ALL, { ...detail, planItem: { id: 's1', name: 'Montar apresentação' } })
+    expect(await screen.findByText(/1\.0 Iniciação › Kickoff › Montar apresentação/)).toBeInTheDocument()
+  })
+
+  it('tarefa fora da Gestão: escolher a etapa envia planGroupId (o servidor cria a linha)', async () => {
+    const { update } = editForm(ALL, { ...detail, planItem: null })
     const combo = await field()
+    expect(combo).not.toBeDisabled()
     await userEvent.click(combo)
-    await userEvent.click(within(await screen.findByRole('listbox')).getByRole('button', { name: 'Plano v6' }))
+    await userEvent.click(await screen.findByRole('option', { name: '2.0 Planejamento' }))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
-    expect(await screen.findByText('Opção inválida')).toBeInTheDocument()
+    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+    expect(update.mock.calls[0]?.[1]).toMatchObject({ planGroupId: 'g2' })
+  })
+
+  it('erro do servidor (a tarefa já entrou na Gestão) volta ao campo', async () => {
+    const update = vi.fn<TaskRepository['update']>(() =>
+      Promise.reject(new AppError({ code: 'VALIDATION_ERROR', message: 'x', status: 400, details: { fields: { plan_group_id: 'already_linked' } } })),
+    )
+    renderRoutes([{ path: '/', element: <TaskFormDialog open task={{ ...detail, planItem: null }} onOpenChange={() => {}} /> }], {
+      repositories: repositories(ALL, { update }),
+      initialPath: '/',
+    })
+    await userEvent.click(await field())
+    await userEvent.click(await screen.findByRole('option', { name: '1.0 Iniciação' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(await screen.findByText('A tarefa já está na Gestão')).toBeInTheDocument()
+  })
+
+  it('sem plan.view (ex.: Responsável TI), nem a etapa nem o vínculo aparecem', async () => {
+    editForm(['tasks.view', 'tasks.edit', 'projects.view'])
+    await screen.findByRole('dialog')
+    expect(screen.queryByRole('combobox', { name: STAGE })).not.toBeInTheDocument()
   })
 })
 

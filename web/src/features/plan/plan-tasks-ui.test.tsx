@@ -196,7 +196,10 @@ describe('Gestão: tarefas vinculadas aos elementos', () => {
     const panel = await screen.findByRole('dialog', { name: 'Kickoff' })
     await userEvent.click(await within(panel).findByRole('button', { name: 'Nova tarefa' }))
     const form = await screen.findByRole('dialog', { name: 'Nova tarefa' })
-    expect(await within(form).findByRole('combobox', { name: /^Elemento da Gestão/ })).toHaveTextContent('Kickoff')
+    // já ligada ao elemento: a etapa dele aparece só para leitura
+    const stage = await within(form).findByRole('combobox', { name: /^Etapa da gestão/ })
+    expect(stage).toBeDisabled()
+    expect(await within(form).findByText(/› Kickoff\./)).toBeInTheDocument()
     await userEvent.click(within(form).getByRole('combobox', { name: /^Tipo/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Tarefa' }))
     await userEvent.type(within(form).getByLabelText(/^Título/), 'Enviar convite')
