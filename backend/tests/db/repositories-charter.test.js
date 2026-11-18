@@ -43,6 +43,17 @@ describe('repositórios da Ficha do projeto (Postgres)', () => {
     assert.equal((await t.db.one('SELECT count(*) AS total FROM project_charters WHERE project_id = $1', [project.id])).total, 1)
   })
 
+  it('fichas de vários projetos de uma vez (Panorama); lista vazia não consulta', async () => {
+    const a = await seedProject()
+    const b = await seedProject()
+    const c = await seedProject()
+    await charters.upsert(a.id, { objective: 'Objetivo A', updatedBy: owner.id })
+    await charters.upsert(b.id, { objective: 'Objetivo B', updatedBy: owner.id })
+    const list = await charters.listByProjects([a.id, c.id])
+    assert.deepEqual(list.map((x) => [x.projectId, x.objective]), [[a.id, 'Objetivo A']])
+    assert.deepEqual(await charters.listByProjects([]), [])
+  })
+
   it('itens: gravam e leem com as convenções (vazios, dias puros, listas de ids, valor atual nulo)', async () => {
     const project = await seedProject()
     const result = await items.create({

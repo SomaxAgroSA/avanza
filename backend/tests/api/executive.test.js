@@ -134,4 +134,44 @@ describe('API painel executivo', { timeout: 180000 }, () => {
     assert.equal((await admin.get('/executive?statuses=paused,outro')).body.error.details.fields.statuses, 'invalid_option')
     await gestor.patch(`/projects/${erp.id}`, { status: 'active' })
   })
+  it('Panorama: área, responsável, concluídos só nas entregas, objetivo da ficha e marcos vencidos', async () => {
+    const area = (await admin.post('/areas', { key: 'PANO', name: 'Panorama' })).body.data
+    const app = (await gestor.post('/projects', { name: 'App', key: 'APP' })).body.data
+    const done = (await gestor.post('/projects', { name: 'Feito', key: 'FEI' })).body.data
+    assert.equal((await gestor.patch(`/projects/${app.id}`, { area_id: area.id })).status, 200)
+    await gestor.patch(`/projects/${done.id}`, { area_id: area.id })
+    await gestor.put(`/projects/${app.id}/charter`, { objective: 'Ofertas diretas aos clientes' })
+    await gestor.post(`/projects/${app.id}/milestones`, { name: 'Protótipo', due_date: '2020-01-10' })
+    const type = (await admin.get('/task-types')).body.data.find((t) => t.key === 'EXEC')
+    const statuses = (await admin.get('/statuses')).body.data
+    await gestor.post('/tasks', { project_id: done.id, task_type_id: type.id, title: 'Entregue antes de concluir', status_id: statuses.find((st) => st.category === 'done').id })
+    await gestor.patch(`/projects/${done.id}`, { status: 'completed' })
+
+    const res = await admin.get(`/executive?area_ids=${area.id}&statuses=planning,active,paused&delivery_statuses=completed`)
+    assert.equal(res.status, 200, JSON.stringify(res.body))
+    const data = res.body.data
+    assert.deepEqual(data.filters.area_ids, [area.id])
+    assert.deepEqual(data.filters.delivery_statuses, ['completed'])
+    // portfólio só com o projeto da área que está em curso; o concluído entra só nas entregas
+    assert.deepEqual(data.portfolio.map((r) => r.project.key), ['APP'])
+    assert.equal(data.summary.deliveries.tasks, 1)
+    assert.equal(data.achievements.find((a) => a.project.key === 'FEI').project.status, 'completed')
+    const row = data.portfolio[0]
+    assert.equal(row.project.objective, 'Ofertas diretas aos clientes')
+    assert.ok(row.project.updated_at)
+    assert.deepEqual(data.plan.overdue_milestones.map((m) => [m.name, m.project.key]), [['Protótipo', 'APP']])
+    assert.equal(data.plan.overdue_milestones_total, 1)
+    // catálogo (opções dos filtros) com área e responsável de todos os projetos
+    const option = data.projects.find((p) => p.key === 'APP')
+    assert.equal(option.area.name, 'Panorama')
+    assert.equal(option.owner.name, 'Gil')
+
+    const byOwner = (await admin.get(`/executive?owner_ids=${option.owner.id}&statuses=active`)).body.data
+    assert.ok(byOwner.portfolio.length >= 1)
+    assert.ok(byOwner.portfolio.every((r) => r.project.owner.id === option.owner.id))
+    const noArea = (await admin.get('/executive?area_ids=none&statuses=planning,active,paused')).body.data
+    assert.ok(noArea.portfolio.every((r) => r.project.area === null))
+    assert.equal((await admin.get('/executive?area_ids=a;b')).body.error.details.fields.area_ids, 'invalid_type')
+    assert.equal((await admin.get('/executive?delivery_statuses=outro')).body.error.details.fields.delivery_statuses, 'invalid_option')
+  })
 })

@@ -13,6 +13,9 @@
  * - Série no tempo (Seguimento de projetos): além do que foi criado e concluído em cada balde, quantas
  *   tarefas dos projetos ativos estavam em andamento e vencidas no fim dele, reconstruído pelas datas
  *   (início, conclusão, prazo e criação) — sem foto semanal, o prazo é o atual da tarefa.
+ * - Projeto "só do período" (`periodOnly`, ex.: concluído pedido em `delivery_statuses`): fica fora do
+ *   portfólio, da Gestão e do Kanban, como um arquivado, mas o que ele entregou no período conta.
+ * - Marcos vencidos (Panorama): pendentes com data antes de hoje, dos projetos do portfólio.
  */
 
 const report = require('./report')
@@ -24,6 +27,7 @@ const FUNNEL = ['backlog', 'todo', 'in_progress', 'done', 'cancelled']
 const TOP_ISSUES = 5
 const TOP_OVERDUE = 5
 const TOP_MILESTONES = 8
+const TOP_OVERDUE_MILESTONES = 20
 const MILESTONE_WINDOW_DAYS = 30
 const RECENT_PER_PROJECT = 5
 /** Acima disso a série é mensal; até, semanal. */
@@ -117,14 +121,39 @@ function timeline(input) {
 }
 
 /**
+ * Projetos do painel a partir dos filtros (todos os critérios juntos = interseção):
+ * - `projectIds`, `areaIds` ('none' = sem área), `ownerIds` (responsável do projeto; sem ele, o dono);
+ * - `statuses`: os do portfólio (vazio = todos);
+ * - `deliveryStatuses`: status a mais cujos projetos entram só no que foi entregue no período
+ *   (saem marcados com `periodOnly`), ex.: o Panorama pede os concluídos para não perder o que eles
+ *   entregaram no período.
+ */
+function scopeProjects(all, filters) {
+  const f = filters || {}
+  const has = (list, value) => !list || !list.length || list.indexOf(value) >= 0
+  const inScope = (p) =>
+    has(f.projectIds, p.id) &&
+    (!f.areaIds || !f.areaIds.length || f.areaIds.indexOf(p.areaId || 'none') >= 0) &&
+    has(f.ownerIds, p.leadId || p.ownerId)
+  const out = []
+  all.forEach((p) => {
+    if (!inScope(p)) return
+    if (has(f.statuses, p.status)) out.push(p)
+    else if (f.deliveryStatuses && f.deliveryStatuses.indexOf(p.status) >= 0) out.push(Object.assign({}, p, { periodOnly: true }))
+  })
+  return out
+}
+
+/**
  * @param {object} input
- * @param {Array} input.projects projetos no escopo (ativos e arquivados), na ordem da chave
+ * @param {Array} input.projects projetos no escopo (ativos, arquivados e os `periodOnly`), na ordem da chave
  * @param {object} input.owners { userId: resumo da pessoa }
  * @param {object} input.plans { projectId: resultado de planReport } — só ativos com elementos
  * @param {Array} input.planItems elementos e subelementos dos projetos no escopo
  * @param {Function} input.planCategoryOf (elemento) → categoria da etiqueta de status
  * @param {Array} input.issues problemas da Gestão dos projetos no escopo
  * @param {Array} input.milestones marcos dos projetos no escopo
+ * @param {object} [input.objectives] { projectId: objetivo geral da Ficha do projeto }
  * @param {Array} input.taskRows linhas de tarefa (com code, title e blocked) dos projetos no escopo
  * @param {object} input.statuses { statusId: status } do fluxo das tarefas
  * @param {object} input.taskContext contexto de domain/report.js#indicators (bugTypeIds, criticalPriorityId…)
@@ -134,7 +163,9 @@ function timeline(input) {
  */
 function buildDashboard(input) {
   const { projects, owners, plans, planCategoryOf, statuses, period, today } = input
-  const active = projects.filter((p) => !p.archivedAt)
+  // portfólio: nem arquivado nem só do período
+  const active = projects.filter((p) => !p.archivedAt && !p.periodOnly)
+  const objectives = input.objectives || {}
   const activeIds = {}
   active.forEach((p) => {
     activeIds[p.id] = true
@@ -190,6 +221,9 @@ function buildDashboard(input) {
         due_date: dayOf(project.dueDate),
         // responsável do projeto (sem ele, o dono)
         owner: ((project.leadId || project.ownerId) && owners[project.leadId || project.ownerId]) || null,
+        // objetivo geral da Ficha (vazio = null) e a última alteração do projeto (Panorama: resumo do projeto)
+        objective: (objectives[project.id] || '').trim() || null,
+        updated_at: isoOf(project.updatedAt),
       },
       health: plan ? plan.health : { level: 'none', factors: [] },
       progress,
@@ -222,6 +256,9 @@ function buildDashboard(input) {
     projectOf[p.id] = p
   })
   const upcomingLimit = addDays(today, MILESTONE_WINDOW_DAYS)
+  const overdueMilestones = input.milestones
+    .filter((m) => activeIds[m.projectId] && m.state !== 'done' && m.dueDate && m.dueDate < today)
+    .sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0))
   const planSection = {
     items: {
       total: sumOf((p) => p.summary.total),
@@ -263,6 +300,9 @@ function buildDashboard(input) {
       .filter((m) => activeIds[m.projectId] && m.state !== 'done' && m.dueDate && m.dueDate >= today && m.dueDate <= upcomingLimit)
       .slice(0, TOP_MILESTONES)
       .map((m) => ({ id: m.id, name: m.name, due_date: m.dueDate, project: projectRef(projectOf[m.projectId]) })),
+    // pendentes com a data já passada: do mais antigo; o total diz se a lista foi cortada
+    overdue_milestones: overdueMilestones.slice(0, TOP_OVERDUE_MILESTONES).map((m) => ({ id: m.id, name: m.name, due_date: m.dueDate, project: projectRef(projectOf[m.projectId]) })),
+    overdue_milestones_total: overdueMilestones.length,
   }
 
   // ---------------------------------------------------------------- Kanban de atividades
@@ -314,7 +354,7 @@ function buildDashboard(input) {
         .sort((a, b) => (a.completed_at < b.completed_at ? 1 : a.completed_at > b.completed_at ? -1 : 0))
         .slice(0, RECENT_PER_PROJECT)
       return {
-        project: Object.assign(projectRef(project), { archived: !!project.archivedAt }),
+        project: Object.assign(projectRef(project), { archived: !!project.archivedAt, status: project.status || null }),
         tasks_done: tasks.length,
         plan_items_done: items.length,
         milestones_done: milestones.map((m) => ({ id: m.id, name: m.name, due_date: m.dueDate })),
@@ -361,4 +401,4 @@ function buildDashboard(input) {
   }
 }
 
-module.exports = { HEALTH_RANK, FUNNEL, WEEKLY_LIMIT_DAYS, MILESTONE_WINDOW_DAYS, bucketStart, timeline, buildDashboard }
+module.exports = { HEALTH_RANK, FUNNEL, WEEKLY_LIMIT_DAYS, MILESTONE_WINDOW_DAYS, TOP_OVERDUE_MILESTONES, bucketStart, scopeProjects, timeline, buildDashboard }

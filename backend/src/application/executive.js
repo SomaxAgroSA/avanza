@@ -7,6 +7,9 @@
  * - Filtros: `project_ids` e `statuses` (status do projeto: planning, active…), separados por vírgula;
  *   vazio = todos; os dois juntos = os projetos escolhidos que estão nesses status. Período: `from`/`to` (AAAA-MM-DD no
  *   fuso de quem consulta, ou ISO); sem `from` = desde o início; sem `to` = agora.
+ * - Panorama: `area_ids` ('none' = sem área) e `owner_ids` (responsável do projeto; sem ele, o dono)
+ *   recortam tudo, inclusive arquivados e as entregas; `delivery_statuses` = status a mais cujos
+ *   projetos entram só no que foi entregue no período (ex.: completed). Ver domain/executive.js#scopeProjects.
  * - Leitura em lote (sem uma consulta por projeto) e os cálculos em domain/executive.js, com a saúde
  *   de domain/plan-report.js e os indicadores de domain/report.js.
  */
@@ -28,22 +31,31 @@ const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 const CHUNK = 400
 const BUG_TYPE_KEYS = ['BUG']
 
+const idListRule = () =>
+  rules.custom((value) => {
+    if (typeof value !== 'string') return 'invalid_type'
+    const ids = value.split(',').map((id) => id.trim()).filter(Boolean)
+    if (ids.length > MAX_PROJECT_IDS) return 'too_many'
+    return ids.every((id) => ID_PATTERN.test(id)) ? null : 'invalid_type'
+  })
+const statusListRule = () =>
+  rules.custom((value) => {
+    if (typeof value !== 'string') return 'invalid_type'
+    const list = value.split(',').map((s) => s.trim()).filter(Boolean)
+    return list.every((s) => projectDomain.PROJECT_STATUS.indexOf(s) >= 0) ? null : 'invalid_option'
+  })
+const listOf = (raw) =>
+  (raw || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter((v, i, all) => v && all.indexOf(v) === i)
+
 const SCHEMA = {
-  project_ids: [
-    rules.custom((value) => {
-      if (typeof value !== 'string') return 'invalid_type'
-      const ids = value.split(',').map((id) => id.trim()).filter(Boolean)
-      if (ids.length > MAX_PROJECT_IDS) return 'too_many'
-      return ids.every((id) => ID_PATTERN.test(id)) ? null : 'invalid_type'
-    }),
-  ],
-  statuses: [
-    rules.custom((value) => {
-      if (typeof value !== 'string') return 'invalid_type'
-      const list = value.split(',').map((s) => s.trim()).filter(Boolean)
-      return list.every((s) => projectDomain.PROJECT_STATUS.indexOf(s) >= 0) ? null : 'invalid_option'
-    }),
-  ],
+  project_ids: [idListRule()],
+  statuses: [statusListRule()],
+  area_ids: [idListRule()],
+  owner_ids: [idListRule()],
+  delivery_statuses: [statusListRule()],
   from: [rules.isoDate()],
   to: [rules.isoDate()],
   tz_offset: [rules.custom((value) => (/^-?\d{1,3}$/.test(String(value)) && Math.abs(Number(value)) <= 840 ? null : 'invalid_type'))],
@@ -82,15 +94,17 @@ function createExecutiveService(deps) {
     const from = data.from ? boundary(source.from, data.from, tzOffset, false) : null
     const to = data.to ? boundary(source.to, data.to, tzOffset, true) : now
     if (from && to < from) throw appError('VALIDATION_ERROR', undefined, { fields: { to: 'to_before_from' } })
-    const ids = (data.project_ids || '')
-      .split(',')
-      .map((id) => id.trim())
-      .filter((id, i, all) => id && all.indexOf(id) === i)
-    const statuses = (data.statuses || '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s, i, all) => s && all.indexOf(s) === i)
-    return { projectIds: ids, statuses, from, to, now, tzOffset }
+    return {
+      projectIds: listOf(data.project_ids),
+      statuses: listOf(data.statuses),
+      areaIds: listOf(data.area_ids),
+      ownerIds: listOf(data.owner_ids),
+      deliveryStatuses: listOf(data.delivery_statuses),
+      from,
+      to,
+      now,
+      tzOffset,
+    }
   }
 
   /** Tarefas abertas com algum bloqueador ainda aberto (mesma regra dos relatórios). */
@@ -122,9 +136,10 @@ function createExecutiveService(deps) {
     // de quais a pessoa participa (dona ou membro): o configurador do filtro pode mostrar só esses
     const roles = all.length ? await deps.projectMemberRepository.rolesForUser(ctx.principal.userId, all.map((p) => p.id)) : {}
     const isMember = (p) => p.ownerId === ctx.principal.userId || Object.prototype.hasOwnProperty.call(roles, p.id)
-    const projects = all.filter((p) => (!params.projectIds.length || params.projectIds.indexOf(p.id) >= 0) && (!params.statuses.length || params.statuses.indexOf(p.status) >= 0))
+    const projects = executive.scopeProjects(all, params)
     const ids = projects.map((p) => p.id)
-    const activeIds = projects.filter((p) => !p.archivedAt).map((p) => p.id)
+    // portfólio: nem arquivado nem só do período (os `periodOnly` só contam nas entregas)
+    const activeIds = projects.filter((p) => !p.archivedAt && !p.periodOnly).map((p) => p.id)
 
     // Gestão de projetos: tudo em lote
     const planStatuses = indexBy(await deps.planStatusRepository.listByProjects(ids))
@@ -184,8 +199,15 @@ function createExecutiveService(deps) {
         areas[area.id] = { id: area.id, name: area.name, color: area.color || null }
       })
     }
-    // "Responsável" do Panorama: o responsável do projeto; sem ele, o dono
-    const ownerIds = projects
+    // objetivo geral da Ficha de cada projeto do portfólio (resumo do projeto no Panorama)
+    const objectives = {}
+    if (deps.charterRepository && deps.charterRepository.listByProjects && activeIds.length) {
+      ;(await deps.charterRepository.listByProjects(activeIds)).forEach((charter) => {
+        objectives[charter.projectId] = charter.objective
+      })
+    }
+    // "Responsável" do Panorama: o responsável do projeto; sem ele, o dono (de todos: opções do filtro)
+    const ownerIds = all
       .map((p) => p.leadId || p.ownerId)
       .concat(issues.map((i) => i.ownerId))
       .filter((id, i, list) => id && list.indexOf(id) === i)
@@ -205,6 +227,7 @@ function createExecutiveService(deps) {
       planCategoryOf,
       issues,
       milestones,
+      objectives,
       taskRows,
       statuses: indexBy(statusList),
       taskContext: {
@@ -221,8 +244,20 @@ function createExecutiveService(deps) {
       {
         generated_at: params.now.toISOString(),
         period: { from: params.from ? params.from.toISOString() : null, to: params.to.toISOString() },
-        filters: { project_ids: params.projectIds, statuses: params.statuses },
-        projects: all.map((p) => ({ id: p.id, key: p.key, name: p.name, color: p.cover || null, icon: p.icon || null, status: p.status, member: isMember(p), archived: !!p.archivedAt })),
+        filters: { project_ids: params.projectIds, statuses: params.statuses, area_ids: params.areaIds, owner_ids: params.ownerIds, delivery_statuses: params.deliveryStatuses },
+        // opções dos filtros: todos os projetos, com área e responsável (Panorama filtra por eles)
+        projects: all.map((p) => ({
+          id: p.id,
+          key: p.key,
+          name: p.name,
+          color: p.cover || null,
+          icon: p.icon || null,
+          status: p.status,
+          member: isMember(p),
+          archived: !!p.archivedAt,
+          area: (p.areaId && areas[p.areaId]) || null,
+          owner: ((p.leadId || p.ownerId) && owners[p.leadId || p.ownerId]) || null,
+        })),
       },
       dashboard,
     )

@@ -40,6 +40,13 @@ function createCharterRepository(db) {
       return row ? toEntity(row) : null
     },
 
+    /** Fichas de vários projetos de uma vez (Panorama: o objetivo geral de cada um). */
+    async listByProjects(projectIds) {
+      if (!projectIds.length) return []
+      const rows = await db.query('SELECT * FROM project_charters WHERE project_id = ANY($1::text[])', [projectIds])
+      return rows.map(toEntity)
+    },
+
     /** Cria ou atualiza a ficha do projeto (uma só por projeto, mesmo com gravações simultâneas). */
     async upsert(projectId, patch) {
       const objective = patch.objective === undefined || patch.objective === null ? '' : patch.objective

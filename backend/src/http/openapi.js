@@ -1118,7 +1118,7 @@ function build() {
       },
       '/executive': {
         get: op(
-          'Painel executivo (executive.view): Gestão de projetos + Kanban de TODOS os projetos (mesmo sem ser membro), só leitura — resumo, portfólio com a saúde de cada projeto, Gestão (status, cronograma, esforço, problemas, marcos), Kanban (funil, criadas × concluídas, tempos, atrasadas), série de entregas (semana/mês) e o que já foi feito (arquivados só nas entregas)',
+          'Painel executivo (executive.view): Gestão de projetos + Kanban de TODOS os projetos (mesmo sem ser membro), só leitura — resumo, portfólio com a saúde de cada projeto, Gestão (status, cronograma, esforço, problemas, marcos), Kanban (funil, criadas × concluídas, tempos, atrasadas), série de entregas (semana/mês) e o que já foi feito (arquivados só nas entregas). Panorama: portfólio com objective e updated_at, plan.overdue_milestones, projects com area e owner',
           ['reports'],
           { 200: ok('Painel', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') },
           {
@@ -1128,6 +1128,14 @@ function build() {
               { name: 'from', in: 'query', schema: { type: 'string', format: 'date' }, description: 'início (dia no fuso de tz_offset ou ISO); vazio = desde o início' },
               { name: 'to', in: 'query', schema: { type: 'string', format: 'date' }, description: 'fim (o dia inteiro); vazio = agora' },
               { name: 'tz_offset', in: 'query', schema: { type: 'integer', minimum: -840, maximum: 840 } },
+              { name: 'area_ids', in: 'query', schema: { type: 'string' }, description: 'Panorama: áreas do projeto separadas por vírgula (none = sem área); recorta também arquivados e entregas' },
+              { name: 'owner_ids', in: 'query', schema: { type: 'string' }, description: 'Panorama: responsável do projeto (sem ele, o dono), ids separados por vírgula' },
+              {
+                name: 'delivery_statuses',
+                in: 'query',
+                schema: { type: 'string' },
+                description: 'Panorama: status a mais cujos projetos entram só nas entregas do período (ex.: completed) — fora do portfólio, da Gestão e do Kanban',
+              },
             ],
           },
         ),
