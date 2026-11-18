@@ -642,11 +642,11 @@ Tela **Painel executivo** (menu lateral) para a diretoria acompanhar, num lugar 
 
 ## 27. Configurador do filtro de projetos
 
-Toda tela com filtro ou seletor de projeto (Kanban, Planejamento, Gestão de projetos, Timeline, Tarefas, Relatórios e Painel executivo) tem, ao lado dele, uma **engrenagem** que abre o configurador daquela tela.
+Toda tela com filtro ou seletor de projeto (Kanban, Planejamento, Gestão de projetos, Timeline, Relatórios e Painel executivo) tem, ao lado dele, uma **engrenagem** que abre o configurador daquela tela.
 
 - **Opções:** os **status do projeto** que aparecem (Planejamento, Em andamento, Pausado, Concluído, Cancelado; nenhum marcado = todos) e **só projetos de que participo** (dono ou membro — útil para quem vê todos os projetos, como administradores e diretoria).
 - **Guardado por pessoa e por tela:** cada um tem a sua configuração, e cada tela a sua (o Kanban pode mostrar só os em andamento e a Timeline todos). Fica no servidor, então vale em qualquer computador. "Restaurar padrão" volta a mostrar todos.
-- **Efeito:** o filtro/seletor de projetos da tela lista só os projetos que respeitam o configurador; o projeto aberto ou já escolhido continua na lista mesmo que não respeite. Nas telas que juntam vários projetos (Kanban em "Todos os projetos" e Painel executivo), "Todos os projetos" passa a ser todos os do configurador. Em Tarefas e Relatórios, que filtram um projeto por vez, o configurador limita só a lista de escolha.
+- **Efeito:** o filtro/seletor de projetos da tela lista só os projetos que respeitam o configurador; o projeto aberto ou já escolhido continua na lista mesmo que não respeite. Nas telas que juntam vários projetos (Kanban em "Todos os projetos" e Painel executivo), "Todos os projetos" passa a ser todos os do configurador. Em Relatórios, que filtra um projeto por vez, o configurador limita só a lista de escolha. (A lista de Tarefas deixou de ter o filtro de projeto em 18/11/2026, §39; a configuração guardada para ela fica sem uso.)
 - Não muda permissão nenhuma: só esconde da lista o que a pessoa escolheu não ver; não entra no histórico de auditoria.
 
 ## 28. Tarefas ligadas aos elementos da Gestão de projetos
@@ -670,7 +670,7 @@ A Gestão de projetos é o **plano macro** do projeto (fases, entregas, cronogra
 
 Página do projeto → aba **Informe**: monta o informe do projeto com os dados da plataforma e baixa em PDF.
 
-- **Quais tarefas entram:** toda tarefa entra por padrão (também as que já existiam). Na aba **Tarefas** do projeto, o botão de informe de cada linha (antes do "Visualizar") tira ou devolve a tarefa; a coluna/filtro **No informe** mostra quais estão fora. Pode mudar quem edita a tarefa e tem a seção **Informe** no perfil (`projects.report`, §35; a aba Informe também depende dela); não exige os campos obrigatórios do status e fica no histórico da tarefa ("No informe: Sim → Não").
+- **Quais tarefas entram:** toda tarefa entra por padrão (também as que já existiam). Na aba **Tarefas** do projeto, o botão de informe de cada linha (antes do "Visualizar") tira ou devolve a tarefa; a coluna **No informe** (escondida por padrão) mostra quais estão fora. Pode mudar quem edita a tarefa e tem a seção **Informe** no perfil (`projects.report`, §35; a aba Informe também depende dela); não exige os campos obrigatórios do status e fica no histórico da tarefa ("No informe: Sim → Não").
 - **O que o informe mostra:** capa (projeto, início, data de corte e equipe = responsáveis das tarefas do informe), resumo com indicadores (dias corridos e úteis, tarefas concluídas, marcos alcançados, fases encerradas) e cronograma, avanço por fase, marcos, linha do tempo dia a dia (Diário, marcos e tarefas pela data do fato — mesma regra do Histórico), tarefas por situação e próximos passos (marcos pendentes e tarefas abertas pelo prazo). Cada seção pode ser desligada; a numeração acompanha.
 - **Fases:** elementos de primeiro nível de um grupo da Gestão de projetos (e dos subgrupos dele), com a etiqueta de status e o progresso do quadro; sem escolha, o primeiro grupo do quadro. Só aparece para quem tem `plan.view`.
 - **Período e corte:** "De/Até" recortam tarefas (pela data de início, ou o prazo), marcos e Diário; tarefa sem data só entra sem período. A **data de corte** é o "hoje" do documento: dias, fases em andamento e a linha tracejada do cronograma vão até ela. Tarefas canceladas aparecem na lista, mas não contam no total de tarefas.
@@ -705,9 +705,9 @@ Tarefas e projetos têm uma **urgência** em semáforo: 🔴 **Alta**, 🟡 **M�
 Lista configurável em **Configurações → Áreas** (`settings.manage`), com as mesmas regras de status e prioridades (chave imutável, ordem, cor, ativa/inativa), mas **sem padrão**: tarefa e projeto podem ficar sem área (o padrão, inclusive para o que já existia). Carga inicial: Inteligencia Estratégica, Dpto. TI, Desarrollo e Innovación, Marketing, Contabilidad, Administración, Fertilizantes, Logística, Supply, Comex e Créditos (dado editável).
 
 - **Tarefas:** coluna **Área** logo depois de Responsável, na aba Tarefas → Lista do projeto e na lista geral de Tarefas; quem edita a tarefa troca com um clique (menu com as áreas ativas e "Sem área"), sem exigir os campos obrigatórios do status, e também no formulário. Histórico: `task.updated` com o nome da área.
-- **Projetos:** coluna e filtro "Área" na lista de Projetos (quem edita o projeto troca com um clique) e campo no formulário do projeto; histórico em `project.updated`.
-- **Kanban:** filtro "Área" na barra (também no Backlog) e o selo da área no cartão.
-- **Filtro:** uma área ou "Sem área" (`area_id=none` na API).
+- **Projetos:** coluna "Área" na lista de Projetos (quem edita o projeto troca com um clique) e campo no formulário do projeto; histórico em `project.updated`.
+- **Kanban:** o selo da área no cartão.
+- **Filtro:** só o Panorama filtra por área na tela; o filtro "Área/Departamento" saiu da lista de Projetos (§37), das listas de Tarefas, do Kanban e do Planejamento (§39). Na API continua: uma área ou "Sem área" (`area_id=…|none`).
 - Só áreas **ativas** podem ser escolhidas; a área inativa continua aparecendo onde já estava. Área em uso por tarefas ou projetos não se exclui (`AREA_IN_USE`, com as contagens): desative.
 - **API e Claude (MCP):** `GET/POST /areas`, `PUT /areas/order`, `GET/PATCH/DELETE /areas/{id}`; tarefas — `PUT /tasks/{id}/area` (`null` limpa; sem exigir os obrigatórios), também `area_id` em `POST/PATCH /tasks` e o filtro `GET /tasks?area_id=…|none`; projetos — `area_id` em `POST/PATCH /projects` (`null` limpa) e `GET /projects?area_id=…|none`. O Claude usa `area_id` em `create_task`/`update_task`/`list_tasks` e `create_project`/`update_project`/`list_projects`, vê as áreas em `get_task_settings` e administra com `list_areas`/`create_area`/`update_area`/`delete_area`/`reorder_areas`.
 
@@ -730,7 +730,7 @@ Um projeto pode **fazer parte de um projeto maior** (o projeto pai), por exemplo
 
 - **Um só nível:** o pai não pode ter pai e um projeto com subprojetos não pode virar filho. Também não vale ligar o projeto a ele mesmo nem a um pai arquivado (`parent_id`: `self`, `parent_is_child`, `has_children`, `parent_archived`). O banco também recusa o projeto como pai de si mesmo.
 - **Quem liga:** só a um pai que a pessoa pode editar (gestor do pai com `projects.edit`); senão — inclusive pai que ela não vê —, `invalid_option`.
-- **Onde aparece:** o subprojeto mostra o nome do pai acima do título, no cabeçalho da página do projeto (com link), e na lista de Projetos ("↳ pai"); o pai mostra o card **Subprojetos** na Visão geral, com estado e entrega de cada um, e a quantidade na lista. Filtro **Projeto pai** em "Mais filtros" da lista de Projetos (só projetos principais, ou os filhos de um pai) — `GET /projects?parent_id=<id>|none`.
+- **Onde aparece:** o subprojeto mostra o nome do pai acima do título, no cabeçalho da página do projeto (com link), e na lista de Projetos ("↳ pai"); o pai mostra o card **Subprojetos** na Visão geral, com estado e entrega de cada um, e a quantidade na lista. Na API, o filtro de projeto pai (só projetos principais, ou os filhos de um pai) — `GET /projects?parent_id=<id>|none`; na lista de Projetos ele saiu da barra (§37).
 - **Independência:** cada projeto continua com seus membros, tarefas, ficha e permissões; ser membro do pai **não** dá acesso aos subprojetos (o card do pai lista só os filhos que a pessoa vê; a quantidade conta todos).
 - **Arquivar ou excluir:** arquivar o pai não mexe nos filhos; excluir o pai solta os subprojetos (ficam sem pai — `ON DELETE SET NULL`).
 - **Histórico:** criação e troca de pai ficam em `project.created`/`project.updated` com o nome do projeto pai ("Projeto pai").
@@ -753,15 +753,18 @@ Na aba Tarefas → Lista do projeto, o botão **Visível para TI** (ícone de no
 
 - O Responsável TI vê as tarefas **atribuídas a ele** e as **marcadas** — no resumo do projeto, na lista geral de Tarefas, nos Relatórios e ao abrir a tarefa. As demais continuam fechadas (`TASK_NOT_FOUND`); desmarcar fecha de novo.
 - Quem edita a tarefa marca e desmarca (`PUT /tasks/{id}/it-visible`); o Responsável TI não muda a marca. Não exige os campos obrigatórios do status; fica no histórico da tarefa ("Visível para TI: Não → Sim").
-- A coluna e o filtro **Visível para TI** (escondidos por padrão) mostram o que está compartilhado; na API, toda tarefa sai com `it_visible` e há o filtro `GET /tasks?it_visible=true|false`.
+- A coluna **Visível para TI** (escondida por padrão) mostra o que está compartilhado; na API, toda tarefa sai com `it_visible` e há o filtro `GET /tasks?it_visible=true|false`.
 - **Claude (MCP):** `set_task_it_visible` e o filtro `it_visible` de `list_tasks`.
 
 ## 37. Filtros das listas de projetos
 
-- As quatro listas (Todos os meus projetos, Em andamento, Concluídos, Arquivados) têm a barra numa linha só: **busca · Estado** (seletor) **· Prioridade e Urgência** (botões) **· Colunas** à direita (pedido da coordenação, 17/11/2026).
+- As quatro listas (Todos os meus projetos, Em andamento, Concluídos, Arquivados) têm a barra numa linha só: **busca · Estado** (seletor) **· Prioridade e Urgência** (botões) e, à direita, **Limpar (n) · Colunas** (pedido da coordenação, 17/11/2026; ajuste de 18/11/2026).
+- Sem a trilha de navegação no topo nessas quatro páginas (repetia o título); nas demais páginas ela continua.
 - **Estado** oferece só os status da lista (Em andamento: planejamento, em curso, pausado; Concluídos: concluído, cancelado; Todos e Arquivados: todos).
 - **Prioridade** (Crítica, Alta, Média, Baixa) e **Urgência** (Alta, Média, Baixa, Sem urgência) são botões que ligam e desligam, da maior para a menor e com o nome do grupo ao lado, na mesma linha (ajuste da coordenação, 17/11/2026); vários ao mesmo tempo valem como "ou" dentro do grupo e "e" entre grupos. Na API: `status`, `priority` e `urgency` aceitam vários valores separados por vírgula.
-- Cada botão e cada opção de Estado mostra **quantos projetos** há com aquele valor, contando a lista, a busca e os outros filtros — não o próprio grupo (`GET /projects?facets=true` → `meta.facets`). Valor sem projetos aparece com 0, apagado, e continua clicável.
+- **Sem quantidades** nos botões e nas opções de Estado (ajuste da coordenação, 18/11/2026): a lista não pede mais as contagens. A API continua oferecendo `GET /projects?facets=true` → `meta.facets` (quantos projetos há por valor, contando a lista, a busca e os outros filtros — não o próprio grupo).
+- **Visual:** cada grupo de botões tem um traço à esquerda, o nome em letra pequena maiúscula ao lado e não quebra por dentro (em tela estreita a linha quebra entre os grupos). Os estados são distintos: parado neutro; mouse em cima, fundo cinza (sem verde, só em aparelho com mouse); ligado, verde cheio com ✓; ao clicar, encolhe um pouco (não com movimento reduzido); com o teclado, contorno verde. O Estado parado mostra o nome na cor normal do texto.
+- **Limpar (n)** fica ao lado de Colunas e diz quantos valores estão marcados (ex.: duas prioridades e uma urgência = "Limpar (3)"; a busca conta um); sem filtro, o botão some mas guarda o lugar, para a barra não pular. Vale para todas as listagens padrão (tabelas); no Kanban, Planejamento, Cronograma e Relatórios o "Limpar filtros" também foi para a direita, sem número.
 - **Departamento** e **Projeto pai** saíram da barra (as colunas continuam; a API ainda aceita `area_id` e `parent_id`). Um desses filtros guardado no navegador de antes é descartado ao abrir a lista: nada filtra escondido.
 
 ## 38. Página inicial por pessoa
@@ -770,3 +773,18 @@ Na aba Tarefas → Lista do projeto, o botão **Visível para TI** (ícone de no
 - Opções: **Automática** (como antes: Panorama para quem tem `executive.view`; senão, Todos os meus projetos), Panorama, Todos os meus projetos, Em andamento, Concluídos, Arquivados, Kanban e Documentação — só as que o perfil da pessoa abre.
 - Se a pessoa perde o acesso à tela escolhida, entra na automática. Links de e-mail, avisos e o `?next=` do login continuam abrindo direto onde apontam.
 - Gravada em `users.home_page` (migration 0027; `''` = automática; lista fechada em `domain/user.js#HOME_PAGES`); muda por `PATCH /users/{id}` com `users.edit` (também para a própria) e fica no histórico (`user.updated`).
+
+## 39. Filtros das tarefas, Kanban e Planejamento
+
+Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
+
+- **Listas de tarefas** (página Tarefas e aba Tarefas → Lista do projeto): a barra tem só **Status, Prioridade, Urgência e Responsável**, mais "Minhas tarefas primeiro", **Limpar (n)** e Colunas. **"Mais filtros" saiu** (só existia aqui): Tipo, Projeto, Etiquetas, Situação (abertas/encerradas), Visível para TI e No informe deixaram de ser filtros; as colunas continuam (as escondidas por padrão seguem escondidas).
+- Sem o filtro Situação, a lista deixa de abrir só com as tarefas abertas: mostra todas, e as encerradas aparecem riscadas. Para ver só um status, use o filtro **Status**.
+- **Departamento/Área** saiu também do **Kanban** e do **Planejamento** (Backlog). A coluna e o selo da área continuam; só o **Panorama** filtra por área.
+- **Filtro guardado de antes:** as listas de tarefas guardam os filtros no navegador (`kamban.table.tasks`, `kamban.table.project-tasks`). Um filtro que saiu da barra (Área, Situação, Tipo, Projeto, Etiquetas, Visível para TI, No informe) é descartado ao abrir a lista e apagado do navegador: nada filtra escondido.
+- A API não mudou: `GET /tasks` continua aceitando `area_id`, `category`, `task_type_id`, `project_id`, `tag_id`, `in_report` e `it_visible` (o Claude/MCP e outras telas usam).
+
+## 40. Visão geral do projeto
+
+- Coluna principal, nesta ordem: **Saúde do projeto** (para quem tem `plan.view` e o projeto tem quadro de gestão), **Descrição** e **Subprojetos**. Ao lado, numa coluna mais estreita, os **Detalhes**, para a saúde ganhar largura (os cards da saúde ficam em 4 colunas quando cabem; senão, 2).
+- **Detalhes** mais compactos (nome à esquerda, valor à direita), na ordem: Plataforma (quando há), Status, Prioridade, Urgência, Área, Gestão, Desenvolvimento, Início, Entrega, Criado em e Atualizado em. **Sem a linha Dono** (ajuste de 18/11/2026): o dono continua em **Membros** (com a coroa) e se transfere em **Configurações → Transferir**; as permissões não mudam.

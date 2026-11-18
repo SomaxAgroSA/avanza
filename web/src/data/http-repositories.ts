@@ -1306,7 +1306,6 @@ const TASK_FILTERS: Record<string, string> = {
   in_report: 'in_report',
   it_visible: 'it_visible',
   urgency: 'urgency',
-  area: 'area_id',
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {

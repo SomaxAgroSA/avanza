@@ -63,7 +63,7 @@ function HealthCard({
   const hours = (value: number | null) => (value === null ? '—' : t('plan.report.hours', { value: num(value) }))
   const deviation = effort.deviation
   return (
-    <section aria-labelledby="plan-health" className="rounded-xl border border-border bg-surface p-4 shadow-card">
+    <section aria-labelledby="plan-health" className="@container rounded-xl border border-border bg-surface p-4 shadow-card">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h2 id="plan-health" className="flex items-center gap-2 text-base font-semibold text-fg">
           <HeartPulse className="size-5 text-muted" aria-hidden /> {t('plan.report.health.title')}
@@ -90,7 +90,7 @@ function HealthCard({
           </Link>
         </AppButton>
       </div>
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <ul className="mt-4 grid gap-3 @md:grid-cols-2 @3xl:grid-cols-4">
         {health.factors.map((factor) => {
           const count = countOf(factor.key)
           const selected = open === factor.key
@@ -127,7 +127,7 @@ function HealthCard({
         })}
       </ul>
       {open && <FactorDetails factor={open} data={data} />}
-      <div className="mt-4 grid gap-4 border-t border-border pt-4 md:grid-cols-3">
+      <div className="mt-4 grid gap-4 border-t border-border pt-4 @xl:grid-cols-3">
         <Metrics id="plan-health-summary" title={t('plan.report.summary.title')}>
           <ProgressBar value={summary.progress} label={t('plan.columns.progress')} className="mb-1" />
           <Metric label={t('plan.report.summary.done')} value={`${summary.done}/${summary.total}`} />

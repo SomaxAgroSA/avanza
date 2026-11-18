@@ -32,8 +32,8 @@ import { useProjectHistory, useProjectLifecycle, useProjectMembers, useProjects 
  */
 
 /**
- * Visão geral: saúde do projeto (quando há quadro de gestão), descrição, subprojetos e detalhes. Para o
- * Responsável TI (regras §33), o resumo do que o projeto precisa dele.
+ * Visão geral: na coluna principal, saúde do projeto (quando há quadro de gestão), descrição e subprojetos;
+ * ao lado, os detalhes. Para o Responsável TI (regras §33), o resumo do que o projeto precisa dele.
  */
 export function ProjectOverviewTab() {
   const { project } = useProjectOutlet()
@@ -67,11 +67,12 @@ export function ProjectSettingsTab() {
   return <ProjectSettings project={project} onArchive={onArchive} onDelete={onDelete} />
 }
 
+/** Linha dos Detalhes: nome à esquerda e valor à direita, compacta (a coluna lateral é estreita). */
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
-      <dt className="text-sm text-muted">{label}</dt>
-      <dd className="text-right text-sm font-medium text-fg">{children}</dd>
+    <div className="flex items-center justify-between gap-3 py-2">
+      <dt className="shrink-0 text-sm text-muted">{label}</dt>
+      <dd className="min-w-0 text-right text-sm font-medium text-fg">{children}</dd>
     </div>
   )
 }
@@ -82,78 +83,68 @@ function Overview({ project }: { project: Project }) {
   const overdue = isOverdue(project)
   const canViewPlan = useCan('plan.view')
   return (
-    <div className="flex flex-col gap-4">
-      {/* saúde do quadro de gestão (só quando o projeto tem quadro com elementos) */}
-      {canViewPlan && <ProjectHealth projectId={project.id} family={!project.parent && project.childCount > 0} />}
-      <div className="grid items-start gap-4 lg:grid-cols-3">
-        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
-          <AppCard title={t('projects.fields.description')}>
-            {project.description ? (
-              <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{project.description}</p>
-            ) : (
-              <p className="text-sm text-subtle">{t('projects.noDescription')}</p>
-            )}
-          </AppCard>
-          <SubprojectsCard project={project} />
-        </div>
-        <AppCard title={t('projects.details')}>
-          <dl className="divide-y divide-border">
-            {project.platformUrl && (
-              <Detail label={t('projects.fields.platform')}>
-                <a href={project.platformUrl} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-primary-text hover:underline">
-                  {project.platformUrl.replace(/^https?:\/\//i, '').replace(/\/$/, '')} ↗
-                </a>
-              </Detail>
-            )}
-            <Detail label={t('projects.fields.status')}>
-              <ProjectStatusBadge status={project.status} />
+    // coluna lateral estreita (Detalhes) para a saúde ganhar largura
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="flex min-w-0 flex-col gap-4">
+        {/* saúde do quadro de gestão primeiro (só quando o projeto tem quadro com elementos) */}
+        {canViewPlan && <ProjectHealth projectId={project.id} family={!project.parent && project.childCount > 0} />}
+        <AppCard title={t('projects.fields.description')}>
+          {project.description ? (
+            <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{project.description}</p>
+          ) : (
+            <p className="text-sm text-subtle">{t('projects.noDescription')}</p>
+          )}
+        </AppCard>
+        <SubprojectsCard project={project} />
+      </div>
+      {/* sem a linha Dono: o dono fica em Membros (com a coroa) e se transfere em Configurações */}
+      <AppCard title={t('projects.details')}>
+        <dl className="divide-y divide-border">
+          {project.platformUrl && (
+            <Detail label={t('projects.fields.platform')}>
+              <a href={project.platformUrl} target="_blank" rel="noopener noreferrer" className="block truncate font-medium text-primary-text hover:underline">
+                {project.platformUrl.replace(/^https?:\/\//i, '').replace(/\/$/, '')} ↗
+              </a>
             </Detail>
-            <Detail label={t('projects.fields.priority')}>
-              <ProjectPriorityLabel priority={project.priority} />
-            </Detail>
-            <Detail label={t('tasks.fields.urgency')}>
-              <UrgencyLabel urgency={project.urgency} />
-            </Detail>
-            <Detail label={t('tasks.fields.area')}>
-              <AreaBadge area={project.area} />
-            </Detail>
-            {([
-              ['projects.fields.lead', project.lead],
-              ['projects.fields.devLead', project.devLead],
-            ] as const).map(([label, person]) => (
-              <Detail key={label} label={t(label)}>
-                {person ? (
-                  <span className="inline-flex items-center gap-2">
-                    <AppAvatar name={person.name} size="xs" />
-                    {person.name}
-                  </span>
-                ) : (
-                  '—'
-                )}
-              </Detail>
-            ))}
-            <Detail label={t('projects.fields.owner')}>
-              {project.owner ? (
+          )}
+          <Detail label={t('projects.fields.status')}>
+            <ProjectStatusBadge status={project.status} />
+          </Detail>
+          <Detail label={t('projects.fields.priority')}>
+            <ProjectPriorityLabel priority={project.priority} />
+          </Detail>
+          <Detail label={t('tasks.fields.urgency')}>
+            <UrgencyLabel urgency={project.urgency} />
+          </Detail>
+          <Detail label={t('tasks.fields.area')}>
+            <AreaBadge area={project.area} />
+          </Detail>
+          {([
+            ['projects.fields.lead', project.lead],
+            ['projects.fields.devLead', project.devLead],
+          ] as const).map(([label, person]) => (
+            <Detail key={label} label={t(label)}>
+              {person ? (
                 <span className="inline-flex items-center gap-2">
-                  <AppAvatar name={project.owner.name} size="xs" />
-                  {project.owner.name}
+                  <AppAvatar name={person.name} size="xs" />
+                  {person.name}
                 </span>
               ) : (
                 '—'
               )}
             </Detail>
-            <Detail label={t('projects.fields.startDate')}>{formatDay(project.startDate, locale)}</Detail>
-            <Detail label={t('projects.fields.dueDate')}>
-              <span className={cn(overdue && 'text-danger')}>
-                {formatDay(project.dueDate, locale)}
-                {overdue && <span className="ml-1 text-xs">({t('projects.overdue')})</span>}
-              </span>
-            </Detail>
-            <Detail label={t('users.fields.createdAt')}>{formatDateTime(project.createdAt, locale)}</Detail>
-            <Detail label={t('users.fields.updatedAt')}>{formatDateTime(project.updatedAt, locale)}</Detail>
-          </dl>
-        </AppCard>
-      </div>
+          ))}
+          <Detail label={t('projects.fields.startDate')}>{formatDay(project.startDate, locale)}</Detail>
+          <Detail label={t('projects.fields.dueDate')}>
+            <span className={cn(overdue && 'text-danger')}>
+              {formatDay(project.dueDate, locale)}
+              {overdue && <span className="ml-1 text-xs">({t('projects.overdue')})</span>}
+            </span>
+          </Detail>
+          <Detail label={t('users.fields.createdAt')}>{formatDateTime(project.createdAt, locale)}</Detail>
+          <Detail label={t('users.fields.updatedAt')}>{formatDateTime(project.updatedAt, locale)}</Detail>
+        </dl>
+      </AppCard>
     </div>
   )
 }
