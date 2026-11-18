@@ -32,6 +32,12 @@ export interface ExecutiveQuery {
   to: string | null
   /** Minutos (Date#getTimezoneOffset): "hoje" e os dias no fuso de quem consulta. */
   tzOffset: number
+  /** Panorama: áreas do projeto ('none' = sem área); vazio/ausente = todas. */
+  areaIds?: string[]
+  /** Panorama: responsável do projeto (sem ele, o dono); vazio/ausente = todos. */
+  ownerIds?: string[]
+  /** Status a mais cujos projetos entram só nas entregas do período (ex.: concluídos). */
+  deliveryStatuses?: ProjectStatus[]
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -85,6 +91,10 @@ export interface ExecutiveProjectOption extends ExecutiveProjectRef {
   archived: boolean
   /** Participo (dono ou membro) — usado pelo configurador "Só projetos de que participo". */
   member: boolean
+  /** Área do projeto (opções do filtro do Panorama); null = sem área. */
+  area: { id: string; name: string } | null
+  /** Responsável do projeto (sem ele, o dono). */
+  owner: ExecutivePerson | null
 }
 
 export interface ExecutiveHealth {
@@ -107,6 +117,10 @@ export interface PortfolioRow {
     startDate: string | null
     dueDate: string | null
     owner: ExecutivePerson | null
+    /** Objetivo geral da Ficha do projeto; null = sem objetivo. */
+    objective: string | null
+    /** Última alteração do projeto. */
+    updatedAt: Date | null
   }
   health: ExecutiveHealth
   /** null = sem elementos nem tarefas para medir. */
@@ -142,6 +156,10 @@ export interface ExecutivePlanSection {
   issues: ExecutiveIssue[]
   openIssuesTotal: number
   upcomingMilestones: ExecutiveMilestone[]
+  /** Marcos pendentes com a data já passada (do mais antigo; até 20). */
+  overdueMilestones: ExecutiveMilestone[]
+  /** Total de marcos vencidos (a lista pode vir cortada). */
+  overdueMilestonesTotal: number
 }
 
 export const FUNNEL_CATEGORIES = ['backlog', 'todo', 'in_progress', 'done', 'cancelled'] as const satisfies readonly StatusCategory[]
@@ -188,7 +206,7 @@ export interface ExecutiveCompletion {
 }
 
 export interface ExecutiveAchievement {
-  project: ExecutiveProjectRef & { archived: boolean }
+  project: ExecutiveProjectRef & { archived: boolean; status: ProjectStatus | null }
   tasksDone: number
   planItemsDone: number
   milestonesDone: Array<{ id: string; name: string; dueDate: string | null }>

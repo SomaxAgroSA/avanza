@@ -34,8 +34,8 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     generatedAt: new Date(2026, 9, 29, 10, 42),
     period: { from: null, to: new Date(2026, 9, 29, 23, 59, 59, 999) },
     projects: [
-      { ...crm, cover: 'blue', icon: 'folder', status: 'active', archived: false, member: true },
-      { ...erp, cover: 'slate', icon: 'box', status: 'completed', archived: true, member: false },
+      { ...crm, cover: 'blue', icon: 'folder', status: 'active', archived: false, member: true, area: null, owner: null },
+      { ...erp, cover: 'slate', icon: 'box', status: 'completed', archived: true, member: false, area: null, owner: null },
     ],
     summary: {
       activeProjects: 12,
@@ -48,7 +48,7 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     },
     portfolio: [
       {
-        project: { ...crm, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', area: null, startDate: '2026-01-10', dueDate: '2026-12-15', owner: { id: 'u1', name: 'Ana', avatarUrl: null } },
+        project: { ...crm, cover: 'blue', icon: 'folder', status: 'active', priority: 'high', area: null, startDate: '2026-01-10', dueDate: '2026-12-15', owner: { id: 'u1', name: 'Ana', avatarUrl: null }, objective: null, updatedAt: null },
         health: {
           level: 'critical',
           factors: [
@@ -63,7 +63,7 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
         openIssues: 2,
       },
       {
-        project: { id: 'p3', key: 'FIN', name: 'Financeiro', cover: 'green', icon: 'folder', status: 'active', priority: 'medium', area: null, startDate: null, dueDate: '2027-02-01', owner: null },
+        project: { id: 'p3', key: 'FIN', name: 'Financeiro', cover: 'green', icon: 'folder', status: 'active', priority: 'medium', area: null, startDate: null, dueDate: '2027-02-01', owner: null, objective: null, updatedAt: null },
         health: { level: 'ok', factors: [] },
         progress: { value: 40, source: 'tasks' },
         plan: null,
@@ -83,6 +83,8 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
       issues: [{ id: 'i1', number: 3, description: 'Fornecedor atrasou', state: 'pending', openedOn: '2026-10-01', project: crm }],
       openIssuesTotal: 3,
       upcomingMilestones: [{ id: 'm1', name: 'Go-live', dueDate: '2026-11-15', project: crm }],
+      overdueMilestones: [],
+      overdueMilestonesTotal: 0,
     },
     kanban: {
       funnel: { backlog: 40, todo: 20, in_progress: 15, done: 300, cancelled: 12 },
@@ -104,7 +106,7 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
     },
     achievements: [
       {
-        project: { ...crm, archived: false },
+        project: { ...crm, archived: false, status: 'active' },
         tasksDone: 48,
         planItemsDone: 12,
         milestonesDone: [{ id: 'm0', name: 'Homologação', dueDate: '2026-10-10' }],
@@ -113,7 +115,7 @@ function dashboard(overrides: Partial<ExecutiveDashboard> = {}): ExecutiveDashbo
           { kind: 'plan_item', id: 'e3', code: null, title: 'Levantamento', completedAt: new Date('2026-10-20T10:00:00.000Z') },
         ],
       },
-      { project: { ...erp, archived: true }, tasksDone: 3, planItemsDone: 0, milestonesDone: [], recent: [] },
+      { project: { ...erp, archived: true, status: 'completed' }, tasksDone: 3, planItemsDone: 0, milestonesDone: [], recent: [] },
     ],
     ...overrides,
   }

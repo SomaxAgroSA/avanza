@@ -759,6 +759,9 @@ export function createHttpExecutiveRepository(api: ApiClient): ExecutiveReposito
         query: {
           project_ids: query.projectIds.length ? query.projectIds.join(',') : undefined,
           statuses: query.statuses.length ? query.statuses.join(',') : undefined,
+          area_ids: query.areaIds?.length ? query.areaIds.join(',') : undefined,
+          owner_ids: query.ownerIds?.length ? query.ownerIds.join(',') : undefined,
+          delivery_statuses: query.deliveryStatuses?.length ? query.deliveryStatuses.join(',') : undefined,
           from: query.from ?? undefined,
           to: query.to ?? undefined,
           tz_offset: String(query.tzOffset),

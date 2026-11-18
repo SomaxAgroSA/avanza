@@ -1169,6 +1169,8 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
       status: (PROJECT_STATUSES as readonly string[]).includes(p.status ?? '') ? (p.status as ProjectStatus) : null,
       archived: !!p.archived,
       member: p.member === true,
+      area: p.area ? { id: p.area.id, name: p.area.name } : null,
+      owner: person(p.owner),
     })),
     summary: {
       activeProjects: s.active_projects,
@@ -1190,6 +1192,8 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
         startDate: row.project.start_date ?? null,
         dueDate: row.project.due_date ?? null,
         owner: person(row.project.owner),
+        objective: row.project.objective?.trim() || null,
+        updatedAt: toDate(row.project.updated_at),
       },
       health: toExecutiveHealth(row.health),
       progress:
@@ -1222,6 +1226,8 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
           })),
           openIssuesTotal: plan.open_issues_total ?? 0,
           upcomingMilestones: (plan.upcoming_milestones ?? []).map((m) => ({ id: m.id, name: m.name, dueDate: m.due_date, project: projectRef(m.project) })),
+          overdueMilestones: (plan.overdue_milestones ?? []).map((m) => ({ id: m.id, name: m.name, dueDate: m.due_date, project: projectRef(m.project) })),
+          overdueMilestonesTotal: plan.overdue_milestones_total ?? (plan.overdue_milestones ?? []).length,
         }
       : null,
     kanban: {
@@ -1259,7 +1265,11 @@ export function toExecutiveDashboard(dto: ExecutiveDto): ExecutiveDashboard {
       })),
     },
     achievements: (dto.achievements ?? []).map((a) => ({
-      project: { ...projectRef(a.project), archived: !!a.project.archived },
+      project: {
+        ...projectRef(a.project),
+        archived: !!a.project.archived,
+        status: (PROJECT_STATUSES as readonly string[]).includes(a.project.status ?? '') ? (a.project.status as ProjectStatus) : null,
+      },
       tasksDone: a.tasks_done,
       planItemsDone: a.plan_items_done,
       milestonesDone: (a.milestones_done ?? []).map((m) => ({ id: m.id, name: m.name, dueDate: m.due_date ?? null })),
