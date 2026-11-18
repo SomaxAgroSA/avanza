@@ -150,6 +150,15 @@ describe('Responsável TI — tarefas (§33/§36)', () => {
     assert.equal(full.parent.code, s.other.code)
   })
 
+  it('não põe a tarefa numa etapa da Gestão (ele não vê a Gestão); a equipe põe e ele continua sem ver', async () => {
+    const s = await setup()
+    const group = await createPlanService(s.deps).createGroup(s.ctx.gabi, s.project.id, { name: 'Iniciação', color: 'blue' })
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ti, s.mine.id, { plan_group_id: group.id })), 'FORBIDDEN')
+    assert.equal(s.deps.store.planItems.length, 0)
+    assert.equal((await s.tasks.updateTask(s.ctx.gabi, s.mine.id, { plan_group_id: group.id })).plan_item.name, 'Liberar acesso ao banco')
+    assert.equal((await s.tasks.getTask(s.ctx.ti, s.mine.id)).plan_item, null)
+  })
+
   it('ligar/desligar no informe é da seção Informe: o Responsável TI não tem', async () => {
     const s = await setup()
     assert.equal(await codeOf(() => s.tasks.setTaskReport(s.ctx.ti, s.mine.id, { in_report: false })), 'FORBIDDEN')

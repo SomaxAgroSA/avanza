@@ -280,6 +280,25 @@ describe('mcp/tools', () => {
     assert.deepEqual(calls.map((c) => c.args), [[{ area_id: 'none' }], ['p1', { area_id: null }], [{ area_id: 'a1' }], ['t1', { area_id: 'a2' }]])
   })
 
+  it('etapa da Gestão (plan_group_id): em criar e editar tarefa, sem null; vai direto para o caso de uso', async () => {
+    const { validateArguments: check } = require('../../src/mcp/schema')
+    ;['create_task', 'update_task'].forEach((name) => {
+      const prop = byName(name).inputSchema.properties.plan_group_id
+      assert.match(prop.description, /stage/i, name)
+      assert.match(byName(name).inputSchema.properties.plan_item_id.description, /Not together with plan_group_id/, name)
+      assert.equal(check({ plan_group_id: 'g1' }, byName(name).inputSchema).plan_group_id, undefined, name)
+      assert.equal(check({ plan_group_id: null }, byName(name).inputSchema).plan_group_id, 'invalid_type', name)
+    })
+    assert.match(byName('update_task').inputSchema.properties.plan_group_id.description, /not linked to any element yet/)
+    const { calls, services } = spyServices()
+    await byName('create_task').run({ project_id: 'p1', task_type_id: 't', title: 'Unir a base', plan_group_id: 'g1' }, { services, ctx })
+    await byName('update_task').run({ task_id: 't1', plan_group_id: 'g2' }, { services, ctx })
+    assert.deepEqual(calls.map((c) => [c.method, c.args]), [
+      ['createTask', [{ project_id: 'p1', task_type_id: 't', title: 'Unir a base', plan_group_id: 'g1' }]],
+      ['updateTask', ['t1', { plan_group_id: 'g2' }]],
+    ])
+  })
+
   it('get_task_settings: status, prioridades, áreas, tipos e tags ativos', async () => {
     const { calls, services } = spyServices({ 'areas.list': [{ id: 'a1' }] })
     const out = await byName('get_task_settings').run({}, { services, ctx })

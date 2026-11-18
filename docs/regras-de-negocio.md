@@ -337,7 +337,7 @@ Cada tipo de tarefa define, campo a campo, **quando** ele precisa estar preenchi
 
 ### Módulo à parte das tarefas
 - O quadro organiza a **gestão do projeto** — fases e atividades como reuniões, alinhamentos, entregas e aprovações — com **status, recursos, cronograma, esforço, duração e progresso próprios**.
-- **Não tem vínculo com as tarefas**: a aba **Tarefas** do projeto continua sendo a lista de tarefas; nada do quadro muda tarefas, Kanban, Planejamento ou relatórios, e vice-versa.
+- **Ligado às tarefas só por referência (§28):** a aba **Tarefas** do projeto continua sendo a lista de tarefas e o quadro tem as suas próprias tabelas. A única ligação é a tarefa apontar para um elemento (ou subelemento): o elemento passa a tirar o progresso das tarefas ligadas, e a tarefa criada com uma **etapa da Gestão** nasce como uma linha nova nessa etapa. Fora isso, nada do quadro muda tarefas, Kanban, Planejamento ou relatórios, e vice-versa.
 
 ### Grupos
 - O quadro se organiza em **grupos** (fases) com nome e cor, em até **2 níveis**: grupo (1.0, 2.0…) e subgrupo (2.1, 2.2…). A **numeração é automática**, pela ordem. O subgrupo aparece com o título do pai: "2.0 Planejamento | 2.1 Plano do Projeto".
@@ -653,10 +653,18 @@ Toda tela com filtro ou seletor de projeto (Kanban, Planejamento, Gestão de pro
 
 A Gestão de projetos é o **plano macro** do projeto (fases, entregas, cronograma); as tarefas são a **execução** do dia a dia. Uma tarefa pode ser ligada a um elemento (ou subelemento) da Gestão do mesmo projeto.
 
-- **Onde ligar:** no painel do elemento (seção Tarefas: vincular uma tarefa existente, criar uma nova já ligada, desvincular) ou no formulário/página da tarefa (campo **Elemento da Gestão**). Ligar exige poder editar a tarefa; elemento de outro projeto é recusado.
+- **Onde ligar:** no painel do elemento (seção Tarefas: vincular uma tarefa existente, criar uma nova já ligada, desvincular) ou, pela API/MCP, com `plan_item_id`. No formulário da tarefa, a ligação é pela **etapa da Gestão** (abaixo), que cria a linha. Ligar exige poder editar a tarefa; elemento de outro projeto é recusado.
 - **Progresso pelas tarefas:** elemento que não está "feito" e tem tarefas ligadas tem o progresso = tarefas concluídas ÷ tarefas ligadas (canceladas não contam). Isso vale antes do progresso dos subelementos e do informado à mão; o elemento "feito" continua 100%. O quadro mostra "pelas tarefas · 3/5". A saúde do projeto e o Painel executivo usam esse mesmo progresso.
 - **Excluir o elemento** desliga as tarefas (elas continuam existindo, sem elemento). Ligar, trocar e desligar ficam no histórico da tarefa ("Elemento da Gestão").
 - O Claude (MCP) liga com `plan_item_id` em `create_task`/`update_task` e filtra com `list_tasks`.
+
+### Etapa da Gestão no formulário da tarefa (desde 2026-11-18, ADR-052)
+- **Campo "Etapa da gestão"** (coluna da esquerda, logo abaixo de Etiquetas): lista as etapas do quadro do projeto com o número e o nome ("1.0 Base de clientes e critérios"; subetapas "2.1 …" recuadas) e **Sem etapa** (o padrão). Aparece só para quem vê a Gestão (`plan.view`) e quando o projeto tem pelo menos uma etapa. Substitui o antigo campo "Elemento da Gestão" do formulário.
+- **Criar com etapa:** na mesma transação, o sistema cria uma **linha nova** (elemento) no fim da etapa e liga a tarefa a ela: nome = título da tarefa; início = início planejado (sem ele, hoje — ou o prazo, se já venceu); fim = prazo (sem ele, o próprio início); responsável = o da tarefa (se ainda participa do projeto); status do quadro vazio, como todo elemento novo. Os dois históricos registram (elemento criado; tarefa com "Elemento da Gestão").
+- **Cópia só na criação:** editar a tarefa depois não muda a linha (cada lado segue com os seus dados); o progresso da linha já vem da tarefa (regra acima).
+- **Permissão:** basta ver a Gestão e poder criar a tarefa no projeto — a linha é criada pelo sistema em nome da pessoa, sem exigir `plan.edit`. Sem `plan.view`, a API recusa (`FORBIDDEN`). O Responsável TI não vê a Gestão: o campo não aparece e a API recusa.
+- **Editar a tarefa:** se ela já está na Gestão, o formulário mostra a etapa só para leitura, com o nome da linha ("1.0 Base de clientes › Unir a base de clientes"); trocar ou desligar continua no painel do elemento. Se ainda não está, o campo de etapa aparece e cria a linha ao salvar (com o título, as datas e o responsável já editados). Tarefa criada pelo painel do elemento (já ligada) mostra a etapa dele só para leitura.
+- **API:** `plan_group_id` em `POST /tasks` e em `PATCH /tasks/{id}` (só para a tarefa sem elemento; senão `already_linked`); não vai junto com `plan_item_id` (`exclusive`); etapa de outro projeto = `invalid_option`. O MCP aceita o mesmo em `create_task`/`update_task`.
 
 ## 29. Informe do projeto
 
