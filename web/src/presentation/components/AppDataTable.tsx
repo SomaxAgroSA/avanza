@@ -26,7 +26,7 @@ import { AppPagination } from './AppPagination'
 import { AppEmptyState, AppErrorState, AppLoadingBar, AppSkeleton } from './AppStates'
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
-import { FilterButtons, FilterChips, FilterSelect, MoreFilters, type TableFilterDef } from './data-table/TableFilters'
+import { FilterButtons, FilterSelect, type TableFilterDef } from './data-table/TableFilters'
 import type { DataTableStateApi } from './data-table/use-data-table-state'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { useDelayedFlag } from '@/presentation/common/use-delayed-flag'
@@ -47,15 +47,15 @@ export interface DataTableColumn<T> {
   /** Fixa a coluna no início da tabela ao rolar horizontalmente. */
   pinned?: boolean
   align?: 'start' | 'end'
-  /** Filtro por coluna exibido na barra de filtros; `addon` fica colado ao filtro (ex.: engrenagem do configurador). */
+  /**
+   * Filtro por coluna, sempre à vista na barra de filtros (não há "Mais filtros"); `addon` fica colado ao
+   * filtro (ex.: engrenagem do configurador).
+   */
   filter?: {
     label: string
-    /** `count`: quantos registros há com o valor (mostrado no botão ou na opção; §37). */
-    options: Array<{ value: string; label: string; count?: number }>
+    options: Array<{ value: string; label: string }>
     addon?: ReactNode
-    /** Sempre à vista na barra; os demais vão para "Mais filtros". Sem nenhum marcado, valem os primeiros. */
-    primary?: boolean
-    /** `buttons`: um botão por valor, vários ao mesmo tempo, sempre à vista (§37). Padrão: seletor. */
+    /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
     variant?: 'select' | 'buttons'
   }
 }
@@ -100,8 +100,6 @@ export interface AppDataTableProps<T extends RowData> {
   toolbar?: ReactNode
   /** À direita da barra, depois de "Colunas" (ex.: a ação principal da tela). */
   toolbarActions?: ReactNode
-  /** Quantos filtros ficam à vista quando nenhuma coluna marca `primary` (padrão 3); o resto vai para "Mais filtros". */
-  maxVisibleFilters?: number
   /**
    * Põe "Colunas" e as ações da barra noutro lugar da tela (ex.: na linha da sub-navegação da seção),
    * deixando a barra de filtros numa linha só. `null` = o lugar ainda está montando.
@@ -176,7 +174,6 @@ export function AppDataTable<T extends RowData>({
   searchPlaceholder,
   toolbar,
   toolbarActions,
-  maxVisibleFilters = 3,
   actionsSlot,
   emptyState,
   searchable = true,
@@ -251,11 +248,8 @@ export function AppDataTable<T extends RowData>({
   })
 
   const filterColumns = columns.filter((c) => c.filter)
-  // filtros à vista (em botões, os marcados `primary` ou os primeiros) e o resto em "Mais filtros"
-  const filterDefs: Array<TableFilterDef & { primary?: boolean }> = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
-  const listedFilters = filterDefs.some((f) => f.primary) ? filterDefs.filter((f) => f.primary) : filterDefs.filter((f) => f.variant !== 'buttons').slice(0, maxVisibleFilters)
-  const visibleFilters = filterDefs.filter((f) => f.variant === 'buttons' || listedFilters.includes(f))
-  const hiddenFilters = filterDefs.filter((f) => !visibleFilters.includes(f))
+  // todos os filtros à vista, na ordem das colunas
+  const filterDefs: TableFilterDef[] = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
   const hideableColumns = table.getAllLeafColumns().filter((c) => c.getCanHide())
   const visibleColumnCount = table.getVisibleLeafColumns().length
   const showSkeleton = loading && data.length === 0
@@ -307,19 +301,18 @@ export function AppDataTable<T extends RowData>({
           }
           filters={
             <>
-              {visibleFilters.map((filter) =>
+              {filterDefs.map((filter) =>
                 filter.variant === 'buttons' ? (
                   <FilterButtons key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
                 ) : (
                   <FilterSelect key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
                 ),
               )}
-              <MoreFilters filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />
               {toolbar}
             </>
           }
-          below={<FilterChips filters={hiddenFilters} values={state.filters} onChange={tableState.setFilter} />}
           hasActiveFilters={tableState.hasActiveFilters}
+          activeFilterCount={tableState.activeFilterCount}
           onReset={tableState.resetFilters}
           // com lugar pedido (mesmo que ainda montando, null), os botões não aparecem na barra
           actions={actionsSlot === undefined ? toolbarButtons : undefined}

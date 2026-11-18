@@ -75,4 +75,14 @@ describe('vínculo tarefa ↔ elemento da Gestão (dados)', () => {
     await repo.update('t1', { planItemId: null })
     expect(patch).toHaveBeenCalledWith('/tasks/t1', expect.objectContaining({ plan_item_id: null }))
   })
+
+  it('repositório: etapa da Gestão vai como plan_group_id na criação e na edição', async () => {
+    const post = vi.fn(() => Promise.resolve({ data: detailDto, meta: {} }))
+    const patch = vi.fn(() => Promise.resolve({ data: detailDto, meta: {} }))
+    const repo = createHttpTaskRepository({ post, patch } as unknown as ApiClient)
+    await repo.create({ projectId: 'p1', taskTypeId: 'tt', title: 'X', planGroupId: 'g1' })
+    expect(post).toHaveBeenCalledWith('/tasks', expect.objectContaining({ plan_group_id: 'g1' }))
+    await repo.update('t1', { planGroupId: 'g2' })
+    expect(patch).toHaveBeenCalledWith('/tasks/t1', expect.objectContaining({ plan_group_id: 'g2' }))
+  })
 })

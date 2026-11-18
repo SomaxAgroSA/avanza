@@ -153,6 +153,11 @@ export interface TaskInput {
   parentTaskId?: string | null
   /** Elemento ou subelemento da Gestão do mesmo projeto (null desvincula). */
   planItemId?: string | null
+  /**
+   * Etapa da Gestão (grupo do quadro do mesmo projeto): o servidor cria nela uma linha com o título, as
+   * datas e o responsável da tarefa e liga a tarefa a ela. Na edição, só para a tarefa ainda sem elemento.
+   */
+  planGroupId?: string
   /** Área responsável ativa (null limpa). */
   areaId?: string | null
 }
@@ -217,6 +222,22 @@ export function mentionQueryAt(text: string, caret: number): { start: number; qu
 export const TASK_SORTS = ['code', 'title', 'created_at', 'updated_at', 'due_date', 'priority', 'status'] as const
 
 /** Tarefa encerrada (concluída ou cancelada). */
+/**
+ * Filtros da barra das listas de tarefas (página Tarefas e aba Tarefas do projeto; ajuste 18/11): Status,
+ * Prioridade, Urgência e Responsável. Área, Situação, Tipo, Projeto, Etiquetas, Visível para TI e No informe
+ * deixaram de ser filtros (as colunas continuam).
+ */
+export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee'] as const
+
+/** Só os filtros da barra: um filtro antigo guardado no navegador (ex.: Área) não pode filtrar escondido. */
+export function taskListFilters(filters: Record<string, string>): Record<string, string> {
+  const kept: Record<string, string> = {}
+  TASK_LIST_FILTERS.forEach((id) => {
+    if (filters[id]) kept[id] = filters[id]
+  })
+  return kept
+}
+
 export function isClosed(task: Pick<TaskSummary, 'status'>): boolean {
   return task.status?.category === 'done' || task.status?.category === 'cancelled'
 }

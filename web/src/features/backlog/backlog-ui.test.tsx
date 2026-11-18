@@ -232,6 +232,9 @@ describe('Planejamento (aba Tarefas do projeto)', () => {
     expect(await screen.findByRole('button', { name: 'Nova sprint' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Projeto' })).not.toBeInTheDocument()
+    // sem filtro de área (ajuste 18/11): Responsável, Tipo, Prioridade, Urgência e Etiquetas continuam
+    expect(screen.queryByRole('combobox', { name: 'Área' })).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Urgência' })).toBeInTheDocument()
     const views = screen.getByRole('navigation', { name: 'Visões das tarefas' })
     expect(within(views).getByRole('link', { name: 'Planejamento' })).toHaveAttribute('aria-current', 'page')
     expect(within(views).getByRole('link', { name: 'Lista' })).toHaveAttribute('href', '/projects/p1/tasks')

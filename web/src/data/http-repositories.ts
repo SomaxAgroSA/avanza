@@ -638,6 +638,7 @@ function taskBody(data: TaskInput) {
     sprint_id: data.sprintId,
     parent_task_id: data.parentTaskId,
     plan_item_id: data.planItemId,
+    plan_group_id: data.planGroupId,
     area_id: data.areaId,
     checklist: data.checklist?.map((item) => ({ id: item.id, text: item.text, done: item.done })),
   }
@@ -1308,7 +1309,6 @@ const TASK_FILTERS: Record<string, string> = {
   in_report: 'in_report',
   it_visible: 'it_visible',
   urgency: 'urgency',
-  area: 'area_id',
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {

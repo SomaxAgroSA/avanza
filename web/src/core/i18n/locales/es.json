@@ -45,14 +45,13 @@
     "noMatches": "Sin resultados para los filtros",
     "noMatchesHint": "Ajuste la búsqueda o limpie los filtros para ver más registros.",
     "empty": "Nada por aquí todavía",
+    "clearCount": "Limpiar ({{count}})",
+    "clearCountLabel_one": "Limpiar {{count}} filtro",
+    "clearCountLabel_other": "Limpiar {{count}} filtros",
     "clearFilters": "Limpiar filtros",
     "noMoreActions": "No hay otras acciones",
     "resetColumns": "Restaurar columnas",
-    "openHint": "Clic para ver · doble clic para abrir",
-    "moreFilters": "Más filtros",
-    "moreFiltersActive": "Más filtros ({{count}} activos)",
-    "activeFilters": "Filtros activos",
-    "removeFilter": "Quitar filtro {{filter}}"
+    "openHint": "Clic para ver · doble clic para abrir"
   },
   "validation": {
     "required": "Campo obligatorio",
@@ -129,7 +128,9 @@
     "has_children": "Un proyecto con subproyectos no puede tener padre",
     "parent_archived": "El proyecto padre está archivado",
     "color_in_use": "Otro proyecto ya usa este color",
-    "not_a_member": "Elija al dueño o a un miembro del proyecto (gestor o miembro)."
+    "not_a_member": "Elija al dueño o a un miembro del proyecto (gestor o miembro).",
+    "exclusive": "Elija solo uno: la etapa o el elemento de la Gestión",
+    "already_linked": "La tarea ya está en la Gestión"
   },
   "errors": {
     "VALIDATION_ERROR": "Revise los campos destacados.",
@@ -1765,9 +1766,13 @@
     "planLink": {
       "label": "Elemento de la Gestión",
       "short": "Elemento",
-      "none": "Ninguno",
-      "hint": "Fase o entrega del plan que ejecuta esta tarea.",
       "open": "Abrir {{name}} en la Gestión"
+    },
+    "stage": {
+      "label": "Etapa de la gestión",
+      "none": "Sin etapa",
+      "hint": "Al crear, la tarea aparece sola en esa etapa de la Gestión, como una fila nueva con su título y sus fechas.",
+      "linkedHint": "En la Gestión: {{path}}. Para cambiarla o desvincularla, use el panel del elemento en la Gestión."
     },
     "report": {
       "add": "Incluir en el informe del proyecto",

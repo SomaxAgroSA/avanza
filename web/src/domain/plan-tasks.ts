@@ -6,7 +6,7 @@
  */
 import type { Plan, PlanItem, PlanTaskCount } from './plan'
 import type { TaskSummary } from './tasks'
-import { boardSections, groupTitle } from './plan-view'
+import { groupTitle } from './plan-view'
 
 const NO_TASKS: PlanTaskCount = { total: 0, done: 0 }
 
@@ -21,25 +21,37 @@ export function tasksPercent(count: PlanTaskCount): number {
 /** O progresso vem das tarefas vinculadas (não se digita no quadro). */
 export const isProgressFromTasks = (item: Pick<PlanItem, 'progress'>): boolean => item.progress.source === 'tasks'
 
-/** Opção do campo "Elemento da Gestão" da tarefa. */
-export interface PlanItemChoice {
+/** Opção do campo "Etapa da gestão" da tarefa: uma etapa (grupo) do quadro. */
+export interface PlanStageChoice {
   id: string
-  name: string
-  /** Título do grupo ("1.0 Iniciação"), cabeçalho da seção na lista. */
-  group: string
-  /** Subelemento: id do elemento pai. */
-  parentId: string | null
+  /** Número e nome: "1.0 Base de clientes", "2.1 Plano do projeto". */
+  label: string
+  /** Subetapa (2.1…): aparece recuada, logo depois da etapa pai. */
+  sub: boolean
 }
 
-/** Elementos e subelementos do quadro na ordem dele: grupo a grupo, cada subelemento logo depois do pai. */
-export function planItemChoices(plan: Plan): PlanItemChoice[] {
-  return boardSections(plan).flatMap((section) => {
-    const group = groupTitle(section.group)
-    return section.items.flatMap((item) => [
-      { id: item.id, name: item.name, group, parentId: null },
-      ...(section.subitems.get(item.id) ?? []).map((sub) => ({ id: sub.id, name: sub.name, group, parentId: item.id })),
+/** Etapas do quadro na ordem dele: cada etapa seguida das suas subetapas. */
+export function planStageChoices(plan: Pick<Plan, 'groups'>): PlanStageChoice[] {
+  return plan.groups
+    .filter((g) => !g.parentId)
+    .flatMap((root) => [
+      { id: root.id, label: groupTitle(root), sub: false },
+      ...plan.groups.filter((g) => g.parentId === root.id).map((sub) => ({ id: sub.id, label: groupTitle(sub), sub: true })),
     ])
-  })
+}
+
+/**
+ * Onde a tarefa ligada está na Gestão: a etapa do elemento ("1.0 Base de clientes") e o caminho até a
+ * linha ("1.0 Base de clientes › Unir a base", com o elemento pai no meio quando é subelemento).
+ * Elemento fora do quadro carregado (ex.: quadro truncado) = null.
+ */
+export function planItemStage(plan: Pick<Plan, 'groups' | 'items'>, itemId: string): { stage: string; path: string } | null {
+  const item = plan.items.find((i) => i.id === itemId)
+  const group = item ? plan.groups.find((g) => g.id === item.groupId) : undefined
+  if (!item || !group) return null
+  const parent = item.parentId ? plan.items.find((i) => i.id === item.parentId) : undefined
+  const stage = groupTitle(group)
+  return { stage, path: [stage, parent?.name, item.name].filter(Boolean).join(' › ') }
 }
 
 /** Resultados da busca para vincular ao elemento: as que já estão nele saem da lista. */

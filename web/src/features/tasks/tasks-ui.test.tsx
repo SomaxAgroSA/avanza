@@ -499,15 +499,34 @@ describe('TasksTable: área responsável', () => {
     expect(await screen.findByText('Marketing')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Mudar área/ })).not.toBeInTheDocument()
   })
+})
 
-  it('filtro de área à vista na barra: escolher a área (ou "Sem área") pede area_id à API', async () => {
+describe('TasksTable: barra de filtros (ajuste 18/11)', () => {
+  it('só Status, Prioridade, Urgência e Responsável; sem Área, Projeto, Situação nem "Mais filtros" (as colunas continuam)', async () => {
+    window.localStorage.removeItem('kamban.table.bar-filters')
     const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
-    renderRoutes([{ path: '/', element: <TasksTable tableId="area-filter" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    renderRoutes([{ path: '/', element: <TasksTable tableId="bar-filters" /> }], { repositories: repositories({ list }), initialPath: '/' })
     await screen.findByText(detail.title)
-    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Sem área' }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ area: 'none' }) }), { mineFirst: true }))
-    expect(screen.getByRole('combobox', { name: 'Área' })).toHaveTextContent('Área: Sem área')
+    // (o último seletor da tela é o "Por página" da paginação)
+    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Prioridade', 'Urgência', 'Responsável', 'Por página'])
+    expect(screen.queryByRole('button', { name: /Mais filtros/ })).not.toBeInTheDocument()
+    // sem filtro escondido: nem a antiga "Situação: Abertas" vai para a API
+    list.mock.calls.forEach(([query]) => expect(query.filters).toEqual({}))
+    expect(screen.getByRole('columnheader', { name: /Área/ })).toBeInTheDocument()
+  })
+
+  it('um filtro guardado no navegador que saiu da barra (Área, Situação, Tipo, Projeto…) não filtra escondido e é apagado', async () => {
+    window.localStorage.setItem(
+      'kamban.table.project-tasks-old',
+      JSON.stringify({ filters: { area: 'a1', category: 'backlog,todo,in_progress', type: 't1', project: 'p9', tags: 'g1', in_report: 'true', it_visible: 'false', urgency: 'high' } }),
+    )
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    renderRoutes([{ path: '/', element: <TasksTable tableId="project-tasks-old" projectId="p1" /> }], { repositories: repositories({ list }), initialPath: '/' })
+    await screen.findByText(detail.title)
+    expect(list).toHaveBeenCalled()
+    list.mock.calls.forEach(([query]) => expect(query.filters).toEqual({ urgency: 'high' }))
+    await waitFor(() => expect(JSON.parse(window.localStorage.getItem('kamban.table.project-tasks-old') ?? '{}').filters).toEqual({ urgency: 'high' }))
+    expect(screen.getByRole('combobox', { name: 'Urgência' })).toHaveTextContent('Urgência: Alta')
   })
 })
 

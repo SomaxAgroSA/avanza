@@ -253,7 +253,7 @@ describe('KanbanPage', () => {
     expect(screen.queryByText('Nova tela de login')).not.toBeInTheDocument()
   })
 
-  it('área: selo com o nome no cartão e filtro na barra (área ou "Sem área")', async () => {
+  it('área: selo com o nome no cartão, sem filtro de área na barra (ajuste 18/11)', async () => {
     const withAreas: Board = {
       ...board,
       columns: [
@@ -265,17 +265,8 @@ describe('KanbanPage', () => {
     const first = await screen.findByRole('button', { name: /CRM-1 · Erro ao salvar pedido/ })
     expect(within(first).getByText('Dpto. TI')).toBeInTheDocument()
     expect(within(screen.getByRole('button', { name: /CRM-3 · Nova tela de login/ })).queryByText('Sem área')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Comex' }))
-    expect(screen.getByRole('combobox', { name: 'Área' })).toHaveTextContent('Área: Comex')
-    expect(screen.getByText('Ajustar relatório de vendas')).toBeInTheDocument()
-    expect(screen.queryByText('Erro ao salvar pedido')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('combobox', { name: 'Área' }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Sem área' }))
-    expect(screen.getByText('Nova tela de login')).toBeInTheDocument()
-    expect(screen.queryByText('Ajustar relatório de vendas')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Área' })).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Urgência' })).toBeInTheDocument()
   })
 
   it('filtro de etapas: só as colunas escolhidas; Limpar filtros traz todas de volta', async () => {

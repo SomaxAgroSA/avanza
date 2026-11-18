@@ -190,3 +190,26 @@ describe('domain/plan — posição entre irmãos', () => {
     assert.equal(plan.placeAmong([{ id: 'a', position: 1 }, { id: 'b', position: 1 + 1e-7 }], { prevId: 'a' }), null)
   })
 })
+
+describe('domain/plan — linha da etapa a partir da tarefa (§28)', () => {
+  const today = '2026-01-10'
+
+  it('copia título, início e prazo; o responsável da tarefa vira o da linha', () => {
+    assert.deepEqual(plan.itemFromTask({ title: 'Unir a base', startDate: day('2026-01-05'), dueDate: day('2026-01-20'), assigneeId: 'u1' }, today), {
+      name: 'Unir a base',
+      startDate: '2026-01-05',
+      endDate: '2026-01-20',
+      ownerId: 'u1',
+    })
+  })
+
+  it('sem início: começa hoje; sem prazo: termina no mesmo dia', () => {
+    assert.deepEqual(plan.itemFromTask({ title: 'A', startDate: null, dueDate: null, assigneeId: null }, today), { name: 'A', startDate: today, endDate: today, ownerId: null })
+    assert.deepEqual(plan.itemFromTask({ title: 'B', startDate: '2026-02-01', dueDate: null }, today), { name: 'B', startDate: '2026-02-01', endDate: '2026-02-01', ownerId: null })
+    assert.deepEqual(plan.itemFromTask({ title: 'C', startDate: null, dueDate: '2026-03-01' }, today), { name: 'C', startDate: today, endDate: '2026-03-01', ownerId: null })
+  })
+
+  it('prazo já vencido sem início: a linha começa no prazo (o fim nunca fica antes do início)', () => {
+    assert.deepEqual(plan.itemFromTask({ title: 'D', startDate: null, dueDate: '2025-12-20' }, today), { name: 'D', startDate: '2025-12-20', endDate: '2025-12-20', ownerId: null })
+  })
+})

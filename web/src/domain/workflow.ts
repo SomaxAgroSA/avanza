@@ -44,16 +44,6 @@ export type Area = LookupItem
 /** Área resumida que vem na tarefa e no projeto. */
 export type AreaRef = Pick<LookupItem, 'id' | 'key' | 'name' | 'color'>
 
-/** Valor do filtro para "sem área" (nas listagens, no Kanban e na API: `area_id=none`). */
-export const NO_AREA = 'none'
-
-/** A área passa no filtro? ('' = qualquer; 'none' = só sem área.) */
-export function matchesArea(area: AreaRef | null | undefined, filter: string): boolean {
-  if (!filter) return true
-  if (filter === NO_AREA) return !area
-  return area?.id === filter
-}
-
 /** Tarefas em status destas categorias são consideradas encerradas. */
 export function isClosedCategory(category: StatusCategory): boolean {
   return category === 'done' || category === 'cancelled'

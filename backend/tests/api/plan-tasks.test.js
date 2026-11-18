@@ -78,4 +78,78 @@ describe('API tarefas ligadas aos elementos da Gestão', { timeout: 180000 }, ()
     const after = (await admin.get(`/tasks/${task.id}`)).body.data
     assert.equal(after.plan_item, null)
   })
+
+  it('etapa da Gestão (plan_group_id): criar a tarefa cria a linha na etapa, na mesma transação, já ligada', async () => {
+    const stage = (await admin.post(`/projects/${project.id}/groups`, { name: 'Base de clientes' })).body.data
+    const sub = (await admin.post(`/projects/${project.id}/groups`, { name: 'Critérios', parent_id: stage.id })).body.data
+    const me = (await admin.get('/auth/me')).body.data.user
+    const res = await admin.post('/tasks', {
+      project_id: project.id,
+      task_type_id: type.id,
+      title: 'Unir a base de clientes',
+      plan_group_id: sub.id,
+      start_date: '2026-11-20',
+      due_date: '2026-11-27',
+      assignee_id: me.id,
+    })
+    assert.equal(res.status, 201, JSON.stringify(res.body))
+    const task = res.body.data
+    assert.equal(task.plan_item.name, 'Unir a base de clientes')
+    const board = (await admin.get(`/projects/${project.id}/plan`)).body.data
+    const row = board.items.find((i) => i.id === task.plan_item.id)
+    assert.equal(row.group_id, sub.id)
+    assert.equal(row.name, 'Unir a base de clientes')
+    assert.equal(row.start_date.slice(0, 10), '2026-11-20')
+    assert.equal(row.end_date.slice(0, 10), '2026-11-27')
+    assert.deepEqual(row.tasks, { total: 1, done: 0 })
+    assert.equal(row.owner.id, me.id)
+    const history = (await admin.get(`/plan/items/${row.id}/history`)).body.data
+    assert.ok(history.some((h) => h.action === 'plan_item.created'), JSON.stringify(history))
+
+    // etapa e elemento juntos, ou etapa de outro projeto: nada é criado
+    const before = board.items.length
+    const both = await admin.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'X', plan_group_id: stage.id, plan_item_id: item.id })
+    assert.equal(both.status, 400)
+    assert.equal(both.body.error.details.fields.plan_group_id, 'exclusive')
+    const foreign = await admin.post('/tasks', { project_id: other.id, task_type_id: type.id, title: 'Y', plan_group_id: stage.id })
+    assert.equal(foreign.status, 400)
+    assert.equal(foreign.body.error.details.fields.plan_group_id, 'invalid_option')
+    assert.equal((await admin.get(`/projects/${project.id}/plan`)).body.data.items.length, before)
+  })
+
+  it('PATCH com plan_group_id: só para a tarefa sem elemento; depois recusa', async () => {
+    const stage = (await admin.post(`/projects/${project.id}/groups`, { name: 'Fase 3' })).body.data
+    const loose = (await admin.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'Sem etapa' })).body.data
+    const placed = await admin.patch(`/tasks/${loose.id}`, { plan_group_id: stage.id })
+    assert.equal(placed.status, 200, JSON.stringify(placed.body))
+    assert.equal(placed.body.data.plan_item.name, 'Sem etapa')
+    const again = await admin.patch(`/tasks/${loose.id}`, { plan_group_id: stage.id })
+    assert.equal(again.status, 400)
+    assert.equal(again.body.error.details.fields.plan_group_id, 'already_linked')
+    const history = (await admin.get(`/tasks/${loose.id}/history`)).body.data
+    assert.ok(history.some((h) => h.new_value && h.new_value.plan_item === 'Sem etapa'), JSON.stringify(history))
+  })
+
+  it('sem plan.view a etapa é recusada (FORBIDDEN); com plan.view, sem plan.edit, a linha é criada', async () => {
+    const { DEFAULT_ROLE_PERMISSIONS } = require('../../src/domain/permissions')
+    const base = DEFAULT_ROLE_PERMISSIONS.MEMBER.filter((p) => p !== 'plan.view' && p !== 'plan.edit' && p !== 'plan.manage')
+    await admin.post('/roles', { code: 'SEM_GESTAO', name: 'Sem Gestão', permissions: base })
+    await admin.post('/roles', { code: 'SO_VE_GESTAO', name: 'Só vê a Gestão', permissions: base.concat('plan.view') })
+    const roles = (await admin.get('/roles')).body.data
+    const person = async (code, email) => {
+      const user = (await admin.post('/users', { name: code, email, password: 'SenhaTeste123', role_id: roles.find((r) => r.code === code).id })).body.data
+      await admin.post(`/projects/${project.id}/members`, { user_id: user.id, role: 'member' })
+      const client = createClient(pb.api)
+      await client.login(email, 'SenhaTeste123')
+      return client
+    }
+    const blind = await person('SEM_GESTAO', 'sem.gestao@example.com')
+    const viewer = await person('SO_VE_GESTAO', 've.gestao@example.com')
+    const stage = (await admin.post(`/projects/${project.id}/groups`, { name: 'Fase 4' })).body.data
+    const refused = await blind.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'Não pode', plan_group_id: stage.id })
+    assert.equal(refused.status, 403, JSON.stringify(refused.body))
+    const ok = await viewer.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'Pode', plan_group_id: stage.id })
+    assert.equal(ok.status, 201, JSON.stringify(ok.body))
+    assert.equal(ok.body.data.plan_item.name, 'Pode')
+  })
 })

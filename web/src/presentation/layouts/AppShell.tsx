@@ -23,7 +23,7 @@ import { Sidebar } from '@/presentation/navigation/Sidebar'
 import { CommandPalette } from '@/presentation/navigation/CommandPalette'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useLiveNotifications, useRealtimeResync, useRealtimeStatus } from '@/presentation/common/use-live'
-import { findNavTrail, visibleNavItems } from '@/presentation/navigation/nav-items'
+import { findNavTrail, showsBreadcrumb, visibleNavItems } from '@/presentation/navigation/nav-items'
 import { rememberNavChild } from '@/presentation/navigation/nav-memory'
 
 /** Layout autenticado: sidebar, topbar, conteúdo e command palette. */
@@ -91,8 +91,9 @@ function Topbar() {
   return (
     <header data-print="hide" className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6">
       <AppIconButton className="md:hidden" label={t('nav.openMenu')} icon={<Menu />} onClick={() => setMobileNavOpen(true)} showTooltip={false} />
+      {/* nas listas de projetos a trilha repetiria o título da página: o espaço fica, vazio */}
       <div className="min-w-0 flex-1">
-        <AppBreadcrumb items={trail.map((item, i) => ({ label: t(item.labelKey), to: i < trail.length - 1 ? item.to : undefined }))} />
+        {showsBreadcrumb(location.pathname) && <AppBreadcrumb items={trail.map((item, i) => ({ label: t(item.labelKey), to: i < trail.length - 1 ? item.to : undefined }))} />}
       </div>
       <button
         type="button"

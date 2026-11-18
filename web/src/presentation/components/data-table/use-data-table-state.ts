@@ -33,6 +33,8 @@ export interface DataTableStateApi {
   query: ListQuery
   /** Busca preenchida ou filtros diferentes do padrão da tabela. */
   hasActiveFilters: boolean
+  /** Quantos filtros estão ativos ("Limpar (3)"): cada valor escolhido conta (os de um filtro em botões, um a um), a busca conta um. */
+  activeFilterCount: number
   setPage: (page: number) => void
   setPerPage: (perPage: number) => void
   setSort: (sort: SortState | null) => void
@@ -49,6 +51,16 @@ const storageKey = (id: string) => `kamban.table.${id}`
 function sameFilters(a: Record<string, string>, b: Record<string, string>): boolean {
   const keys = Object.keys(a)
   return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key])
+}
+
+/** Valores escolhidos que diferem do padrão da tabela; tirar um filtro padrão conta um. */
+function countActive(filters: Record<string, string>, defaults: Record<string, string>, search: string): number {
+  let count = search.trim() ? 1 : 0
+  new Set([...Object.keys(filters), ...Object.keys(defaults)]).forEach((key) => {
+    if (filters[key] === defaults[key]) return
+    count += filters[key] ? filters[key].split(',').filter(Boolean).length : 1
+  })
+  return count
 }
 
 function initialState(id: string, defaults: DataTableStateDefaults): DataTableState {
@@ -115,6 +127,7 @@ export function useDataTableState(id: string, defaults: DataTableStateDefaults =
     state,
     query,
     hasActiveFilters: state.search.trim() !== '' || !sameFilters(state.filters, defaultFilters),
+    activeFilterCount: countActive(state.filters, defaultFilters, state.search),
     setPage: useCallback((page) => update({ page }), [update]),
     setPerPage: useCallback((perPage) => update({ perPage, page: 1 }), [update]),
     setSort: useCallback((sort) => update({ sort, page: 1 }), [update]),

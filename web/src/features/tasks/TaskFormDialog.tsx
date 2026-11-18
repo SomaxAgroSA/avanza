@@ -5,7 +5,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
 import { isRequiredIn, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
 import { customValueIssues, datesIssue, parseHours, type TaskDetail, type TaskInput } from '@/domain/tasks'
-import { planItemChoices } from '@/domain/plan-tasks'
+import { planItemStage, planStageChoices } from '@/domain/plan-tasks'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
 import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppSkeleton, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
@@ -68,8 +68,10 @@ interface Draft {
   sprintId: string
   /** Subtarefa: pai (só na criação; na edição o vínculo muda pela aba Relações). */
   parentTaskId: string
-  /** Elemento da Gestão de projetos que a tarefa executa ('' = nenhum). */
+  /** Elemento da Gestão já ligado (criação a partir do painel do elemento; '' = nenhum). */
   planItemId: string
+  /** Etapa da Gestão em que a tarefa entra como linha nova ('' = sem etapa). */
+  planGroupId: string
 }
 
 function draftFrom(task: TaskDetail | null | undefined, projectId: string | undefined, initial?: TaskFormInitial): Draft {
@@ -92,6 +94,7 @@ function draftFrom(task: TaskDetail | null | undefined, projectId: string | unde
     sprintId: task?.sprint?.id ?? '',
     parentTaskId: task?.parentTaskId ?? '',
     planItemId: task?.planItem?.id ?? '',
+    planGroupId: '',
     ...(task ? {} : initial),
   }
 }
@@ -133,11 +136,14 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const createOption = useFieldOptionCreator()
   const tags = useTags(open)
   const sprints = useSprints(open ? draft.projectId || undefined : undefined)
-  // Elemento da Gestão: só para quem vê a Gestão e quando o quadro do projeto tem elementos
+  // Etapa da gestão: só para quem vê a Gestão e quando o quadro do projeto tem etapas. Tarefa já ligada
+  // a um elemento (na edição, ou criada pelo painel do elemento) mostra a etapa dele só para leitura.
   const canViewPlan = useCan('plan.view')
   const plan = usePlan(draft.projectId, open && canViewPlan)
-  const planChoices = useMemo(() => (plan.data ? planItemChoices(plan.data) : []), [plan.data])
-  const showPlanItem = canViewPlan && (planChoices.length > 0 || !!task?.planItem)
+  const stages = useMemo(() => (plan.data ? planStageChoices(plan.data) : []), [plan.data])
+  const linkedItem = isEdit ? (task?.planItem ?? null) : draft.planItemId ? { id: draft.planItemId, name: '' } : null
+  const linkedStage = linkedItem && plan.data ? planItemStage(plan.data, linkedItem.id) : null
+  const showStage = canViewPlan && (linkedItem ? !!(linkedStage || linkedItem.name) : stages.length > 0)
 
   // Padrões de status/prioridade na criação (ajuste durante a renderização).
   if (!isEdit && !draft.statusId && statuses.data) {
@@ -270,8 +276,8 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       customValues,
       tagIds: draft.tagIds,
       sprintId: draft.sprintId || null,
-      // só quando mudou: quem não vê o campo (sem plan.view) nunca desvincula sem querer
-      planItemId: draft.planItemId !== (task?.planItem?.id ?? '') ? draft.planItemId || null : undefined,
+      // etapa escolhida (só para a tarefa ainda fora da Gestão): o servidor cria a linha e liga
+      planGroupId: !linkedItem && draft.planGroupId ? draft.planGroupId : undefined,
     }
     const onError = (error: unknown) => {
       if (isAppError(error) && error.code === 'VALIDATION_ERROR') {
@@ -315,6 +321,8 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
           assigneeId: draft.assigneeId || undefined,
           sprintId: draft.sprintId || undefined,
           parentTaskId: draft.parentTaskId || undefined,
+          // criada pelo painel do elemento: já nasce ligada a ele
+          planItemId: draft.planItemId || undefined,
         },
         { onSuccess: (saved) => void onCreated(saved), onError },
       )
@@ -361,7 +369,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                 value={draft.projectId || undefined}
                 placeholder={t('fields.selectPlaceholder')}
                 error={errors.project_id}
-                onValueChange={(value) => setDraft((d) => ({ ...d, projectId: value, assigneeId: '', sprintId: '', planItemId: '' }))}
+                onValueChange={(value) => setDraft((d) => ({ ...d, projectId: value, assigneeId: '', sprintId: '', planItemId: '', planGroupId: '' }))}
                 options={(projects.data?.items ?? [])
                   .filter((p) => p.myRole !== 'viewer' && !p.archivedAt)
                   .map((p) => ({ value: p.id, label: `${p.key} · ${p.name}` }))}
@@ -405,6 +413,33 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             placeholder={t('tasks.tagsPlaceholder')}
             options={(tags.data ?? []).map((tag) => ({ value: tag.id, label: tag.name, prefix: <ColorDot color={tag.color} /> }))}
           />
+          {showStage &&
+            (linkedItem ? (
+              <AppSelect
+                disabled
+                label={t('tasks.stage.label')}
+                value={linkedItem.id}
+                hint={t('tasks.stage.linkedHint', { path: linkedStage?.path ?? linkedItem.name })}
+                onValueChange={() => {}}
+                options={[{ value: linkedItem.id, label: linkedStage?.stage ?? linkedItem.name }]}
+              />
+            ) : (
+              <AppSelect
+                label={t('tasks.stage.label')}
+                value={draft.planGroupId || NONE}
+                error={errors.plan_group_id}
+                hint={t('tasks.stage.hint')}
+                onValueChange={(value) => set('planGroupId', value === NONE ? '' : value)}
+                options={[
+                  { value: NONE, label: t('tasks.stage.none') },
+                  ...stages.map((stage) => ({
+                    value: stage.id,
+                    label: stage.label,
+                    prefix: stage.sub ? <CornerDownRight className="size-3.5 shrink-0 text-subtle" aria-hidden /> : undefined,
+                  })),
+                ]}
+              />
+            ))}
           {draft.typeId && (
             <section aria-labelledby="task-fields-title" className="flex flex-col gap-4 rounded-xl border border-border p-4">
               <h3 id="task-fields-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
@@ -523,27 +558,6 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                 : []),
             ]}
           />
-          {showPlanItem && (
-            <AppSelect
-              searchable
-              label={t('tasks.planLink.label')}
-              value={draft.planItemId || NONE}
-              error={errors.plan_item_id}
-              hint={t('tasks.planLink.hint')}
-              onValueChange={(value) => set('planItemId', value === NONE ? '' : value)}
-              options={[
-                { value: NONE, label: t('tasks.planLink.none') },
-                ...planChoices.map((choice) => ({
-                  value: choice.id,
-                  label: choice.name,
-                  group: choice.group,
-                  prefix: choice.parentId ? <CornerDownRight className="size-3.5 shrink-0 text-subtle" aria-hidden /> : undefined,
-                })),
-                // vínculo atual fora da lista (quadro ainda carregando)
-                ...(task?.planItem && !planChoices.some((c) => c.id === task.planItem?.id) ? [{ value: task.planItem.id, label: task.planItem.name }] : []),
-              ]}
-            />
-          )}
         </aside>
       </form>
     </AppDialog>
