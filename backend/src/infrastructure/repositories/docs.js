@@ -3,7 +3,8 @@
  * Árvore, busca e recentes leem só as colunas necessárias (o conteúdo JSON não é carregado).
  * Arquivos ficam no Storage ("doc_files/<id>/<nome guardado>"); ao apagar o registro (inclusive em
  * cascata), um gatilho manda a chave para a lixeira do Storage. Vínculos página ↔ tarefa em
- * "doc_page_tasks" (saem junto com a página ou a tarefa).
+ * "doc_page_tasks" (saem junto com a página ou a tarefa). Módulos ("doc_modules", §42) organizam os
+ * espaços; excluir um módulo deixa os espaços dele sem módulo.
  */
 
 const { appError } = require('../../core/errors')
@@ -49,6 +50,7 @@ function createDocSpaceRepository(db) {
     icon: ['icon', 'text'],
     color: ['color', 'text'],
     projectId: ['project_id', 'relation'],
+    moduleId: ['module_id', 'relation'],
     visibility: ['visibility', 'text'],
     // texto (não é chave estrangeira): a página inicial é criada depois do espaço
     homePageId: ['home_page_id', 'text'],
@@ -64,6 +66,7 @@ function createDocSpaceRepository(db) {
       icon: row.icon,
       color: row.color,
       projectId: row.project_id || null,
+      moduleId: row.module_id || null,
       visibility: row.visibility,
       homePageId: row.home_page_id || null,
       createdBy: row.created_by || null,
@@ -94,7 +97,66 @@ function createDocSpaceRepository(db) {
       const row = await uniqueAs('idx_doc_spaces_key', 'DOC_SPACE_KEY_IN_USE', () => updateRow(db, TABLE, id, columns(FIELDS, patch)))
       return row ? toEntity(row) : null
     },
+    /** Tira os espaços do módulo (ficam "Sem módulo"); devolve quantos. */
+    async clearModule(moduleId) {
+      return db.exec('UPDATE doc_spaces SET module_id = NULL WHERE module_id = $1', [moduleId])
+    },
     /** Páginas, versões e arquivos saem junto (relações em cascata). */
+    async delete(id) {
+      await deleteRow(db, TABLE, id)
+    },
+  }
+}
+
+function createDocModuleRepository(db) {
+  const TABLE = 'doc_modules'
+  const FIELDS = {
+    name: ['name', 'text'],
+    nameKey: ['name_key', 'text'],
+    color: ['color', 'text'],
+    position: ['position', 'number'],
+    createdBy: ['created_by', 'relation'],
+  }
+  // nome único (idx_doc_modules_name): a gravação concorrente perde como se tivesse conferido antes
+  const unique = (fn) => uniqueAs('idx_doc_modules_name', 'DOC_MODULE_NAME_IN_USE', fn)
+
+  function toEntity(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      nameKey: row.name_key,
+      color: row.color,
+      position: row.position,
+      createdBy: row.created_by || null,
+      createdAt: row.created,
+      updatedAt: row.updated,
+    }
+  }
+
+  return {
+    async findById(id) {
+      const row = await findRow(db, TABLE, id)
+      return row ? toEntity(row) : null
+    },
+    async list() {
+      return (await db.query('SELECT * FROM doc_modules ORDER BY position ASC, name ASC, id ASC')).map(toEntity)
+    },
+    async create(data) {
+      return toEntity(await unique(() => insertRow(db, TABLE, columns(FIELDS, data))))
+    },
+    async update(id, patch) {
+      const row = await unique(() => updateRow(db, TABLE, id, columns(FIELDS, patch)))
+      return row ? toEntity(row) : null
+    },
+    /** Posições 0, 1, 2… na ordem dos ids (um comando só). */
+    async setPositions(ids) {
+      if (ids.length === 0) return
+      await db.exec(
+        'UPDATE doc_modules m SET position = o.ord - 1 FROM unnest($1::text[]) WITH ORDINALITY AS o(id, ord) WHERE m.id = o.id AND m.position <> o.ord - 1',
+        [ids],
+      )
+    },
+    /** Os espaços do módulo ficam sem módulo (chave estrangeira ON DELETE SET NULL). */
     async delete(id) {
       await deleteRow(db, TABLE, id)
     },
@@ -367,4 +429,4 @@ function createDocPageTaskRepository(db) {
   }
 }
 
-module.exports = { createDocSpaceRepository, createDocPageRepository, createDocPageVersionRepository, createDocFileRepository, createDocPageTaskRepository }
+module.exports = { createDocSpaceRepository, createDocModuleRepository, createDocPageRepository, createDocPageVersionRepository, createDocFileRepository, createDocPageTaskRepository }

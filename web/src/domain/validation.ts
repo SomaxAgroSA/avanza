@@ -147,6 +147,8 @@ export const docSpaceSchema = z
     color: z.union([z.enum(OPTION_COLORS), z.custom<HexColor>(isHexColor)]),
     visibility: z.enum(SPACE_VISIBILITIES),
     projectId: z.string(),
+    /** '' = Sem módulo. */
+    moduleId: z.string().optional(),
   })
   .refine((v) => v.visibility !== 'project' || !!v.projectId, { path: ['projectId'], message: 'project_required' })
 export type DocSpaceFormInput = z.input<typeof docSpaceSchema>

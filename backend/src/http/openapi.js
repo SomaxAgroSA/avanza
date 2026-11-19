@@ -969,13 +969,21 @@ function build() {
           },
         ),
       },
+      '/docs/modules': {
+        get: op('Módulos da documentação (§42), na ordem da lista, com quantos espaços a pessoa vê em cada um (docs.view)', ['docs'], { 200: ok('Módulos', { type: 'array', items: ref('DocModule') }) }),
+        post: op('Cria módulo no fim da lista (docs.manage) — { name*, color }', ['docs'], { 201: ok('Módulo', ref('DocModule')), 409: errorResponse('DOC_MODULE_NAME_IN_USE') }, { parameters: [csrfHeader], requestBody: jsonBody(ref('DocModuleInput')) }),
+      },
+      '/docs/modules/{id}': {
+        patch: op('Renomeia, troca a cor ou reordena (position = novo índice) o módulo (docs.manage)', ['docs'], { 200: ok('Módulo', ref('DocModule')), 404: errorResponse('DOC_MODULE_NOT_FOUND'), 409: errorResponse('DOC_MODULE_NAME_IN_USE') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocModuleInput')) }),
+        delete: op('Exclui o módulo (docs.manage); os espaços dele ficam sem módulo', ['docs'], { 200: ok('Excluído', { type: 'object', properties: { deleted: { type: 'boolean' }, spaces: { type: 'integer', description: 'espaços que ficaram sem módulo' } } }), 404: errorResponse('DOC_MODULE_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
+      },
       '/docs/spaces': {
         get: op('Espaços de documentação que a pessoa lê (docs.view + visibilidade)', ['docs'], { 200: ok('Espaços', { type: 'array', items: ref('DocSpace') }) }),
         post: op('Cria espaço (docs.manage; espaço de projeto exige ser gestor). Nasce com a página inicial publicada', ['docs'], { 201: ok('Espaço', ref('DocSpace')), 409: errorResponse('DOC_SPACE_KEY_IN_USE') }, { parameters: [csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
       },
       '/docs/spaces/{id}': {
         get: op('Espaço pela CHAVE (ex.: MANUAL), com a árvore de páginas visíveis (rascunhos só para quem edita)', ['docs'], { 200: ok('Espaço e páginas', { type: 'object' }), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam] }),
-        patch: op('Configura o espaço (quem gerencia): name, description, icon, color, visibility e project_id (outro projeto que a pessoa gerencia, ou "" / null para tirar — aí visibility precisa ser company)', ['docs'], { 200: ok('Espaço', ref('DocSpace')), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
+        patch: op('Configura o espaço (quem gerencia): name, description, icon, color, visibility, module_id ("" / null = Sem módulo) e project_id (outro projeto que a pessoa gerencia, ou "" / null para tirar — aí visibility precisa ser company)', ['docs'], { 200: ok('Espaço', ref('DocSpace')), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
         delete: op('Exclui o espaço com páginas, versões e arquivos (quem gerencia)', ['docs'], { 200: ok('Excluído', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
       '/docs/spaces/{id}/pages': {
@@ -1834,6 +1842,7 @@ function build() {
             color: { type: 'string' },
             visibility: { type: 'string', enum: ['company', 'project'] },
             project: { type: ['object', 'null'] },
+            module: { type: ['object', 'null'], description: 'módulo da tela inicial (§42): { id, name, color }; null = Sem módulo' },
             home_page_id: { type: 'string' },
             page_count: { type: 'integer' },
             capabilities: { type: 'object', properties: { edit: { type: 'boolean' }, manage: { type: 'boolean' } } },
@@ -1848,7 +1857,28 @@ function build() {
             icon: { type: 'string' },
             color: { type: 'string' },
             project_id: { type: 'string', description: 'só na criação' },
+            module_id: { type: ['string', 'null'], description: 'módulo da documentação; "" ou null = Sem módulo' },
             visibility: { type: 'string', enum: ['company', 'project'] },
+          },
+        },
+        DocModule: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            color: { type: 'string' },
+            position: { type: 'integer' },
+            space_count: { type: 'integer', description: 'espaços que a pessoa vê no módulo' },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        DocModuleInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', maxLength: 60 },
+            color: { type: 'string', enum: ['gray', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'violet', 'pink'] },
+            position: { type: 'integer', minimum: 0, description: 'só na edição: novo índice na lista' },
           },
         },
         DocPage: {

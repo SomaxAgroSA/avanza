@@ -184,4 +184,37 @@ describe('repositórios da documentação', () => {
       assert.deepEqual(await versions.listByPage(page.id), [])
     })
   })
+
+  describe('módulos', () => {
+    it('nome único pela chave, ordem por posição, espaço no módulo e exclusão sem apagar espaço', async () => {
+      const modules = docs.createDocModuleRepository(t.db)
+      const mkt = await modules.create({ name: 'Marketing', nameKey: 'marketing', color: 'pink', position: 0, createdBy: author.id })
+      const fin = await modules.create({ name: 'Finanças', nameKey: 'financas', color: 'green', position: 1, createdBy: null })
+      assert.deepEqual([mkt.name, mkt.color, mkt.position, mkt.createdBy], ['Marketing', 'pink', 0, author.id])
+      assert.equal(fin.createdBy, null)
+      await assert.rejects(modules.create({ name: 'MARKETING', nameKey: 'marketing', color: 'blue', position: 2 }), { code: 'DOC_MODULE_NAME_IN_USE' })
+      await assert.rejects(modules.update(fin.id, { name: 'marketing', nameKey: 'marketing' }), { code: 'DOC_MODULE_NAME_IN_USE' })
+      assert.equal((await modules.update(fin.id, { name: 'Financeiro', nameKey: 'financeiro' })).name, 'Financeiro')
+
+      await modules.setPositions([fin.id, mkt.id])
+      await modules.setPositions([])
+      assert.deepEqual((await modules.list()).map((m) => [m.name, m.position]), [['Financeiro', 0], ['Marketing', 1]])
+
+      const space = await spaces.create({ key: 'mkt', name: 'Campanhas', visibility: 'company', moduleId: mkt.id, createdBy: author.id })
+      assert.equal(space.moduleId, mkt.id)
+      const other = await spaces.create({ key: 'mkt2', name: 'Eventos', visibility: 'company', moduleId: mkt.id, createdBy: author.id })
+      assert.equal((await spaces.update(other.id, { moduleId: fin.id })).moduleId, fin.id)
+      assert.equal((await spaces.update(other.id, { moduleId: null })).moduleId, null)
+      assert.equal(await spaces.clearModule(mkt.id), 1)
+      assert.equal((await spaces.findById(space.id)).moduleId, null)
+
+      // a chave estrangeira também solta os espaços se o módulo sair
+      await spaces.update(space.id, { moduleId: fin.id })
+      await modules.delete(fin.id)
+      assert.equal(await modules.findById(fin.id), null)
+      assert.equal((await spaces.findById(space.id)).moduleId, null)
+      await spaces.delete(space.id)
+      await spaces.delete(other.id)
+    })
+  })
 })

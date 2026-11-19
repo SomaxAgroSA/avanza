@@ -349,6 +349,10 @@ export function fakeRepositories(overrides: {
       linkTasks: notImplemented,
       unlinkTask: notImplemented,
       listTaskDocs: () => Promise.resolve([]),
+      listModules: () => Promise.resolve([]),
+      createModule: notImplemented,
+      updateModule: notImplemented,
+      deleteModule: notImplemented,
       ...overrides.docs,
     },
     reports: {

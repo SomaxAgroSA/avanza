@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { BookX, ListTree, PanelLeftClose, PanelLeftOpen, Plus, Settings, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookX, ListTree, PanelLeftClose, PanelLeftOpen, Plus, Settings, Trash2 } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { isAppError } from '@/core/errors/app-error'
 import { safeStorage } from '@/core/storage/safe-storage'
@@ -12,7 +12,7 @@ import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { DocPageView } from './DocPageView'
 import { editPath, pagePath, spacePath } from './docs-paths'
-import { SpaceAvatar, SpaceVisibilityBadge } from './docs-visuals'
+import { ModuleSwatch, SpaceAvatar, SpaceVisibilityBadge } from './docs-visuals'
 import { MovePageDialog } from './MovePageDialog'
 import { PageTree } from './PageTree'
 import { useDocSpace, usePageMutations, useSpaceMutations } from './queries'
@@ -155,6 +155,7 @@ function SpaceLayout({ detail, currentId }: { detail: DocSpaceDetail; currentId:
       onRequestMove={fromDrawer(setMoving)}
       onRequestDelete={fromDrawer(setDeleting)}
       extra={desktop ? null : settings}
+      header={desktop ? null : <BackToDocs />}
     />
   )
   // no celular não há coluna: o painel abre por este botão no topo da página
@@ -175,20 +176,28 @@ function SpaceLayout({ detail, currentId }: { detail: DocSpaceDetail; currentId:
         >
           {docked ? (
             <>
-              <div className="flex items-start gap-2.5 border-b border-border px-4 py-3.5">
-                <SpaceAvatar icon={space.icon} color={space.color} size="sm" className="mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <Link to={spacePath(space.key)} className="block truncate text-sm font-semibold text-fg hover:text-primary-text">
-                    {space.name}
-                  </Link>
-                  <p className="font-mono text-xs text-subtle">{space.key}</p>
+              <div className="border-b border-border px-4 py-3.5">
+                <BackToDocs />
+                <div className="flex items-start gap-2.5">
+                  <SpaceAvatar icon={space.icon} color={space.color} size="sm" className="mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <Link to={spacePath(space.key)} className="block truncate text-sm font-semibold text-fg hover:text-primary-text">
+                      {space.name}
+                    </Link>
+                    <SpaceModule space={space} />
+                  </div>
+                  {settings}
                 </div>
-                {settings}
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">{body}</div>
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center gap-1.5 border-b border-transparent py-3.5">
+              <AppTooltip content={t('docs.modules.backToAll')} side="right">
+                <Link to="/docs" aria-label={t('docs.modules.backToAll')} className="mb-2 flex size-9 items-center justify-center rounded-md border border-border-strong bg-surface-2 text-fg transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary-text [&_svg]:size-4">
+                  <ArrowLeft aria-hidden />
+                </Link>
+              </AppTooltip>
               <AppTooltip content={t('docs.tree.expandPanel')} side="right">
                 <button type="button" onClick={() => setPanel(true)} aria-label={`${t('docs.tree.expandPanel')}: ${space.name}`} className="rounded-md">
                   <SpaceAvatar icon={space.icon} color={space.color} size="sm" />
@@ -266,6 +275,39 @@ function SpaceLayout({ detail, currentId }: { detail: DocSpaceDetail; currentId:
   )
 }
 
+/** "← Todas as documentações": volta para a tela inicial da Documentação (topo da coluna do espaço). */
+function BackToDocs() {
+  const { t } = useTranslation()
+  return (
+    <Link
+      to="/docs"
+      className="mb-3 flex w-full items-center gap-2 whitespace-nowrap rounded-lg border border-border-strong bg-surface-2 px-3 py-2 text-sm font-semibold text-fg transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary-text [&_svg]:size-4"
+    >
+      <ArrowLeft aria-hidden />
+      {t('docs.modules.backToAll')}
+    </Link>
+  )
+}
+
+/** Módulo do espaço (§42) abaixo do nome; leva à tela inicial filtrada por ele. */
+function SpaceModule({ space }: { space: DocSpace }) {
+  const { t } = useTranslation()
+  if (!space.module) {
+    return (
+      <p className="mt-0.5 flex items-center gap-1.5 text-xs text-subtle">
+        <ModuleSwatch color={null} />
+        {t('docs.modules.none')}
+      </p>
+    )
+  }
+  return (
+    <Link to={`/docs?module=${encodeURIComponent(space.module.id)}`} className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted hover:text-fg">
+      <ModuleSwatch color={space.module.color} />
+      <span className="truncate">{space.module.name}</span>
+    </Link>
+  )
+}
+
 interface PanelBodyProps {
   space: DocSpace
   pages: DocTreePage[]
@@ -280,13 +322,16 @@ interface PanelBodyProps {
   onRequestDelete: (page: DocTreePage) => void
   /** Ações extras ao lado de "Nova página" (no celular, as configurações do espaço). */
   extra?: ReactNode
+  /** Topo do painel (no celular, o "Todas as documentações"). */
+  header?: ReactNode
 }
 
 /** Conteúdo da coluna/painel: quem lê, "Nova página" e a árvore. */
-function PanelBody({ space, pages, currentId, canEdit, creating, onCreate, onNavigate, onAddChild, onMove, onRequestMove, onRequestDelete, extra }: PanelBodyProps) {
+function PanelBody({ space, pages, currentId, canEdit, creating, onCreate, onNavigate, onAddChild, onMove, onRequestMove, onRequestDelete, extra, header }: PanelBodyProps) {
   const { t } = useTranslation()
   return (
     <>
+      {header}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
         <SpaceVisibilityBadge space={space} />
         <span className="flex items-center gap-1">

@@ -55,3 +55,14 @@ export function Highlighted({ text, query }: { text: string; query: string }) {
   if (last < chars.length) parts.push(chars.slice(last).join(''))
   return <>{parts}</>
 }
+
+/** Quadradinho da cor do módulo (§42); sem cor = "Sem módulo" (cinza neutro do tema). */
+export function ModuleSwatch({ color, className }: { color: OptionColor | null; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn('size-2.5 shrink-0 rounded-[3px]', !color && 'bg-border-strong', className)}
+      style={color ? { backgroundColor: optionColor(color) } : undefined}
+    />
+  )
+}

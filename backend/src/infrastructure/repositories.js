@@ -74,6 +74,7 @@ function createRepositories(db, ctx) {
     planColumnRepository: plan.createPlanColumnRepository(db, ctx),
 
     docSpaceRepository: docs.createDocSpaceRepository(db, ctx),
+    docModuleRepository: docs.createDocModuleRepository(db),
     docPageRepository: docs.createDocPageRepository(db, ctx),
     docPageVersionRepository: docs.createDocPageVersionRepository(db, ctx),
     docFileRepository: docs.createDocFileRepository(db, ctx),

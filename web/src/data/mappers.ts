@@ -20,9 +20,9 @@ import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
 import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
-import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
+import type { BacklogDto, BoardDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
-import { SPACE_ICONS, SPACE_VISIBILITIES, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
+import { SPACE_ICONS, SPACE_VISIBILITIES, type DocModule, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
@@ -425,11 +425,22 @@ export function toDocSpace(dto: DocSpaceDto): DocSpace {
     color: toColor(OPTION_COLORS, dto.color, 'blue'),
     visibility: oneOf(SPACE_VISIBILITIES, dto.visibility, 'company'),
     project: dto.project,
+    module: dto.module ? { id: dto.module.id, name: dto.module.name, color: toColor(OPTION_COLORS, dto.module.color, 'blue') } : null,
     homePageId: dto.home_page_id,
     pageCount: dto.page_count ?? null,
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
     capabilities: { edit: !!dto.capabilities?.edit, manage: !!dto.capabilities?.manage },
+  }
+}
+
+export function toDocModule(dto: DocModuleDto): DocModule {
+  return {
+    id: dto.id,
+    name: dto.name,
+    color: toColor(OPTION_COLORS, dto.color, 'blue'),
+    position: dto.position ?? 0,
+    spaceCount: dto.space_count ?? 0,
   }
 }
 

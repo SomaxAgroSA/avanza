@@ -73,7 +73,7 @@ describe('mcp/catalog/docs', () => {
     })
     assert.deepEqual(names.sort(), [
       'create_doc_page', 'create_doc_space', 'delete_doc_page', 'delete_doc_space', 'discard_doc_draft', 'get_doc_draft', 'get_doc_page', 'get_doc_space',
-      'get_doc_version', 'list_doc_spaces', 'list_doc_versions', 'list_recent_doc_pages', 'move_doc_page', 'publish_doc_page', 'restore_doc_version',
+      'get_doc_version', 'list_doc_modules', 'list_doc_spaces', 'list_doc_versions', 'list_recent_doc_pages', 'move_doc_page', 'publish_doc_page', 'restore_doc_version',
       'save_doc_draft', 'search_docs', 'update_doc_space',
     ])
   })
@@ -96,6 +96,9 @@ describe('mcp/catalog/docs', () => {
     await byName('create_doc_space').run({ key: 'ENG', name: 'Engenharia', visibility: 'project', project_id: 'p1' }, { services, ctx })
     await byName('update_doc_space').run({ space_id: 'sp1', name: 'Eng', color: 'blue' }, { services, ctx })
     await byName('delete_doc_space').run({ space_id: 'sp1' }, { services, ctx })
+    await byName('list_doc_modules').run({}, { services, ctx })
+    await byName('create_doc_space').run({ key: 'MKT', name: 'Campanhas', visibility: 'company', module_id: 'm1' }, { services, ctx })
+    await byName('update_doc_space').run({ space_id: 'sp1', module_id: null }, { services, ctx })
     assert.deepEqual(
       calls.map((c) => [c.service, c.method, c.args]),
       [
@@ -106,6 +109,9 @@ describe('mcp/catalog/docs', () => {
         ['docSpaces', 'createSpace', [{ key: 'ENG', name: 'Engenharia', visibility: 'project', project_id: 'p1' }]],
         ['docSpaces', 'updateSpace', ['sp1', { name: 'Eng', color: 'blue' }]],
         ['docSpaces', 'deleteSpace', ['sp1']],
+        ['docModules', 'listModules', []],
+        ['docSpaces', 'createSpace', [{ key: 'MKT', name: 'Campanhas', visibility: 'company', module_id: 'm1' }]],
+        ['docSpaces', 'updateSpace', ['sp1', { module_id: null }]],
       ],
     )
   })
