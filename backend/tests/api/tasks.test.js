@@ -291,7 +291,9 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal(me.permissions.includes('tasks.view'), true)
     const seen = await nina.get(`/tasks?project_id=${project.id}`)
     assert.equal(seen.status, 200, JSON.stringify(seen.body))
-    assert.ok(seen.body.meta.total >= 2)
+    // o projeto ficou com uma tarefa (a outra foi excluída no teste de acesso): a mesma que o administrador vê
+    assert.ok(seen.body.meta.total >= 1)
+    assert.equal(seen.body.meta.total, (await admin.get(`/tasks?project_id=${project.id}`)).body.meta.total)
     assert.equal((await nina.get('/tasks')).body.meta.total, seen.body.meta.total)
     // o catálogo traz o módulo próprio
     const catalog = (await admin.get('/permissions')).body.data
