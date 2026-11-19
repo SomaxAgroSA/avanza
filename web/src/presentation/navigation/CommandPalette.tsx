@@ -52,7 +52,9 @@ export function CommandPalette() {
   const groups = useMemo<CommandGroup[]>(() => {
     const nav = flatten(visibleNavItems(permissions ?? [], NAV_ITEMS))
     const canViewUsers = permissions?.includes('users.view')
-    const canCreateTasks = permissions?.includes('tasks.create')
+    // criar e buscar abrem a Lista de tarefas (/tasks): só com o módulo (§42); as tarefas encontradas abrem direto
+    const canListTasks = canViewTasks && !!permissions?.includes('tasks.list')
+    const canCreateTasks = canListTasks && permissions?.includes('tasks.create')
     const canCreateProjects = permissions?.includes('projects.create')
     const query = search.trim()
 
@@ -66,7 +68,7 @@ export function CommandPalette() {
           ...(canCreateTasks
             ? [{ id: 'create-task', label: t('commandPalette.createTask'), icon: <Plus />, keywords: ['tarefa', 'task', 'nova'], onSelect: () => navigate('/tasks?new=1') }]
             : []),
-          ...(canViewTasks
+          ...(canListTasks
             ? [
                 {
                   id: 'search-task',

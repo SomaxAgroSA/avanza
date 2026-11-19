@@ -797,7 +797,7 @@ Na aba Tarefas → Lista do projeto, o botão **Visível para TI** (ícone de no
 ## 38. Página inicial por pessoa
 
 - Em Configurações → Controle de acesso → Por pessoa, ao lado do Perfil, **Página inicial** define a tela que a pessoa abre ao entrar no Avanza (e em "Voltar ao início"); depois ela navega livremente.
-- Opções: **Automática** (como antes: Panorama para quem tem `executive.view`; senão, Todos os meus projetos), Panorama, Todos os meus projetos, Em andamento, Concluídos, Arquivados, Kanban e Documentação — só as que o perfil da pessoa abre.
+- Opções: **Automática** (como antes: Panorama para quem tem `executive.view`; senão, Todos os meus projetos), Panorama, Todos os meus projetos, Em andamento, Concluídos, Arquivados, Tarefas (§42), Kanban e Documentação — só as que o perfil da pessoa abre.
 - Se a pessoa perde o acesso à tela escolhida, entra na automática. Links de e-mail, avisos e o `?next=` do login continuam abrindo direto onde apontam.
 - Gravada em `users.home_page` (migration 0027; `''` = automática; lista fechada em `domain/user.js#HOME_PAGES`); muda por `PATCH /users/{id}` com `users.edit` (também para a própria) e fica no histórico (`user.updated`).
 
@@ -810,6 +810,7 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
 - **Departamento/Área** saiu também do **Kanban** e do **Planejamento** (Backlog). A coluna e o selo da área continuam; só o **Panorama** filtra por área.
 - **Filtro guardado de antes:** as listas de tarefas guardam os filtros no navegador (`kamban.table.tasks`, `kamban.table.project-tasks`). Um filtro que saiu da barra (Área, Situação, Tipo, Projeto, Etiquetas, Visível para TI, No informe) é descartado ao abrir a lista e apagado do navegador: nada filtra escondido.
 - A API não mudou: `GET /tasks` continua aceitando `area_id`, `category`, `task_type_id`, `project_id`, `tag_id`, `in_report` e `it_visible` (o Claude/MCP e outras telas usam).
+- **A página Tarefas do menu** mudou em 19/11/2026 (escopo Minhas/Todas, só as abertas, Prioridade e Urgência em botões, sem Responsável nem "Minhas tarefas primeiro"): ver §42. A aba Tarefas → Lista do projeto continua como descrito aqui.
 
 ## 40. Visão geral do projeto
 
@@ -831,3 +832,21 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
   7. **Tabela** igual à de hoje (mesmas colunas e barra: busca, Estado, Prioridade, Urgência, Colunas), filtrada pelo painel (a interseção vai ao servidor). Ações da linha: só **Ver**.
 - **Só consulta:** nessa vista somem criar, editar, arquivar, excluir e duplicar (o olho "Ver" fica; a urgência e o departamento da tabela não se trocam com um clique). **As permissões reais continuam as do perfil**: para impedir a edição em todo o Avanza (Kanban, tarefas, projeto), desligue as permissões de edição do **mesmo perfil** em Controle de acesso → Perfis → Editar permissões. Nada em RBAC mudou.
 
+
+## 42. Lista de tarefas (menu Tarefas)
+
+Pedido da coordenação, aprovado em demonstração (19/11/2026): a lista de todas as tarefas volta ao menu, com o que é de cada pessoa à frente.
+
+- **Módulo próprio no Controle de acesso:** **Lista de tarefas** (`tasks.list`, módulo `task_list`), com interruptor por perfil em **Por pessoa** (logo abaixo de Tarefas, com a explicação do que faz) e na matriz **Permissões por perfil**. É só de tela: decide se o item **Tarefas** aparece no menu e se a página `/tasks` abre. **Não muda o que a pessoa vê**: as tarefas dentro de cada projeto, a tarefa aberta por link (`/tasks/{id}`), notificações, Kanban, relatórios, MCP e a API (`GET /tasks`) continuam com `tasks.view` e o acesso ao projeto, como sempre.
+- **Depende de "ver tarefas":** sem `tasks.view` a lista não serve. Na tela, ligar Lista de tarefas liga também Tarefas; desligar Tarefas desliga a Lista. O menu exige as duas.
+- **Na migração** (`0029_task_list_permission.sql`), todo perfil que já tinha `tasks.view` recebeu `tasks.list`: o menu aparece para todos até o administrador desligar no perfil. Os perfis padrão Gestor, Membro e Leitor vêm com ela; o SUPER_ADMIN tem tudo.
+- **Menu:** **Tarefas** logo depois de Projetos. Na paleta de comandos (Ctrl+K), "Tarefas", "Criar tarefa" e "Buscar tarefas…" seguem a mesma regra (abrem `/tasks`); as tarefas encontradas pela busca da paleta continuam abrindo direto, com `tasks.view`. **Tarefas** também pode ser a página inicial da pessoa (§38).
+- **Página** (`/tasks`): título "Tarefas", "As tarefas dos projetos a que você tem acesso." e **+ Nova tarefa** (com `tasks.create`). Acima da barra, **Minhas tarefas (n) | Ver todas (n)**:
+  - **Minhas tarefas** (padrão a **cada entrada**, não fica guardado): as atribuídas a quem olha (`assignee_id=me`). **Ver todas:** as dos projetos que a pessoa vê (o recorte de sempre, inclusive o do Responsável TI, §36).
+  - **(n)** = quantas tarefas **abertas** há em cada escopo, sem os filtros da barra.
+  - **Só as abertas** (backlog, a fazer, em andamento), como diz a linha ao lado. Escolher um **Status** mostra esse status, aberto ou encerrado. A coordenação decidiu não trazer de volta o filtro Situação (§39).
+  - **Ordem inicial:** Minhas pelo **prazo** (mais próximo primeiro; sem prazo no fim); Todas pelas **movidas mais recentes**. Trocar de escopo volta à ordem dele; dentro do escopo, as colunas ordenáveis continuam.
+- **Barra** igual à das listas de projetos (§37): busca · **Status** (seletor) · **Prioridade** e **Urgência** em botões que ligam e desligam (vários ao mesmo tempo: "ou" dentro do grupo, "e" entre grupos) · Limpar (n) · Colunas. **Sem Responsável** (o escopo decide) e **sem "Minhas tarefas primeiro"** (substituído pelo escopo nesta página; continua na aba do projeto e no Kanban).
+- **Colunas:** **Tarefa** (título e, embaixo, o código), **Projeto**, **Status**, **Responsável** (foto e nome, ou "Sem responsável"), **Prioridade**, **Urgência**, **Prazo** (vencido em vermelho com "· vencida") e as ações (ver, editar, abrir, excluir). Área, Tipo, Etiquetas, Etapa da gestão, Situação e Atualizada ficam ocultas por padrão em Colunas.
+- **Nada filtra escondido:** a página guarda os filtros no navegador com uma chave nova (`kamban.table.task-list`; a antiga `kamban.table.tasks` deixa de ser usada); um Responsável, Área ou qualquer filtro fora da barra guardado ali é descartado ao abrir.
+- **API:** `GET /tasks` passou a aceitar **vários valores separados por vírgula** em `priority_id` e `urgency` (aditivo; um valor continua valendo).

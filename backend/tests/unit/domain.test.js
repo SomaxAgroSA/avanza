@@ -26,10 +26,19 @@ describe('domain/permissions', () => {
 
   it('VIEWER não pode editar nada', () => {
     const viewer = DEFAULT_ROLE_PERMISSIONS[ROLE_CODES.VIEWER]
-    // seções do projeto (§35) também são só de leitura
+    // seções do projeto (§35) e a Lista de tarefas (§42) também são só de leitura
     const sections = ['projects.charter', 'projects.history', 'projects.members', 'projects.report']
-    assert.ok(viewer.every((code) => code.endsWith('.view') || sections.includes(code)))
+    assert.ok(viewer.every((code) => code.endsWith('.view') || sections.includes(code) || code === 'tasks.list'))
     assert.deepEqual(sections.filter((code) => !viewer.includes(code)), [])
+  })
+
+  it('Lista de tarefas (§42): módulo próprio, e todo perfil padrão que vê tarefas tem o menu', () => {
+    const entry = PERMISSIONS.find((p) => p.code === 'tasks.list')
+    assert.deepEqual(entry, { code: 'tasks.list', module: 'task_list' })
+    for (const role of Object.keys(DEFAULT_ROLE_PERMISSIONS)) {
+      const codes = DEFAULT_ROLE_PERMISSIONS[role]
+      assert.equal(codes.includes('tasks.list'), codes.includes('tasks.view'), role)
+    }
   })
 })
 

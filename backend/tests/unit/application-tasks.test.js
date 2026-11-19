@@ -324,6 +324,32 @@ describe('application/tasks — listagem', () => {
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { category: 'backlog,todo,in_progress' })).items.map((t) => t.code), ['CRM-2'])
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { category: 'done' })).items.map((t) => t.code), ['CRM-1'])
   })
+
+  it('Prioridade e Urgência aceitam vários valores separados por vírgula (botões da Lista de tarefas, §42)', async () => {
+    const s = await setup()
+    const a = await s.tasks.createTask(s.ctx.mario, newBug(s, { priority_id: s.priorities.high.id, urgency: 'high' }))
+    const b = await s.tasks.createTask(s.ctx.mario, newBug(s, { priority_id: s.priorities.medium.id, urgency: 'low' }))
+    const c = await s.tasks.createTask(s.ctx.mario, newBug(s, { priority_id: s.priorities.medium.id }))
+    const codes = async (query) => (await s.tasks.listTasks(s.ctx.mario, Object.assign({ sort: 'code' }, query))).items.map((t) => t.code)
+    assert.deepEqual(await codes({ priority_id: `${s.priorities.high.id},${s.priorities.medium.id}` }), [a.code, b.code, c.code])
+    assert.deepEqual(await codes({ priority_id: s.priorities.medium.id }), [b.code, c.code])
+    assert.deepEqual(await codes({ urgency: 'high,none' }), [a.code, c.code])
+    assert.deepEqual(await codes({ urgency: 'low', priority_id: `${s.priorities.high.id},${s.priorities.medium.id}` }), [b.code])
+    assert.equal(await codeOf(() => codes({ urgency: 'high,roja' })), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+    assert.equal(await codeOf(() => codes({ priority_id: 'ok,não é id' })), 'VALIDATION_ERROR:{"priority_id":"invalid_type"}')
+  })
+
+  it('a Lista de tarefas do menu (tasks.list) não muda o que a pessoa vê: a API segue só tasks.view (§42)', async () => {
+    const s = await setup()
+    await s.tasks.createTask(s.ctx.mario, newBug(s, { assignee_id: s.users.mario.id }))
+    const role = await s.deps.roleRepository.findById(s.users.mario.roleId)
+    const perms = await s.deps.roleRepository.getPermissionCodes(role.id)
+    assert.ok(perms.includes('tasks.list'))
+    await s.deps.roleRepository.setPermissionCodes(role.id, perms.filter((code) => code !== 'tasks.list'))
+    const withoutMenu = await ctxOf(s.deps, s.users.mario)
+    assert.equal((await s.tasks.listTasks(withoutMenu, {})).meta.total, 1)
+    assert.equal((await s.tasks.listTasks(withoutMenu, { project_id: s.project.id, assignee_id: 'me' })).meta.total, 1)
+  })
 })
 
 describe('application/tasks — informe do projeto', () => {

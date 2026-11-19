@@ -14,6 +14,12 @@ describe('página inicial (§38)', () => {
     expect(homePageOptions([])).toEqual([])
   })
 
+  it('Tarefas (§42) entra nas opções para quem tem a Lista de tarefas, depois das listas de projetos', () => {
+    expect(homePageOptions([...director, 'tasks.list']).map((o) => o.path)).toEqual(['/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/tasks', '/kanban', '/docs'])
+    expect(homePageOptions([...director, 'tasks.list']).find((o) => o.path === '/tasks')?.labelKeys).toEqual(['nav.tasks'])
+    expect(resolveHomePath('/tasks', director)).toBe('/projects')
+  })
+
   it('automática: Panorama para quem vê o painel executivo; senão, a lista de projetos', () => {
     expect(automaticHomePath(manager)).toBe('/tracking')
     expect(automaticHomePath(director)).toBe('/projects')

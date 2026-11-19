@@ -82,11 +82,15 @@ const SORTABLE = {
   status: 'status',
 }
 
+/** "a,b,a" → ['a', 'b']; vazio → undefined (sem filtro). */
+const toList = (value) => (value ? Array.from(new Set(value.split(','))) : undefined)
+
 const LIST_SCHEMA = {
   project_id: [idRule],
   task_type_id: [idRule],
   status_id: [idRule],
-  priority_id: [idRule],
+  // vários separados por vírgula (botões da Lista de tarefas, §42)
+  priority_id: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type'))],
   assignee_id: [rules.custom((value) => (value === 'me' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   search: [rules.maxLength(100)],
   tag_id: [idRule],
@@ -96,8 +100,12 @@ const LIST_SCHEMA = {
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   mine_first: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   it_visible: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
-  // `none` = sem urgência
-  urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS.concat(['none']))],
+  // `none` = sem urgência; vários separados por vírgula (§42)
+  urgency: [
+    rules.custom((value) =>
+      typeof value === 'string' && value.split(',').every((v) => taskDomain.URGENCY_LEVELS.concat(['none']).indexOf(v) >= 0) ? null : 'invalid_option',
+    ),
+  ],
   // `none` = sem área
   area_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   category: [
@@ -632,14 +640,14 @@ function createTaskService(deps) {
       projectId: filters.project_id,
       typeId: filters.task_type_id,
       statusIds,
-      priorityId: filters.priority_id,
+      priorityId: toList(filters.priority_id),
       assigneeId: filters.assignee_id === 'me' ? ctx.principal.userId : filters.assignee_id,
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
       planItemId: filters.plan_item_id,
       inReport: filters.in_report === undefined ? undefined : filters.in_report === 'true',
       itVisible: filters.it_visible === undefined ? undefined : filters.it_visible === 'true',
-      urgency: filters.urgency,
+      urgency: toList(filters.urgency),
       areaId: filters.area_id,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),

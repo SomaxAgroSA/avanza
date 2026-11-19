@@ -219,6 +219,8 @@ describe('application/users', () => {
     assert.equal(saved.home_page, '/projects/ongoing')
     const entry = deps.store.audit.at(-1)
     assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['user.updated', { home_page: '' }, { home_page: '/projects/ongoing' }])
+    // Tarefas (§42) também pode ser a página inicial
+    assert.equal((await users.updateUser(admin, target.id, { home_page: '/tasks' })).home_page, '/tasks')
     assert.equal((await users.updateUser(admin, target.id, { home_page: '' })).home_page, '')
     await assert.rejects(() => users.updateUser(admin, target.id, { home_page: '/settings/access' }), { code: 'VALIDATION_ERROR' })
     await assert.rejects(() => users.updateUser(admin, target.id, { home_page: 'https://exemplo.com' }), { code: 'VALIDATION_ERROR' })

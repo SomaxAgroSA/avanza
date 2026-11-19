@@ -39,6 +39,23 @@ describe('migrations', () => {
     })
   })
 
+  it('Lista de tarefas (§42): todo perfil que via tarefas recebeu tasks.list; os padrões batem com o catálogo', async () => {
+    const { DEFAULT_ROLE_PERMISSIONS } = require('../../src/domain/permissions')
+    const catalog = await t.db.one("SELECT code, module FROM permissions WHERE code = 'tasks.list'")
+    assert.deepEqual(catalog, { code: 'tasks.list', module: 'task_list' })
+    const rows = await t.db.query(
+      `SELECT r.code, array_agg(p.code ORDER BY p.code) AS codes FROM roles r
+       JOIN role_permissions rp ON rp.role_id = r.id JOIN permissions p ON p.id = rp.permission_id
+       GROUP BY r.code`,
+    )
+    rows.forEach((row) => {
+      assert.equal(row.codes.includes('tasks.list'), row.codes.includes('tasks.view'), row.code)
+      if (DEFAULT_ROLE_PERMISSIONS[row.code] && row.code !== 'SUPER_ADMIN') {
+        assert.equal(DEFAULT_ROLE_PERMISSIONS[row.code].includes('tasks.list'), row.codes.includes('tasks.view'), `padrão ${row.code}`)
+      }
+    })
+  })
+
   it('não reaplicam o que já rodou', async () => {
     assert.deepEqual(await migrate(t.db), [])
   })
