@@ -185,7 +185,7 @@ function RoleDetailsDrawer({ role, onOpenChange }: { role: Role | null; onOpenCh
             <AppBadge tone="primary">{t('roles.userCount', { count: role.userCount })}</AppBadge>
           </div>
           <p className="text-sm text-muted">
-            {t('roles.ongoingView.label')}: <span className="font-medium text-fg">{t(role.ongoingView === 'executive' ? 'roles.ongoingView.executive' : 'roles.ongoingView.management')}</span>
+            {t('roles.ongoingView.label')}: <span className="font-medium text-fg">{t(`roles.ongoingView.${role.ongoingView === 'executive' ? 'executive' : role.ongoingView === 'both' ? 'both' : 'management'}`)}</span>
           </p>
           {role.code === 'SUPER_ADMIN' ? (
             <p className="text-sm text-muted">{t('roles.superAdminNote')}</p>
@@ -277,11 +277,12 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
         <AppSelect
           label={t('roles.ongoingView.label')}
           hint={t('roles.ongoingView.hint')}
-          value={ongoingView === 'executive' ? 'executive' : 'management'}
-          onValueChange={(value) => setValue('ongoingView', value === 'executive' ? 'executive' : '', { shouldDirty: true })}
+          value={ongoingView === 'executive' || ongoingView === 'both' ? ongoingView : 'management'}
+          onValueChange={(value) => setValue('ongoingView', value === 'executive' || value === 'both' ? value : '', { shouldDirty: true })}
           options={[
             { value: 'management', label: t('roles.ongoingView.management') },
             { value: 'executive', label: t('roles.ongoingView.executive') },
+            { value: 'both', label: t('roles.ongoingView.both') },
           ]}
         />
       </form>

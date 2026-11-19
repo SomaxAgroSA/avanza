@@ -550,7 +550,8 @@
       "management": "Management",
       "executive": "Direction and management",
       "hint": "Management: the usual list. Direction and management: a view-only dashboard (indicators, timeline, team and table) without edit actions. To block editing everywhere in Avanza, turn off this profile's edit permissions.",
-      "inherited": "Ongoing view: {{view}} (change it in the profile)"
+      "inherited": "Ongoing view: {{view}} (change it in the profile)",
+      "both": "Both (choose on the page)"
     }
   },
   "permissions": {
@@ -4524,7 +4525,9 @@
       "late": "Overdue",
       "tip": "{{name}} · {{status}} · due {{date}}",
       "tipLate": "{{name}} · {{status}} · due {{date}} (overdue)",
-      "empty": "No project in the filter has start and due dates."
+      "empty": "No project in the filter has start and due dates.",
+      "noDue": "No due date · {{count}}",
+      "noDueTag": "no due date"
     },
     "departments": {
       "title": "Projects by department",
@@ -4566,6 +4569,11 @@
       "who": "Who is working on it",
       "nobody": "Nobody moved tasks of this project in the last 7 days.",
       "openProject": "Open the project"
+    },
+    "viewSwitch": {
+      "label": "Ongoing view",
+      "management": "Management",
+      "executive": "Direction & management"
     }
   },
   "tiDependencies": {
@@ -4611,8 +4619,6 @@
     "confirm": "Confirm blocking",
     "confirmed": "{{code}} now depends on {{target}}",
     "seeAll": "See all projects",
-    "how": "How it is calculated",
-    "howText": "Each task counts in its own project. IT delivery: an open task assigned to someone in IT people (Settings) or to the project IT owner. Blocked: an open task that “depends on” (or is “blocked by”) an open IT delivery — the same “blocked” rule used across Avanza — even if the delivery belongs to another project. Tasks that are only “related” stay to validate and are not counted. Without due date: IT delivery with no date. After the project end: IT due date later than the project delivery.",
     "due": {
       "none": "No due date",
       "afterClose": "{{date}} · after the project end",

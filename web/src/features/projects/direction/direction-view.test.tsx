@@ -137,6 +137,27 @@ const kpi = (name: RegExp) => screen.getByRole('button', { name })
 const lastTableFilters = (list: ReturnType<typeof setup>['list']) => list.mock.calls.filter(([q]) => q.perPage !== 100).at(-1)?.[0]
 
 describe('En marcha: vista de Dirección y gerencia (§41)', () => {
+  it('perfil con «Ambas»: selector Gestión | Dirección y gerencia arriba; abre en Dirección y recuerda la elección', async () => {
+    window.localStorage.clear()
+    const { unmount } = setup({ view: 'both' })
+    const sw = await screen.findByRole('group', { name: 'Vista de En marcha' })
+    expect(within(sw).getByRole('button', { name: 'Dirección y gerencia' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByTestId('direction-panel')).toBeInTheDocument()
+    await userEvent.click(within(sw).getByRole('button', { name: 'Gestión' }))
+    await waitFor(() => expect(screen.queryByTestId('direction-panel')).toBeNull())
+    expect(screen.getByRole('button', { name: /Nuevo proyecto/ })).toBeInTheDocument()
+    unmount()
+    setup({ view: 'both' })
+    const again = await screen.findByRole('group', { name: 'Vista de En marcha' })
+    expect(within(again).getByRole('button', { name: 'Gestión' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('sin «Ambas» no hay selector', async () => {
+    setup({ view: 'executive' })
+    await screen.findByTestId('direction-panel')
+    expect(screen.queryByRole('group', { name: 'Vista de En marcha' })).toBeNull()
+  })
+
   it('el perfil en Gestión sigue con la lista de siempre: sin indicadores, con Nuevo proyecto y Equipo ahora', async () => {
     setup({ view: '' })
     expect(await screen.findByRole('button', { name: 'Nuevo proyecto' })).toBeInTheDocument()
@@ -253,7 +274,10 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(bars.map((e) => e.getAttribute('aria-label')?.split(' · ')[0])).toEqual(['Delta', 'Beta', 'Alfa'])
     expect(bars[0]!.getAttribute('aria-label')).toContain('(vencida)')
     expect(bars[1]!.getAttribute('aria-label')).not.toContain('(vencida)')
-    expect(within(timeline).queryByText('Gama')).toBeNull()
+    // los que no tienen fechas aparecen al final, marcados (sin barra), para que el número coincida
+    expect(within(timeline).getByText(/Sin fecha de entrega · 1/)).toBeInTheDocument()
+    expect(within(timeline).getByText('Gama')).toBeInTheDocument()
+    expect(within(timeline).getAllByText('sin fecha de entrega')).toHaveLength(1)
     expect(within(timeline).getByText('Hoy')).toBeInTheDocument()
     ;['Planificación', 'En curso', 'Pausado', 'Entrega vencida'].forEach((label) => expect(within(timeline).getByText(label)).toBeInTheDocument())
   })
@@ -382,7 +406,7 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(alfa).toHaveTextContent('Sin plazo')
     expect(alfa).toHaveTextContent('Esperando hace 2 días · bloquea 1 tarea (de Beta)')
     expect(within(alfa).getByRole('button', { name: 'Confirmar bloqueo' })).toBeInTheDocument()
-    expect(within(drawer).getByText('Cómo se calcula')).toBeInTheDocument()
+    expect(within(drawer).queryByText('Cómo se calcula')).toBeNull()
     expect(within(drawer).queryByRole('button', { name: /Ver todos los proyectos/ })).toBeNull()
   })
 

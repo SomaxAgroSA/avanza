@@ -152,6 +152,8 @@ function Timeline({ projects, affected, onTi }: { projects: Project[]; affected:
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const model = useMemo(() => ganttModel(projects), [projects])
+  // sem início e entrega válidos não há barra: aparecem no fim, marcados, para o número dos indicadores bater
+  const undated = useMemo(() => projects.filter((p) => !(p.startDate && p.dueDate && p.dueDate.getTime() >= p.startDate.getTime())).sort((a, b) => a.name.localeCompare(b.name)), [projects])
   const legend = (
     <ul className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-fg">
       {(['planning', 'active', 'paused'] as const).map((status) => (
@@ -220,6 +222,24 @@ function Timeline({ projects, affected, onTi }: { projects: Project[]; affected:
               })}
             </ul>
           </div>
+        </div>
+      )}
+      {undated.length > 0 && (
+        <div>
+          <p className="border-b border-border pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted">{t('direction.timeline.noDue', { count: undated.length })}</p>
+          <ul>
+            {undated.map((project) => (
+              <li key={project.id} className="grid min-h-6 items-center border-b border-border" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr` }}>
+                <span className="flex min-w-0 items-center pr-2.5">
+                  <span className="truncate text-xs text-muted" title={project.name}>
+                    {project.name}
+                  </span>
+                  {affected.has(project.id) && <TiFlag name={project.name} onOpen={() => onTi(project.id)} />}
+                </span>
+                <span className="justify-self-start rounded-md bg-warning-soft px-2 py-0.5 text-[11.5px] text-warning-soft-fg">{t('direction.timeline.noDueTag')}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

@@ -113,6 +113,6 @@ function isKnownPermission(code) {
  * (a tela de sempre); 'executive' = Direção e gerência (painel de consulta). Só muda a tela, não o que a
  * pessoa pode fazer: isso continua nas permissões do perfil.
  */
-const ONGOING_VIEWS = Object.freeze(['', 'executive'])
+const ONGOING_VIEWS = Object.freeze(['', 'executive', 'both'])
 
 module.exports = { PERMISSIONS, ONGOING_VIEWS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }

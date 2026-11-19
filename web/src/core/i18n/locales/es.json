@@ -550,7 +550,8 @@
       "management": "Gestión",
       "executive": "Dirección y gerencia",
       "hint": "Gestión: la lista de siempre. Dirección y gerencia: panel de consulta (indicadores, línea de tiempo, equipo y tabla) sin acciones de editar. Para bloquear la edición en todo Avanza, apaga los permisos de edición de este perfil.",
-      "inherited": "Vista de En marcha: {{view}} (se cambia en el perfil)"
+      "inherited": "Vista de En marcha: {{view}} (se cambia en el perfil)",
+      "both": "Ambas (se elige en la pantalla)"
     }
   },
   "permissions": {
@@ -4524,7 +4525,9 @@
       "late": "Entrega vencida",
       "tip": "{{name}} · {{status}} · entrega {{date}}",
       "tipLate": "{{name}} · {{status}} · entrega {{date}} (vencida)",
-      "empty": "Ningún proyecto del filtro tiene fechas de inicio y entrega."
+      "empty": "Ningún proyecto del filtro tiene fechas de inicio y entrega.",
+      "noDue": "Sin fecha de entrega · {{count}}",
+      "noDueTag": "sin fecha de entrega"
     },
     "departments": {
       "title": "Proyectos por departamento",
@@ -4566,6 +4569,11 @@
       "who": "Quién está trabajando",
       "nobody": "Nadie movió tareas de este proyecto en los últimos 7 días.",
       "openProject": "Abrir el proyecto"
+    },
+    "viewSwitch": {
+      "label": "Vista de En marcha",
+      "management": "Gestión",
+      "executive": "Dirección y gerencia"
     }
   },
   "tiDependencies": {
@@ -4611,8 +4619,6 @@
     "confirm": "Confirmar bloqueo",
     "confirmed": "{{code}} ahora depende de {{target}}",
     "seeAll": "Ver todos los proyectos",
-    "how": "Cómo se calcula",
-    "howText": "Cada tarea cuenta en su proyecto. Entrega de TI: tarea abierta asignada a alguien de Personas de TI (Configuración) o al Responsable TI del proyecto. Bloqueada: tarea abierta que «depende de» (o está «bloqueada por») una entrega de TI abierta —la misma regla de «bloqueada» de Avanza—, aunque esa entrega sea de otro proyecto. Las solo «relacionadas» quedan por validar y no suman. Sin plazo: entrega de TI sin fecha. Después del cierre: plazo de TI posterior a la entrega del proyecto.",
     "due": {
       "none": "Sin plazo",
       "afterClose": "{{date}} · después del cierre",

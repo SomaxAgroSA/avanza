@@ -550,7 +550,8 @@
       "management": "Gestão",
       "executive": "Direção e gerência",
       "hint": "Gestão: a lista de sempre. Direção e gerência: painel de consulta (indicadores, linha do tempo, equipe e tabela) sem ações de editar. Para bloquear a edição em todo o Avanza, desligue as permissões de edição deste perfil.",
-      "inherited": "Visão de Em andamento: {{view}} (muda no perfil)"
+      "inherited": "Visão de Em andamento: {{view}} (muda no perfil)",
+      "both": "Ambas (escolhe na tela)"
     }
   },
   "permissions": {
@@ -4524,7 +4525,9 @@
       "late": "Entrega vencida",
       "tip": "{{name}} · {{status}} · entrega {{date}}",
       "tipLate": "{{name}} · {{status}} · entrega {{date}} (vencida)",
-      "empty": "Nenhum projeto do filtro tem datas de início e entrega."
+      "empty": "Nenhum projeto do filtro tem datas de início e entrega.",
+      "noDue": "Sem data de entrega · {{count}}",
+      "noDueTag": "sem data de entrega"
     },
     "departments": {
       "title": "Projetos por departamento",
@@ -4566,6 +4569,11 @@
       "who": "Quem está trabalhando",
       "nobody": "Ninguém moveu tarefas deste projeto nos últimos 7 dias.",
       "openProject": "Abrir o projeto"
+    },
+    "viewSwitch": {
+      "label": "Visão de Em andamento",
+      "management": "Gestão",
+      "executive": "Direção e gerência"
     }
   },
   "tiDependencies": {
@@ -4611,8 +4619,6 @@
     "confirm": "Confirmar bloqueio",
     "confirmed": "{{code}} agora depende de {{target}}",
     "seeAll": "Ver todos os projetos",
-    "how": "Como é calculado",
-    "howText": "Cada tarefa conta no seu projeto. Entrega de TI: tarefa aberta atribuída a alguém de Pessoas de TI (Configurações) ou ao Responsável TI do projeto. Bloqueada: tarefa aberta que “depende de” (ou é “bloqueada por”) uma entrega de TI aberta — a mesma regra de “bloqueada” do Avanza —, mesmo que a entrega seja de outro projeto. As só “relacionadas” ficam a validar e não somam. Sem prazo: entrega de TI sem data. Depois do encerramento: prazo de TI posterior à entrega do projeto.",
     "due": {
       "none": "Sem prazo",
       "afterClose": "{{date}} · depois do encerramento",

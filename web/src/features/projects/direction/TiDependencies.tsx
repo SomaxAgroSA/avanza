@@ -143,10 +143,6 @@ export function TiDrawer({ ti, scope, only, open, onClose, onShowAll }: TiDrawer
             {t('tiDependencies.seeAll')}
           </AppButton>
         )}
-        <details className="mt-1 border-t border-border pt-3 text-[12.5px] text-muted">
-          <summary className="cursor-pointer font-bold text-fg">{t('tiDependencies.how')}</summary>
-          <p className="mt-2 leading-relaxed">{t('tiDependencies.howText')}</p>
-        </details>
       </div>
     </AppDrawer>
   )

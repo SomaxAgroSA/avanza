@@ -1348,7 +1348,7 @@ function build() {
             name: { type: 'string' },
             description: { type: 'string' },
             is_system: { type: 'boolean' },
-            ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "executive" = Direção e gerência' },
+            ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "both" = as duas, com seletor na tela; "executive" = Direção e gerência' },
             permissions: { type: 'array', items: { type: 'string' } },
             user_count: { type: 'integer' },
           },

@@ -160,7 +160,7 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     expect(select).toHaveTextContent('Gestión')
     expect(within(dialog).getByText(/panel de consulta/)).toBeInTheDocument()
     await userEvent.click(select)
-    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Gestión', 'Dirección y gerencia'])
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Gestión', 'Dirección y gerencia', 'Ambas (se elige en la pantalla)'])
     await userEvent.click(screen.getByRole('option', { name: 'Dirección y gerencia' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: 'executive' }))

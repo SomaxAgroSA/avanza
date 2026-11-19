@@ -833,6 +833,10 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
   7. **Tabela** igual à de hoje (mesmas colunas e barra: busca, Estado, Prioridade, Urgência, Colunas), filtrada pelo painel (a interseção vai ao servidor). Ações da linha: só **Ver**.
 - **Só consulta:** nessa vista somem criar, editar, arquivar, excluir e duplicar (o olho "Ver" fica; a urgência e o departamento da tabela não se trocam com um clique). **As permissões reais continuam as do perfil**: para impedir a edição em todo o Avanza (Kanban, tarefas, projeto), desligue as permissões de edição do **mesmo perfil** em Controle de acesso → Perfis → Editar permissões. Nada em RBAC mudou.
 
+- **Ambas (19/11/2026):** o perfil pode ter `ongoing_view = both`. Em Em andamento aparece no topo o seletor **Gestão | Direção e gerência**; abre em Direção e o navegador lembra a última escolha de cada pessoa. Perfil Admin (Angelica e Douglas) usa essa opção.
+- **Sem data de entrega:** a linha do tempo mostra no fim, sob "Sem data de entrega · N", os projetos do filtro sem início e entrega válidos (só o nome e a marca, sem barra), para o número dos indicadores bater com o que se vê.
+- O painel de Dependências de TI não traz mais o bloco "Como é calculado" (a regra fica no §42).
+
 ## 42. Dependências de TI (painel Direção e gerência)
 
 - **Onde:** só na vista **Direção e gerência** de Em andamento (§41), para quem tem `tasks.view`. Dados de `GET /ti-dependencies` (calculados no servidor, `domain/ti-dependencies.js`), atualizados junto com as tarefas: qualquer mudança de tarefa ou de relação no Avanza recarrega o bloco (chave sob `tasks`).

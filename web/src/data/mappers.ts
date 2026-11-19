@@ -91,7 +91,7 @@ export function toUser(dto: UserDto): User {
 }
 
 export function toRoleSummary(dto: RoleDto): RoleSummary {
-  return { id: dto.id, code: dto.code, name: dto.name, description: dto.description, isSystem: dto.is_system, ongoingView: dto.ongoing_view === 'executive' ? 'executive' : '' }
+  return { id: dto.id, code: dto.code, name: dto.name, description: dto.description, isSystem: dto.is_system, ongoingView: dto.ongoing_view === 'executive' || dto.ongoing_view === 'both' ? dto.ongoing_view : '' }
 }
 
 export function toRole(dto: RoleDto): Role {
