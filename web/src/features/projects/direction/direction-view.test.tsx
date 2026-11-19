@@ -6,6 +6,7 @@ import type { OngoingView } from '@/domain/entities'
 import { PERMISSION_CODES } from '@/domain/permissions'
 import type { Project, ProjectStatus, ProjectPriority, TeamActivity } from '@/domain/projects'
 import type { ProjectListQuery, ProjectPage } from '@/domain/repositories'
+import type { TiDependencies } from '@/domain/ti-dependencies'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ProjectsPage } from '../ProjectsPage'
 
@@ -60,7 +61,41 @@ const TEAM: TeamActivity = {
 
 const PERMS = [...PERMISSION_CODES]
 
-function setup({ view = 'executive', counts = true, perms = PERMS }: { view?: OngoingView; counts?: boolean; perms?: typeof PERMS } = {}) {
+const victor = { id: 'u9', name: 'Equipo de Informática', email: 'ti@x.com', avatarUrl: null }
+const tref = (id: string, code: string, title: string, p: Project, dueDate: string | null = null) => ({ id, code, title, project: { id: p.id, key: p.key, name: p.name }, dueDate })
+const tiCounts = (extra: Partial<TiDependencies['projects'][number]['counts']> = {}) => ({ deliveries: 0, blocked: 0, pending: 0, noneDue: 0, afterProjectDue: 0, overdue: 0, dueSoon: 0, ...extra })
+/** Alfa: 2 entregas de TI (una sin plazo, otra después del cierre) y una relacionada; Beta: una tarea bloqueada por Alfa. */
+const TI_DEPS: TiDependencies = {
+  today: '2026-11-19',
+  people: [victor],
+  projects: [
+    {
+      project: { id: 'p2', key: 'P2', name: 'Beta', dueDate: '2026-12-15' },
+      counts: tiCounts({ blocked: 1 }),
+      deliveries: [],
+      blocked: [{ ...tref('t40', 'BET-40', 'Dashboard de resultado', BETA, '2026-11-20'), waitingOn: [{ ...tref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r1' }] }],
+      pending: [],
+    },
+    {
+      project: { id: 'p1', key: 'P1', name: 'Alfa', dueDate: '2027-01-31' },
+      counts: tiCounts({ deliveries: 2, pending: 1, noneDue: 1, afterProjectDue: 1 }),
+      deliveries: [
+        { ...tref('t38', 'ALF-38', 'Tablas en SAP', ALFA, '2027-02-04'), assigneeId: 'u9', waitingDays: 2, daysLeft: 77, risk: 'after_project_due', blocks: 0, blocksProjects: [] },
+        { ...tref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), assigneeId: 'u9', waitingDays: 2, daysLeft: null, risk: 'none_due', blocks: 1, blocksProjects: [{ id: 'p2', key: 'P2', name: 'Beta' }] },
+      ],
+      blocked: [],
+      pending: [{ ...tref('t31', 'ALF-31', 'Capa de seguridad', ALFA, '2026-11-20'), relatedTo: tref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r2', canConfirm: true }],
+    },
+  ],
+}
+
+function setup({
+  view = 'executive',
+  counts = true,
+  perms = PERMS,
+  ti = { today: '2026-11-19', people: [], projects: [] },
+  relations = {},
+}: { view?: OngoingView; counts?: boolean; perms?: typeof PERMS; ti?: TiDependencies; relations?: Record<string, unknown> } = {}) {
   const list = vi.fn((query: ProjectListQuery): Promise<ProjectPage> => {
     // simula el servidor: estado, prioridad y departamento de la tabla; la lista completa del panel no filtra
     const csv = (value?: string) => (value ? value.split(',') : null)
@@ -90,7 +125,9 @@ function setup({ view = 'executive', counts = true, perms = PERMS }: { view?: On
               ]
             : [],
         ),
+      tiDependencies: () => Promise.resolve(ti),
     },
+    relations,
   })
   const utils = renderRoutes([{ path: '/projects/ongoing', element: <ProjectsPage view="ongoing" /> }, { path: '/projects/:id', element: <p>detalle</p> }], { repositories, initialPath: '/projects/ongoing' })
   return { list, ...utils }
@@ -107,7 +144,7 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(screen.queryByTestId('direction-panel')).toBeNull()
   })
 
-  it('Dirección: título y 5 indicadores con cantidad y porcentaje, sin aviso ni acciones de cabecera', async () => {
+  it('Dirección: 5 indicadores; el % es sobre los en marcha (base, sin %); Finalizados sin %; ninguno marcado al entrar', async () => {
     const { list } = setup()
     expect(await screen.findByRole('heading', { level: 1, name: 'En marcha' })).toBeInTheDocument()
     expect(screen.queryByText('Vista de consulta · sin editar, archivar ni eliminar')).not.toBeInTheDocument()
@@ -119,12 +156,17 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
       const card = within(cards).getByRole('button', { name })
       return [card.querySelector('.text-3xl')?.textContent, card.querySelector('.text-sm.font-bold')?.textContent]
     }
-    expect(numbers(/^En marcha/)).toEqual(['4', '80 %'])
-    expect(numbers(/^En planificación/)).toEqual(['1', '20 %'])
-    expect(numbers(/^En ejecución/)).toEqual(['2', '40 %'])
-    expect(numbers(/^Alta prioridad/)).toEqual(['2', '40 %'])
-    expect(numbers(/^Finalizados/)).toEqual(['1', '20 %'])
-    expect(within(cards).getByRole('button', { name: /^En marcha/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(numbers(/^En marcha/)).toEqual(['4', undefined])
+    expect(numbers(/^En planificación/)).toEqual(['1', '25 %'])
+    expect(numbers(/^En ejecución/)).toEqual(['2', '50 %'])
+    expect(numbers(/^Alta prioridad/)).toEqual(['2', '50 %'])
+    expect(numbers(/^Finalizados/)).toEqual(['1', undefined])
+    expect(within(cards).getByRole('button', { name: /^En marcha/ })).toHaveTextContent('planificación + en curso + pausados')
+    expect(within(cards).getByRole('button', { name: /^Alta prioridad/ })).toHaveTextContent('de los 4 en marcha')
+    expect(within(cards).getByRole('button', { name: /^Finalizados/ })).toHaveTextContent('concluidos · fuera del cálculo')
+    // al entrar ningún indicador está marcado (el panel muestra los en marcha) y no hay franja de filtro
+    within(cards).getAllByRole('button').forEach((card) => expect(card).toHaveAttribute('aria-pressed', 'false'))
+    expect(screen.queryByRole('status')).toBeNull()
     // sin la barra de progreso dentro de las tarjetas
     expect(within(cards).queryByRole('progressbar')).toBeNull()
     // la tabla pide todos los proyectos en marcha (vista "all" + estados)
@@ -153,7 +195,14 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
 
     await userEvent.click(within(panel).getByRole('button', { name: /^Alta prioridad/ }))
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
-    expect(within(panel).getByRole('button', { name: /^En marcha/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(panel).getByRole('button', { name: /^En marcha/ })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(panel).getByRole('button', { name: /^Alta prioridad/ })).toHaveAttribute('aria-pressed', 'false')
+    await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'planning,active,paused' }))
+    // En marcha también se puede elegir (verde + franja) y un segundo clic lo quita
+    await userEvent.click(within(panel).getByRole('button', { name: /^En marcha/ }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Filtrando todo el panel: En marcha (4 proyectos)')
+    await userEvent.click(within(panel).getByRole('button', { name: /^En marcha/ }))
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
     await userEvent.click(within(panel).getByRole('button', { name: /^Finalizados/ }))
     expect(await screen.findByRole('status')).toHaveTextContent('Filtrando todo el panel: Finalizados (1 proyecto)')
     await userEvent.click(screen.getByRole('button', { name: 'Quitar filtro' }))
@@ -292,5 +341,76 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await userEvent.click(within(screen.getByRole('group', { name: 'Prioridad' })).getByRole('button', { name: 'Baja' }))
     await userEvent.click(within(screen.getByTestId('direction-panel')).getByRole('button', { name: /^Alta prioridad/ }))
     await waitFor(() => expect(within(screen.getByRole('table')).queryByText('Delta')).toBeNull())
+  })
+
+  it('Dependencias de TI: franja entre indicadores y línea de tiempo, ⚠ junto al nombre en el Gantt y se oculta sin proyectos afectados', async () => {
+    setup({ ti: TI_DEPS })
+    const panel = await screen.findByTestId('direction-panel')
+    const strip = await within(panel).findByTestId('ti-strip')
+    expect(strip).toHaveTextContent('Dependencias de TI')
+    expect(strip).toHaveTextContent('1 bloqueada·1 sin plazo·1 después del cierre·1 por validar|2 proyectos')
+    expect(strip).toHaveTextContent('Ver impacto')
+    // orden: indicadores → franja → línea de tiempo
+    const timeline = within(panel).getByRole('region', { name: 'Línea de tiempo de los proyectos' })
+    expect(strip.compareDocumentPosition(timeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(timeline).getByRole('button', { name: 'Dependencias de TI en Alfa: ver impacto' })).toBeInTheDocument()
+    expect(within(timeline).getByRole('button', { name: 'Dependencias de TI en Beta: ver impacto' })).toBeInTheDocument()
+    expect(within(timeline).queryByRole('button', { name: /Dependencias de TI en Delta/ })).toBeNull()
+    // En ejecución: solo Beta afectado
+    await userEvent.click(within(panel).getByRole('button', { name: /^En ejecución/ }))
+    await waitFor(() => expect(within(panel).getByTestId('ti-strip')).toHaveTextContent('1 bloqueada·0 sin plazo|1 proyecto'))
+    // Finalizados: ningún proyecto afectado → la franja no aparece
+    await userEvent.click(within(panel).getByRole('button', { name: /^Finalizados/ }))
+    await waitFor(() => expect(within(panel).queryByTestId('ti-strip')).toBeNull())
+  })
+
+  it('Ver impacto abre el panel con un bloque por proyecto: Bloqueado por TI, Por validar y Entregas pendientes (columna Plazo)', async () => {
+    setup({ ti: TI_DEPS })
+    await userEvent.click(await screen.findByTestId('ti-strip'))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias de TI' })
+    expect(drawer).toHaveTextContent('Proyectos en marcha')
+    expect(drawer).toHaveTextContent('Entregas a cargo de Equipo de Informática, separadas por proyecto')
+    const blocks = within(drawer).getAllByRole('region')
+    expect(blocks.map((b) => b.getAttribute('aria-label'))).toEqual(['Beta', 'Alfa'])
+    const [beta, alfa] = blocks as [HTMLElement, HTMLElement]
+    expect(beta).toHaveTextContent('Bloqueado por TI')
+    expect(beta).toHaveTextContent('BET-40Dashboard de resultado')
+    expect(beta).toHaveTextContent('Espera a ALF-39de Alfa · Definir la autenticación (SSO)')
+    expect(beta).toHaveTextContent('20/11 · mañana')
+    // Alfa: secciones en orden y la columna de plazo con etiquetas cortas
+    const titles = within(alfa).getAllByRole('heading', { level: 4 }).map((h) => h.textContent)
+    expect(titles).toEqual(['Por validarrelacionadas: no cuentan como bloqueo', 'Entregas pendientes de TI2'])
+    expect(alfa).toHaveTextContent('Relacionada con ALF-39 · Definir la autenticación (SSO)')
+    expect(alfa).toHaveTextContent('04/02/27 · después del cierre')
+    expect(alfa).toHaveTextContent('Sin plazo')
+    expect(alfa).toHaveTextContent('Esperando hace 2 días · bloquea 1 tarea (de Beta)')
+    expect(within(alfa).getByRole('button', { name: 'Confirmar bloqueo' })).toBeInTheDocument()
+    expect(within(drawer).getByText('Cómo se calcula')).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: /Ver todos los proyectos/ })).toBeNull()
+  })
+
+  it('el ⚠ abre solo ese proyecto con "Ver todos los proyectos"; "Confirmar bloqueo" crea "depende de" y quita la relacionada', async () => {
+    const create = vi.fn(() => Promise.resolve({}))
+    const remove = vi.fn(() => Promise.resolve())
+    setup({ ti: TI_DEPS, relations: { create, remove } })
+    const timeline = await screen.findByRole('region', { name: 'Línea de tiempo de los proyectos' })
+    await userEvent.click(await within(timeline).findByRole('button', { name: 'Dependencias de TI en Alfa: ver impacto' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias de TI' })
+    expect(within(drawer).getAllByRole('region').map((b) => b.getAttribute('aria-label'))).toEqual(['Alfa'])
+    expect(drawer).not.toHaveTextContent('separadas por proyecto')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Confirmar bloqueo' }))
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('r2'))
+    expect(create).toHaveBeenCalledWith('t31', { type: 'depends_on', targetId: 't39' })
+    await userEvent.click(within(drawer).getByRole('button', { name: /Ver todos los proyectos/ }))
+    await waitFor(() => expect(within(drawer).getAllByRole('region')).toHaveLength(2))
+  })
+
+  it('sin permiso para relacionar no hay "Confirmar bloqueo"', async () => {
+    const readOnly: TiDependencies = { ...TI_DEPS, projects: TI_DEPS.projects.map((p) => ({ ...p, pending: p.pending.map((x) => ({ ...x, canConfirm: false })) })) }
+    setup({ ti: readOnly })
+    await userEvent.click(await screen.findByTestId('ti-strip'))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias de TI' })
+    expect(drawer).toHaveTextContent('ALF-31')
+    expect(within(drawer).queryByRole('button', { name: 'Confirmar bloqueo' })).toBeNull()
   })
 })

@@ -35,7 +35,7 @@ import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './proje
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { DeleteProjectDialog } from './DeleteProjectDialog'
 import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
-import { useAllOpenProjects, useProjectLifecycle, useProjectTaskCounts, useProjects, useTeamActivity, useUpdateProject } from './queries'
+import { useAllOpenProjects, useProjectLifecycle, useProjectTaskCounts, useProjects, useTeamActivity, useTiDependencies, useUpdateProject } from './queries'
 import { ActivityCell, TeamActivityDrawer } from './team-activity'
 import { activityByProject } from './team-activity-data'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
@@ -97,6 +97,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const overview = useAllOpenProjects(direction)
   const canSeeTasks = useCan('tasks.view')
   const taskCounts = useProjectTaskCounts(direction && canSeeTasks)
+  const ti = useTiDependencies(direction && canSeeTasks)
   const lifecycle = useProjectLifecycle()
 
   const [viewing, setViewing] = useState<Project | null>(null)
@@ -320,6 +321,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
             filter={panel}
             onFilter={setPanel}
             taskCounts={canSeeTasks ? taskCounts.data : undefined}
+            ti={canSeeTasks ? ti.data : undefined}
             team={showActivity ? { data: team.data, pending: team.isPending, error: team.isError, retry: () => void team.refetch() } : null}
           />
         ))}

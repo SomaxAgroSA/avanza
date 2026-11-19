@@ -1,6 +1,7 @@
 /**
  * Configurador geral da plataforma (regras de negócio §15): retenção do histórico, bloqueio de login,
- * política de senha e identidade (nome, logo e ícone do navegador).
+ * política de senha e identidade (nome, logo e ícone do navegador). Também guarda as "Pessoas de TI"
+ * (§42, `it_people`), editadas por uma rota própria com `settings.manage`.
  *
  * - Os padrões são os valores que antes ficavam fixos no código; valem até alguém mudar.
  * - Limites seguros: ninguém desliga uma proteção por engano (ex.: no mínimo 3 tentativas, senha de 8+).
@@ -21,6 +22,8 @@ const DEFAULTS = Object.freeze({
   password_require_mixed_case: false,
   password_require_symbol: false,
   platform_name: 'Avanza',
+  /** Pessoas de TI (§42): ids dos usuários cujas tarefas abertas são "entregas de TI". */
+  it_people: Object.freeze([]),
 })
 
 const LIMITS = Object.freeze({
@@ -30,6 +33,8 @@ const LIMITS = Object.freeze({
   password_min_length: Object.freeze({ min: 8, max: 64 }),
 })
 const NAME_MAX = 40
+const IT_PEOPLE_MAX = 50
+const ID_PATTERN = /^[A-Za-z0-9_]{1,64}$/
 
 const INTEGER_KEYS = ['lockout_threshold', 'lockout_base_minutes', 'lockout_max_minutes', 'password_min_length']
 const BOOLEAN_KEYS = ['password_require_mixed_case', 'password_require_symbol']
@@ -50,12 +55,19 @@ function valueIssue(key, value) {
     if (!name) return 'required'
     return name.length > NAME_MAX ? 'too_long' : null
   }
+  if (key === 'it_people') {
+    if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && ID_PATTERN.test(id))) return 'invalid_type'
+    return value.length > IT_PEOPLE_MAX ? 'too_many' : null
+  }
   return 'unknown_field'
 }
 
 function clean(key, value) {
+  if (key === 'it_people') return value.filter((id, i, all) => all.indexOf(id) === i)
   return key === 'platform_name' ? value.trim() : value
 }
+
+const same = (a, b) => (Array.isArray(a) || Array.isArray(b) ? JSON.stringify(a) === JSON.stringify(b) : a === b)
 
 /** Configurações guardadas → valores completos (o que faltar ou estiver inválido volta ao padrão). */
 function normalizeSettings(stored) {
@@ -88,7 +100,7 @@ function validateSettings(patch, current) {
 
 /** { old, new } só com as chaves que mudaram (para o histórico); null se nada mudou. */
 function diffSettings(before, after) {
-  const changed = KEYS.filter((key) => before[key] !== after[key])
+  const changed = KEYS.filter((key) => !same(before[key], after[key]))
   if (changed.length === 0) return null
   const pick = (source) => changed.reduce((acc, key) => Object.assign(acc, { [key]: source[key] }), {})
   return { old: pick(before), new: pick(after) }
@@ -214,6 +226,7 @@ module.exports = {
   DEFAULTS,
   LIMITS,
   NAME_MAX,
+  IT_PEOPLE_MAX,
   BRANDING_SLOTS,
   BRANDING_MAX_BYTES,
   BRANDING_MIME_TYPES,

@@ -256,6 +256,7 @@
     "statuses": "Status",
     "priorities": "Prioridades",
     "areas": "Áreas",
+    "itPeople": "Pessoas de TI",
     "tags": "Tags",
     "icons": "Ícones",
     "roles": "Perfis",
@@ -4447,9 +4448,9 @@
       "high": "Alta prioridade",
       "completed": "Finalizados",
       "hintOngoing": "planejamento + em curso + pausados",
-      "hintHigh": "alta ou crítica, em andamento",
-      "hintTotal_one": "do total de {{count}} projeto",
-      "hintTotal_other": "do total de {{count}} projetos"
+      "hintOfOngoing_one": "do {{count}} em andamento",
+      "hintOfOngoing_other": "dos {{count}} em andamento",
+      "hintCompleted": "concluídos · fora do cálculo"
     },
     "band": {
       "text_one": "Filtrando todo o painel: {{filters}} ({{count}} projeto)",
@@ -4505,6 +4506,69 @@
       "who": "Quem está trabalhando",
       "nobody": "Ninguém moveu tarefas deste projeto nos últimos 7 dias.",
       "openProject": "Abrir o projeto"
+    }
+  },
+  "tiDependencies": {
+    "title": "Dependências de TI",
+    "view": "Ver impacto",
+    "stripAria": "Dependências de TI: ver impacto",
+    "blocked_one": "{{count}} bloqueada",
+    "blocked_other": "{{count}} bloqueadas",
+    "noneDue": "{{count}} sem prazo",
+    "afterProjectDue": "{{count}} depois do encerramento",
+    "overdue_one": "{{count}} vencida",
+    "overdue_other": "{{count}} vencidas",
+    "pending": "{{count}} a validar",
+    "projects_one": "{{count}} projeto",
+    "projects_other": "{{count}} projetos",
+    "flag": "Dependências de TI em {{name}}: ver impacto",
+    "allProjects": "Projetos em andamento",
+    "responsible": "Entregas a cargo de",
+    "separated": ", separadas por projeto",
+    "noAlerts": "sem alertas",
+    "stats": {
+      "blocked_one": "bloqueada",
+      "blocked_other": "bloqueadas",
+      "noneDue": "sem prazo",
+      "afterProjectDue": "depois do encerramento",
+      "pending": "a validar"
+    },
+    "blockedTitle": "Bloqueado por TI",
+    "pendingTitle": "A validar",
+    "pendingHint": "relacionadas: não contam como bloqueio",
+    "deliveriesTitle": "Entregas pendentes de TI",
+    "deliveryHead": "Entrega",
+    "dueHead": "Prazo",
+    "waitsFor": "Espera",
+    "relatedTo": "Relacionada com",
+    "fromProject": "de {{name}}",
+    "waiting_one": "Esperando há {{count}} dia",
+    "waiting_other": "Esperando há {{count}} dias",
+    "waitingToday": "Aberta hoje",
+    "blocks_one": "bloqueia {{count}} tarefa",
+    "blocks_other": "bloqueia {{count}} tarefas",
+    "blocksFrom": "(de {{names}})",
+    "confirm": "Confirmar bloqueio",
+    "confirmed": "{{code}} agora depende de {{target}}",
+    "seeAll": "Ver todos os projetos",
+    "how": "Como é calculado",
+    "howText": "Cada tarefa conta no seu projeto. Entrega de TI: tarefa aberta atribuída a alguém de Pessoas de TI (Configurações) ou ao Responsável TI do projeto. Bloqueada: tarefa aberta que “depende de” (ou é “bloqueada por”) uma entrega de TI aberta — a mesma regra de “bloqueada” do Avanza —, mesmo que a entrega seja de outro projeto. As só “relacionadas” ficam a validar e não somam. Sem prazo: entrega de TI sem data. Depois do encerramento: prazo de TI posterior à entrega do projeto.",
+    "due": {
+      "none": "Sem prazo",
+      "afterClose": "{{date}} · depois do encerramento",
+      "overdue": "{{date}} · vencida",
+      "today": "{{date}} · hoje",
+      "tomorrow": "{{date}} · amanhã",
+      "inDays": "{{date}} · em {{count}} dias"
+    },
+    "settings": {
+      "title": "Pessoas de TI",
+      "description": "Quem é de TI para o painel Direção e gerência de Em andamento: as tarefas abertas atribuídas a essas pessoas são “entregas de TI”. O Responsável TI de cada projeto já conta no projeto dele, sem estar aqui.",
+      "label": "Pessoas de TI",
+      "placeholder": "Escolha as pessoas",
+      "hint": "Só usuários ativos aparecem na lista.",
+      "save": "Salvar",
+      "saved": "Pessoas de TI salvas"
     }
   }
 }

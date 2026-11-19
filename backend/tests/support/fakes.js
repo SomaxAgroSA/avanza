@@ -624,6 +624,7 @@ function createFakeRepositories(store) {
         .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
+        .filter((t) => !query.projectIds || query.projectIds.includes(t.projectId))
         .filter((t) => !query.assigneeId || (query.assigneeId === 'none' ? !t.assigneeId : t.assigneeId === query.assigneeId))
         .filter((t) => !query.typeId || t.typeId === query.typeId)
         .filter((t) => !query.priorityId || t.priorityId === query.priorityId)
@@ -639,6 +640,7 @@ function createFakeRepositories(store) {
           startedAt: t.startedAt || null,
           completedAt: t.completedAt || null,
           dueDate: t.dueDate ? new Date(t.dueDate) : null,
+          ...(query.withTitles ? { code: t.code, title: t.title } : {}),
         })),
     listChildren: (parentId) => store.tasks.filter((t) => t.parentTaskId === parentId).slice().sort((a, b) => a.number - b.number),
     listForks: (taskId) => store.tasks.filter((t) => t.forkedFromTaskId === taskId).slice().sort((a, b) => a.number - b.number),
@@ -1130,6 +1132,7 @@ function createFakeRepositories(store) {
   const relationRepository = {
     findById: (id) => store.relations.find((r) => r.id === id) || null,
     listByTask: (taskId) => store.relations.filter((r) => r.sourceId === taskId || r.targetId === taskId),
+    listByTasks: (taskIds) => store.relations.filter((r) => taskIds.includes(r.sourceId) || taskIds.includes(r.targetId)),
     /** Relações entre o mesmo par (qualquer sentido). */
     listBetween: (a, b) => store.relations.filter((r) => (r.sourceId === a && r.targetId === b) || (r.sourceId === b && r.targetId === a)),
     /** Arestas "vem antes" que saem dos ids (bloqueia: origem->destino; depende de: destino->origem). */
@@ -1373,6 +1376,7 @@ function createFakeRepositories(store) {
       })
       return counts
     },
+    listByRole: (role, ids) => store.projectMembers.filter((m) => m.role === role && ids.includes(m.projectId)).map((m) => ({ projectId: m.projectId, userId: m.userId })),
     rolesForUser: (userId, ids) => {
       const roles = {}
       store.projectMembers.filter((m) => m.userId === userId && ids.includes(m.projectId)).forEach((m) => {

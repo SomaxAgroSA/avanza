@@ -14,6 +14,7 @@ import type { Milestone, MilestoneInput, Timeline } from './timeline'
 import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
+import type { ItPeople, TiDependencies } from './ti-dependencies'
 import type {
   DependencyRule,
   Plan,
@@ -144,6 +145,9 @@ export interface PlatformRepository {
   removeBranding(slot: BrandingSlot): Promise<PlatformSettings>
   /** Aplica a retenção agora (mesma regra da rotina diária). */
   runRetention(): Promise<{ removed: number }>
+  /** Pessoas de TI (§42; settings.manage). */
+  getItPeople(): Promise<ItPeople>
+  updateItPeople(userIds: string[]): Promise<ItPeople>
 }
 
 export interface CreateUserData {
@@ -273,6 +277,8 @@ export interface ProjectRepository {
   teamActivity(): Promise<TeamActivity>
   /** Tarefas executadas e faltantes por projeto (painel Direção e gerência, §41); projeto sem tarefas não vem. */
   taskCounts(): Promise<ProjectTaskCount[]>
+  /** Dependências de TI dos projetos que a pessoa vê por inteiro (painel Direção e gerência, §42). */
+  tiDependencies(): Promise<TiDependencies>
   addMember(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   updateMemberRole(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   removeMember(id: string, userId: string): Promise<void>

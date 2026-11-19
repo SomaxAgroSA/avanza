@@ -905,6 +905,15 @@ function createRelationRepository(db) {
       const rows = await db.query('SELECT * FROM task_relations WHERE source_task_id = $1 OR target_task_id = $1 ORDER BY created ASC, id ASC', [taskId])
       return rows.map(toEntity)
     },
+    /** Relações que tocam alguma das tarefas (qualquer tipo e sentido). */
+    async listByTasks(taskIds) {
+      if (taskIds.length === 0) return []
+      const rows = await db.query(
+        'SELECT * FROM task_relations WHERE source_task_id = ANY($1::text[]) OR target_task_id = ANY($1::text[]) ORDER BY created ASC, id ASC',
+        [taskIds],
+      )
+      return rows.map(toEntity)
+    },
     /** Relações entre o mesmo par (qualquer sentido). */
     async listBetween(a, b) {
       const rows = await db.query(

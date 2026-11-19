@@ -50,6 +50,33 @@ export function useProjectTaskCounts(enabled = true) {
   return useQuery({ queryKey: projectKeys.taskCounts, queryFn: () => projects.taskCounts(), enabled, staleTime: 60_000 })
 }
 
+/**
+ * Dependências de TI (painel Direção e gerência, §42). A chave fica sob `tasks`: criar, mover, concluir ou
+ * relacionar tarefas já invalida `['tasks']` em todo o app, e o painel acompanha.
+ */
+export const tiDependenciesKey = ['tasks', 'ti-dependencies'] as const
+
+export function useTiDependencies(enabled = true) {
+  const { projects } = useRepositories()
+  return useQuery({ queryKey: tiDependenciesKey, queryFn: () => projects.tiDependencies(), enabled, staleTime: 60_000 })
+}
+
+/**
+ * "Confirmar bloqueio": a tarefa só relacionada passa a depender da entrega de TI (API de relações de sempre:
+ * cria "depende de" e só então desfaz a "relacionada"). Ciclo ou falta de permissão = nada muda.
+ */
+export function useConfirmTiBlock() {
+  const { relations } = useRepositories()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { taskId: string; deliveryId: string; relationId: string }) => {
+      await relations.create(input.taskId, { type: 'depends_on', targetId: input.deliveryId })
+      await relations.remove(input.relationId)
+    },
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  })
+}
+
 export function useProject(id: string | undefined) {
   const { projects } = useRepositories()
   return useQuery({ queryKey: projectKeys.detail(id ?? ''), queryFn: () => projects.get(id as string), enabled: !!id })

@@ -256,6 +256,7 @@
     "statuses": "Statuses",
     "priorities": "Priorities",
     "areas": "Departments",
+    "itPeople": "IT people",
     "tags": "Tags",
     "icons": "Icons",
     "roles": "Roles",
@@ -4447,9 +4448,9 @@
       "high": "High priority",
       "completed": "Finished",
       "hintOngoing": "planning + in progress + paused",
-      "hintHigh": "high or critical, ongoing",
-      "hintTotal_one": "of {{count}} project in total",
-      "hintTotal_other": "of {{count}} projects in total"
+      "hintOfOngoing_one": "of the {{count}} ongoing",
+      "hintOfOngoing_other": "of the {{count}} ongoing",
+      "hintCompleted": "completed · not in the calculation"
     },
     "band": {
       "text_one": "Filtering the whole dashboard: {{filters}} ({{count}} project)",
@@ -4505,6 +4506,69 @@
       "who": "Who is working on it",
       "nobody": "Nobody moved tasks of this project in the last 7 days.",
       "openProject": "Open the project"
+    }
+  },
+  "tiDependencies": {
+    "title": "IT dependencies",
+    "view": "See impact",
+    "stripAria": "IT dependencies: see impact",
+    "blocked_one": "{{count}} blocked",
+    "blocked_other": "{{count}} blocked",
+    "noneDue": "{{count}} without due date",
+    "afterProjectDue": "{{count}} after the project end",
+    "overdue_one": "{{count}} overdue",
+    "overdue_other": "{{count}} overdue",
+    "pending": "{{count}} to validate",
+    "projects_one": "{{count}} project",
+    "projects_other": "{{count}} projects",
+    "flag": "IT dependencies in {{name}}: see impact",
+    "allProjects": "Ongoing projects",
+    "responsible": "Deliveries owned by",
+    "separated": ", grouped by project",
+    "noAlerts": "no alerts",
+    "stats": {
+      "blocked_one": "blocked",
+      "blocked_other": "blocked",
+      "noneDue": "without due date",
+      "afterProjectDue": "after the project end",
+      "pending": "to validate"
+    },
+    "blockedTitle": "Blocked by IT",
+    "pendingTitle": "To validate",
+    "pendingHint": "related: not counted as blocking",
+    "deliveriesTitle": "Pending IT deliveries",
+    "deliveryHead": "Delivery",
+    "dueHead": "Due",
+    "waitsFor": "Waits for",
+    "relatedTo": "Related to",
+    "fromProject": "from {{name}}",
+    "waiting_one": "Waiting for {{count}} day",
+    "waiting_other": "Waiting for {{count}} days",
+    "waitingToday": "Opened today",
+    "blocks_one": "blocks {{count}} task",
+    "blocks_other": "blocks {{count}} tasks",
+    "blocksFrom": "(from {{names}})",
+    "confirm": "Confirm blocking",
+    "confirmed": "{{code}} now depends on {{target}}",
+    "seeAll": "See all projects",
+    "how": "How it is calculated",
+    "howText": "Each task counts in its own project. IT delivery: an open task assigned to someone in IT people (Settings) or to the project IT owner. Blocked: an open task that “depends on” (or is “blocked by”) an open IT delivery — the same “blocked” rule used across Avanza — even if the delivery belongs to another project. Tasks that are only “related” stay to validate and are not counted. Without due date: IT delivery with no date. After the project end: IT due date later than the project delivery.",
+    "due": {
+      "none": "No due date",
+      "afterClose": "{{date}} · after the project end",
+      "overdue": "{{date}} · overdue",
+      "today": "{{date}} · today",
+      "tomorrow": "{{date}} · tomorrow",
+      "inDays": "{{date}} · in {{count}} days"
+    },
+    "settings": {
+      "title": "IT people",
+      "description": "Who counts as IT for the Management dashboard of Ongoing: open tasks assigned to these people are “IT deliveries”. Each project IT owner already counts in their project without being listed here.",
+      "label": "IT people",
+      "placeholder": "Choose people",
+      "hint": "Only active users are listed.",
+      "save": "Save",
+      "saved": "IT people saved"
     }
   }
 }

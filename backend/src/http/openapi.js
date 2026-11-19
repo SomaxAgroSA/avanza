@@ -291,6 +291,38 @@ function build() {
           }),
         }),
       },
+      '/ti-dependencies': {
+        get: op('Dependências de TI (§42): por projeto não arquivado que a pessoa vê por inteiro, as entregas de TI abertas (tarefa aberta atribuída a alguém de "Pessoas de TI" ou ao Responsável TI do projeto) com o risco do prazo (none_due, after_project_due, overdue, due_soon, ok), as tarefas abertas bloqueadas por elas ("bloqueia"/"depende de", inclusive de outro projeto) e as só relacionadas (a validar, nunca bloqueio). Exige tasks.view (sem ele, vazio). Alimenta o painel Direção e gerência de Em andamento', ['projects'], {
+          200: ok('Dependências', {
+            type: 'object',
+            properties: {
+              generated_at: { type: 'string', format: 'date-time' },
+              today: { type: 'string', description: 'AAAA-MM-DD no fuso de quem consulta' },
+              people: { type: 'array', items: ref('UserSummary'), description: 'quem responde pelas entregas' },
+              totals: { type: 'object', description: 'deliveries, blocked, pending, none_due, after_project_due, overdue, due_soon, projects' },
+              projects: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    project: { type: 'object', description: '{ id, key, name, due_date }' },
+                    counts: { type: 'object', description: 'deliveries, blocked, pending, none_due, after_project_due, overdue, due_soon' },
+                    deliveries: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, assignee_id, since, waiting_days, days_left, risk, blocks, blocks_projects }' },
+                    blocked: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, waiting_on: [{ id, code, title, project, due_date, relation_id }] }' },
+                    pending: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, related_to, relation_id, can_confirm }' },
+                  },
+                },
+              },
+            },
+          }),
+          400: errorResponse('VALIDATION_ERROR'),
+        }, {
+          parameters: [
+            { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'só estes projetos (ids separados por vírgula, até 200)' },
+            { name: 'tz_offset', in: 'query', schema: { type: 'integer' }, description: 'minutos (Date#getTimezoneOffset) para o "hoje" de quem consulta' },
+          ],
+        }),
+      },
       '/projects': {
         get: op('Lista projetos acessíveis (paginado)', ['projects'], { 200: ok('Página de projetos', { type: 'array', items: ref('Project') }, true) }, {
           parameters: [
@@ -1045,6 +1077,13 @@ function build() {
       },
       '/settings/platform/purge-audit': {
         post: op('Aplica a retenção do histórico agora (platform.manage; mesma regra da rotina diária) → { removed }', ['platform'], { 200: ok('Resultado', { type: 'object' }) }, { parameters: [csrfHeader] }),
+      },
+      '/settings/it-people': {
+        get: op('Pessoas de TI (§42; settings.manage) → { user_ids, users, candidates } (candidates = usuários ativos que podem ser escolhidos, até 500)', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }) }),
+        put: op('Troca a lista inteira (settings.manage): { user_ids } (até 50, usuários existentes); fica no histórico com os nomes', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {
+          parameters: [csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['user_ids'], properties: { user_ids: { type: 'array', items: { type: 'string' } } } }),
+        }),
       },
       '/settings/email': {
         get: op('Configurações do envio de e-mail (integrations.manage): { values: { enabled, host, port, username, tls, sender_name, sender_address, app_url }, has_password } — a senha nunca volta', ['integrations'], { 200: ok('Configurações', { type: 'object' }) }),
