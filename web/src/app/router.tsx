@@ -182,7 +182,9 @@ export const routes: RouteObject[] = [
               { path: 'statuses', ...page(() => import('@/features/workflow/LookupsPage').then((m) => ({ default: m.StatusesPage }))) },
               { path: 'priorities', ...page(() => import('@/features/workflow/LookupsPage').then((m) => ({ default: m.PrioritiesPage }))) },
               { path: 'areas', ...page(() => import('@/features/workflow/LookupsPage').then((m) => ({ default: m.AreasPage }))) },
-              { path: 'it-people', ...page(() => import('@/features/settings/ItPeoplePage').then((m) => ({ default: m.ItPeoplePage }))) },
+              { path: 'dependency-areas', ...page(() => import('@/features/settings/DependencyAreasPage').then((m) => ({ default: m.DependencyAreasPage }))) },
+              // endereço antigo (Pessoas de TI): a tela virou Dependências por área
+              { path: 'it-people', element: <Navigate to="/settings/dependency-areas" replace /> },
               { path: 'tags', ...page(() => import('@/features/tags/TagsPage').then((m) => ({ default: m.TagsPage }))) },
               { path: 'icons', ...page(() => import('@/features/icons/IconLibraryPage').then((m) => ({ default: m.IconLibraryPage }))) },
             ],

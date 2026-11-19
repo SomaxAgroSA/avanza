@@ -972,48 +972,54 @@ export interface TeamActivityDto {
   }>
 }
 
-/* ------------------------------------------------------------------ Dependências de TI (§42) */
+/* ------------------------------------------------------------------ Dependências por área (§42) */
 
-export interface TiProjectRefDto {
+export interface DepProjectRefDto {
   id: string
   key: string
   name: string
 }
 
-export interface TiTaskRefDto {
+export interface DepAreaRefDto {
+  key: string
+  name: string
+}
+
+export interface DepTaskRefDto {
   id: string
   code: string
   title: string
-  project: TiProjectRefDto
+  project: DepProjectRefDto
   due_date: string | null
 }
 
-export interface TiCountsDto {
+export type DepDeliveryRefDto = DepTaskRefDto & { area: DepAreaRefDto }
+
+export interface DepCountsDto {
   deliveries: number
   blocked: number
   pending: number
   none_due: number
-  after_project_due: number
   overdue: number
-  due_soon: number
 }
 
-export interface TiDependenciesDto {
+export interface DependenciesDto {
   generated_at: string | null
   today: string
   people: UserSummaryDto[]
-  totals: TiCountsDto & { projects: number }
+  areas?: Array<DepAreaRefDto & { deliveries: number }>
+  totals: DepCountsDto & { projects: number }
   projects: Array<{
-    project: TiProjectRefDto & { due_date: string | null }
-    counts: TiCountsDto
-    deliveries: Array<TiTaskRefDto & { assignee_id: string; since: string | null; waiting_days: number | null; days_left: number | null; risk: string; blocks: number; blocks_projects: TiProjectRefDto[] }>
-    blocked: Array<TiTaskRefDto & { waiting_on: Array<TiTaskRefDto & { relation_id: string }> }>
-    pending: Array<TiTaskRefDto & { related_to: TiTaskRefDto; relation_id: string; can_confirm: boolean }>
+    project: DepProjectRefDto & { due_date: string | null }
+    counts: DepCountsDto
+    deliveries: Array<DepDeliveryRefDto & { assignee_id: string; since: string | null; waiting_days: number | null; days_left: number | null; risk: string; blocks: number; blocks_projects: DepProjectRefDto[] }>
+    blocked: Array<DepTaskRefDto & { waiting_on: Array<DepDeliveryRefDto & { relation_id: string }> }>
+    pending: Array<DepTaskRefDto & { related_to: DepDeliveryRefDto; relation_id: string; can_confirm: boolean }>
   }>
 }
 
-export interface ItPeopleDto {
-  user_ids: string[]
-  users: UserSummaryDto[]
+export interface DependencyAreasDto {
+  areas: Array<{ key: string; name: string; user_ids: string[]; users: UserSummaryDto[] }>
+  configured?: boolean
   candidates?: UserSummaryDto[]
 }

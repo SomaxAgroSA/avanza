@@ -6,7 +6,8 @@ import type { OngoingView } from '@/domain/entities'
 import { PERMISSION_CODES } from '@/domain/permissions'
 import type { Project, ProjectStatus, ProjectPriority, TeamActivity } from '@/domain/projects'
 import type { ProjectListQuery, ProjectPage } from '@/domain/repositories'
-import type { TiDependencies } from '@/domain/ti-dependencies'
+import type { Dependencies } from '@/domain/dependencies'
+import type { TaskDetail } from '@/domain/tasks'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ProjectsPage } from '../ProjectsPage'
 
@@ -62,40 +63,95 @@ const TEAM: TeamActivity = {
 const PERMS = [...PERMISSION_CODES]
 
 const victor = { id: 'u9', name: 'Equipo de Informática', email: 'ti@x.com', avatarUrl: null }
+const AREA_TI = { key: 'ti', name: 'TI' }
+const AREA_FIN = { key: 'finanzas', name: 'Finanzas' }
 const tref = (id: string, code: string, title: string, p: Project, dueDate: string | null = null) => ({ id, code, title, project: { id: p.id, key: p.key, name: p.name }, dueDate })
-const tiCounts = (extra: Partial<TiDependencies['projects'][number]['counts']> = {}) => ({ deliveries: 0, blocked: 0, pending: 0, noneDue: 0, afterProjectDue: 0, overdue: 0, dueSoon: 0, ...extra })
-/** Alfa: 2 entregas de TI (una sin plazo, otra después del cierre) y una relacionada; Beta: una tarea bloqueada por Alfa. */
-const TI_DEPS: TiDependencies = {
+const dref = (id: string, code: string, title: string, p: Project, area = AREA_TI, dueDate: string | null = null) => ({ ...tref(id, code, title, p, dueDate), area })
+const depCounts = (extra: Partial<Dependencies['projects'][number]['counts']> = {}) => ({ deliveries: 0, blocked: 0, pending: 0, noneDue: 0, overdue: 0, ...extra })
+/**
+ * Alfa: 3 entregas (TI sin plazo, TI con plazo en 2027 y Finanzas vencida) y una relacionada;
+ * Beta: una tarea bloqueada por una entrega de Alfa.
+ */
+const DEPS: Dependencies = {
   today: '2026-11-19',
   people: [victor],
+  areas: [
+    { ...AREA_TI, deliveries: 2 },
+    { ...AREA_FIN, deliveries: 1 },
+  ],
   projects: [
     {
       project: { id: 'p2', key: 'P2', name: 'Beta', dueDate: '2026-12-15' },
-      counts: tiCounts({ blocked: 1 }),
+      counts: depCounts({ blocked: 1 }),
       deliveries: [],
-      blocked: [{ ...tref('t40', 'BET-40', 'Dashboard de resultado', BETA, '2026-11-20'), waitingOn: [{ ...tref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r1' }] }],
+      blocked: [{ ...tref('t40', 'BET-40', 'Dashboard de resultado', BETA, '2026-11-20'), waitingOn: [{ ...dref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r1' }] }],
       pending: [],
     },
     {
       project: { id: 'p1', key: 'P1', name: 'Alfa', dueDate: '2027-01-31' },
-      counts: tiCounts({ deliveries: 2, pending: 1, noneDue: 1, afterProjectDue: 1 }),
+      counts: depCounts({ deliveries: 3, pending: 1, noneDue: 1, overdue: 1 }),
       deliveries: [
-        { ...tref('t38', 'ALF-38', 'Tablas en SAP', ALFA, '2027-02-04'), assigneeId: 'u9', waitingDays: 2, daysLeft: 77, risk: 'after_project_due', blocks: 0, blocksProjects: [] },
-        { ...tref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), assigneeId: 'u9', waitingDays: 2, daysLeft: null, risk: 'none_due', blocks: 1, blocksProjects: [{ id: 'p2', key: 'P2', name: 'Beta' }] },
+        { ...dref('t36', 'ALF-36', 'Cierre contable de noviembre', ALFA, AREA_FIN, '2026-11-09'), assigneeId: 'u7', waitingDays: 12, daysLeft: -10, risk: 'overdue', blocks: 0, blocksProjects: [] },
+        { ...dref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), assigneeId: 'u9', waitingDays: 2, daysLeft: null, risk: 'none_due', blocks: 1, blocksProjects: [{ id: 'p2', key: 'P2', name: 'Beta' }] },
+        { ...dref('t38', 'ALF-38', 'Tablas en SAP', ALFA, AREA_TI, '2027-02-04'), assigneeId: 'u9', waitingDays: 1, daysLeft: 77, risk: 'ok', blocks: 0, blocksProjects: [] },
       ],
       blocked: [],
-      pending: [{ ...tref('t31', 'ALF-31', 'Capa de seguridad', ALFA, '2026-11-20'), relatedTo: tref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r2', canConfirm: true }],
+      pending: [{ ...tref('t31', 'ALF-31', 'Capa de seguridad', ALFA, '2026-11-20'), relatedTo: dref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r2', canConfirm: true }],
     },
   ],
 }
+
+/** Detalle de la tarea que abre el clic en una fila del panel. */
+const taskDetail = (id: string, title: string) =>
+  ({
+    id,
+    code: 'ALF-39',
+    number: 39,
+    title,
+    project: { id: 'p1', key: 'P1', name: 'Alfa' },
+    type: { id: 'ty1', key: 'INT', name: 'Integración', icon: 'plug', color: 'blue' },
+    status: { id: 's1', key: 'TODO', name: 'Backlog', color: 'gray', category: 'todo' },
+    priority: { id: 'pr1', key: 'MEDIA', name: 'Media', color: 'yellow' },
+    creator: null,
+    assignee: victor,
+    reporter: null,
+    parentTaskId: null,
+    startDate: null,
+    dueDate: null,
+    estimatedHours: null,
+    actualHours: null,
+    startedAt: null,
+    completedAt: null,
+    createdAt: null,
+    updatedAt: null,
+    tags: [],
+    checklistProgress: { done: 0, total: 0 },
+    commentCount: 0,
+    attachmentCount: 0,
+    subtaskProgress: { done: 0, total: 0 },
+    blocked: false,
+    inReport: true,
+    itVisible: false,
+    urgency: null,
+    area: null,
+    sprint: null,
+    description: 'Falta que TI defina la autenticación.',
+    customValues: {},
+    checklist: [],
+    fields: [],
+    parent: null,
+    forkedFrom: null,
+    capabilities: { edit: true, delete: false, assign: true, comment: true, link: true, fork: true },
+  }) as unknown as TaskDetail
 
 function setup({
   view = 'executive',
   counts = true,
   perms = PERMS,
-  ti = { today: '2026-11-19', people: [], projects: [] },
+  deps = { today: '2026-11-19', people: [], areas: [], projects: [] },
   relations = {},
-}: { view?: OngoingView; counts?: boolean; perms?: typeof PERMS; ti?: TiDependencies; relations?: Record<string, unknown> } = {}) {
+  tasks = {},
+}: { view?: OngoingView; counts?: boolean; perms?: typeof PERMS; deps?: Dependencies; relations?: Record<string, unknown>; tasks?: Record<string, unknown> } = {}) {
   const list = vi.fn((query: ProjectListQuery): Promise<ProjectPage> => {
     // simula el servidor: estado, prioridad y departamento de la tabla; la lista completa del panel no filtra
     const csv = (value?: string) => (value ? value.split(',') : null)
@@ -125,9 +181,10 @@ function setup({
               ]
             : [],
         ),
-      tiDependencies: () => Promise.resolve(ti),
+      dependencies: () => Promise.resolve(deps),
     },
     relations,
+    tasks,
   })
   const utils = renderRoutes([{ path: '/projects/ongoing', element: <ProjectsPage view="ongoing" /> }, { path: '/projects/:id', element: <p>detalle</p> }], { repositories, initialPath: '/projects/ongoing' })
   return { list, ...utils }
@@ -364,61 +421,124 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await waitFor(() => expect(within(screen.getByRole('table')).queryByText('Delta')).toBeNull())
   })
 
-  it('Dependencias de TI: franja entre indicadores y línea de tiempo, ⚠ junto al nombre en el Gantt y se oculta sin proyectos afectados', async () => {
-    setup({ ti: TI_DEPS })
+  it('Dependencias: franja entre indicadores y línea de tiempo con solo los alertas que hay, ⚠ junto al nombre en el Gantt y se oculta sin proyectos afectados', async () => {
+    setup({ deps: DEPS })
     const panel = await screen.findByTestId('direction-panel')
-    const strip = await within(panel).findByTestId('ti-strip')
-    expect(strip).toHaveTextContent('Dependencias de TI')
-    expect(strip).toHaveTextContent('1 bloqueada·1 sin plazo·1 después del cierre·1 por validar|2 proyectos')
+    const strip = await within(panel).findByTestId('dep-strip')
+    expect(strip).toHaveTextContent('Dependencias')
+    expect(strip).not.toHaveTextContent('de TI')
+    expect(strip).toHaveTextContent('1 bloqueada·1 sin plazo·1 vencida·1 por validar|2 proyectos')
+    expect(strip).not.toHaveTextContent('después del cierre')
     expect(strip).toHaveTextContent('Ver impacto')
     // orden: indicadores → franja → línea de tiempo
     const timeline = within(panel).getByRole('region', { name: 'Línea de tiempo de los proyectos' })
     expect(strip.compareDocumentPosition(timeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(within(timeline).getByRole('button', { name: 'Dependencias de TI en Alfa: ver impacto' })).toBeInTheDocument()
-    expect(within(timeline).getByRole('button', { name: 'Dependencias de TI en Beta: ver impacto' })).toBeInTheDocument()
-    expect(within(timeline).queryByRole('button', { name: /Dependencias de TI en Delta/ })).toBeNull()
-    // En ejecución: solo Beta afectado
+    const flag = within(timeline).getByRole('button', { name: 'Dependencias en este proyecto: Alfa' })
+    expect(flag).toHaveAttribute('title', 'Dependencias en este proyecto')
+    expect(within(timeline).getByRole('button', { name: 'Dependencias en este proyecto: Beta' })).toBeInTheDocument()
+    expect(within(timeline).queryByRole('button', { name: /Dependencias en este proyecto: Delta/ })).toBeNull()
+    // En ejecución: solo Beta afectado → solo lo que hay (sin "0 sin plazo")
     await userEvent.click(within(panel).getByRole('button', { name: /^En ejecución/ }))
-    await waitFor(() => expect(within(panel).getByTestId('ti-strip')).toHaveTextContent('1 bloqueada·0 sin plazo|1 proyecto'))
+    await waitFor(() => expect(within(panel).getByTestId('dep-strip')).toHaveTextContent(/^Dependencias1 bloqueada\|1 proyectoVer impacto$/))
     // Finalizados: ningún proyecto afectado → la franja no aparece
     await userEvent.click(within(panel).getByRole('button', { name: /^Finalizados/ }))
-    await waitFor(() => expect(within(panel).queryByTestId('ti-strip')).toBeNull())
+    await waitFor(() => expect(within(panel).queryByTestId('dep-strip')).toBeNull())
   })
 
-  it('Ver impacto abre el panel con un bloque por proyecto: Bloqueado por TI, Por validar y Entregas pendientes (columna Plazo)', async () => {
-    setup({ ti: TI_DEPS })
-    await userEvent.click(await screen.findByTestId('ti-strip'))
-    const drawer = await screen.findByRole('dialog', { name: 'Dependencias de TI' })
-    expect(drawer).toHaveTextContent('Proyectos en marcha')
-    expect(drawer).toHaveTextContent('Entregas a cargo de Equipo de Informática, separadas por proyecto')
+  it('Ver impacto: panel "Dependencias" sin números ni "a cargo de", chips por área, un bloque por proyecto con el total de pendientes, sin códigos', async () => {
+    setup({ deps: DEPS })
+    await userEvent.click(await screen.findByTestId('dep-strip'))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
+    expect(drawer).toHaveTextContent('Proyectos en marcha · entregas pendientes de otras áreas')
+    expect(drawer).not.toHaveTextContent('a cargo de')
+    expect(drawer).not.toHaveTextContent('Cómo se calcula')
+    expect(drawer).not.toHaveTextContent('Entregas pendientes de TI')
+    // ningún código de tarea
+    ;['BET-40', 'ALF-39', 'ALF-38', 'ALF-36', 'ALF-31'].forEach((code) => expect(drawer).not.toHaveTextContent(code))
+    // chips de área: todas + una por área con entregas
+    const chips = within(drawer).getByRole('group', { name: 'Área' })
+    expect(within(chips).getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-pressed')])).toEqual([
+      ['Todas las áreas3', 'true'],
+      ['TI2', 'false'],
+      ['Finanzas1', 'false'],
+    ])
     const blocks = within(drawer).getAllByRole('region')
     expect(blocks.map((b) => b.getAttribute('aria-label'))).toEqual(['Beta', 'Alfa'])
     const [beta, alfa] = blocks as [HTMLElement, HTMLElement]
-    expect(beta).toHaveTextContent('Bloqueado por TI')
-    expect(beta).toHaveTextContent('BET-40Dashboard de resultado')
-    expect(beta).toHaveTextContent('Espera a ALF-39de Alfa · Definir la autenticación (SSO)')
+    // cabecera: nombre + solo el número de entregas pendientes
+    expect(within(alfa).getByLabelText('3 entregas pendientes')).toHaveTextContent(/^3$/)
+    expect(within(beta).getByLabelText('0 entregas pendientes')).toBeInTheDocument()
+    expect(beta).toHaveTextContent('Bloqueado por otra área')
+    expect(beta).toHaveTextContent('Dashboard de resultado')
+    expect(beta).toHaveTextContent('Espera a Definir la autenticación (SSO)de Alfa')
     expect(beta).toHaveTextContent('20/11 · mañana')
-    // Alfa: secciones en orden y la columna de plazo con etiquetas cortas
-    const titles = within(alfa).getAllByRole('heading', { level: 4 }).map((h) => h.textContent)
-    expect(titles).toEqual(['Por validarrelacionadas: no cuentan como bloqueo', 'Entregas pendientes de TI2'])
-    expect(alfa).toHaveTextContent('Relacionada con ALF-39 · Definir la autenticación (SSO)')
-    expect(alfa).toHaveTextContent('04/02/27 · después del cierre')
+    // Alfa: Por validar y la lista de entregas (columnas Entrega / Plazo), sin título de sección para las entregas
+    expect(within(alfa).getAllByRole('heading', { level: 4 }).map((h) => h.textContent)).toEqual(['Por validarrelacionadas: no cuentan como bloqueo'])
+    expect(alfa).toHaveTextContent('EntregaPlazo')
+    expect(alfa).toHaveTextContent('Relacionada con Definir la autenticación (SSO)')
+    expect(alfa).toHaveTextContent('09/11 · vencida hace 10 días')
     expect(alfa).toHaveTextContent('Sin plazo')
-    expect(alfa).toHaveTextContent('Esperando hace 2 días · bloquea 1 tarea (de Beta)')
+    expect(alfa).toHaveTextContent('04/02/27 · en 77 días')
+    expect(alfa).toHaveTextContent('TI· Esperando hace 2 días· bloquea 1 tarea (de Beta)')
+    expect(alfa).toHaveTextContent('Finanzas· Esperando hace 12 días')
+    // colores: vencida en rojo, sin plazo en ámbar, en plazo en verde
+    expect(within(alfa).getByText('09/11 · vencida hace 10 días')).toHaveClass('bg-danger-soft')
+    expect(within(alfa).getByText('Sin plazo')).toHaveClass('bg-warning-soft')
+    expect(within(alfa).getByText('04/02/27 · en 77 días')).toHaveClass('bg-success-soft')
     expect(within(alfa).getByRole('button', { name: 'Confirmar bloqueo' })).toBeInTheDocument()
-    expect(within(drawer).queryByText('Cómo se calcula')).toBeNull()
     expect(within(drawer).queryByRole('button', { name: /Ver todos los proyectos/ })).toBeNull()
+  })
+
+  it('la chip de un área filtra el panel: solo los proyectos y las filas de esa área', async () => {
+    setup({ deps: DEPS })
+    await userEvent.click(await screen.findByTestId('dep-strip'))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Finanzas1' }))
+    expect(within(drawer).getByRole('button', { name: 'Finanzas1' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(drawer).getAllByRole('region').map((b) => b.getAttribute('aria-label'))).toEqual(['Alfa'])
+    expect(drawer).toHaveTextContent('Cierre contable de noviembre')
+    expect(drawer).not.toHaveTextContent('Tablas en SAP')
+    expect(drawer).not.toHaveTextContent('Capa de seguridad')
+    expect(within(drawer).getByLabelText('1 entrega pendiente')).toBeInTheDocument()
+    // TI: Beta vuelve (espera una entrega de TI) y la de Finanzas sale
+    await userEvent.click(within(drawer).getByRole('button', { name: 'TI2' }))
+    expect(within(drawer).getAllByRole('region').map((b) => b.getAttribute('aria-label'))).toEqual(['Beta', 'Alfa'])
+    expect(drawer).not.toHaveTextContent('Cierre contable de noviembre')
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Todas las áreas3' }))
+    expect(drawer).toHaveTextContent('Cierre contable de noviembre')
+  })
+
+  it('clic en una fila (bloqueada o entrega) abre la tarea encima, con "Volver a Dependencias"', async () => {
+    const get = vi.fn((id: string) => Promise.resolve(taskDetail(id, id === 't40' ? 'Dashboard de resultado' : 'Definir la autenticación (SSO)')))
+    setup({ deps: DEPS, tasks: { get } })
+    await userEvent.click(await screen.findByTestId('dep-strip'))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
+    const alfa = within(drawer).getAllByRole('region')[1]!
+    const row = within(alfa).getByRole('button', { name: /^Definir la autenticación \(SSO\)/ })
+    row.focus()
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(get).toHaveBeenCalledWith('t39'))
+    const task = await screen.findByRole('dialog', { name: 'Definir la autenticación (SSO)' })
+    expect(task).toHaveTextContent('Falta que TI defina la autenticación.')
+    expect(within(task).getByRole('button', { name: 'Editar' })).toBeInTheDocument()
+    await userEvent.click(within(task).getByRole('button', { name: /Volver a Dependencias/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Definir la autenticación (SSO)' })).toBeNull())
+    expect(screen.getByRole('dialog', { name: 'Dependencias' })).toBeInTheDocument()
+    // la fila bloqueada también abre su tarea
+    const beta = within(screen.getByRole('dialog', { name: 'Dependencias' })).getAllByRole('region')[0]!
+    await userEvent.click(within(beta).getByRole('button', { name: /^Dashboard de resultado/ }))
+    await waitFor(() => expect(get).toHaveBeenCalledWith('t40'))
   })
 
   it('el ⚠ abre solo ese proyecto con "Ver todos los proyectos"; "Confirmar bloqueo" crea "depende de" y quita la relacionada', async () => {
     const create = vi.fn(() => Promise.resolve({}))
     const remove = vi.fn(() => Promise.resolve())
-    setup({ ti: TI_DEPS, relations: { create, remove } })
+    setup({ deps: DEPS, relations: { create, remove } })
     const timeline = await screen.findByRole('region', { name: 'Línea de tiempo de los proyectos' })
-    await userEvent.click(await within(timeline).findByRole('button', { name: 'Dependencias de TI en Alfa: ver impacto' }))
-    const drawer = await screen.findByRole('dialog', { name: 'Dependencias de TI' })
+    await userEvent.click(await within(timeline).findByRole('button', { name: 'Dependencias en este proyecto: Alfa' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
+    expect(drawer).toHaveTextContent('Alfa · entregas pendientes de otras áreas')
     expect(within(drawer).getAllByRole('region').map((b) => b.getAttribute('aria-label'))).toEqual(['Alfa'])
-    expect(drawer).not.toHaveTextContent('separadas por proyecto')
     await userEvent.click(within(drawer).getByRole('button', { name: 'Confirmar bloqueo' }))
     await waitFor(() => expect(remove).toHaveBeenCalledWith('r2'))
     expect(create).toHaveBeenCalledWith('t31', { type: 'depends_on', targetId: 't39' })
@@ -427,11 +547,11 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
   })
 
   it('sin permiso para relacionar no hay "Confirmar bloqueo"', async () => {
-    const readOnly: TiDependencies = { ...TI_DEPS, projects: TI_DEPS.projects.map((p) => ({ ...p, pending: p.pending.map((x) => ({ ...x, canConfirm: false })) })) }
-    setup({ ti: readOnly })
-    await userEvent.click(await screen.findByTestId('ti-strip'))
-    const drawer = await screen.findByRole('dialog', { name: 'Dependencias de TI' })
-    expect(drawer).toHaveTextContent('ALF-31')
+    const readOnly: Dependencies = { ...DEPS, projects: DEPS.projects.map((p) => ({ ...p, pending: p.pending.map((x) => ({ ...x, canConfirm: false })) })) }
+    setup({ deps: readOnly })
+    await userEvent.click(await screen.findByTestId('dep-strip'))
+    const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
+    expect(drawer).toHaveTextContent('Capa de seguridad')
     expect(within(drawer).queryByRole('button', { name: 'Confirmar bloqueo' })).toBeNull()
   })
 })
