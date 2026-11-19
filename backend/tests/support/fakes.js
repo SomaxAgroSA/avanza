@@ -6,6 +6,7 @@
  */
 
 const { DEFAULT_ROLES, DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } = require('../../src/domain/permissions')
+const { appError } = require('../../src/core/errors')
 
 let seq = 0
 const nextId = (prefix) => `${prefix}${++seq}`
@@ -83,6 +84,7 @@ function createFakeStore() {
     planColumns: [],
     planIssues: [],
     docSpaces: [],
+    docModules: [],
     docPages: [],
     docPageTasks: [],
     docVersions: [],
@@ -624,6 +626,7 @@ function createFakeRepositories(store) {
         .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
+        .filter((t) => !query.projectIds || query.projectIds.includes(t.projectId))
         .filter((t) => !query.assigneeId || (query.assigneeId === 'none' ? !t.assigneeId : t.assigneeId === query.assigneeId))
         .filter((t) => !query.typeId || t.typeId === query.typeId)
         .filter((t) => !query.priorityId || t.priorityId === query.priorityId)
@@ -639,6 +642,7 @@ function createFakeRepositories(store) {
           startedAt: t.startedAt || null,
           completedAt: t.completedAt || null,
           dueDate: t.dueDate ? new Date(t.dueDate) : null,
+          ...(query.withTitles ? { code: t.code, title: t.title } : {}),
         })),
     listChildren: (parentId) => store.tasks.filter((t) => t.parentTaskId === parentId).slice().sort((a, b) => a.number - b.number),
     listForks: (taskId) => store.tasks.filter((t) => t.forkedFromTaskId === taskId).slice().sort((a, b) => a.number - b.number),
@@ -675,14 +679,14 @@ function createFakeRepositories(store) {
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
       if (query.statusIds) items = items.filter((t) => query.statusIds.includes(t.statusId))
-      if (query.priorityId) items = items.filter((t) => t.priorityId === query.priorityId)
+      if (query.priorityId) items = items.filter((t) => [].concat(query.priorityId).includes(t.priorityId))
       if (query.assigneeId) items = items.filter((t) => t.assigneeId === query.assigneeId)
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.planItemId) items = items.filter((t) => t.planItemId === query.planItemId)
       if (query.inReport !== undefined) items = items.filter((t) => !t.reportExcluded === query.inReport)
       if (query.itVisible !== undefined) items = items.filter((t) => !!t.itVisible === query.itVisible)
-      if (query.urgency) items = items.filter((t) => (t.urgency || 'none') === query.urgency)
+      if (query.urgency) items = items.filter((t) => [].concat(query.urgency).includes(t.urgency || 'none'))
       if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
       if (query.search) {
         const q = query.search.text.toLowerCase()
@@ -1035,10 +1039,41 @@ function createFakeRepositories(store) {
       return space
     },
     update: (id, patch) => Object.assign(docSpaceRepository.findById(id), patch, { updatedAt: stamp() }),
+    /** Tira os espaços do módulo (ficam "Sem módulo"); devolve quantos. */
+    clearModule: (moduleId) => {
+      const inModule = store.docSpaces.filter((sp) => sp.moduleId === moduleId)
+      inModule.forEach((sp) => Object.assign(sp, { moduleId: null, updatedAt: stamp() }))
+      return inModule.length
+    },
     delete: (id) => {
       const pageIds = store.docPages.filter((p) => p.spaceId === id).map((p) => p.id)
       docPageRepository.deleteMany(pageIds)
       store.docSpaces = store.docSpaces.filter((s) => s.id !== id)
+    },
+  }
+  const docModuleRepository = {
+    findById: (id) => store.docModules.find((m) => m.id === id) || null,
+    list: () => store.docModules.slice().sort((a, b) => a.position - b.position || a.name.localeCompare(b.name)),
+    create: (data) => {
+      if (store.docModules.some((m) => m.nameKey === data.nameKey)) throw appError('DOC_MODULE_NAME_IN_USE')
+      const module = Object.assign({ id: nextDocId('module'), createdAt: stamp(), updatedAt: stamp() }, data)
+      store.docModules.push(module)
+      return module
+    },
+    update: (id, patch) => {
+      if (patch.nameKey && store.docModules.some((m) => m.id !== id && m.nameKey === patch.nameKey)) throw appError('DOC_MODULE_NAME_IN_USE')
+      return Object.assign(docModuleRepository.findById(id), patch, { updatedAt: stamp() })
+    },
+    /** Posições 0, 1, 2… na ordem dos ids. */
+    setPositions: (ids) => {
+      ids.forEach((id, index) => {
+        const module = docModuleRepository.findById(id)
+        if (module) module.position = index
+      })
+    },
+    delete: (id) => {
+      store.docSpaces.filter((sp) => sp.moduleId === id).forEach((sp) => (sp.moduleId = null))
+      store.docModules = store.docModules.filter((m) => m.id !== id)
     },
   }
   const docPageRepository = {
@@ -1130,6 +1165,7 @@ function createFakeRepositories(store) {
   const relationRepository = {
     findById: (id) => store.relations.find((r) => r.id === id) || null,
     listByTask: (taskId) => store.relations.filter((r) => r.sourceId === taskId || r.targetId === taskId),
+    listByTasks: (taskIds) => store.relations.filter((r) => taskIds.includes(r.sourceId) || taskIds.includes(r.targetId)),
     /** Relações entre o mesmo par (qualquer sentido). */
     listBetween: (a, b) => store.relations.filter((r) => (r.sourceId === a && r.targetId === b) || (r.sourceId === b && r.targetId === a)),
     /** Arestas "vem antes" que saem dos ids (bloqueia: origem->destino; depende de: destino->origem). */
@@ -1373,6 +1409,7 @@ function createFakeRepositories(store) {
       })
       return counts
     },
+    listByRole: (role, ids) => store.projectMembers.filter((m) => m.role === role && ids.includes(m.projectId)).map((m) => ({ projectId: m.projectId, userId: m.userId })),
     rolesForUser: (userId, ids) => {
       const roles = {}
       store.projectMembers.filter((m) => m.userId === userId && ids.includes(m.projectId)).forEach((m) => {
@@ -1517,6 +1554,7 @@ function createFakeRepositories(store) {
     planIssueRepository,
     planSettingsRepository,
     docSpaceRepository,
+    docModuleRepository,
     docPageRepository,
     docPageVersionRepository,
     docFileRepository,

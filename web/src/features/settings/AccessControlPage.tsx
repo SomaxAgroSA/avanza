@@ -334,9 +334,13 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
           return (
             <li key={mod.module} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
               <div className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 font-medium text-fg">
-                  {visible ? <Eye className="size-4 text-primary-text" aria-hidden /> : <EyeOff className="size-4 text-subtle" aria-hidden />}
-                  {t(`permissions.modules.${mod.module}`)}
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="flex items-center gap-2 font-medium text-fg">
+                    {visible ? <Eye className="size-4 text-primary-text" aria-hidden /> : <EyeOff className="size-4 text-subtle" aria-hidden />}
+                    {t(`permissions.modules.${mod.module}`)}
+                  </span>
+                  {/* módulo que depende de outro (Lista de tarefas, §44): o que faz e do que precisa */}
+                  {mod.hintKey && <span className="text-xs text-subtle">{t(mod.hintKey)}</span>}
                 </span>
                 {mod.view ? (
                   <span className="flex items-center gap-2">

@@ -82,6 +82,8 @@ export interface DocSpace {
   color: OptionColor
   visibility: SpaceVisibility
   project: { id: string; key: string; name: string } | null
+  /** Módulo da tela inicial (§43); null = "Sem módulo". */
+  module: DocModuleRef | null
   homePageId: string | null
   pageCount: number | null
   createdAt: Date | null
@@ -97,7 +99,89 @@ export interface DocSpaceInput {
   color?: OptionColor
   /** Na configuração: '' tira o vínculo com o projeto. */
   projectId?: string
+  /** '' = Sem módulo. */
+  moduleId?: string
   visibility?: SpaceVisibility
+}
+
+/* ---------------------------------------------- módulos (§43; regras em backend/src/domain/doc-modules.js) */
+
+/** Módulo resumido no espaço. */
+export interface DocModuleRef {
+  id: string
+  name: string
+  color: OptionColor
+}
+
+/** Módulo da documentação: lista da empresa que organiza os espaços na tela inicial. */
+export interface DocModule extends DocModuleRef {
+  position: number
+  /** Espaços que a pessoa vê neste módulo. */
+  spaceCount: number
+}
+
+export interface DocModuleInput {
+  name?: string
+  color?: OptionColor
+  /** Nova posição na lista (0 = primeiro). */
+  position?: number
+}
+
+export const MODULE_NAME_MAX = 60
+/** Filtro da tela inicial: todos, só os sem módulo ou o id de um módulo (?module=). */
+export type ModuleFilter = 'all' | 'none' | (string & {})
+
+export interface DocSpaceGroup {
+  /** null = "Sem módulo". */
+  module: DocModule | null
+  spaces: DocSpace[]
+}
+
+/** Filtro válido a partir do endereço: um módulo que não existe mais volta para "Todos". */
+export function resolveModuleFilter(raw: string | null, modules: DocModule[]): ModuleFilter {
+  if (raw === 'none') return 'none'
+  return raw && modules.some((m) => m.id === raw) ? raw : 'all'
+}
+
+const sortedModules = (modules: DocModule[]) => modules.slice().sort((a, b) => a.position - b.position || a.name.localeCompare(b.name))
+
+/** Módulo do espaço que ainda existe na lista (senão, o espaço conta como "Sem módulo"). */
+function moduleIdOf(space: DocSpace, known: Set<string>): string | null {
+  return space.module && known.has(space.module.id) ? space.module.id : null
+}
+
+/**
+ * Espaços agrupados para a tela inicial: em "Todos", um grupo por módulo na ordem da lista (os vazios
+ * somem) e "Sem módulo" no fim; com um módulo escolhido, só o grupo dele (mesmo vazio).
+ */
+export function groupSpacesByModule(spaces: DocSpace[], modules: DocModule[], filter: ModuleFilter): DocSpaceGroup[] {
+  const known = new Set(modules.map((m) => m.id))
+  const inModule = (id: string | null) => spaces.filter((s) => moduleIdOf(s, known) === id)
+  if (filter === 'none') return [{ module: null, spaces: inModule(null) }]
+  const chosen = filter !== 'all' ? modules.find((m) => m.id === filter) : undefined
+  if (chosen) return [{ module: chosen, spaces: inModule(chosen.id) }]
+  const groups: DocSpaceGroup[] = sortedModules(modules).map((module) => ({ module, spaces: inModule(module.id) }))
+  groups.push({ module: null, spaces: inModule(null) })
+  return groups.filter((g) => g.spaces.length > 0)
+}
+
+/** Quantos espaços em cada módulo, sem módulo e no total (para a lista de módulos). */
+export function countSpacesByModule(spaces: DocSpace[], modules: DocModule[]): { all: number; none: number; byModule: Record<string, number> } {
+  const known = new Set(modules.map((m) => m.id))
+  const byModule: Record<string, number> = {}
+  modules.forEach((m) => (byModule[m.id] = 0))
+  let none = 0
+  spaces.forEach((s) => {
+    const id = moduleIdOf(s, known)
+    if (id) byModule[id] = (byModule[id] ?? 0) + 1
+    else none += 1
+  })
+  return { all: spaces.length, none, byModule }
+}
+
+/** Módulos na ordem da lista. */
+export function orderedModules(modules: DocModule[]): DocModule[] {
+  return sortedModules(modules)
 }
 
 export interface DocTreePage {

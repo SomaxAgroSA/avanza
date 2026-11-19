@@ -1,3 +1,4 @@
+import type { SortState } from './pagination'
 import type { Attachment } from './attachments'
 import type { PlanItemRef } from './plan'
 import type { SprintRef } from './sprints'
@@ -228,6 +229,48 @@ export const TASK_SORTS = ['code', 'title', 'created_at', 'updated_at', 'due_dat
  * deixaram de ser filtros (as colunas continuam).
  */
 export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee'] as const
+
+/**
+ * Lista de tarefas do menu (§44): "Minhas tarefas" (atribuídas a quem olha; padrão a cada entrada) ou "Ver
+ * todas" (as dos projetos que a pessoa vê). A barra tem Status, Prioridade e Urgência — o Responsável sai, o
+ * escopo decide.
+ */
+export type TaskScope = 'mine' | 'all'
+export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency'] as const
+
+/** Categorias de status das tarefas abertas (o filtro `category` da API). */
+export const OPEN_TASK_CATEGORIES = 'backlog,todo,in_progress'
+
+/** Ordem inicial de cada escopo: Minhas pelo prazo (sem prazo no fim, o servidor garante); Todas pelas movidas mais recentes. */
+export const TASK_SCOPE_SORT: Record<TaskScope, SortState> = {
+  mine: { id: 'due_date', direction: 'asc' },
+  all: { id: 'updated_at', direction: 'desc' },
+}
+
+/** Só os filtros da barra da Lista de tarefas (um filtro antigo guardado, inclusive Responsável, não filtra escondido). */
+export function scopeBarFilters(filters: Record<string, string>): Record<string, string> {
+  const kept: Record<string, string> = {}
+  TASK_SCOPE_FILTERS.forEach((id) => {
+    if (filters[id]) kept[id] = filters[id]
+  })
+  return kept
+}
+
+/**
+ * O que a Lista de tarefas pede à API: os filtros da barra + o escopo (Minhas = responsável "me") e, sem
+ * Status escolhido, só as abertas — escolher um Status (aberto ou encerrado) mostra esse status.
+ */
+export function scopedTaskFilters(filters: Record<string, string>, scope: TaskScope): Record<string, string> {
+  const out = scopeBarFilters(filters)
+  if (scope === 'mine') out.assignee = 'me'
+  if (!out.status) out.category = OPEN_TASK_CATEGORIES
+  return out
+}
+
+/** Quantas abertas há em cada escopo (os números de "Minhas tarefas (n)" e "Ver todas (n)"), sem os filtros da barra. */
+export function scopeCountFilters(scope: TaskScope): Record<string, string> {
+  return scope === 'mine' ? { assignee: 'me', category: OPEN_TASK_CATEGORIES } : { category: OPEN_TASK_CATEGORIES }
+}
 
 /** Só os filtros da barra: um filtro antigo guardado no navegador (ex.: Área) não pode filtrar escondido. */
 export function taskListFilters(filters: Record<string, string>): Record<string, string> {

@@ -44,19 +44,27 @@ const PROJECTS = [
 ]
 
 describe('direction-data: indicadores', () => {
-  it('conta cada indicador e o percentual do total de projetos (não arquivados) que a pessoa vê', () => {
-    const stats = kpiStats(PROJECTS)
-    expect(stats.ongoing).toEqual({ count: 5, percent: 71 })
-    expect(stats.planning).toEqual({ count: 2, percent: 29 })
-    expect(stats.active).toEqual({ count: 2, percent: 29 })
-    expect(stats.high).toEqual({ count: 2, percent: 29 }) // alta ou crítica, entre os em andamento
-    expect(stats.completed).toEqual({ count: 1, percent: 14 })
-    expect(kpiStats([]).ongoing).toEqual({ count: 0, percent: 0 })
+  it('o percentual é sobre os em andamento (a base, sem %); Finalizados conta sem % (fora do cálculo)', () => {
+    const { base, stats } = kpiStats(PROJECTS)
+    expect(base).toBe(5)
+    expect(stats.ongoing).toEqual({ count: 5, percent: null })
+    expect(stats.planning).toEqual({ count: 2, percent: 40 })
+    expect(stats.active).toEqual({ count: 2, percent: 40 })
+    expect(stats.high).toEqual({ count: 2, percent: 40 }) // alta ou crítica, entre os em andamento
+    expect(stats.completed).toEqual({ count: 1, percent: null })
+    expect(kpiStats([])).toEqual(expect.objectContaining({ base: 0 }))
+    expect(kpiStats([]).stats.planning).toEqual({ count: 0, percent: 0 })
   })
 
   it('Alta prioridade só conta projetos em andamento', () => {
     const finishedHigh = make('p8', 'completed', {}, 'high')
-    expect(kpiStats([...PROJECTS, finishedHigh]).high.count).toBe(2)
+    expect(kpiStats([...PROJECTS, finishedHigh]).stats.high.count).toBe(2)
+  })
+
+  it('sem indicador escolhido (padrão) o recorte é o dos em andamento, sem contar como filtro', () => {
+    expect(DEFAULT_PANEL.kpi).toBeNull()
+    expect(panelScope(PROJECTS, DEFAULT_PANEL)).toEqual(panelScope(PROJECTS, { ...DEFAULT_PANEL, kpi: 'ongoing' }))
+    expect(isPanelFiltered({ ...DEFAULT_PANEL, kpi: 'ongoing' })).toBe(true)
   })
 
   it('o filtro do painel combina indicador, estado e departamento; cada bloco ignora o seu próprio filtro', () => {

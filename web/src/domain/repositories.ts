@@ -11,9 +11,10 @@ import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relat
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { ExecutiveDashboard, ExecutiveQuery } from './executive'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
-import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
+import type { DocDraft, DocFile, DocModule, DocModuleInput, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
+import type { ItPeople, TiDependencies } from './ti-dependencies'
 import type {
   DependencyRule,
   Plan,
@@ -144,6 +145,9 @@ export interface PlatformRepository {
   removeBranding(slot: BrandingSlot): Promise<PlatformSettings>
   /** Aplica a retenção agora (mesma regra da rotina diária). */
   runRetention(): Promise<{ removed: number }>
+  /** Pessoas de TI (§42; settings.manage). */
+  getItPeople(): Promise<ItPeople>
+  updateItPeople(userIds: string[]): Promise<ItPeople>
 }
 
 export interface CreateUserData {
@@ -273,6 +277,8 @@ export interface ProjectRepository {
   teamActivity(): Promise<TeamActivity>
   /** Tarefas executadas e faltantes por projeto (painel Direção e gerência, §41); projeto sem tarefas não vem. */
   taskCounts(): Promise<ProjectTaskCount[]>
+  /** Dependências de TI dos projetos que a pessoa vê por inteiro (painel Direção e gerência, §42). */
+  tiDependencies(): Promise<TiDependencies>
   addMember(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   updateMemberRole(id: string, userId: string, role: MemberRole): Promise<ProjectMember[]>
   removeMember(id: string, userId: string): Promise<void>
@@ -578,6 +584,12 @@ export interface DocsRepository {
   unlinkTask(pageId: string, taskId: string): Promise<void>
   /** Páginas vinculadas à tarefa (só as dos espaços que a pessoa lê). */
   listTaskDocs(taskId: string): Promise<TaskDocLink[]>
+  /** Módulos da tela inicial (§43), na ordem da lista. */
+  listModules(): Promise<DocModule[]>
+  createModule(input: DocModuleInput): Promise<DocModule>
+  updateModule(id: string, input: DocModuleInput): Promise<DocModule>
+  /** Os espaços do módulo ficam "Sem módulo"; devolve quantos. */
+  deleteModule(id: string): Promise<number>
 }
 
 /** Relacionamentos, subtarefas e fork. */

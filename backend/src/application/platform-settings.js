@@ -1,7 +1,8 @@
 /**
  * Casos de uso do Configurador geral (regras de negócio §15): configurações da plataforma (só
  * `platform.manage`), identidade pública (nome, logo e ícone — sem login), política de senha
- * (quem está logado) e a limpeza diária do histórico de auditoria (rotina, sem usuário).
+ * (quem está logado), a limpeza diária do histórico de auditoria (rotina, sem usuário) e as Pessoas de TI
+ * (§42, `settings.manage`).
  *
  * Porta: `platformSettingsRepository` { get() → { values, files: { slot: { name, mime, size } }, updatedAt },
  * saveValues(values), setFile(slot, data), clearFile(slot), fileKeyOf(slot) }; o histórico usa
@@ -12,8 +13,10 @@ const { appError } = require('../core/errors')
 const rbac = require('../domain/rbac')
 const settingsDomain = require('../domain/platform-settings')
 const { buildAuditEntry } = require('./audit')
+const { toUserSummary } = require('./presenters')
 
 const PERMISSION = 'platform.manage'
+const IT_PEOPLE_PERMISSION = 'settings.manage'
 const ENTITY = 'platform_settings'
 const ENTITY_ID = 'platform'
 const BRANDING_URL = '/api/v1/platform/branding/'
@@ -82,6 +85,8 @@ function createPlatformSettingsService(deps) {
     const input = Object.assign({}, raw || {})
     const dryRun = input.dry_run === true
     delete input.dry_run
+    // Pessoas de TI têm rota e permissão próprias (settings.manage): aqui não entram
+    if (Object.prototype.hasOwnProperty.call(input, 'it_people')) throw invalid({ it_people: 'unknown_field' })
     const before = await currentSettings(deps)
     const result = settingsDomain.validateSettings(input, before)
     if (Object.keys(result.fields).length > 0) throw invalid(result.fields)
@@ -194,7 +199,54 @@ function createPlatformSettingsService(deps) {
     return await purgeAuditLogs(ctx)
   }
 
-  return { runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
+  // ------------------------------------------------------------------ Pessoas de TI (§42)
+
+  async function presentItPeople(ids) {
+    const users = ids.length ? await deps.userRepository.findManyByIds(ids) : []
+    const byId = {}
+    users.forEach((u) => {
+      byId[u.id] = u
+    })
+    return { user_ids: ids.filter((id) => byId[id]), users: ids.filter((id) => byId[id]).map((id) => toUserSummary(byId[id])) }
+  }
+
+  /**
+   * Quem é de TI para as "Dependências de TI" (além do Responsável TI de cada projeto) e os usuários ativos
+   * que podem ser escolhidos (`candidates`, até 500 — quem tem settings.manage nem sempre tem users.view).
+   */
+  async function getItPeople(ctx) {
+    rbac.assertCan(ctx.principal, IT_PEOPLE_PERMISSION)
+    const out = await presentItPeople((await currentSettings(deps)).it_people)
+    out.candidates = (await deps.userRepository.searchActive({ search: '', excludeIds: [], limit: 500 })).map(toUserSummary)
+    return out
+  }
+
+  /** Troca a lista inteira (`user_ids`): só usuários que existem; fica no histórico com os nomes. */
+  async function updateItPeople(ctx, raw) {
+    rbac.assertCan(ctx.principal, IT_PEOPLE_PERMISSION)
+    const ids = raw && raw.user_ids
+    const issue = settingsDomain.validateSettings({ it_people: ids }, {}).fields.it_people
+    if (issue) throw invalid({ user_ids: issue })
+    const unique = ids.filter((id, i, all) => all.indexOf(id) === i)
+    const found = unique.length ? await deps.userRepository.findManyByIds(unique) : []
+    if (found.length !== unique.length) throw invalid({ user_ids: 'invalid_option' })
+    const before = await currentSettings(deps)
+    const after = Object.assign({}, before, { it_people: unique })
+    if (settingsDomain.diffSettings(before, after)) {
+      const names = async (list) => (list.length ? (await deps.userRepository.findManyByIds(list)).map((u) => u.name).sort() : [])
+      const oldNames = await names(before.it_people)
+      const newNames = found.map((u) => u.name).sort()
+      await deps.unitOfWork.run(async (repos) => {
+        await repos.platformSettingsRepository.saveValues(after)
+        await repos.auditRepository.record(
+          buildAuditEntry(ctx, { entityType: ENTITY, entityId: ENTITY_ID, action: 'platform_settings.update', oldValue: { it_people: oldNames }, newValue: { it_people: newNames } }),
+        )
+      })
+    }
+    return presentItPeople(unique)
+  }
+
+  return { getItPeople, updateItPeople, runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
 }
 
 module.exports = { createPlatformSettingsService, currentSettings, currentPasswordPolicy, currentLockoutPolicy }

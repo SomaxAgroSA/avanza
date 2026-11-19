@@ -192,14 +192,15 @@ function createTaskRepository(db) {
     if (!query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), 'tasks.'))
     if (query.projectId) where.push(`tasks.project_id = ${param(query.projectId)}`)
     if (query.typeId) where.push(`tasks.task_type_id = ${param(query.typeId)}`)
-    if (query.priorityId) where.push(`tasks.priority_id = ${param(query.priorityId)}`)
+    // prioridade e urgência: um valor ou vários (lista = "ou")
+    if (query.priorityId) where.push(`tasks.priority_id = ANY(${param([].concat(query.priorityId))}::text[])`)
     if (query.assigneeId) where.push(`tasks.assignee_id = ${param(query.assigneeId)}`)
     if (query.tagId) where.push(`tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = ${param(query.tagId)})`)
     if (query.sprintId) where.push(query.sprintId === 'none' ? 'tasks.sprint_id IS NULL' : `tasks.sprint_id = ${param(query.sprintId)}`)
     if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)
     if (query.inReport !== undefined) where.push(`tasks.report_excluded = ${param(!query.inReport)}`)
     if (query.itVisible !== undefined) where.push(`tasks.it_visible = ${param(!!query.itVisible)}`)
-    if (query.urgency) where.push(`tasks.urgency = ${param(query.urgency === 'none' ? '' : query.urgency)}`)
+    if (query.urgency) where.push(`tasks.urgency = ANY(${param([].concat(query.urgency).map((u) => (u === 'none' ? '' : u)))}::text[])`)
     if (query.areaId) where.push(query.areaId === 'none' ? 'tasks.area_id IS NULL' : `tasks.area_id = ${param(query.areaId)}`)
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
     if (query.search) {
@@ -903,6 +904,15 @@ function createRelationRepository(db) {
     },
     async listByTask(taskId) {
       const rows = await db.query('SELECT * FROM task_relations WHERE source_task_id = $1 OR target_task_id = $1 ORDER BY created ASC, id ASC', [taskId])
+      return rows.map(toEntity)
+    },
+    /** Relações que tocam alguma das tarefas (qualquer tipo e sentido). */
+    async listByTasks(taskIds) {
+      if (taskIds.length === 0) return []
+      const rows = await db.query(
+        'SELECT * FROM task_relations WHERE source_task_id = ANY($1::text[]) OR target_task_id = ANY($1::text[]) ORDER BY created ASC, id ASC',
+        [taskIds],
+      )
       return rows.map(toEntity)
     },
     /** Relações entre o mesmo par (qualquer sentido). */

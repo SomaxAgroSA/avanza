@@ -41,6 +41,7 @@ const space = (extra: Partial<DocSpace> = {}): DocSpace => ({
   color: 'green',
   visibility: 'project',
   project: { id: 'ecc', key: 'ECC', name: 'EVALUACIÓN DE CAMPOS A CIEGAS' },
+  module: null,
   homePageId: 'home',
   pageCount: 2,
   createdAt: null,

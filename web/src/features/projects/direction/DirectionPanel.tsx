@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
 import type { Project, ProjectStatus, ProjectTaskCount, TeamActivity } from '@/domain/projects'
+import type { TiDependencies } from '@/domain/ti-dependencies'
 import { AppTooltip } from '@/presentation/components'
 import {
   DEFAULT_PANEL,
@@ -14,6 +15,7 @@ import {
   departmentSlices,
   ganttModel,
   isPanelFiltered,
+  kpiOf,
   kpiStats,
   panelScope,
   pieSlicePaths,
@@ -25,6 +27,8 @@ import {
   type PanelFilter,
 } from './direction-data'
 import { DirectionTeam } from './DirectionTeam'
+import { TiDrawer, TiFlag, TiStrip } from './TiDependencies'
+import { tiAffected, tiInScope } from './ti-data'
 import { TaskBar } from './TaskBar'
 
 /** Cor da marca de cada estado; o nome vai sempre ao lado (a cor nunca fica sozinha). */
@@ -39,18 +43,28 @@ export interface DirectionPanelProps {
   taskCounts: ProjectTaskCount[] | undefined
   /** "Equipo ahora" e se pode ser mostrado (exige tasks.view). */
   team: { data: TeamActivity | undefined; pending: boolean; error: boolean; retry: () => void } | null
+  /** Dependências de TI (§42); sem tasks.view ou ainda sem resposta, nada aparece. */
+  ti?: TiDependencies | undefined
 }
 
 /** Painel da vista "Direção e gerência" de Em andamento (regras §41): indicadores, linha do tempo, gráficos e equipe. */
-export function DirectionPanel({ projects, filter, onFilter, taskCounts, team }: DirectionPanelProps) {
+export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, ti }: DirectionPanelProps) {
   const scope = useMemo(() => panelScope(projects, filter), [projects, filter])
   const set = (patch: Partial<PanelFilter>) => onFilter({ ...filter, ...patch })
+  // painel lateral das Dependências de TI: null = fechado; only = projeto do ⚠ (null = todos do recorte)
+  const [tiView, setTiView] = useState<{ only: string | null } | null>(null)
+  const tiScope = useMemo(() => tiInScope(ti, scope), [ti, scope])
+  const tiShown = useMemo(() => tiInScope(ti, scope, tiView?.only), [ti, scope, tiView])
+  const affected = useMemo(() => tiAffected(ti), [ti])
   // `contents`: a faixa fixa do filtro vale também sobre a tabela (o bloco pai dela é a página)
   return (
     <div className="contents" data-testid="direction-panel">
-      <Kpis projects={projects} filter={filter} onSelect={(kpi) => set({ kpi: filter.kpi === kpi && kpi !== DEFAULT_PANEL.kpi ? DEFAULT_PANEL.kpi : kpi })} />
+      {/* clicar no indicador escolhido de novo limpa a escolha (volta aos em andamento, sem destaque) */}
+      <Kpis projects={projects} filter={filter} onSelect={(kpi) => set({ kpi: filter.kpi === kpi ? DEFAULT_PANEL.kpi : kpi })} />
       <FilterBand projects={projects} filter={filter} count={scope.length} onClear={() => onFilter(DEFAULT_PANEL)} />
-      <Timeline projects={scope} />
+      <TiStrip scope={tiScope} onOpen={() => setTiView({ only: null })} />
+      <Timeline projects={scope} affected={affected} onTi={(projectId) => setTiView({ only: projectId })} />
+      <TiDrawer ti={ti} scope={tiShown} only={tiView?.only ?? null} open={!!tiView} onClose={() => setTiView(null)} onShowAll={() => setTiView({ only: null })} />
       <div className={cn('mb-4 grid gap-3', taskCounts && taskCounts.length > 0 ? 'lg:grid-cols-2' : '')}>
         <Departments projects={departmentScope(projects, filter)} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />
         {taskCounts && taskCounts.length > 0 && <TasksCard projects={scope} counts={taskCounts} />}
@@ -65,8 +79,8 @@ export function DirectionPanel({ projects, filter, onFilter, taskCounts, team }:
 
 function Kpis({ projects, filter, onSelect }: { projects: Project[]; filter: PanelFilter; onSelect: (kpi: KpiId) => void }) {
   const { t } = useTranslation()
-  const stats = useMemo(() => kpiStats(projects), [projects])
-  const hints: Partial<Record<KpiId, string>> = { ongoing: t('direction.kpi.hintOngoing'), high: t('direction.kpi.hintHigh') }
+  const { base, stats } = useMemo(() => kpiStats(projects), [projects])
+  const hints: Partial<Record<KpiId, string>> = { ongoing: t('direction.kpi.hintOngoing'), completed: t('direction.kpi.hintCompleted') }
   const dots: Partial<Record<KpiId, string>> = { planning: STATUS_COLORS.planning, active: STATUS_COLORS.active }
   return (
     <div role="group" aria-label={t('direction.kpi.label')} className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -89,9 +103,9 @@ function Kpis({ projects, filter, onSelect }: { projects: Project[]; filter: Pan
           </span>
           <span className="flex items-baseline gap-2.5">
             <span className="text-3xl font-bold leading-none tabular-nums text-fg">{stats[id].count}</span>
-            <span className="text-sm font-bold tabular-nums text-muted">{stats[id].percent} %</span>
+            {stats[id].percent !== null && <span className="text-sm font-bold tabular-nums text-muted">{stats[id].percent} %</span>}
           </span>
-          <span className="text-xs text-muted">{hints[id] ?? t('direction.kpi.hintTotal', { count: projects.length })}</span>
+          <span className="text-xs text-muted">{hints[id] ?? t('direction.kpi.hintOfOngoing', { count: base })}</span>
         </button>
       ))}
     </div>
@@ -102,7 +116,7 @@ function FilterBand({ projects, filter, count, onClear }: { projects: Project[];
   const { t } = useTranslation()
   if (!isPanelFiltered(filter)) return null
   const areaName = filter.area === NO_AREA ? t('direction.departments.none') : projects.find((p) => p.area?.id === filter.area)?.area?.name
-  const filters = [t(`direction.kpi.${filter.kpi}`), filter.status && t(`projects.status.${filter.status}`), filter.area && areaName].filter(Boolean).join(' · ')
+  const filters = [t(`direction.kpi.${kpiOf(filter)}`), filter.status && t(`projects.status.${filter.status}`), filter.area && areaName].filter(Boolean).join(' · ')
   return (
     <div role="status" className="sticky top-0 z-10 -mt-1 mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-primary-border bg-primary-soft px-3.5 py-2.5 text-sm text-fg shadow-card">
       <span className="min-w-0 flex-1 basis-60">
@@ -136,7 +150,7 @@ function Card({ title, aside, children, className }: { title: string; aside?: Re
 
 const LABEL_WIDTH = 220
 
-function Timeline({ projects }: { projects: Project[] }) {
+function Timeline({ projects, affected, onTi }: { projects: Project[]; affected: Set<string>; onTi: (projectId: string) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const model = useMemo(() => ganttModel(projects), [projects])
@@ -187,8 +201,11 @@ function Timeline({ projects }: { projects: Project[] }) {
                 })
                 return (
                   <li key={row.project.id} className="grid min-h-6 items-center border-b border-border hover:bg-surface-2" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr` }}>
-                    <span className="truncate pr-2.5 text-xs font-semibold text-fg" title={row.project.name}>
-                      {row.project.name}
+                    <span className="flex min-w-0 items-center pr-2.5">
+                      <span className="truncate text-xs font-semibold text-fg" title={row.project.name}>
+                        {row.project.name}
+                      </span>
+                      {affected.has(row.project.id) && <TiFlag name={row.project.name} onOpen={() => onTi(row.project.id)} />}
                     </span>
                     <div className="relative h-6">
                       <AppTooltip content={tip}>

@@ -24,6 +24,20 @@ describe('domain/access', () => {
     expect(togglePermission(['projects.view', 'projects.charter'], 'projects.charter', false)).toEqual(['projects.view'])
   })
 
+  it('Lista de tarefas (§44): módulo próprio que depende de "ver tarefas"', () => {
+    const list = ACCESS_MODULES.find((m) => m.module === 'task_list')!
+    expect(list).toMatchObject({ view: 'tasks.list', actions: [], requires: 'tasks.view' })
+    // logo depois de Tarefas
+    expect(ACCESS_MODULES.map((m) => m.module).indexOf('task_list')).toBe(ACCESS_MODULES.map((m) => m.module).indexOf('tasks') + 1)
+    // ligar a lista liga "ver tarefas"; desligar "ver tarefas" desliga a lista; desligar a lista não mexe nas tarefas
+    expect(togglePermission([], 'tasks.list', true)).toEqual(['tasks.list', 'tasks.view'])
+    expect(togglePermission(['tasks.view', 'tasks.list', 'tasks.edit', 'kanban.view'], 'tasks.view', false)).toEqual(['kanban.view'])
+    expect(togglePermission(['tasks.view', 'tasks.list'], 'tasks.list', false)).toEqual(['tasks.view'])
+    // sem "ver tarefas" a lista não conta como módulo visto
+    expect(moduleVisible(['tasks.list'], list)).toBe(false)
+    expect(moduleVisible(['tasks.list', 'tasks.view'], list)).toBe(true)
+  })
+
   it('o que vê dentro do projeto, na ordem das abas: seções próprias e módulos que aparecem nele', () => {
     // Gestión, Tareas y Kanban no se repiten aquí: ya son interruptores de módulo
     expect(PROJECT_SECTION_CHIPS.map((c) => c.key)).toEqual(['charter', 'report', 'members', 'history'])

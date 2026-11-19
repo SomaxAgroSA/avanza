@@ -351,11 +351,20 @@ export interface DocSpaceDto {
   color: string
   visibility: string
   project: { id: string; key: string; name: string } | null
+  module?: { id: string; name: string; color: string } | null
   home_page_id: string | null
   page_count: number | null
   created_at: string | null
   updated_at: string | null
   capabilities: { edit: boolean; manage: boolean }
+}
+
+export interface DocModuleDto {
+  id: string
+  name: string
+  color: string
+  position: number
+  space_count: number
 }
 
 export interface DocTreePageDto {
@@ -961,4 +970,50 @@ export interface TeamActivityDto {
       tasks: Array<{ id: string; code: string; title: string; status: { id: string; name: string; color: string; category: string }; updated_at: string | null; in_progress: boolean; moved: boolean }>
     }>
   }>
+}
+
+/* ------------------------------------------------------------------ Dependências de TI (§42) */
+
+export interface TiProjectRefDto {
+  id: string
+  key: string
+  name: string
+}
+
+export interface TiTaskRefDto {
+  id: string
+  code: string
+  title: string
+  project: TiProjectRefDto
+  due_date: string | null
+}
+
+export interface TiCountsDto {
+  deliveries: number
+  blocked: number
+  pending: number
+  none_due: number
+  after_project_due: number
+  overdue: number
+  due_soon: number
+}
+
+export interface TiDependenciesDto {
+  generated_at: string | null
+  today: string
+  people: UserSummaryDto[]
+  totals: TiCountsDto & { projects: number }
+  projects: Array<{
+    project: TiProjectRefDto & { due_date: string | null }
+    counts: TiCountsDto
+    deliveries: Array<TiTaskRefDto & { assignee_id: string; since: string | null; waiting_days: number | null; days_left: number | null; risk: string; blocks: number; blocks_projects: TiProjectRefDto[] }>
+    blocked: Array<TiTaskRefDto & { waiting_on: Array<TiTaskRefDto & { relation_id: string }> }>
+    pending: Array<TiTaskRefDto & { related_to: TiTaskRefDto; relation_id: string; can_confirm: boolean }>
+  }>
+}
+
+export interface ItPeopleDto {
+  user_ids: string[]
+  users: UserSummaryDto[]
+  candidates?: UserSummaryDto[]
 }

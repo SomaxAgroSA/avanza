@@ -4,6 +4,8 @@ import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanRep
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
 import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
+import type { ItPeopleDto, TiCountsDto, TiDependenciesDto, TiProjectRefDto, TiTaskRefDto } from './dtos'
+import type { ItPeople, TiCounts, TiDependencies, TiProjectRef, TiRisk, TiTaskRef } from '@/domain/ti-dependencies'
 import type { ApiToken, ApiTokenState } from '@/domain/api-tokens'
 import type { WebhookDto, WebhookDeliveryDto } from './dtos'
 import type { Webhook, WebhookDelivery, WebhookDeliveryStatus } from '@/domain/webhooks'
@@ -20,9 +22,9 @@ import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
 import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
-import type { BacklogDto, BoardDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
+import type { BacklogDto, BoardDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
-import { SPACE_ICONS, SPACE_VISIBILITIES, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
+import { SPACE_ICONS, SPACE_VISIBILITIES, type DocModule, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
@@ -425,11 +427,22 @@ export function toDocSpace(dto: DocSpaceDto): DocSpace {
     color: toColor(OPTION_COLORS, dto.color, 'blue'),
     visibility: oneOf(SPACE_VISIBILITIES, dto.visibility, 'company'),
     project: dto.project,
+    module: dto.module ? { id: dto.module.id, name: dto.module.name, color: toColor(OPTION_COLORS, dto.module.color, 'blue') } : null,
     homePageId: dto.home_page_id,
     pageCount: dto.page_count ?? null,
     createdAt: toDate(dto.created_at),
     updatedAt: toDate(dto.updated_at),
     capabilities: { edit: !!dto.capabilities?.edit, manage: !!dto.capabilities?.manage },
+  }
+}
+
+export function toDocModule(dto: DocModuleDto): DocModule {
+  return {
+    id: dto.id,
+    name: dto.name,
+    color: toColor(OPTION_COLORS, dto.color, 'blue'),
+    position: dto.position ?? 0,
+    spaceCount: dto.space_count ?? 0,
   }
 }
 
@@ -1328,4 +1341,45 @@ export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
       })),
     })),
   }
+}
+
+/* ------------------------------------------------------------------ Dependências de TI (§42) */
+
+const TI_RISKS: readonly TiRisk[] = ['none_due', 'after_project_due', 'overdue', 'due_soon', 'ok']
+const toTiProjectRef = (dto: TiProjectRefDto): TiProjectRef => ({ id: dto.id, key: dto.key, name: dto.name })
+const toTiTaskRef = (dto: TiTaskRefDto): TiTaskRef => ({ id: dto.id, code: dto.code, title: dto.title, project: toTiProjectRef(dto.project), dueDate: dto.due_date ? dto.due_date.slice(0, 10) : null })
+const toTiCounts = (dto: TiCountsDto): TiCounts => ({
+  deliveries: dto.deliveries,
+  blocked: dto.blocked,
+  pending: dto.pending,
+  noneDue: dto.none_due,
+  afterProjectDue: dto.after_project_due,
+  overdue: dto.overdue,
+  dueSoon: dto.due_soon,
+})
+
+export function toTiDependencies(dto: TiDependenciesDto): TiDependencies {
+  return {
+    today: dto.today,
+    people: dto.people.map(toUserSummary),
+    projects: dto.projects.map((row) => ({
+      project: { ...toTiProjectRef(row.project), dueDate: row.project.due_date ? row.project.due_date.slice(0, 10) : null },
+      counts: toTiCounts(row.counts),
+      deliveries: row.deliveries.map((d) => ({
+        ...toTiTaskRef(d),
+        assigneeId: d.assignee_id,
+        waitingDays: d.waiting_days,
+        daysLeft: d.days_left,
+        risk: TI_RISKS.includes(d.risk as TiRisk) ? (d.risk as TiRisk) : 'ok',
+        blocks: d.blocks,
+        blocksProjects: d.blocks_projects.map(toTiProjectRef),
+      })),
+      blocked: row.blocked.map((b) => ({ ...toTiTaskRef(b), waitingOn: b.waiting_on.map((w) => ({ ...toTiTaskRef(w), relationId: w.relation_id })) })),
+      pending: row.pending.map((p) => ({ ...toTiTaskRef(p), relatedTo: toTiTaskRef(p.related_to), relationId: p.relation_id, canConfirm: !!p.can_confirm })),
+    })),
+  }
+}
+
+export function toItPeople(dto: ItPeopleDto): ItPeople {
+  return { userIds: dto.user_ids, users: dto.users.map(toUserSummary), candidates: (dto.candidates ?? []).map(toUserSummary) }
 }

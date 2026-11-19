@@ -173,6 +173,8 @@ describe('repositórios de tarefas (Postgres)', () => {
       assert.deepEqual(await listed({ sprintId: sprint.id }), { codes: nth(1), total: 1 })
       assert.deepEqual(await listed({ sprintId: 'none' }), { codes: nth(0, 2, 3), total: 3 })
       assert.deepEqual(await listed({ priorityId: priorities[1], typeId: type.id }), { codes: nth(2), total: 1 })
+      // vários valores (botões da Lista de tarefas, §44)
+      assert.deepEqual(await listed({ priorityId: [priorities[1], priorities[3]] }), { codes: nth(2, 3), total: 2 })
     })
 
     it('filtra por informe do projeto e por urgência (none = sem urgência; vazio gravado como texto vazio)', async () => {
@@ -183,6 +185,8 @@ describe('repositórios de tarefas (Postgres)', () => {
         assert.deepEqual(await listed({ inReport: true }), { codes: nth(0, 2, 3), total: 3 })
         assert.deepEqual(await listed({ urgency: 'high' }), { codes: nth(1), total: 1 })
         assert.deepEqual(await listed({ urgency: 'none' }), { codes: nth(0, 2), total: 2 })
+        assert.deepEqual(await listed({ urgency: ['high', 'none'] }), { codes: nth(0, 1, 2), total: 3 })
+        assert.deepEqual(await listed({ urgency: ['low', 'high'] }), { codes: nth(1, 3), total: 2 })
         const raw = await t.db.one('SELECT urgency, report_excluded FROM tasks WHERE id = $1', [list[0].id])
         assert.deepEqual(raw, { urgency: '', report_excluded: false })
         const card = (await r.tasks.listForBoard(project.id, status.BACKLOG, { closed: false, limit: 50 })).find((task) => task.id === list[1].id)
@@ -610,6 +614,10 @@ describe('repositórios de tarefas (Postgres)', () => {
     assert.deepEqual(ids(await r.relations.precedenceFrom([t1.id])), [blocks.id])
     assert.deepEqual(ids(await r.relations.precedenceFrom([t2.id])), [depends.id])
     assert.deepEqual(await r.relations.precedenceFrom([]), [])
+    // §42: relações que tocam as tarefas, em qualquer sentido e tipo
+    assert.deepEqual(ids(await r.relations.listByTasks([t1.id])), [blocks.id, related.id])
+    assert.deepEqual(ids(await r.relations.listByTasks([t3.id, t1.id])), [blocks.id, depends.id, related.id])
+    assert.deepEqual(await r.relations.listByTasks([]), [])
     const blockers = await r.relations.blockersOf([t2.id, t3.id])
     assert.deepEqual(
       blockers.sort((x, y) => (x.taskId < y.taskId ? -1 : 1)),

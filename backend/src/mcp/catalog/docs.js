@@ -1,7 +1,7 @@
 /**
  * Catálogo MCP — Documentação (espaços e páginas estilo Confluence, rascunho, publicação, versões e
  * busca). Cada ferramenta só delega para o caso de uso da rota correspondente (http/routes.js:
- * services.docSpaces e services.docPages); permissões, higienização, histórico e versões são os dos
+ * services.docSpaces, services.docModules e services.docPages); permissões, higienização, histórico e versões são os dos
  * casos de uso.
  *
  * O conteúdo das páginas é o JSON do editor (TipTap); para o modelo ele entra e sai em Markdown
@@ -30,6 +30,7 @@ const SPACE_FIELDS = {
   icon: text(64, `Icon: one of ${docsDomain.SPACE_ICONS.join(', ')} or the name of an icon imported into the icon library.`),
   color: color(),
   visibility: oneOf(docsDomain.SPACE_VISIBILITIES, 'company = everyone with docs.view; project = only people who see the project (needs project_id).'),
+  module_id: nullableId('Documentation module id (from list_doc_modules) that groups the space on the Documentation home; it does not change who can read or edit.'),
 }
 
 // ---------------------------------------------------------------- apresentação
@@ -86,12 +87,21 @@ const TOOLS = [
     run: (_args, { services, ctx }) => services.docPages.recent(ctx),
   },
 
-  // ---------------------------------------------------------------- espaços
+  // ---------------------------------------------------------------- módulos e espaços
+  {
+    name: 'list_doc_modules',
+    title: 'List documentation modules',
+    description:
+      'Lists the company-wide documentation modules (categories such as Marketing that group spaces on the Documentation home), in their order: id, name, color and how many spaces the user can read in each. Spaces without a module have module null in list_doc_spaces.',
+    inputSchema: schema({}),
+    annotations: READ,
+    run: (_args, { services, ctx }) => services.docModules.listModules(ctx),
+  },
   {
     name: 'list_doc_spaces',
     title: 'List documentation spaces',
     description:
-      'Lists the documentation spaces the user can read (company-wide or of a project): id, key, name, visibility, project, home page, number of published pages and what the user can do (edit pages, manage the space).',
+      'Lists the documentation spaces the user can read (company-wide or of a project): id, key, name, visibility, project, module, home page, number of published pages and what the user can do (edit pages, manage the space).',
     inputSchema: schema({}),
     annotations: READ,
     run: (_args, { services, ctx }) => services.docSpaces.listSpaces(ctx),
@@ -126,7 +136,7 @@ const TOOLS = [
   {
     name: 'update_doc_space',
     title: 'Update documentation space',
-    description: 'Changes a space (only the fields sent). The key and the project cannot change. Requires managing the space.',
+    description: 'Changes a space (only the fields sent), including moving it to another module (module_id; null = no module). The key and the project cannot change. Requires managing the space.',
     inputSchema: schema(Object.assign({ space_id: SPACE_ID }, SPACE_FIELDS), ['space_id']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.docSpaces.updateSpace(ctx, args.space_id, pick(args, Object.keys(SPACE_FIELDS))),

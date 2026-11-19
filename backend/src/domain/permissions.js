@@ -25,6 +25,9 @@ const PERMISSIONS = Object.freeze([
   { code: 'tasks.assign', module: 'tasks' },
   { code: 'tasks.fork', module: 'tasks' },
   { code: 'tasks.link', module: 'tasks' },
+  // Lista de tarefas (§44): o item "Tarefas" do menu e a página /tasks; só de tela — a API das tarefas segue
+  // tasks.view, que também governa as tarefas dentro de cada projeto. Sem tasks.view não serve para nada.
+  { code: 'tasks.list', module: 'task_list' },
 
   { code: 'kanban.view', module: 'kanban' },
 
@@ -74,7 +77,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
   ADMIN: ALL_CODES,
   MANAGER: [
     'projects.view', 'projects.create', 'projects.edit', 'projects.charter', 'projects.history', 'projects.members', 'projects.report',
-    'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.delete', 'tasks.assign', 'tasks.fork', 'tasks.link',
+    'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.delete', 'tasks.assign', 'tasks.fork', 'tasks.link', 'tasks.list',
     'kanban.view',
     'users.view',
     'reports.view',
@@ -84,13 +87,13 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
   ],
   MEMBER: [
     'projects.view', 'projects.charter', 'projects.history', 'projects.members', 'projects.report',
-    'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign', 'tasks.fork', 'tasks.link',
+    'tasks.view', 'tasks.create', 'tasks.edit', 'tasks.assign', 'tasks.fork', 'tasks.link', 'tasks.list',
     'kanban.view',
     'reports.view',
     'docs.view', 'docs.edit',
     'plan.view', 'plan.edit',
   ],
-  VIEWER: ['projects.view', 'projects.charter', 'projects.history', 'projects.members', 'projects.report', 'tasks.view', 'kanban.view', 'reports.view', 'docs.view', 'plan.view'],
+  VIEWER: ['projects.view', 'projects.charter', 'projects.history', 'projects.members', 'projects.report', 'tasks.view', 'tasks.list', 'kanban.view', 'reports.view', 'docs.view', 'plan.view'],
 })
 
 const DEFAULT_ROLES = Object.freeze([

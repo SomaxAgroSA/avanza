@@ -291,6 +291,38 @@ function build() {
           }),
         }),
       },
+      '/ti-dependencies': {
+        get: op('Dependências de TI (§42): por projeto não arquivado que a pessoa vê por inteiro, as entregas de TI abertas (tarefa aberta atribuída a alguém de "Pessoas de TI" ou ao Responsável TI do projeto) com o risco do prazo (none_due, after_project_due, overdue, due_soon, ok), as tarefas abertas bloqueadas por elas ("bloqueia"/"depende de", inclusive de outro projeto) e as só relacionadas (a validar, nunca bloqueio). Exige tasks.view (sem ele, vazio). Alimenta o painel Direção e gerência de Em andamento', ['projects'], {
+          200: ok('Dependências', {
+            type: 'object',
+            properties: {
+              generated_at: { type: 'string', format: 'date-time' },
+              today: { type: 'string', description: 'AAAA-MM-DD no fuso de quem consulta' },
+              people: { type: 'array', items: ref('UserSummary'), description: 'quem responde pelas entregas' },
+              totals: { type: 'object', description: 'deliveries, blocked, pending, none_due, after_project_due, overdue, due_soon, projects' },
+              projects: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    project: { type: 'object', description: '{ id, key, name, due_date }' },
+                    counts: { type: 'object', description: 'deliveries, blocked, pending, none_due, after_project_due, overdue, due_soon' },
+                    deliveries: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, assignee_id, since, waiting_days, days_left, risk, blocks, blocks_projects }' },
+                    blocked: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, waiting_on: [{ id, code, title, project, due_date, relation_id }] }' },
+                    pending: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, related_to, relation_id, can_confirm }' },
+                  },
+                },
+              },
+            },
+          }),
+          400: errorResponse('VALIDATION_ERROR'),
+        }, {
+          parameters: [
+            { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'só estes projetos (ids separados por vírgula, até 200)' },
+            { name: 'tz_offset', in: 'query', schema: { type: 'integer' }, description: 'minutos (Date#getTimezoneOffset) para o "hoje" de quem consulta' },
+          ],
+        }),
+      },
       '/projects': {
         get: op('Lista projetos acessíveis (paginado)', ['projects'], { 200: ok('Página de projetos', { type: 'array', items: ref('Project') }, true) }, {
           parameters: [
@@ -453,7 +485,7 @@ function build() {
             { name: 'project_id', in: 'query', schema: { type: 'string' } },
             { name: 'task_type_id', in: 'query', schema: { type: 'string' } },
             { name: 'status_id', in: 'query', schema: { type: 'string' } },
-            { name: 'priority_id', in: 'query', schema: { type: 'string' } },
+            { name: 'priority_id', in: 'query', schema: { type: 'string' }, description: 'um ou vários ids separados por vírgula (§44)' },
             { name: 'assignee_id', in: 'query', schema: { type: 'string' }, description: 'ID ou "me"' },
             { name: 'category', in: 'query', schema: { type: 'string' }, description: 'categorias de status separadas por vírgula (ex.: backlog,todo,in_progress)' },
             { name: 'tag_id', in: 'query', schema: { type: 'string' } },
@@ -461,7 +493,7 @@ function build() {
             { name: 'plan_item_id', in: 'query', schema: { type: 'string' }, description: 'tarefas ligadas a um elemento da Gestão de projetos' },
             { name: 'in_report', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'entra (true) ou não (false) no informe do projeto' },
             { name: 'it_visible', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'marcada (true) ou não (false) como visível para o Responsável TI (§36)' },
-            { name: 'urgency', in: 'query', schema: { type: 'string', enum: ['high', 'medium', 'low', 'none'] }, description: 'urgência (semáforo); none = sem urgência' },
+            { name: 'urgency', in: 'query', schema: { type: 'string' }, description: 'urgência (semáforo): high, medium, low ou none (sem urgência); um ou vários separados por vírgula (§44)' },
             { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
@@ -969,13 +1001,21 @@ function build() {
           },
         ),
       },
+      '/docs/modules': {
+        get: op('Módulos da documentação (§43), na ordem da lista, com quantos espaços a pessoa vê em cada um (docs.view)', ['docs'], { 200: ok('Módulos', { type: 'array', items: ref('DocModule') }) }),
+        post: op('Cria módulo no fim da lista (docs.manage) — { name*, color }', ['docs'], { 201: ok('Módulo', ref('DocModule')), 409: errorResponse('DOC_MODULE_NAME_IN_USE') }, { parameters: [csrfHeader], requestBody: jsonBody(ref('DocModuleInput')) }),
+      },
+      '/docs/modules/{id}': {
+        patch: op('Renomeia, troca a cor ou reordena (position = novo índice) o módulo (docs.manage)', ['docs'], { 200: ok('Módulo', ref('DocModule')), 404: errorResponse('DOC_MODULE_NOT_FOUND'), 409: errorResponse('DOC_MODULE_NAME_IN_USE') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocModuleInput')) }),
+        delete: op('Exclui o módulo (docs.manage); os espaços dele ficam sem módulo', ['docs'], { 200: ok('Excluído', { type: 'object', properties: { deleted: { type: 'boolean' }, spaces: { type: 'integer', description: 'espaços que ficaram sem módulo' } } }), 404: errorResponse('DOC_MODULE_NOT_FOUND') }, { parameters: [idParam, csrfHeader] }),
+      },
       '/docs/spaces': {
         get: op('Espaços de documentação que a pessoa lê (docs.view + visibilidade)', ['docs'], { 200: ok('Espaços', { type: 'array', items: ref('DocSpace') }) }),
         post: op('Cria espaço (docs.manage; espaço de projeto exige ser gestor). Nasce com a página inicial publicada', ['docs'], { 201: ok('Espaço', ref('DocSpace')), 409: errorResponse('DOC_SPACE_KEY_IN_USE') }, { parameters: [csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
       },
       '/docs/spaces/{id}': {
         get: op('Espaço pela CHAVE (ex.: MANUAL), com a árvore de páginas visíveis (rascunhos só para quem edita)', ['docs'], { 200: ok('Espaço e páginas', { type: 'object' }), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam] }),
-        patch: op('Configura o espaço (quem gerencia): name, description, icon, color, visibility e project_id (outro projeto que a pessoa gerencia, ou "" / null para tirar — aí visibility precisa ser company)', ['docs'], { 200: ok('Espaço', ref('DocSpace')), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
+        patch: op('Configura o espaço (quem gerencia): name, description, icon, color, visibility, module_id ("" / null = Sem módulo) e project_id (outro projeto que a pessoa gerencia, ou "" / null para tirar — aí visibility precisa ser company)', ['docs'], { 200: ok('Espaço', ref('DocSpace')), 404: errorResponse('DOC_SPACE_NOT_FOUND') }, { parameters: [idParam, csrfHeader], requestBody: jsonBody(ref('DocSpaceInput')) }),
         delete: op('Exclui o espaço com páginas, versões e arquivos (quem gerencia)', ['docs'], { 200: ok('Excluído', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
       '/docs/spaces/{id}/pages': {
@@ -1045,6 +1085,13 @@ function build() {
       },
       '/settings/platform/purge-audit': {
         post: op('Aplica a retenção do histórico agora (platform.manage; mesma regra da rotina diária) → { removed }', ['platform'], { 200: ok('Resultado', { type: 'object' }) }, { parameters: [csrfHeader] }),
+      },
+      '/settings/it-people': {
+        get: op('Pessoas de TI (§42; settings.manage) → { user_ids, users, candidates } (candidates = usuários ativos que podem ser escolhidos, até 500)', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }) }),
+        put: op('Troca a lista inteira (settings.manage): { user_ids } (até 50, usuários existentes); fica no histórico com os nomes', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {
+          parameters: [csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['user_ids'], properties: { user_ids: { type: 'array', items: { type: 'string' } } } }),
+        }),
       },
       '/settings/email': {
         get: op('Configurações do envio de e-mail (integrations.manage): { values: { enabled, host, port, username, tls, sender_name, sender_address, app_url }, has_password } — a senha nunca volta', ['integrations'], { 200: ok('Configurações', { type: 'object' }) }),
@@ -1834,6 +1881,7 @@ function build() {
             color: { type: 'string' },
             visibility: { type: 'string', enum: ['company', 'project'] },
             project: { type: ['object', 'null'] },
+            module: { type: ['object', 'null'], description: 'módulo da tela inicial (§43): { id, name, color }; null = Sem módulo' },
             home_page_id: { type: 'string' },
             page_count: { type: 'integer' },
             capabilities: { type: 'object', properties: { edit: { type: 'boolean' }, manage: { type: 'boolean' } } },
@@ -1848,7 +1896,28 @@ function build() {
             icon: { type: 'string' },
             color: { type: 'string' },
             project_id: { type: 'string', description: 'só na criação' },
+            module_id: { type: ['string', 'null'], description: 'módulo da documentação; "" ou null = Sem módulo' },
             visibility: { type: 'string', enum: ['company', 'project'] },
+          },
+        },
+        DocModule: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            color: { type: 'string' },
+            position: { type: 'integer' },
+            space_count: { type: 'integer', description: 'espaços que a pessoa vê no módulo' },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        DocModuleInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', maxLength: 60 },
+            color: { type: 'string', enum: ['gray', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'indigo', 'violet', 'pink'] },
+            position: { type: 'integer', minimum: 0, description: 'só na edição: novo índice na lista' },
           },
         },
         DocPage: {

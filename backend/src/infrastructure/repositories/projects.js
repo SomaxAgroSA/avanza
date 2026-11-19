@@ -316,6 +316,13 @@ function createProjectMemberRepository(db) {
       return counts
     },
 
+    /** Membros com o papel `role` nos projetos informados: [{ projectId, userId }]. */
+    async listByRole(role, ids) {
+      if (!ids || ids.length === 0) return []
+      const rows = await db.query('SELECT project_id, user_id FROM project_members WHERE role = $1 AND project_id = ANY($2::text[])', [role, ids])
+      return rows.map((row) => ({ projectId: row.project_id, userId: row.user_id }))
+    },
+
     /** { projectId: papel } do usuário nos projetos informados. */
     async rolesForUser(userId, ids) {
       const roles = {}
