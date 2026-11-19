@@ -93,7 +93,7 @@ export const roleSchema = z.object({
   name: z.string().trim().min(1, 'required').max(60, 'too_long'),
   description: z.string().trim().max(255, 'too_long'),
   /** Vista da lista Em andamento do perfil (§41): '' = Gestão. */
-  ongoingView: z.enum(['', 'executive']),
+  ongoingView: z.enum(['', 'executive', 'both']),
 })
 export type RoleInput = z.input<typeof roleSchema>
 

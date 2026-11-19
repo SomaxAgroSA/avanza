@@ -22,8 +22,8 @@ export interface User {
   lastLoginAt: Date | null
 }
 
-/** Vista da lista "Em andamento" de um perfil (§41): '' = Gestão (padrão); 'executive' = Direção e gerência (consulta). */
-export const ONGOING_VIEWS = ['', 'executive'] as const
+/** Vista da lista "Em andamento" de um perfil (§41): '' = Gestão (padrão); 'executive' = Direção e gerência (consulta); 'both' = as duas, com seletor na tela. */
+export const ONGOING_VIEWS = ['', 'executive', 'both'] as const
 export type OngoingView = (typeof ONGOING_VIEWS)[number]
 
 export interface Role {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, Pencil } from 'lucide-react'
+import { ChevronLeft, ExternalLink, Pencil } from 'lucide-react'
 import { AppButton, AppDrawer, AppErrorState, AppMarkdown, AppSkeleton } from '@/presentation/components'
 import { useProjectMembers } from '@/features/projects/queries'
 import { useTask, useTaskAttachments } from './queries'
@@ -17,6 +17,7 @@ export function TaskPreviewDrawer({
   onEdit,
   quickFields = false,
   onOpenFull,
+  backLabel,
 }: {
   taskId: string | null
   onOpenChange: (open: boolean) => void
@@ -25,6 +26,8 @@ export function TaskPreviewDrawer({
   quickFields?: boolean
   /** "Abrir tarefa" abre a tarefa completa sem sair da tela (janela); sem isto, vai para a página da tarefa. */
   onOpenFull?: (id: string) => void
+  /** Aberto por cima de outro painel: link "‹ <rótulo>" no topo que fecha e volta para ele. */
+  backLabel?: string
 }) {
   const { t } = useTranslation()
   const task = useTask(taskId ?? undefined)
@@ -67,6 +70,11 @@ export function TaskPreviewDrawer({
         )
       }
     >
+      {backLabel && (
+        <AppButton variant="link" className="-mt-1 mb-3 px-0" leftIcon={<ChevronLeft />} onClick={() => onOpenChange(false)}>
+          {backLabel}
+        </AppButton>
+      )}
       {task.isPending && taskId ? (
         <div className="flex flex-col gap-3">
           <AppSkeleton className="h-8 w-1/2" />

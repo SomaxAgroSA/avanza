@@ -46,6 +46,35 @@ const csrfHeader = {
 }
 const idParam = { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
 
+/** Resposta de GET /dependencies e /ti-dependencies (§42). */
+const DEPENDENCIES_SCHEMA = {
+  type: 'object',
+  properties: {
+    generated_at: { type: 'string', format: 'date-time' },
+    today: { type: 'string', description: 'AAAA-MM-DD no fuso de quem consulta' },
+    people: { type: 'array', items: { $ref: '#/components/schemas/UserSummary' }, description: 'quem responde pelas entregas' },
+    areas: { type: 'array', items: { type: 'object' }, description: '[{ key, name, deliveries }] — as áreas configuradas, na ordem, com quantas entregas têm' },
+    totals: { type: 'object', description: 'deliveries, blocked, pending, none_due, overdue, projects' },
+    projects: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          project: { type: 'object', description: '{ id, key, name, due_date }' },
+          counts: { type: 'object', description: 'deliveries, blocked, pending, none_due, overdue' },
+          deliveries: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, area{ key, name }, assignee_id, since, waiting_days, days_left, risk (none_due | overdue | ok), blocks, blocks_projects }' },
+          blocked: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, waiting_on: [{ id, code, title, project, due_date, area, relation_id }] }' },
+          pending: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, related_to{ …, area }, relation_id, can_confirm }' },
+        },
+      },
+    },
+  },
+}
+const DEPENDENCIES_PARAMS = [
+  { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'só estes projetos (ids separados por vírgula, até 200)' },
+  { name: 'tz_offset', in: 'query', schema: { type: 'integer' }, description: 'minutos (Date#getTimezoneOffset) para o "hoje" de quem consulta' },
+]
+
 function op(summary, tags, responses, extra) {
   return Object.assign({ summary, tags, responses: Object.assign({}, responses, COMMON_ERRORS) }, extra || {})
 }
@@ -291,37 +320,17 @@ function build() {
           }),
         }),
       },
-      '/ti-dependencies': {
-        get: op('Dependências de TI (§42): por projeto não arquivado que a pessoa vê por inteiro, as entregas de TI abertas (tarefa aberta atribuída a alguém de "Pessoas de TI" ou ao Responsável TI do projeto) com o risco do prazo (none_due, after_project_due, overdue, due_soon, ok), as tarefas abertas bloqueadas por elas ("bloqueia"/"depende de", inclusive de outro projeto) e as só relacionadas (a validar, nunca bloqueio). Exige tasks.view (sem ele, vazio). Alimenta o painel Direção e gerência de Em andamento', ['projects'], {
-          200: ok('Dependências', {
-            type: 'object',
-            properties: {
-              generated_at: { type: 'string', format: 'date-time' },
-              today: { type: 'string', description: 'AAAA-MM-DD no fuso de quem consulta' },
-              people: { type: 'array', items: ref('UserSummary'), description: 'quem responde pelas entregas' },
-              totals: { type: 'object', description: 'deliveries, blocked, pending, none_due, after_project_due, overdue, due_soon, projects' },
-              projects: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    project: { type: 'object', description: '{ id, key, name, due_date }' },
-                    counts: { type: 'object', description: 'deliveries, blocked, pending, none_due, after_project_due, overdue, due_soon' },
-                    deliveries: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, assignee_id, since, waiting_days, days_left, risk, blocks, blocks_projects }' },
-                    blocked: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, waiting_on: [{ id, code, title, project, due_date, relation_id }] }' },
-                    pending: { type: 'array', items: { type: 'object' }, description: '{ id, code, title, project, due_date, related_to, relation_id, can_confirm }' },
-                  },
-                },
-              },
-            },
-          }),
+      '/dependencies': {
+        get: op('Dependências por área (§42): por projeto não arquivado que a pessoa vê por inteiro, as entregas abertas de outras áreas (tarefa aberta atribuída a alguém de uma área de Configurações → Dependências por área, ou ao Responsável TI do projeto, que conta na área TI), cada uma com a área { key, name } e o risco pelo prazo da própria tarefa (none_due, overdue, ok); as tarefas abertas bloqueadas por elas ("bloqueia"/"depende de", inclusive de outro projeto) e as só relacionadas (a validar, nunca bloqueio); e as áreas com quantas entregas têm. Exige tasks.view (sem ele, vazio). Alimenta o painel Direção e gerência de Em andamento', ['projects'], {
+          200: ok('Dependências', DEPENDENCIES_SCHEMA),
           400: errorResponse('VALIDATION_ERROR'),
-        }, {
-          parameters: [
-            { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'só estes projetos (ids separados por vírgula, até 200)' },
-            { name: 'tz_offset', in: 'query', schema: { type: 'integer' }, description: 'minutos (Date#getTimezoneOffset) para o "hoje" de quem consulta' },
-          ],
-        }),
+        }, { parameters: DEPENDENCIES_PARAMS }),
+      },
+      '/ti-dependencies': {
+        get: op('Compatibilidade: o mesmo que /dependencies, só com as entregas da área TI (areas = [TI])', ['projects'], {
+          200: ok('Dependências da TI', DEPENDENCIES_SCHEMA),
+          400: errorResponse('VALIDATION_ERROR'),
+        }, { parameters: DEPENDENCIES_PARAMS }),
       },
       '/projects': {
         get: op('Lista projetos acessíveis (paginado)', ['projects'], { 200: ok('Página de projetos', { type: 'array', items: ref('Project') }, true) }, {
@@ -1086,9 +1095,16 @@ function build() {
       '/settings/platform/purge-audit': {
         post: op('Aplica a retenção do histórico agora (platform.manage; mesma regra da rotina diária) → { removed }', ['platform'], { 200: ok('Resultado', { type: 'object' }) }, { parameters: [csrfHeader] }),
       },
+      '/settings/dependency-areas': {
+        get: op('Dependências por área (§42; settings.manage) → { areas: [{ key, name, user_ids, users }], configured, candidates } — sem configuração salva (configured = false), a área TI vem das antigas Pessoas de TI (it_people); candidates = usuários ativos, até 500', ['platform'], { 200: ok('Áreas', { type: 'object' }) }),
+        put: op('Troca a lista inteira (settings.manage): { areas: [{ key?, name, user_ids }] } (até 20 áreas, nome até 40, até 50 pessoas por área). A área TI (key "ti") é obrigatória (pode ser renomeada); área nova sem key ganha uma pelo nome; uma pessoa fica numa área só. Erros em fields.areas: invalid_type, too_many, ti_required, name_required, name_too_long, duplicate_name, too_many_people, duplicate_person, invalid_option (usuário inexistente). A TI é espelhada em it_people; histórico platform_settings.update com "Área: nomes"', ['platform'], { 200: ok('Áreas', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {
+          parameters: [csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['areas'], properties: { areas: { type: 'array', items: { type: 'object', properties: { key: { type: 'string' }, name: { type: 'string' }, user_ids: { type: 'array', items: { type: 'string' } } } } } } }),
+        }),
+      },
       '/settings/it-people': {
-        get: op('Pessoas de TI (§42; settings.manage) → { user_ids, users, candidates } (candidates = usuários ativos que podem ser escolhidos, até 500)', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }) }),
-        put: op('Troca a lista inteira (settings.manage): { user_ids } (até 50, usuários existentes); fica no histórico com os nomes', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {
+        get: op('Compatibilidade (§42; settings.manage): as pessoas da área TI de Dependências por área → { user_ids, users, candidates } (candidates = usuários ativos que podem ser escolhidos, até 500). Prefira /settings/dependency-areas', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }) }),
+        put: op('Compatibilidade (settings.manage): troca só as pessoas da área TI { user_ids } (até 50, usuários existentes; quem entra sai da área onde estava); fica no histórico com os nomes. Prefira /settings/dependency-areas', ['platform'], { 200: ok('Pessoas de TI', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {
           parameters: [csrfHeader],
           requestBody: jsonBody({ type: 'object', required: ['user_ids'], properties: { user_ids: { type: 'array', items: { type: 'string' } } } }),
         }),
@@ -1348,7 +1364,7 @@ function build() {
             name: { type: 'string' },
             description: { type: 'string' },
             is_system: { type: 'boolean' },
-            ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "executive" = Direção e gerência' },
+            ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "both" = as duas, com seletor na tela; "executive" = Direção e gerência' },
             permissions: { type: 'array', items: { type: 'string' } },
             user_count: { type: 'integer' },
           },

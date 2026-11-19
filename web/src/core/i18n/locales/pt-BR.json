@@ -259,7 +259,7 @@
     "statuses": "Status",
     "priorities": "Prioridades",
     "areas": "Áreas",
-    "itPeople": "Pessoas de TI",
+    "dependencyAreas": "Dependências por área",
     "tags": "Tags",
     "icons": "Ícones",
     "roles": "Perfis",
@@ -550,7 +550,8 @@
       "management": "Gestão",
       "executive": "Direção e gerência",
       "hint": "Gestão: a lista de sempre. Direção e gerência: painel de consulta (indicadores, linha do tempo, equipe e tabela) sem ações de editar. Para bloquear a edição em todo o Avanza, desligue as permissões de edição deste perfil.",
-      "inherited": "Visão de Em andamento: {{view}} (muda no perfil)"
+      "inherited": "Visão de Em andamento: {{view}} (muda no perfil)",
+      "both": "Ambas (escolhe na tela)"
     }
   },
   "permissions": {
@@ -4524,7 +4525,9 @@
       "late": "Entrega vencida",
       "tip": "{{name}} · {{status}} · entrega {{date}}",
       "tipLate": "{{name}} · {{status}} · entrega {{date}} (vencida)",
-      "empty": "Nenhum projeto do filtro tem datas de início e entrega."
+      "empty": "Nenhum projeto do filtro tem datas de início e entrega.",
+      "noDue": "Sem data de entrega · {{count}}",
+      "noDueTag": "sem data de entrega"
     },
     "departments": {
       "title": "Projetos por departamento",
@@ -4566,37 +4569,36 @@
       "who": "Quem está trabalhando",
       "nobody": "Ninguém moveu tarefas deste projeto nos últimos 7 dias.",
       "openProject": "Abrir o projeto"
+    },
+    "viewSwitch": {
+      "label": "Visão de Em andamento",
+      "management": "Gestão",
+      "executive": "Direção e gerência"
     }
   },
-  "tiDependencies": {
-    "title": "Dependências de TI",
+  "dependencies": {
+    "title": "Dependências",
     "view": "Ver impacto",
-    "stripAria": "Dependências de TI: ver impacto",
+    "stripAria": "Dependências: ver impacto",
     "blocked_one": "{{count}} bloqueada",
     "blocked_other": "{{count}} bloqueadas",
     "noneDue": "{{count}} sem prazo",
-    "afterProjectDue": "{{count}} depois do encerramento",
     "overdue_one": "{{count}} vencida",
     "overdue_other": "{{count}} vencidas",
     "pending": "{{count}} a validar",
     "projects_one": "{{count}} projeto",
     "projects_other": "{{count}} projetos",
-    "flag": "Dependências de TI em {{name}}: ver impacto",
+    "flag": "Dependências neste projeto",
+    "flagAria": "Dependências neste projeto: {{name}}",
     "allProjects": "Projetos em andamento",
-    "responsible": "Entregas a cargo de",
-    "separated": ", separadas por projeto",
-    "noAlerts": "sem alertas",
-    "stats": {
-      "blocked_one": "bloqueada",
-      "blocked_other": "bloqueadas",
-      "noneDue": "sem prazo",
-      "afterProjectDue": "depois do encerramento",
-      "pending": "a validar"
-    },
-    "blockedTitle": "Bloqueado por TI",
+    "subtitle": "{{scope}} · entregas pendentes de outras áreas",
+    "areaFilter": "Área",
+    "allAreas": "Todas as áreas",
+    "pendingCount_one": "{{count}} entrega pendente",
+    "pendingCount_other": "{{count}} entregas pendentes",
+    "blockedTitle": "Bloqueado por outra área",
     "pendingTitle": "A validar",
     "pendingHint": "relacionadas: não contam como bloqueio",
-    "deliveriesTitle": "Entregas pendentes de TI",
     "deliveryHead": "Entrega",
     "dueHead": "Prazo",
     "waitsFor": "Espera",
@@ -4609,26 +4611,40 @@
     "blocks_other": "bloqueia {{count}} tarefas",
     "blocksFrom": "(de {{names}})",
     "confirm": "Confirmar bloqueio",
-    "confirmed": "{{code}} agora depende de {{target}}",
+    "confirmed": "“{{title}}” agora depende de “{{target}}”",
     "seeAll": "Ver todos os projetos",
-    "how": "Como é calculado",
-    "howText": "Cada tarefa conta no seu projeto. Entrega de TI: tarefa aberta atribuída a alguém de Pessoas de TI (Configurações) ou ao Responsável TI do projeto. Bloqueada: tarefa aberta que “depende de” (ou é “bloqueada por”) uma entrega de TI aberta — a mesma regra de “bloqueada” do Avanza —, mesmo que a entrega seja de outro projeto. As só “relacionadas” ficam a validar e não somam. Sem prazo: entrega de TI sem data. Depois do encerramento: prazo de TI posterior à entrega do projeto.",
+    "openTask": "Abrir a tarefa: {{title}}",
+    "back": "Voltar a Dependências",
+    "empty": "Nada pendente nesta área.",
     "due": {
       "none": "Sem prazo",
-      "afterClose": "{{date}} · depois do encerramento",
-      "overdue": "{{date}} · vencida",
+      "overdue_one": "{{date}} · vencida há {{count}} dia",
+      "overdue_other": "{{date}} · vencida há {{count}} dias",
       "today": "{{date}} · hoje",
       "tomorrow": "{{date}} · amanhã",
       "inDays": "{{date}} · em {{count}} dias"
     },
     "settings": {
-      "title": "Pessoas de TI",
-      "description": "Quem é de TI para o painel Direção e gerência de Em andamento: as tarefas abertas atribuídas a essas pessoas são “entregas de TI”. O Responsável TI de cada projeto já conta no projeto dele, sem estar aqui.",
-      "label": "Pessoas de TI",
+      "title": "Dependências por área",
+      "description": "As áreas que entregam coisas aos projetos (TI, Finanças…). As tarefas abertas atribuídas às pessoas de cada área aparecem como “entregas pendentes” no painel Direção e gerência de Em andamento.",
+      "name": "Nome da área",
+      "people": "Pessoas",
       "placeholder": "Escolha as pessoas",
-      "hint": "Só usuários ativos aparecem na lista.",
+      "hint": "Só usuários ativos aparecem na lista. Cada pessoa fica em uma área só.",
+      "tiHint": "O Responsável TI de cada projeto também conta nesta área, sem estar aqui.",
+      "add": "Adicionar área",
+      "newArea": "Nova área",
+      "remove": "Remover a área {{name}}",
       "save": "Salvar",
-      "saved": "Pessoas de TI salvas"
+      "saved": "Áreas salvas",
+      "errors": {
+        "name_required": "Dê um nome a cada área.",
+        "name_too_long": "O nome da área pode ter até 40 caracteres.",
+        "duplicate_name": "Já existe uma área com esse nome.",
+        "duplicate_person": "Uma pessoa só pode estar em uma área.",
+        "too_many": "No máximo 20 áreas.",
+        "too_many_people": "No máximo 50 pessoas por área."
+      }
     }
   }
 }

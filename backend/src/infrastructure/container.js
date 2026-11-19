@@ -43,7 +43,7 @@ const { createDocModuleService } = require('../application/doc-modules')
 const { createDocPageService } = require('../application/doc-pages')
 const { createDocLinkService } = require('../application/doc-links')
 const { createTeamActivityService } = require('../application/team-activity')
-const { createTiDependenciesService } = require('../application/ti-dependencies')
+const { createDependenciesService } = require('../application/dependencies')
 const { createPlatformSettingsService } = require('../application/platform-settings')
 const { createEmailService } = require('../application/email')
 const { createAccountLinkService } = require('../application/account-links')
@@ -138,7 +138,7 @@ function createContainer(runtime, options) {
     docPages: createDocPageService(deps),
     docLinks: createDocLinkService(deps),
     teamActivity: createTeamActivityService(deps),
-    tiDependencies: createTiDependenciesService(deps),
+    dependencies: createDependenciesService(deps),
     platformSettings: createPlatformSettingsService(deps),
     email: createEmailService(deps),
     accountLinks: createAccountLinkService(deps),

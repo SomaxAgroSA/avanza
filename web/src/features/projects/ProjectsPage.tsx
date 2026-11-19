@@ -35,7 +35,7 @@ import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './proje
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { DeleteProjectDialog } from './DeleteProjectDialog'
 import { ProjectPreviewDrawer } from './ProjectPreviewDrawer'
-import { useAllOpenProjects, useProjectLifecycle, useProjectTaskCounts, useProjects, useTeamActivity, useTiDependencies, useUpdateProject } from './queries'
+import { useAllOpenProjects, useProjectLifecycle, useProjectTaskCounts, useProjects, useTeamActivity, useDependencies, useUpdateProject } from './queries'
 import { ActivityCell, TeamActivityDrawer } from './team-activity'
 import { activityByProject } from './team-activity-data'
 import { UrgencyPicker } from '@/features/tasks/TaskUrgency'
@@ -46,6 +46,8 @@ import { DirectionPanel } from './direction/DirectionPanel'
 import { DEFAULT_PANEL, ONGOING_STATUSES, tableFilters, type PanelFilter } from './direction/direction-data'
 
 const EMPTY: Project[] = []
+
+const ONGOING_VIEW_KEY = 'kamban.ongoing-view'
 
 const TITLES: Record<ProjectView, string> = {
   all: 'nav.projects',
@@ -70,7 +72,25 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const canCreate = useCan('projects.create')
   // Vista de En marcha do perfil (§41): Direção e gerência = painel de consulta; senão, a lista de gestão de sempre
   const { current: session } = useSession()
-  const direction = view === 'ongoing' && session?.role?.ongoingView === 'executive'
+  const roleView = session?.role?.ongoingView
+  // perfil com as duas vistas: seletor na tela; abre em Direção e lembra a última escolha neste navegador
+  const canChoose = view === 'ongoing' && roleView === 'both'
+  const [chosen, setChosen] = useState<'executive' | 'management'>(() => {
+    try {
+      return window.localStorage.getItem(ONGOING_VIEW_KEY) === 'management' ? 'management' : 'executive'
+    } catch {
+      return 'executive'
+    }
+  })
+  const choose = (next: 'executive' | 'management') => {
+    setChosen(next)
+    try {
+      window.localStorage.setItem(ONGOING_VIEW_KEY, next)
+    } catch {
+      /* sem armazenamento: vale só nesta visita */
+    }
+  }
+  const direction = view === 'ongoing' && (roleView === 'executive' || (canChoose && chosen === 'executive'))
   const [panel, setPanel] = useState<PanelFilter>(DEFAULT_PANEL)
   // Equipo ahora: quién está trabajando en cada proyecto (solo en las listas de proyectos en marcha)
   const showActivity = useCan('tasks.view') && view !== 'archived' && view !== 'finished'
@@ -97,7 +117,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const overview = useAllOpenProjects(direction)
   const canSeeTasks = useCan('tasks.view')
   const taskCounts = useProjectTaskCounts(direction && canSeeTasks)
-  const ti = useTiDependencies(direction && canSeeTasks)
+  const dependencies = useDependencies(direction && canSeeTasks)
   const lifecycle = useProjectLifecycle()
 
   const [viewing, setViewing] = useState<Project | null>(null)
@@ -290,9 +310,10 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         title={t(TITLES[view])}
         description={t(`projects.descriptions.${view}`)}
         actions={
-          !direction && (showActivity || createHere) ? (
+          canChoose || (!direction && (showActivity || createHere)) ? (
             <div className="flex flex-wrap items-center gap-2">
-              {showActivity && (
+              {canChoose && <ViewSwitch value={chosen} onChange={choose} />}
+              {!direction && showActivity && (
                 <AppButton variant="secondary" leftIcon={<Users />} onClick={() => setTeamOpen(true)}>
                   {t('team.open')}
                 </AppButton>
@@ -321,7 +342,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
             filter={panel}
             onFilter={setPanel}
             taskCounts={canSeeTasks ? taskCounts.data : undefined}
-            ti={canSeeTasks ? ti.data : undefined}
+            dependencies={canSeeTasks ? dependencies.data : undefined}
             team={showActivity ? { data: team.data, pending: team.isPending, error: team.isError, retry: () => void team.refetch() } : null}
           />
         ))}
@@ -458,5 +479,25 @@ function ProjectUrgencyCell({ project, readOnly }: { project: Project; readOnly:
         )
       }
     />
+  )
+}
+
+/** Seletor das duas vistas de Em andamento (perfil com "Ambas", §41). */
+function ViewSwitch({ value, onChange }: { value: 'executive' | 'management'; onChange: (value: 'executive' | 'management') => void }) {
+  const { t } = useTranslation()
+  return (
+    <div role="group" aria-label={t('direction.viewSwitch.label')} className="inline-flex items-center gap-1 rounded-xl border border-border bg-surface-2 p-1">
+      {(['management', 'executive'] as const).map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={value === option}
+          onClick={() => onChange(option)}
+          className="rounded-lg px-3 py-1.5 text-sm font-semibold text-muted hover:text-fg aria-pressed:bg-surface aria-pressed:text-primary-text aria-pressed:shadow-sm focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          {t(`direction.viewSwitch.${option}`)}
+        </button>
+      ))}
+    </div>
   )
 }

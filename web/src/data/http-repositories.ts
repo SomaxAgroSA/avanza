@@ -25,8 +25,8 @@ import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto
 import { toCharterItem, toCharterMeasurement, toProjectBrief, toProjectCharter } from './mappers'
 import { toProjectTaskCounts, toTeamActivity } from './mappers'
 import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
-import { toItPeople, toTiDependencies } from './mappers'
-import type { ItPeopleDto, TiDependenciesDto } from './dtos'
+import { toDependencies, toDependencyAreas } from './mappers'
+import type { DependenciesDto, DependencyAreasDto } from './dtos'
 import { toDocModule, toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
@@ -293,11 +293,12 @@ export function createHttpPlatformRepository(api: ApiClient): PlatformRepository
       const { data } = await api.post<{ removed: number }>('/settings/platform/purge-audit')
       return { removed: data.removed }
     },
-    async getItPeople() {
-      return toItPeople((await api.get<ItPeopleDto>('/settings/it-people')).data)
+    async getDependencyAreas() {
+      return toDependencyAreas((await api.get<DependencyAreasDto>('/settings/dependency-areas')).data)
     },
-    async updateItPeople(userIds) {
-      return toItPeople((await api.put<ItPeopleDto>('/settings/it-people', { user_ids: userIds })).data)
+    async updateDependencyAreas(areas) {
+      const body = { areas: areas.map((a) => ({ ...(a.key ? { key: a.key } : {}), name: a.name, user_ids: a.userIds })) }
+      return toDependencyAreas((await api.put<DependencyAreasDto>('/settings/dependency-areas', body)).data)
     },
   }
 }
@@ -489,9 +490,9 @@ export function createHttpProjectRepository(api: ApiClient): ProjectRepository {
     async taskCounts() {
       return toProjectTaskCounts((await api.get<ProjectTaskCountsDto>('/project-task-counts')).data)
     },
-    async tiDependencies() {
+    async dependencies() {
       const query = { tz_offset: String(new Date().getTimezoneOffset()) }
-      return toTiDependencies((await api.get<TiDependenciesDto>('/ti-dependencies', { query })).data)
+      return toDependencies((await api.get<DependenciesDto>('/dependencies', { query })).data)
     },
     addMember: (id, userId, role) => members(api.post<ProjectMemberDto[]>(`${path(id)}/members`, { user_id: userId, role })),
     updateMemberRole: (id, userId, role) => members(api.patch<ProjectMemberDto[]>(memberPath(id, userId), { role })),

@@ -158,3 +158,46 @@ describe('domain/platform-settings — identidade (logo e ícone)', () => {
     assert.equal(settings.brandingSizeIssue(2048), null)
   })
 })
+
+describe('domain/platform-settings — Dependências por área (§42)', () => {
+  it('sem a lista nova, a área TI sai das Pessoas de TI antigas (it_people)', () => {
+    assert.equal(settings.DEFAULTS.dependency_areas, null)
+    assert.deepEqual(settings.resolveDependencyAreas(settings.normalizeSettings({ it_people: ['ugr36mcczybf2mc'] })), [{ key: 'ti', name: 'TI', user_ids: ['ugr36mcczybf2mc'] }])
+    assert.deepEqual(settings.resolveDependencyAreas(settings.normalizeSettings(null)), [{ key: 'ti', name: 'TI', user_ids: [] }])
+    // com a lista nova, ela vale; a TI volta para o topo se faltar no que foi guardado
+    const stored = settings.normalizeSettings({ it_people: ['x'], dependency_areas: [{ key: 'financas', name: 'Finanças', user_ids: ['u3'] }] })
+    assert.deepEqual(settings.resolveDependencyAreas(stored), [
+      { key: 'ti', name: 'TI', user_ids: ['x'] },
+      { key: 'financas', name: 'Finanças', user_ids: ['u3'] },
+    ])
+    // guardada inválida = ignorada
+    assert.equal(settings.normalizeSettings({ dependency_areas: [{ key: 'a b', name: '', user_ids: 'x' }] }).dependency_areas, null)
+  })
+
+  it('valida a lista: TI obrigatória, nomes únicos (1–40), chave gerada pelo nome, pessoa em uma área só', () => {
+    const ok = settings.validateDependencyAreas([
+      { key: 'ti', name: ' Informática ', user_ids: ['u1', 'u1'] },
+      { name: 'Finanças e Contabilidade', user_ids: ['u3'] },
+      { name: 'Comercial', user_ids: [] },
+    ])
+    assert.deepEqual(ok.fields, {})
+    assert.deepEqual(ok.areas, [
+      { key: 'ti', name: 'Informática', user_ids: ['u1'] },
+      { key: 'financas-e-contabilidade', name: 'Finanças e Contabilidade', user_ids: ['u3'] },
+      { key: 'comercial', name: 'Comercial', user_ids: [] },
+    ])
+    const issue = (list) => settings.validateDependencyAreas(list).fields.areas
+    assert.equal(issue('x'), 'invalid_type')
+    assert.equal(issue([{ name: 'Finanças', user_ids: [] }]), 'ti_required')
+    assert.equal(issue([{ key: 'ti', name: 'TI', user_ids: [] }, { name: '  ', user_ids: [] }]), 'name_required')
+    assert.equal(issue([{ key: 'ti', name: 'TI', user_ids: [] }, { name: 'x'.repeat(41), user_ids: [] }]), 'name_too_long')
+    assert.equal(issue([{ key: 'ti', name: 'TI', user_ids: [] }, { name: 'ti', user_ids: [] }]), 'duplicate_name')
+    assert.equal(issue([{ key: 'ti', name: 'TI', user_ids: ['u1'] }, { name: 'Finanças', user_ids: ['u1'] }]), 'duplicate_person')
+    assert.equal(issue([{ key: 'ti', name: 'TI', user_ids: ['bad id'] }]), 'invalid_type')
+    assert.equal(issue([{ key: 'TI!', name: 'TI', user_ids: [] }]), 'invalid_type')
+    assert.equal(issue(Array.from({ length: settings.DEPENDENCY_AREAS_MAX + 1 }, (_, i) => ({ key: i === 0 ? 'ti' : undefined, name: `Área ${i}`, user_ids: [] }))), 'too_many')
+    // mesmo nome gerando a mesma chave: sufixo
+    const twins = settings.validateDependencyAreas([{ key: 'ti', name: 'TI', user_ids: [] }, { name: 'Ventas', user_ids: [] }, { name: 'Ventás!', user_ids: [] }])
+    assert.deepEqual(twins.areas.map((a) => a.key), ['ti', 'ventas', 'ventas-2'])
+  })
+})

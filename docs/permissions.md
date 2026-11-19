@@ -99,7 +99,7 @@ Regras em `backend/src/domain/task.js`.
 | Status, prioridades, áreas, tags, tipos e campos | ler: `settings.manage` ou `tasks.view`; alterar: `settings.manage` |
 | Área responsável da tarefa (`PUT /tasks/{id}/area`) / do projeto | regra de editar a tarefa / o projeto (não exige os obrigatórios do status) |
 | Biblioteca de ícones | ver: qualquer autenticado (os seletores de ícone usam); importar e remover: `settings.manage` |
-| Pessoas de TI (§42) | ver e trocar: `settings.manage` (`GET/PUT /settings/it-people`); as Dependências de TI do painel exigem `projects.view` + `tasks.view` e só mostram projetos vistos por inteiro |
+| Dependências por área (§42) | ver e trocar: `settings.manage` (`GET/PUT /settings/dependency-areas`; a rota antiga `/settings/it-people` troca só a área TI); as Dependências do painel (`GET /dependencies`, e `/ti-dependencies` por compatibilidade) exigem `projects.view` + `tasks.view` e só mostram projetos vistos por inteiro |
 
 Projeto arquivado: tudo fica somente leitura (inclusive comentários). A API devolve `capabilities` (`edit`, `delete`, `assign`, `comment`) em cada tarefa e (`edit`, `delete`) em cada comentário.
 

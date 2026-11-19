@@ -180,7 +180,7 @@ function UserHeader({ user, roles }: { user: User; roles: Role[] }) {
       {/* a vista de Em andamento é do perfil (§41): aqui só se mostra, muda-se em Perfis */}
       {role && (
         <p className="basis-full text-xs text-muted">
-          {t('roles.ongoingView.inherited', { view: t(role.ongoingView === 'executive' ? 'roles.ongoingView.executive' : 'roles.ongoingView.management') })}
+          {t('roles.ongoingView.inherited', { view: t(`roles.ongoingView.${role.ongoingView === 'executive' ? 'executive' : role.ongoingView === 'both' ? 'both' : 'management'}`) })}
         </p>
       )}
     </div>

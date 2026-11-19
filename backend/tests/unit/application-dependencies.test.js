@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const { createFakeDeps, seedUser } = require('../support/fakes')
 const { createProjectService } = require('../../src/application/projects')
 const { createPlatformSettingsService } = require('../../src/application/platform-settings')
-const { createTiDependenciesService } = require('../../src/application/ti-dependencies')
+const { createDependenciesService } = require('../../src/application/dependencies')
 const { createPrincipal } = require('../../src/domain/rbac')
 
 async function ctxOf(deps, user) {
@@ -20,7 +20,7 @@ async function ctxOf(deps, user) {
 const day = (value) => new Date(`${value}T00:00:00.000Z`)
 const without = (ctx, code) => ({ ...ctx, principal: { ...ctx.principal, permissions: ctx.principal.permissions.filter((c) => c !== code) } })
 
-/** Relógio em 10/01/2026 12:00 (UTC). FVB com entregas da TI; DRE com uma tarefa que espera por FVB. */
+/** Relógio em 10/01/2026 12:00 (UTC). FVB com entregas da TI; DRE com uma tarefa que espera por FVB e uma entrega de Finanças. */
 async function scenario() {
   const deps = createFakeDeps()
   const projects = createProjectService(deps)
@@ -31,6 +31,7 @@ async function scenario() {
   const douglas = await seedUser(deps, { name: 'Douglas', roleCode: 'MEMBER' })
   const lia = await seedUser(deps, { name: 'Lia', roleCode: 'VIEWER' })
   const itDre = await seedUser(deps, { name: 'TI do DRE', roleCode: 'MEMBER' })
+  const lucia = await seedUser(deps, { name: 'Lúcia', roleCode: 'MEMBER' })
   const ctx = { admin: await ctxOf(deps, admin), ana: await ctxOf(deps, ana), douglas: await ctxOf(deps, douglas), lia: await ctxOf(deps, lia), itDre: await ctxOf(deps, itDre) }
 
   const status = (id, category) => deps.store.statuses.push({ id, key: id.toUpperCase(), name: id, color: 'blue', category, order: 0, isActive: true })
@@ -55,33 +56,35 @@ async function scenario() {
     )
   }
   const sso = await task(fvb, victor) // sem prazo
-  const azure = await task(fvb, victor, { dueDate: day('2026-04-10') }) // depois do encerramento (31/03)
+  const azure = await task(fvb, victor, { dueDate: day('2026-04-10') }) // depois do encerramento (31/03): só o prazo dela conta
   await task(fvb, victor, { statusId: 'done' }) // concluída: não é entrega pendente
   const security = await task(fvb, douglas, { dueDate: day('2026-01-11') })
   const dashboard = await task(dre, douglas, { dueDate: day('2026-01-12') })
   const dreIt = await task(dre, itDre, { dueDate: day('2026-01-09') }) // Responsável TI do DRE: vencida
   const hidden = await task(secret, douglas)
+  const budget = await task(dre, lucia, { dueDate: day('2026-01-15') }) // Finanças
   deps.store.relations.push(
     { id: 'r1', type: 'depends_on', sourceId: dashboard.id, targetId: sso.id, createdAt: new Date() },
     { id: 'r2', type: 'relates', sourceId: sso.id, targetId: security.id, createdAt: new Date() },
     { id: 'r3', type: 'blocks', sourceId: azure.id, targetId: hidden.id, createdAt: new Date() }, // SEC: Douglas não vê
   )
+  // produção hoje: só a lista antiga (it_people) — vira a área TI
   await settings.updateItPeople(ctx.admin, { user_ids: [victor.id] })
-  return { deps, settings, service: createTiDependenciesService(deps), ctx, users: { admin, ana, victor, douglas, lia, itDre }, fvb, dre, secret, tasks: { sso, azure, security, dashboard, dreIt, hidden } }
+  return { deps, settings, service: createDependenciesService(deps), ctx, users: { admin, ana, victor, douglas, lia, itDre, lucia }, fvb, dre, secret, tasks: { sso, azure, security, dashboard, dreIt, hidden, budget } }
 }
 
-describe('application/ti-dependencies — Dependências de TI (§42)', () => {
-  it('entregas da TI (lista da plataforma + Responsável TI do projeto), bloqueadas de outro projeto e a validar', async () => {
+describe('application/dependencies — Dependências por área (§42)', () => {
+  it('entregas da TI (lista antiga + Responsável TI do projeto), bloqueadas de outro projeto e a validar', async () => {
     const s = await scenario()
-    const data = await s.service.getTiDependencies(s.ctx.douglas, {})
+    const data = await s.service.getDependencies(s.ctx.douglas, {})
     assert.equal(data.today, '2026-01-10')
     const byKey = Object.fromEntries(data.projects.map((p) => [p.project.key, p]))
     assert.deepEqual(Object.keys(byKey).sort(), ['DRE', 'FVB'])
     assert.deepEqual(
       byKey.FVB.deliveries.map((d) => [d.code, d.risk]),
       [
-        [s.tasks.azure.code, 'after_project_due'],
         [s.tasks.sso.code, 'none_due'],
+        [s.tasks.azure.code, 'ok'],
       ],
     )
     assert.equal(byKey.FVB.deliveries.find((d) => d.code === s.tasks.sso.code).blocks, 1)
@@ -93,32 +96,57 @@ describe('application/ti-dependencies — Dependências de TI (§42)', () => {
     assert.deepEqual(data.people.map((u) => u.name), ['Equipo de Informática', 'TI do DRE'])
     assert.equal(data.totals.blocked, 1)
     assert.equal(data.totals.projects, 2)
+    assert.deepEqual(data.areas, [{ key: 'ti', name: 'TI', deliveries: 3 }])
+    assert.equal(byKey.FVB.deliveries[0].area.key, 'ti')
+  })
+
+  it('outras áreas: as entregas de Finanças entram com a área; /ti-dependencies continua só com a TI', async () => {
+    const s = await scenario()
+    await s.settings.updateDependencyAreas(s.ctx.admin, {
+      areas: [
+        { key: 'ti', name: 'TI', user_ids: [s.users.victor.id] },
+        { name: 'Finanças', user_ids: [s.users.lucia.id] },
+      ],
+    })
+    const data = await s.service.getDependencies(s.ctx.douglas, {})
+    assert.deepEqual(data.areas, [
+      { key: 'ti', name: 'TI', deliveries: 3 },
+      { key: 'financas', name: 'Finanças', deliveries: 1 },
+    ])
+    const dre = data.projects.find((p) => p.project.key === 'DRE')
+    assert.deepEqual(dre.deliveries.map((d) => [d.code, d.area.name]), [
+      [s.tasks.dreIt.code, 'TI'],
+      [s.tasks.budget.code, 'Finanças'],
+    ])
+    const ti = await s.service.getTiDependencies(s.ctx.douglas, {})
+    assert.equal(JSON.stringify(ti).includes(s.tasks.budget.code), false)
+    assert.deepEqual(ti.areas, [{ key: 'ti', name: 'TI', deliveries: 3 }])
   })
 
   it('project_ids recorta os blocos; o fuso muda o "hoje"', async () => {
     const s = await scenario()
-    const only = await s.service.getTiDependencies(s.ctx.douglas, { project_ids: s.dre.id })
+    const only = await s.service.getDependencies(s.ctx.douglas, { project_ids: s.dre.id })
     assert.deepEqual(only.projects.map((p) => p.project.key), ['DRE'])
     assert.equal(only.totals.projects, 1)
     assert.equal(only.totals.pending, 0)
     // 10/01 12:00 UTC com +14h = 11/01 no fuso de quem consulta (tz_offset = -840)
-    assert.equal((await s.service.getTiDependencies(s.ctx.douglas, { tz_offset: '-840' })).today, '2026-01-11')
-    await assert.rejects(() => s.service.getTiDependencies(s.ctx.douglas, { project_ids: 'x;y' }), (err) => err.code === 'VALIDATION_ERROR')
+    assert.equal((await s.service.getDependencies(s.ctx.douglas, { tz_offset: '-840' })).today, '2026-01-11')
+    await assert.rejects(() => s.service.getDependencies(s.ctx.douglas, { project_ids: 'x;y' }), (err) => err.code === 'VALIDATION_ERROR')
   })
 
   it('quem só vê não confirma; sem tasks.view, vazio; o Responsável TI (acesso limitado) não recebe o projeto', async () => {
     const s = await scenario()
-    const viewer = await s.service.getTiDependencies(s.ctx.lia, {})
+    const viewer = await s.service.getDependencies(s.ctx.lia, {})
     assert.equal(viewer.projects.find((p) => p.project.key === 'FVB').pending[0].can_confirm, false)
-    assert.deepEqual((await s.service.getTiDependencies(without(s.ctx.douglas, 'tasks.view'), {})).projects, [])
-    const it = await s.service.getTiDependencies(s.ctx.itDre, {})
+    assert.deepEqual((await s.service.getDependencies(without(s.ctx.douglas, 'tasks.view'), {})).projects, [])
+    const it = await s.service.getDependencies(s.ctx.itDre, {})
     assert.equal(it.projects.some((p) => p.project.key === 'DRE'), false)
   })
 
   it('sem nenhuma pessoa de TI configurada, só o Responsável TI de cada projeto conta', async () => {
     const s = await scenario()
     await s.settings.updateItPeople(s.ctx.admin, { user_ids: [] })
-    const data = await s.service.getTiDependencies(s.ctx.douglas, {})
+    const data = await s.service.getDependencies(s.ctx.douglas, {})
     assert.deepEqual(data.projects.map((p) => p.project.key), ['DRE'])
     assert.deepEqual(data.projects[0].blocked, [])
   })
@@ -148,5 +176,58 @@ describe('application/platform-settings — Pessoas de TI', () => {
     assert.deepEqual((await s.settings.getItPeople(s.ctx.admin)).user_ids, [s.users.victor.id])
     const general = s.deps.store.audit.filter((e) => e.action === 'platform_settings.update').pop()
     assert.deepEqual(Object.keys(general.newValue), ['platform_name'])
+  })
+})
+
+describe('application/platform-settings — Dependências por área', () => {
+  it('sem configuração nova, a área TI vem das Pessoas de TI antigas; salvar áreas grava as duas (compatível)', async () => {
+    const s = await scenario()
+    const current = await s.settings.getDependencyAreas(s.ctx.admin)
+    assert.deepEqual(
+      current.areas.map((a) => [a.key, a.name, a.users.map((u) => u.name)]),
+      [['ti', 'TI', ['Equipo de Informática']]],
+    )
+    assert.ok(current.candidates.some((u) => u.name === 'Lúcia'))
+
+    const saved = await s.settings.updateDependencyAreas(s.ctx.admin, {
+      areas: [
+        { key: 'ti', name: 'Informática', user_ids: [s.users.victor.id, s.users.douglas.id] },
+        { name: 'Finanças', user_ids: [s.users.lucia.id] },
+      ],
+    })
+    assert.deepEqual(
+      saved.areas.map((a) => [a.key, a.name, a.user_ids]),
+      [
+        ['ti', 'Informática', [s.users.victor.id, s.users.douglas.id]],
+        ['financas', 'Finanças', [s.users.lucia.id]],
+      ],
+    )
+    // a rota antiga continua lendo a área TI
+    assert.deepEqual((await s.settings.getItPeople(s.ctx.admin)).user_ids, [s.users.victor.id, s.users.douglas.id])
+    const entry = s.deps.store.audit.filter((e) => e.action === 'platform_settings.update').pop()
+    assert.deepEqual(entry.oldValue, { dependency_areas: ['TI: Equipo de Informática'] })
+    assert.deepEqual(entry.newValue, { dependency_areas: ['Informática: Douglas, Equipo de Informática', 'Finanças: Lúcia'] })
+
+    // a rota antiga troca só a TI e tira a pessoa de outra área
+    await s.settings.updateItPeople(s.ctx.admin, { user_ids: [s.users.lucia.id] })
+    assert.deepEqual(
+      (await s.settings.getDependencyAreas(s.ctx.admin)).areas.map((a) => [a.key, a.user_ids]),
+      [
+        ['ti', [s.users.lucia.id]],
+        ['financas', []],
+      ],
+    )
+  })
+
+  it('recusa sem TI, nome repetido, pessoa em duas áreas e usuário inexistente; só settings.manage', async () => {
+    const s = await scenario()
+    const fails = (areas, code) => assert.rejects(() => s.settings.updateDependencyAreas(s.ctx.admin, { areas }), (err) => err.details.fields.areas === code)
+    await fails([{ name: 'Finanças', user_ids: [] }], 'ti_required')
+    await fails([{ key: 'ti', name: 'TI', user_ids: [] }, { name: 'ti', user_ids: [] }], 'duplicate_name')
+    await fails([{ key: 'ti', name: 'TI', user_ids: [s.users.lucia.id] }, { name: 'Finanças', user_ids: [s.users.lucia.id] }], 'duplicate_person')
+    await fails([{ key: 'ti', name: 'TI', user_ids: ['nao_existe'] }], 'invalid_option')
+    await assert.rejects(() => s.settings.updateDependencyAreas(s.ctx.ana, { areas: [] }), (err) => err.code === 'FORBIDDEN')
+    await assert.rejects(() => s.settings.getDependencyAreas(s.ctx.ana), (err) => err.code === 'FORBIDDEN')
+    await assert.rejects(() => s.settings.updateSettings(s.ctx.admin, { dependency_areas: [] }), (err) => err.details.fields.dependency_areas === 'unknown_field')
   })
 })

@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
 import type { Project, ProjectStatus, ProjectTaskCount, TeamActivity } from '@/domain/projects'
-import type { TiDependencies } from '@/domain/ti-dependencies'
+import type { Dependencies } from '@/domain/dependencies'
 import { AppTooltip } from '@/presentation/components'
 import {
   DEFAULT_PANEL,
@@ -26,8 +26,8 @@ import {
   type PanelFilter,
 } from './direction-data'
 import { DirectionTeam } from './DirectionTeam'
-import { TiDrawer, TiFlag, TiStrip } from './TiDependencies'
-import { tiAffected, tiInScope } from './ti-data'
+import { DepDrawer, DepFlag, DepStrip } from './Dependencies'
+import { depAffected, depInScope } from './dependency-data'
 
 /** Cor da marca de cada estado; o nome vai sempre ao lado (a cor nunca fica sozinha). */
 const dot = (color: string) => <span aria-hidden className="inline-block size-2.5 shrink-0 rounded-full" style={{ background: color }} />
@@ -41,28 +41,27 @@ export interface DirectionPanelProps {
   taskCounts: ProjectTaskCount[] | undefined
   /** "Equipo ahora" e se pode ser mostrado (exige tasks.view). */
   team: { data: TeamActivity | undefined; pending: boolean; error: boolean; retry: () => void } | null
-  /** Dependências de TI (§42); sem tasks.view ou ainda sem resposta, nada aparece. */
-  ti?: TiDependencies | undefined
+  /** Dependências por área (§42); sem tasks.view ou ainda sem resposta, nada aparece. */
+  dependencies?: Dependencies | undefined
 }
 
 /** Painel da vista "Direção e gerência" de Em andamento (regras §41): indicadores, linha do tempo, gráficos e equipe. */
-export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, ti }: DirectionPanelProps) {
+export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, dependencies }: DirectionPanelProps) {
   const scope = useMemo(() => panelScope(projects, filter), [projects, filter])
   const set = (patch: Partial<PanelFilter>) => onFilter({ ...filter, ...patch })
-  // painel lateral das Dependências de TI: null = fechado; only = projeto do ⚠ (null = todos do recorte)
-  const [tiView, setTiView] = useState<{ only: string | null } | null>(null)
-  const tiScope = useMemo(() => tiInScope(ti, scope), [ti, scope])
-  const tiShown = useMemo(() => tiInScope(ti, scope, tiView?.only), [ti, scope, tiView])
-  const affected = useMemo(() => tiAffected(ti), [ti])
+  // painel lateral das Dependências: null = fechado; only = projeto do ⚠ (null = todos do recorte)
+  const [depView, setDepView] = useState<{ only: string | null } | null>(null)
+  const depScope = useMemo(() => depInScope(dependencies, scope), [dependencies, scope])
+  const affected = useMemo(() => depAffected(dependencies), [dependencies])
   // `contents`: a faixa fixa do filtro vale também sobre a tabela (o bloco pai dela é a página)
   return (
     <div className="contents" data-testid="direction-panel">
       {/* clicar no indicador escolhido de novo limpa a escolha (volta aos em andamento, sem destaque) */}
       <Kpis projects={projects} filter={filter} onSelect={(kpi) => set({ kpi: filter.kpi === kpi ? DEFAULT_PANEL.kpi : kpi })} />
       <FilterBand projects={projects} filter={filter} count={scope.length} onClear={() => onFilter(DEFAULT_PANEL)} />
-      <TiStrip scope={tiScope} onOpen={() => setTiView({ only: null })} />
-      <Timeline projects={scope} affected={affected} onTi={(projectId) => setTiView({ only: projectId })} />
-      <TiDrawer ti={ti} scope={tiShown} only={tiView?.only ?? null} open={!!tiView} onClose={() => setTiView(null)} onShowAll={() => setTiView({ only: null })} />
+      <DepStrip scope={depScope} onOpen={() => setDepView({ only: null })} />
+      <Timeline projects={scope} affected={affected} onDependencies={(projectId) => setDepView({ only: projectId })} />
+      <DepDrawer data={dependencies} panel={scope} only={depView?.only ?? null} open={!!depView} onClose={() => setDepView(null)} onShowAll={() => setDepView({ only: null })} />
       {/* departamentos e estado de execução lado a lado (o bloco "Tarefas por projeto" saiu a pedido da coordenação) */}
       <div className="mb-4 grid gap-3 lg:grid-cols-2">
         <Departments projects={departmentScope(projects, filter)} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />
@@ -148,10 +147,12 @@ function Card({ title, aside, children, className }: { title: string; aside?: Re
 
 const LABEL_WIDTH = 220
 
-function Timeline({ projects, affected, onTi }: { projects: Project[]; affected: Set<string>; onTi: (projectId: string) => void }) {
+function Timeline({ projects, affected, onDependencies }: { projects: Project[]; affected: Set<string>; onDependencies: (projectId: string) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const model = useMemo(() => ganttModel(projects), [projects])
+  // sem início e entrega válidos não há barra: aparecem no fim, marcados, para o número dos indicadores bater
+  const undated = useMemo(() => projects.filter((p) => !(p.startDate && p.dueDate && p.dueDate.getTime() >= p.startDate.getTime())).sort((a, b) => a.name.localeCompare(b.name)), [projects])
   const legend = (
     <ul className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-fg">
       {(['planning', 'active', 'paused'] as const).map((status) => (
@@ -203,7 +204,7 @@ function Timeline({ projects, affected, onTi }: { projects: Project[]; affected:
                       <span className="truncate text-xs font-semibold text-fg" title={row.project.name}>
                         {row.project.name}
                       </span>
-                      {affected.has(row.project.id) && <TiFlag name={row.project.name} onOpen={() => onTi(row.project.id)} />}
+                      {affected.has(row.project.id) && <DepFlag name={row.project.name} onOpen={() => onDependencies(row.project.id)} />}
                     </span>
                     <div className="relative h-6">
                       <AppTooltip content={tip}>
@@ -220,6 +221,24 @@ function Timeline({ projects, affected, onTi }: { projects: Project[]; affected:
               })}
             </ul>
           </div>
+        </div>
+      )}
+      {undated.length > 0 && (
+        <div>
+          <p className="border-b border-border pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted">{t('direction.timeline.noDue', { count: undated.length })}</p>
+          <ul>
+            {undated.map((project) => (
+              <li key={project.id} className="grid min-h-6 items-center border-b border-border" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr` }}>
+                <span className="flex min-w-0 items-center pr-2.5">
+                  <span className="truncate text-xs text-muted" title={project.name}>
+                    {project.name}
+                  </span>
+                  {affected.has(project.id) && <DepFlag name={project.name} onOpen={() => onDependencies(project.id)} />}
+                </span>
+                <span className="justify-self-start rounded-md bg-warning-soft px-2 py-0.5 text-[11.5px] text-warning-soft-fg">{t('direction.timeline.noDueTag')}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

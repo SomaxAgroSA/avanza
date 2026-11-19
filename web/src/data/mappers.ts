@@ -4,8 +4,8 @@ import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanRep
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
 import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
-import type { ItPeopleDto, TiCountsDto, TiDependenciesDto, TiProjectRefDto, TiTaskRefDto } from './dtos'
-import type { ItPeople, TiCounts, TiDependencies, TiProjectRef, TiRisk, TiTaskRef } from '@/domain/ti-dependencies'
+import type { DepCountsDto, DepDeliveryRefDto, DependenciesDto, DependencyAreasDto, DepProjectRefDto, DepTaskRefDto } from './dtos'
+import type { DepCounts, DepDeliveryRef, Dependencies, DependencyAreasConfig, DepProjectRef, DepRisk, DepTaskRef } from '@/domain/dependencies'
 import type { ApiToken, ApiTokenState } from '@/domain/api-tokens'
 import type { WebhookDto, WebhookDeliveryDto } from './dtos'
 import type { Webhook, WebhookDelivery, WebhookDeliveryStatus } from '@/domain/webhooks'
@@ -91,7 +91,7 @@ export function toUser(dto: UserDto): User {
 }
 
 export function toRoleSummary(dto: RoleDto): RoleSummary {
-  return { id: dto.id, code: dto.code, name: dto.name, description: dto.description, isSystem: dto.is_system, ongoingView: dto.ongoing_view === 'executive' ? 'executive' : '' }
+  return { id: dto.id, code: dto.code, name: dto.name, description: dto.description, isSystem: dto.is_system, ongoingView: dto.ongoing_view === 'executive' || dto.ongoing_view === 'both' ? dto.ongoing_view : '' }
 }
 
 export function toRole(dto: RoleDto): Role {
@@ -1343,43 +1343,40 @@ export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
   }
 }
 
-/* ------------------------------------------------------------------ Dependências de TI (§42) */
+/* ------------------------------------------------------------------ Dependências por área (§42) */
 
-const TI_RISKS: readonly TiRisk[] = ['none_due', 'after_project_due', 'overdue', 'due_soon', 'ok']
-const toTiProjectRef = (dto: TiProjectRefDto): TiProjectRef => ({ id: dto.id, key: dto.key, name: dto.name })
-const toTiTaskRef = (dto: TiTaskRefDto): TiTaskRef => ({ id: dto.id, code: dto.code, title: dto.title, project: toTiProjectRef(dto.project), dueDate: dto.due_date ? dto.due_date.slice(0, 10) : null })
-const toTiCounts = (dto: TiCountsDto): TiCounts => ({
-  deliveries: dto.deliveries,
-  blocked: dto.blocked,
-  pending: dto.pending,
-  noneDue: dto.none_due,
-  afterProjectDue: dto.after_project_due,
-  overdue: dto.overdue,
-  dueSoon: dto.due_soon,
-})
+const DEP_RISKS: readonly DepRisk[] = ['none_due', 'overdue', 'ok']
+const toDepProjectRef = (dto: DepProjectRefDto): DepProjectRef => ({ id: dto.id, key: dto.key, name: dto.name })
+const toDepTaskRef = (dto: DepTaskRefDto): DepTaskRef => ({ id: dto.id, code: dto.code, title: dto.title, project: toDepProjectRef(dto.project), dueDate: dto.due_date ? dto.due_date.slice(0, 10) : null })
+const toDepDeliveryRef = (dto: DepDeliveryRefDto): DepDeliveryRef => ({ ...toDepTaskRef(dto), area: { key: dto.area.key, name: dto.area.name } })
+const toDepCounts = (dto: DepCountsDto): DepCounts => ({ deliveries: dto.deliveries, blocked: dto.blocked, pending: dto.pending, noneDue: dto.none_due, overdue: dto.overdue })
 
-export function toTiDependencies(dto: TiDependenciesDto): TiDependencies {
+export function toDependencies(dto: DependenciesDto): Dependencies {
   return {
     today: dto.today,
     people: dto.people.map(toUserSummary),
+    areas: (dto.areas ?? []).map((a) => ({ key: a.key, name: a.name, deliveries: a.deliveries })),
     projects: dto.projects.map((row) => ({
-      project: { ...toTiProjectRef(row.project), dueDate: row.project.due_date ? row.project.due_date.slice(0, 10) : null },
-      counts: toTiCounts(row.counts),
+      project: { ...toDepProjectRef(row.project), dueDate: row.project.due_date ? row.project.due_date.slice(0, 10) : null },
+      counts: toDepCounts(row.counts),
       deliveries: row.deliveries.map((d) => ({
-        ...toTiTaskRef(d),
+        ...toDepDeliveryRef(d),
         assigneeId: d.assignee_id,
         waitingDays: d.waiting_days,
         daysLeft: d.days_left,
-        risk: TI_RISKS.includes(d.risk as TiRisk) ? (d.risk as TiRisk) : 'ok',
+        risk: DEP_RISKS.includes(d.risk as DepRisk) ? (d.risk as DepRisk) : 'ok',
         blocks: d.blocks,
-        blocksProjects: d.blocks_projects.map(toTiProjectRef),
+        blocksProjects: d.blocks_projects.map(toDepProjectRef),
       })),
-      blocked: row.blocked.map((b) => ({ ...toTiTaskRef(b), waitingOn: b.waiting_on.map((w) => ({ ...toTiTaskRef(w), relationId: w.relation_id })) })),
-      pending: row.pending.map((p) => ({ ...toTiTaskRef(p), relatedTo: toTiTaskRef(p.related_to), relationId: p.relation_id, canConfirm: !!p.can_confirm })),
+      blocked: row.blocked.map((b) => ({ ...toDepTaskRef(b), waitingOn: b.waiting_on.map((w) => ({ ...toDepDeliveryRef(w), relationId: w.relation_id })) })),
+      pending: row.pending.map((p) => ({ ...toDepTaskRef(p), relatedTo: toDepDeliveryRef(p.related_to), relationId: p.relation_id, canConfirm: !!p.can_confirm })),
     })),
   }
 }
 
-export function toItPeople(dto: ItPeopleDto): ItPeople {
-  return { userIds: dto.user_ids, users: dto.users.map(toUserSummary), candidates: (dto.candidates ?? []).map(toUserSummary) }
+export function toDependencyAreas(dto: DependencyAreasDto): DependencyAreasConfig {
+  return {
+    areas: dto.areas.map((a) => ({ key: a.key, name: a.name, userIds: a.user_ids, users: a.users.map(toUserSummary) })),
+    candidates: (dto.candidates ?? []).map(toUserSummary),
+  }
 }

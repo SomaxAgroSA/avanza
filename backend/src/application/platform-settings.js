@@ -1,8 +1,8 @@
 /**
  * Casos de uso do Configurador geral (regras de negócio §15): configurações da plataforma (só
  * `platform.manage`), identidade pública (nome, logo e ícone — sem login), política de senha
- * (quem está logado), a limpeza diária do histórico de auditoria (rotina, sem usuário) e as Pessoas de TI
- * (§42, `settings.manage`).
+ * (quem está logado), a limpeza diária do histórico de auditoria (rotina, sem usuário) e as Dependências
+ * por área (§42, `settings.manage`; as antigas Pessoas de TI viram a área TI).
  *
  * Porta: `platformSettingsRepository` { get() → { values, files: { slot: { name, mime, size } }, updatedAt },
  * saveValues(values), setFile(slot, data), clearFile(slot), fileKeyOf(slot) }; o histórico usa
@@ -85,8 +85,10 @@ function createPlatformSettingsService(deps) {
     const input = Object.assign({}, raw || {})
     const dryRun = input.dry_run === true
     delete input.dry_run
-    // Pessoas de TI têm rota e permissão próprias (settings.manage): aqui não entram
-    if (Object.prototype.hasOwnProperty.call(input, 'it_people')) throw invalid({ it_people: 'unknown_field' })
+    // Pessoas de TI e Dependências por área têm rotas e permissão próprias (settings.manage): aqui não entram
+    ;['it_people', 'dependency_areas'].forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(input, key)) throw invalid({ [key]: 'unknown_field' })
+    })
     const before = await currentSettings(deps)
     const result = settingsDomain.validateSettings(input, before)
     if (Object.keys(result.fields).length > 0) throw invalid(result.fields)
@@ -199,29 +201,96 @@ function createPlatformSettingsService(deps) {
     return await purgeAuditLogs(ctx)
   }
 
-  // ------------------------------------------------------------------ Pessoas de TI (§42)
+  // ------------------------------------------------------------------ Dependências por área (§42)
 
-  async function presentItPeople(ids) {
+  async function usersById(ids) {
     const users = ids.length ? await deps.userRepository.findManyByIds(ids) : []
     const byId = {}
     users.forEach((u) => {
       byId[u.id] = u
     })
+    return byId
+  }
+
+  async function candidates() {
+    return (await deps.userRepository.searchActive({ search: '', excludeIds: [], limit: 500 })).map(toUserSummary)
+  }
+
+  async function presentItPeople(ids) {
+    const byId = await usersById(ids)
     return { user_ids: ids.filter((id) => byId[id]), users: ids.filter((id) => byId[id]).map((id) => toUserSummary(byId[id])) }
   }
 
+  async function presentAreas(areas) {
+    const byId = await usersById(areas.reduce((all, a) => all.concat(a.user_ids), []))
+    return areas.map((a) => {
+      const ids = a.user_ids.filter((id) => byId[id])
+      return { key: a.key, name: a.name, user_ids: ids, users: ids.map((id) => toUserSummary(byId[id])) }
+    })
+  }
+
+  /** "Área: Fulano, Sicrano" de cada área, para o histórico. */
+  async function auditAreas(areas) {
+    const byId = await usersById(areas.reduce((all, a) => all.concat(a.user_ids), []))
+    return areas.map((a) => {
+      const names = a.user_ids
+        .filter((id) => byId[id])
+        .map((id) => byId[id].name)
+        .sort()
+      return names.length ? `${a.name}: ${names.join(', ')}` : a.name
+    })
+  }
+
+  /** Grava as áreas e espelha a TI em `it_people` (a rota antiga e uma versão anterior continuam certas). */
+  async function saveAreas(ctx, before, areas) {
+    const ti = areas.find((a) => a.key === settingsDomain.TI_AREA_KEY)
+    const after = Object.assign({}, before, { dependency_areas: areas, it_people: ti.user_ids })
+    if (!settingsDomain.diffSettings(before, after)) return
+    const oldValue = { dependency_areas: await auditAreas(settingsDomain.resolveDependencyAreas(before)) }
+    const newValue = { dependency_areas: await auditAreas(areas) }
+    await deps.unitOfWork.run(async (repos) => {
+      await repos.platformSettingsRepository.saveValues(after)
+      await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: ENTITY, entityId: ENTITY_ID, action: 'platform_settings.update', oldValue, newValue }))
+    })
+  }
+
   /**
-   * Quem é de TI para as "Dependências de TI" (além do Responsável TI de cada projeto) e os usuários ativos
-   * que podem ser escolhidos (`candidates`, até 500 — quem tem settings.manage nem sempre tem users.view).
+   * Áreas das "Dependências" (a TI sempre, com as antigas Pessoas de TI enquanto ninguém salvou a tela nova)
+   * e os usuários ativos que podem ser escolhidos (`candidates`, até 500 — quem tem settings.manage nem
+   * sempre tem users.view).
    */
+  async function getDependencyAreas(ctx) {
+    rbac.assertCan(ctx.principal, IT_PEOPLE_PERMISSION)
+    const values = await currentSettings(deps)
+    return { areas: await presentAreas(settingsDomain.resolveDependencyAreas(values)), configured: Array.isArray(values.dependency_areas), candidates: await candidates() }
+  }
+
+  /** Troca a lista inteira (`areas`: [{ key?, name, user_ids }]); só usuários que existem; histórico com os nomes. */
+  async function updateDependencyAreas(ctx, raw) {
+    rbac.assertCan(ctx.principal, IT_PEOPLE_PERMISSION)
+    const checked = settingsDomain.validateDependencyAreas(raw && raw.areas)
+    if (checked.fields.areas) throw invalid(checked.fields)
+    const ids = checked.areas.reduce((all, a) => all.concat(a.user_ids), [])
+    const found = ids.length ? await deps.userRepository.findManyByIds(ids) : []
+    if (found.length !== ids.length) throw invalid({ areas: 'invalid_option' })
+    await saveAreas(ctx, await currentSettings(deps), checked.areas)
+    const values = await currentSettings(deps)
+    return { areas: await presentAreas(settingsDomain.resolveDependencyAreas(values)), configured: true }
+  }
+
+  /** Rota antiga: as pessoas da área TI (`it_people` enquanto não há áreas) e os candidatos. */
   async function getItPeople(ctx) {
     rbac.assertCan(ctx.principal, IT_PEOPLE_PERMISSION)
-    const out = await presentItPeople((await currentSettings(deps)).it_people)
-    out.candidates = (await deps.userRepository.searchActive({ search: '', excludeIds: [], limit: 500 })).map(toUserSummary)
+    const ti = settingsDomain.resolveDependencyAreas(await currentSettings(deps)).find((a) => a.key === settingsDomain.TI_AREA_KEY)
+    const out = await presentItPeople(ti.user_ids)
+    out.candidates = await candidates()
     return out
   }
 
-  /** Troca a lista inteira (`user_ids`): só usuários que existem; fica no histórico com os nomes. */
+  /**
+   * Rota antiga: troca só as pessoas da área TI (`user_ids`). Com áreas configuradas, quem entra na TI sai da
+   * área onde estava (uma pessoa fica numa área só). Histórico como antes, com os nomes.
+   */
   async function updateItPeople(ctx, raw) {
     rbac.assertCan(ctx.principal, IT_PEOPLE_PERMISSION)
     const ids = raw && raw.user_ids
@@ -232,6 +301,11 @@ function createPlatformSettingsService(deps) {
     if (found.length !== unique.length) throw invalid({ user_ids: 'invalid_option' })
     const before = await currentSettings(deps)
     const after = Object.assign({}, before, { it_people: unique })
+    if (Array.isArray(before.dependency_areas)) {
+      after.dependency_areas = settingsDomain
+        .resolveDependencyAreas(before)
+        .map((a) => Object.assign({}, a, { user_ids: a.key === settingsDomain.TI_AREA_KEY ? unique : a.user_ids.filter((id) => unique.indexOf(id) < 0) }))
+    }
     if (settingsDomain.diffSettings(before, after)) {
       const names = async (list) => (list.length ? (await deps.userRepository.findManyByIds(list)).map((u) => u.name).sort() : [])
       const oldNames = await names(before.it_people)
@@ -246,7 +320,7 @@ function createPlatformSettingsService(deps) {
     return presentItPeople(unique)
   }
 
-  return { getItPeople, updateItPeople, runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
+  return { getDependencyAreas, updateDependencyAreas, getItPeople, updateItPeople, runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
 }
 
 module.exports = { createPlatformSettingsService, currentSettings, currentPasswordPolicy, currentLockoutPolicy }

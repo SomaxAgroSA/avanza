@@ -1,7 +1,8 @@
 /**
  * Configurador geral da plataforma (regras de negócio §15): retenção do histórico, bloqueio de login,
- * política de senha e identidade (nome, logo e ícone do navegador). Também guarda as "Pessoas de TI"
- * (§42, `it_people`), editadas por uma rota própria com `settings.manage`.
+ * política de senha e identidade (nome, logo e ícone do navegador). Também guarda as "Dependências por
+ * área" (§42, `dependency_areas`; a área TI ainda espelha a lista antiga `it_people`), editadas por rotas
+ * próprias com `settings.manage`.
  *
  * - Os padrões são os valores que antes ficavam fixos no código; valem até alguém mudar.
  * - Limites seguros: ninguém desliga uma proteção por engano (ex.: no mínimo 3 tentativas, senha de 8+).
@@ -22,8 +23,10 @@ const DEFAULTS = Object.freeze({
   password_require_mixed_case: false,
   password_require_symbol: false,
   platform_name: 'Avanza',
-  /** Pessoas de TI (§42): ids dos usuários cujas tarefas abertas são "entregas de TI". */
+  /** Pessoas de TI (§42, lista antiga): a área TI enquanto `dependency_areas` não existe; depois, o espelho dela. */
   it_people: Object.freeze([]),
+  /** Dependências por área (§42): [{ key, name, user_ids }]; null = ainda não configurada (vale `it_people`). */
+  dependency_areas: null,
 })
 
 const LIMITS = Object.freeze({
@@ -35,6 +38,12 @@ const LIMITS = Object.freeze({
 const NAME_MAX = 40
 const IT_PEOPLE_MAX = 50
 const ID_PATTERN = /^[A-Za-z0-9_]{1,64}$/
+const DEPENDENCY_AREAS_MAX = 20
+const AREA_NAME_MAX = 40
+const AREA_KEY_PATTERN = /^[a-z0-9_-]{1,32}$/
+/** A área TI existe sempre: o Responsável TI de cada projeto pertence a ela (pode ser renomeada, não removida). */
+const TI_AREA_KEY = 'ti'
+const TI_AREA_NAME = 'TI'
 
 const INTEGER_KEYS = ['lockout_threshold', 'lockout_base_minutes', 'lockout_max_minutes', 'password_min_length']
 const BOOLEAN_KEYS = ['password_require_mixed_case', 'password_require_symbol']
@@ -59,12 +68,88 @@ function valueIssue(key, value) {
     if (!Array.isArray(value) || !value.every((id) => typeof id === 'string' && ID_PATTERN.test(id))) return 'invalid_type'
     return value.length > IT_PEOPLE_MAX ? 'too_many' : null
   }
+  if (key === 'dependency_areas') {
+    if (!Array.isArray(value) || !value.every((a) => a && typeof a === 'object' && typeof a.key === 'string')) return 'invalid_type'
+    // guardada: a TI pode faltar (resolveDependencyAreas a recoloca no topo)
+    return validateDependencyAreas(value, { requireTi: false }).fields.areas || null
+  }
   return 'unknown_field'
 }
 
 function clean(key, value) {
   if (key === 'it_people') return value.filter((id, i, all) => all.indexOf(id) === i)
+  if (key === 'dependency_areas') return validateDependencyAreas(value, { requireTi: false }).areas
   return key === 'platform_name' ? value.trim() : value
+}
+
+// ------------------------------------------------------------------ Dependências por área (§42)
+
+/** Chave estável a partir do nome: "Finanças e Contabilidade" → "financas-e-contabilidade". */
+function slugOf(name) {
+  const slug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 28)
+    .replace(/-+$/g, '')
+  return slug || 'area'
+}
+
+/**
+ * Lista inteira de áreas (`[{ key?, name, user_ids }]`, na ordem da tela) → { areas, fields }.
+ * `fields.areas` (o primeiro problema): invalid_type, too_many, ti_required, name_required, name_too_long,
+ * duplicate_name, too_many_people, duplicate_person. Área nova sem `key` ganha uma pelo nome (com sufixo -2,
+ * -3… se repetir); a TI (`key: 'ti'`) é obrigatória; uma pessoa fica em uma área só.
+ */
+function validateDependencyAreas(list, options) {
+  const requireTi = !options || options.requireTi !== false
+  const fail = (code) => ({ areas: [], fields: { areas: code } })
+  if (!Array.isArray(list)) return fail('invalid_type')
+  if (list.length > DEPENDENCY_AREAS_MAX) return fail('too_many')
+  const shaped = []
+  for (const item of list) {
+    if (!item || typeof item !== 'object') return fail('invalid_type')
+    if (item.key !== undefined && item.key !== null && (typeof item.key !== 'string' || !AREA_KEY_PATTERN.test(item.key))) return fail('invalid_type')
+    if (typeof item.name !== 'string') return fail(item.name === undefined || item.name === null ? 'name_required' : 'invalid_type')
+    const ids = item.user_ids === undefined ? [] : item.user_ids
+    if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string' && ID_PATTERN.test(id))) return fail('invalid_type')
+    const name = item.name.trim()
+    if (!name) return fail('name_required')
+    if (name.length > AREA_NAME_MAX) return fail('name_too_long')
+    const unique = ids.filter((id, i, all) => all.indexOf(id) === i)
+    if (unique.length > IT_PEOPLE_MAX) return fail('too_many_people')
+    shaped.push({ key: item.key || null, name, user_ids: unique })
+  }
+  if (requireTi && !shaped.some((a) => a.key === TI_AREA_KEY)) return fail('ti_required')
+  const names = shaped.map((a) => a.name.toLocaleLowerCase('pt-BR'))
+  if (names.some((n, i) => names.indexOf(n) !== i)) return fail('duplicate_name')
+  const keys = shaped.filter((a) => a.key).map((a) => a.key)
+  if (keys.some((k, i) => keys.indexOf(k) !== i)) return fail('duplicate_name')
+  const people = shaped.reduce((all, a) => all.concat(a.user_ids), [])
+  if (people.some((id, i) => people.indexOf(id) !== i)) return fail('duplicate_person')
+  shaped.forEach((a) => {
+    if (a.key) return
+    const base = slugOf(a.name)
+    let key = base
+    for (let n = 2; keys.indexOf(key) >= 0; n++) key = `${base}-${n}`
+    keys.push(key)
+    a.key = key
+  })
+  return { areas: shaped, fields: {} }
+}
+
+/**
+ * Áreas vigentes (valores já normalizados): a lista nova quando existe (com a TI no topo se faltar) ou,
+ * antes de alguém salvar a tela nova, só a TI com as Pessoas de TI antigas (`it_people`).
+ */
+function resolveDependencyAreas(values) {
+  const v = values || {}
+  const legacy = { key: TI_AREA_KEY, name: TI_AREA_NAME, user_ids: (v.it_people || []).slice() }
+  if (!Array.isArray(v.dependency_areas)) return [legacy]
+  const areas = v.dependency_areas.map((a) => ({ key: a.key, name: a.name, user_ids: a.user_ids.slice() }))
+  return areas.some((a) => a.key === TI_AREA_KEY) ? areas : [legacy].concat(areas)
 }
 
 const same = (a, b) => (Array.isArray(a) || Array.isArray(b) ? JSON.stringify(a) === JSON.stringify(b) : a === b)
@@ -227,6 +312,12 @@ module.exports = {
   LIMITS,
   NAME_MAX,
   IT_PEOPLE_MAX,
+  DEPENDENCY_AREAS_MAX,
+  AREA_NAME_MAX,
+  TI_AREA_KEY,
+  TI_AREA_NAME,
+  validateDependencyAreas,
+  resolveDependencyAreas,
   BRANDING_SLOTS,
   BRANDING_MAX_BYTES,
   BRANDING_MIME_TYPES,
