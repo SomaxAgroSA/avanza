@@ -233,13 +233,15 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal((await createClient(pb.api).get('/project-task-counts')).status, 401)
   })
 
-  it('§42: GET /ti-dependencies e Pessoas de TI (PUT /settings/it-people, settings.manage)', async () => {
+  it('§42: GET /dependencies (e /ti-dependencies), Dependências por área (PUT /settings/dependency-areas) e Pessoas de TI antigas (settings.manage)', async () => {
     const roles = (await admin.get('/roles')).body.data
     const ti = (await admin.post('/users', { name: 'Equipo de Informática', email: 'ti@example.com', password: 'SenhaTeste123', role_id: roles.find((r) => r.code === 'MEMBER').id })).body.data
+    const fin = (await admin.post('/users', { name: 'Lúcia Finanças', email: 'fin@example.com', password: 'SenhaTeste123', role_id: roles.find((r) => r.code === 'MEMBER').id })).body.data
     const fvb = (await admin.post('/projects', { name: 'Fuerza de Ventas', key: 'FVB', status: 'active' })).body.data
     const dre = (await admin.post('/projects', { name: 'DRE', key: 'DRE', status: 'active' })).body.data
     for (const p of [fvb, dre]) await admin.post(`/projects/${p.id}/members`, { user_id: member.user.id, role: 'member' })
     await admin.post(`/projects/${fvb.id}/members`, { user_id: ti.id, role: 'manager' })
+    await admin.post(`/projects/${dre.id}/members`, { user_id: fin.id, role: 'member' })
     const make = async (project, title, assignee) => {
       const res = await admin.post('/tasks', { project_id: project.id, task_type_id: doc.id, title, assignee_id: assignee })
       assert.equal(res.status, 201, JSON.stringify(res.body))
@@ -248,6 +250,7 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     const sso = await make(fvb, 'Autenticação SSO', ti.id)
     const blocked = await make(dre, 'Dashboard', member.user.id)
     const related = await make(fvb, 'Segurança', member.user.id)
+    const budget = await make(dre, 'Orçamento', fin.id)
     assert.equal((await member.client.post(`/tasks/${blocked.id}/relations`, { type: 'depends_on', target_id: sso.id })).status, 201)
     const rel = (await member.client.post(`/tasks/${related.id}/relations`, { type: 'relates', target_id: sso.id })).body.data
 
@@ -260,22 +263,37 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.deepEqual((await admin.get('/settings/it-people')).body.data.user_ids, [ti.id])
     assert.equal((await admin.put('/settings/it-people', { user_ids: ['naoexiste'] })).body.error.code, 'VALIDATION_ERROR')
 
-    const data = (await member.client.get('/ti-dependencies')).body.data
+    // a lista antiga vira a área TI
+    assert.deepEqual((await admin.get('/settings/dependency-areas')).body.data.areas.map((a) => [a.key, a.name, a.user_ids]), [['ti', 'TI', [ti.id]]])
+    assert.equal((await member.client.put('/settings/dependency-areas', { areas: [] })).status, 403)
+    const areas = await admin.put('/settings/dependency-areas', { areas: [{ key: 'ti', name: 'TI', user_ids: [ti.id] }, { name: 'Finanças', user_ids: [fin.id] }] })
+    assert.equal(areas.status, 200, JSON.stringify(areas.body))
+    assert.deepEqual(areas.body.data.areas.map((a) => a.key), ['ti', 'financas'])
+    assert.equal((await admin.put('/settings/dependency-areas', { areas: [{ name: 'Sem TI', user_ids: [] }] })).body.error.details.fields.areas, 'ti_required')
+
+    const data = (await member.client.get('/dependencies')).body.data
     const byId = Object.fromEntries(data.projects.map((p) => [p.project.id, p]))
-    assert.deepEqual(byId[fvb.id].deliveries.map((d) => [d.code, d.risk, d.blocks]), [[sso.code, 'none_due', 1]])
+    assert.deepEqual(byId[fvb.id].deliveries.map((d) => [d.code, d.risk, d.blocks, d.area.key]), [[sso.code, 'none_due', 1, 'ti']])
+    assert.deepEqual(byId[dre.id].deliveries.map((d) => [d.code, d.area.name]), [[budget.code, 'Finanças']])
+    assert.deepEqual(data.areas, [{ key: 'ti', name: 'TI', deliveries: 1 }, { key: 'financas', name: 'Finanças', deliveries: 1 }])
+    // a rota antiga continua, só com a TI
+    const legacy = (await member.client.get('/ti-dependencies')).body.data
+    assert.equal(JSON.stringify(legacy).includes(budget.code), false)
+    assert.deepEqual(legacy.areas.map((a) => a.key), ['ti'])
     assert.deepEqual(byId[fvb.id].pending.map((p) => [p.code, p.relation_id, p.can_confirm]), [[related.code, rel.id, true]])
     assert.deepEqual(byId[dre.id].blocked.map((b) => [b.code, b.waiting_on[0].code]), [[blocked.code, sso.code]])
-    assert.deepEqual(data.people.map((u) => u.name), ['Equipo de Informática'])
+    assert.deepEqual(data.people.map((u) => u.name), ['Equipo de Informática', 'Lúcia Finanças'])
     // project_ids recorta; quem não vê os projetos não recebe nada deles; sem login, 401
-    assert.deepEqual((await member.client.get(`/ti-dependencies?project_ids=${dre.id}`)).body.data.projects.map((p) => p.project.id), [dre.id])
-    assert.equal((await outsider.client.get('/ti-dependencies')).body.data.projects.some((p) => [fvb.id, dre.id].includes(p.project.id)), false)
+    assert.deepEqual((await member.client.get(`/dependencies?project_ids=${dre.id}`)).body.data.projects.map((p) => p.project.id), [dre.id])
+    assert.equal((await outsider.client.get('/dependencies')).body.data.projects.some((p) => [fvb.id, dre.id].includes(p.project.id)), false)
+    assert.equal((await createClient(pb.api).get('/dependencies')).status, 401)
     assert.equal((await createClient(pb.api).get('/ti-dependencies')).status, 401)
     // confirmar o bloqueio: a relacionada vira "depende de" e passa a bloquear
     assert.equal((await member.client.post(`/tasks/${related.id}/relations`, { type: 'depends_on', target_id: sso.id })).status, 201)
     assert.equal((await member.client.del(`/relations/${rel.id}`)).status, 200)
-    const after = (await member.client.get(`/ti-dependencies?project_ids=${fvb.id}`)).body.data.projects[0]
+    const after = (await member.client.get(`/dependencies?project_ids=${fvb.id}`)).body.data.projects[0]
     assert.deepEqual([after.counts.blocked, after.counts.pending, after.deliveries[0].blocks], [1, 0, 2])
-    await admin.put('/settings/it-people', { user_ids: [] })
+    await admin.put('/settings/dependency-areas', { areas: [{ key: 'ti', name: 'TI', user_ids: [] }] })
   })
 
   it('§44: sem a Lista de tarefas (tasks.list) a pessoa continua vendo as tarefas pela API e dentro do projeto', async () => {
