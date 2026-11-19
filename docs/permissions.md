@@ -12,6 +12,7 @@
 |---|---|
 | projects | `projects.view`, `projects.create`, `projects.edit`, `projects.delete`, `projects.view_all` (desde a migration 1790000003); seções do projeto `projects.charter`, `projects.history`, `projects.members`, `projects.report` (regras §35, migration `0020_project_sections.sql`) |
 | tasks | `tasks.view`, `tasks.create`, `tasks.edit`, `tasks.delete`, `tasks.assign`, `tasks.fork`, `tasks.link` |
+| task_list | `tasks.list` — Lista de tarefas: o item "Tarefas" do menu e a página `/tasks` (só tela; depende de `tasks.view`; regras §44, migration `0030_task_list_permission.sql`) |
 | kanban | `kanban.view` |
 | users | `users.view`, `users.create`, `users.edit`, `users.disable` |
 | reports | `reports.view` |
@@ -30,6 +31,7 @@
 | tasks.view | ✓ | ✓ | ✓ | ✓ | ✓ |
 | tasks.create / edit / assign / fork / link | ✓ | ✓ | ✓ | ✓ | |
 | tasks.delete | ✓ | ✓ | ✓ | | |
+| tasks.list (Lista de tarefas, §44) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | kanban.view | ✓ | ✓ | ✓ | ✓ | ✓ |
 | users.view | ✓ | ✓ | ✓ | | |
 | users.create / edit / disable | ✓ | ✓ | | | |

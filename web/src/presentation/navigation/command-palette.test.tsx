@@ -15,8 +15,8 @@ beforeEach(() => {
   act(() => useUiStore.getState().setCommandPaletteOpen(false))
 })
 
-function setup(list: TaskRepository['list']) {
-  const repositories = fakeRepositories({ auth: { me: async () => makeCurrentUser(['tasks.view', 'tasks.create']) }, tasks: { list } })
+function setup(list: TaskRepository['list'], permissions: Parameters<typeof makeCurrentUser>[0] = ['tasks.view', 'tasks.create', 'tasks.list']) {
+  const repositories = fakeRepositories({ auth: { me: async () => makeCurrentUser(permissions) }, tasks: { list } })
   const view = renderRoutes(
     [
       { path: '/', element: <CommandPalette /> },
@@ -50,5 +50,18 @@ describe('Command palette — tarefas', () => {
     expect(screen.getByRole('option', { name: 'Buscar tarefas com “filtro”' })).toBeInTheDocument()
     await userEvent.click(result)
     await waitFor(() => expect(router.state.location.pathname).toBe('/tasks/k3'))
+  })
+
+  it('sem a Lista de tarefas (§44): nada leva a /tasks (nem o menu, nem criar, nem buscar), mas as tarefas encontradas continuam', async () => {
+    const task = { id: 'k3', code: 'SB-3', title: 'Filtro por período no relatório de vendas' } as TaskSummary
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [task], page: 1, perPage: 6, total: 1, totalPages: 1 }))
+    setup(list, ['tasks.view', 'tasks.create'])
+    const input = await screen.findByRole('combobox')
+    await screen.findByRole('option', { name: /tema claro/ })
+    expect(screen.queryByRole('option', { name: /^Tarefas$/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Criar tarefa/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Buscar tarefas/ })).not.toBeInTheDocument()
+    await userEvent.type(input, 'filtro')
+    expect(await screen.findByRole('option', { name: /SB-3 · Filtro por período/ })).toBeInTheDocument()
   })
 })

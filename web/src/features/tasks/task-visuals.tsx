@@ -98,15 +98,16 @@ export function TaskIndicators({
 }
 
 /** Prazo; vencido em destaque (tarefa aberta com prazo antes de hoje). */
-export function DueDate({ task }: { task: Pick<TaskSummary, 'dueDate' | 'status'> }) {
+/** Prazo; vencido em vermelho. `showLabel`: escreve "· vencida" ao lado (Lista de tarefas, §44). */
+export function DueDate({ task, showLabel = false }: { task: Pick<TaskSummary, 'dueDate' | 'status'>; showLabel?: boolean }) {
   const { t, i18n } = useTranslation()
   if (!task.dueDate) return <span className="text-subtle">—</span>
   const overdue = isOverdue(task)
   return (
-    <span className={cn('inline-flex items-center gap-1.5', overdue ? 'font-medium text-danger' : 'text-muted')} title={overdue ? t('tasks.overdue') : undefined}>
+    <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap', overdue ? 'font-medium text-danger' : 'text-muted')} title={overdue ? t('tasks.overdue') : undefined}>
       {overdue && <CalendarClock className="size-3.5" aria-hidden />}
       {formatDay(task.dueDate, i18n.language)}
-      {overdue && <span className="sr-only">{t('tasks.overdue')}</span>}
+      {overdue && (showLabel ? <span>· {t('taskList.overdue')}</span> : <span className="sr-only">{t('tasks.overdue')}</span>)}
     </span>
   )
 }

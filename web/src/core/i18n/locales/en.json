@@ -572,6 +572,7 @@
     "modules": {
       "projects": "Projects",
       "tasks": "Tasks",
+      "task_list": "Task list",
       "kanban": "Kanban",
       "users": "Users",
       "reports": "Reports",
@@ -593,6 +594,7 @@
       "tasks.assign": "Assign tasks",
       "tasks.fork": "Fork tasks",
       "tasks.link": "Link tasks",
+      "tasks.list": "View the task list (Tasks menu)",
       "kanban.view": "View Kanban",
       "users.view": "View users",
       "users.create": "Create users",
@@ -1817,6 +1819,15 @@
       "toggle": "My tasks first",
       "hint": "Shows the tasks you are assigned to at the top; the rest stay below."
     }
+  },
+  "taskList": {
+    "subtitle": "Tasks from the projects you have access to.",
+    "scopeLabel": "Which tasks to show",
+    "mine": "My tasks",
+    "all": "See all",
+    "openOnly": "Open tasks only. To see done or cancelled ones, pick a Status.",
+    "overdue": "overdue",
+    "moduleHint": "\"Tasks\" menu: opens on \"My tasks\"; \"See all\" shows the tasks of the projects the person can access. Needs \"Tasks\" on; when off, tasks stay inside each project."
   },
   "tags": {
     "title": "Tags",

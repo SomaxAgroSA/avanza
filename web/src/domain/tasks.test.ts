@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, taskListFilters } from './tasks'
+import { OPEN_TASK_CATEGORIES, TASK_SCOPE_SORT, isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, scopeCountFilters, scopedTaskFilters, taskListFilters } from './tasks'
 
 describe('domain/tasks — menções', () => {
   const carla = { id: 'u7', name: 'Carla Mendes' }
@@ -49,5 +49,28 @@ describe('domain/tasks — filtros da lista (ajuste 18/11)', () => {
       taskListFilters({ status: 's1', priority: 'p1', urgency: 'high', assignee: 'me', area: 'a1', category: 'done,cancelled', type: 't1', project: 'p9', tags: 'g1', in_report: 'true', it_visible: 'false', other: '' }),
     ).toEqual({ status: 's1', priority: 'p1', urgency: 'high', assignee: 'me' })
     expect(taskListFilters({ status: '' })).toEqual({})
+  })
+})
+
+describe('domain/tasks — Lista de tarefas do menu (§44)', () => {
+  it('Minhas = atribuídas a quem olha; Todas = sem responsável fixo; Responsável sai da barra (o escopo decide)', () => {
+    expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'mine')).toEqual({ priority: 'p1,p2', assignee: 'me', category: OPEN_TASK_CATEGORIES })
+    expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'all')).toEqual({ priority: 'p1,p2', category: OPEN_TASK_CATEGORIES })
+  })
+
+  it('só as abertas, a menos que o Status diga outra coisa (aí vale o status escolhido, aberto ou encerrado)', () => {
+    expect(OPEN_TASK_CATEGORIES).toBe('backlog,todo,in_progress')
+    expect(scopedTaskFilters({ status: 's-done', urgency: 'high,none' }, 'all')).toEqual({ status: 's-done', urgency: 'high,none' })
+    expect(scopedTaskFilters({ status: '' }, 'all')).toEqual({ category: OPEN_TASK_CATEGORIES })
+  })
+
+  it('contagens: abertas em cada escopo, sem os filtros da barra', () => {
+    expect(scopeCountFilters('mine')).toEqual({ assignee: 'me', category: OPEN_TASK_CATEGORIES })
+    expect(scopeCountFilters('all')).toEqual({ category: OPEN_TASK_CATEGORIES })
+  })
+
+  it('ordem inicial: Minhas pelo prazo (sem prazo no fim); Todas pelas movidas mais recentes', () => {
+    expect(TASK_SCOPE_SORT.mine).toEqual({ id: 'due_date', direction: 'asc' })
+    expect(TASK_SCOPE_SORT.all).toEqual({ id: 'updated_at', direction: 'desc' })
   })
 })

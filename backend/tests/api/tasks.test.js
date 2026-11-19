@@ -156,6 +156,9 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal(high.body.data.urgency, 'high')
     assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&urgency=high`)).body.data.map((t) => t.code), ['CRM-2'])
     assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&urgency=none`)).body.data.map((t) => t.code), ['CRM-1'])
+    // vários valores separados por vírgula (botões da Lista de tarefas, §44)
+    assert.deepEqual((await member.client.get(`/tasks?project_id=${project.id}&urgency=high,none&sort=code`)).body.data.map((t) => t.code), ['CRM-1', 'CRM-2'])
+    assert.equal((await member.client.get('/tasks?urgency=high,roja')).body.error.details.fields.urgency, 'invalid_option')
     const card = (await member.client.get(`/projects/${project.id}/board`)).body.data.columns.flatMap((c) => c.tasks).find((t) => t.id === task.id)
     assert.equal(card.urgency, 'high')
     const history = (await member.client.get(`/tasks/${task.id}/history`)).body.data
@@ -273,5 +276,25 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     const after = (await member.client.get(`/ti-dependencies?project_ids=${fvb.id}`)).body.data.projects[0]
     assert.deepEqual([after.counts.blocked, after.counts.pending, after.deliveries[0].blocks], [1, 0, 2])
     await admin.put('/settings/it-people', { user_ids: [] })
+  })
+
+  it('§44: sem a Lista de tarefas (tasks.list) a pessoa continua vendo as tarefas pela API e dentro do projeto', async () => {
+    const { DEFAULT_ROLE_PERMISSIONS } = require('../../src/domain/permissions')
+    const permissions = DEFAULT_ROLE_PERMISSIONS.MEMBER.filter((code) => code !== 'tasks.list')
+    const role = (await admin.post('/roles', { code: 'SEM_LISTA', name: 'Sem lista', permissions })).body.data
+    const created = await admin.post('/users', { name: 'Nina', email: 'nina@example.com', password: 'SenhaTeste123', role_id: role.id })
+    await admin.post(`/projects/${project.id}/members`, { user_id: created.body.data.id, role: 'member' })
+    const nina = createClient(pb.api)
+    await nina.login('nina@example.com', 'SenhaTeste123')
+    const me = (await nina.get('/auth/me')).body.data
+    assert.equal(me.permissions.includes('tasks.list'), false)
+    assert.equal(me.permissions.includes('tasks.view'), true)
+    const seen = await nina.get(`/tasks?project_id=${project.id}`)
+    assert.equal(seen.status, 200, JSON.stringify(seen.body))
+    assert.ok(seen.body.meta.total >= 2)
+    assert.equal((await nina.get('/tasks')).body.meta.total, seen.body.meta.total)
+    // o catálogo traz o módulo próprio
+    const catalog = (await admin.get('/permissions')).body.data
+    assert.deepEqual(catalog.filter((p) => p.code === 'tasks.list').map((p) => p.module), ['task_list'])
   })
 })

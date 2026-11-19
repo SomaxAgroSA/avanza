@@ -101,6 +101,20 @@ describe('Control de acceso', () => {
     expect(data.permissions).toContain('projects.charter')
   })
 
+  it('§44: «Lista de tareas» es un módulo con interruptor propio, justo después de Tareas; prenderlo lleva también «ver tareas»', async () => {
+    const { createRole } = setup()
+    const list = await screen.findByRole('switch', { name: 'Ver Lista de tareas' })
+    expect(list).not.toBeChecked()
+    expect(screen.getByText(i18n.t('taskList.moduleHint'))).toBeInTheDocument()
+    const switches = screen.getAllByRole('switch').map((s) => s.getAttribute('aria-label'))
+    expect(switches.indexOf('Ver Lista de tareas')).toBe(switches.indexOf('Ver Tareas') + 1)
+    await userEvent.click(list)
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Crear perfil propio para Douglas' }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledOnce())
+    const [data] = createRole.mock.calls[0] as unknown as [{ permissions: string[] }]
+    expect(data.permissions).toEqual(expect.arrayContaining(['tasks.list', 'tasks.view']))
+  })
+
   it('el papel Responsable TI está entre los accesos al proyecto', async () => {
     const { addMember } = setup()
     await userEvent.click(await screen.findByRole('combobox', { name: 'Acceso a Aplicación del productor' }))

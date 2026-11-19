@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ExternalLink, FileCheck2, FileX2, Laptop, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
-import { isClosed, taskListFilters, type TaskSummary } from '@/domain/tasks'
+import { TASK_SCOPE_SORT, isClosed, scopeBarFilters, scopedTaskFilters, taskListFilters, type TaskScope, type TaskSummary } from '@/domain/tasks'
 import {
   AppBadge,
   AppButton,
@@ -46,10 +46,21 @@ export interface TasksTableProps {
    * seção Informe, §35) e o que o Responsável TI vê (§36; nunca o próprio Responsável TI).
    */
   marks?: { report: boolean; itVisible: boolean }
+  /**
+   * Lista de tarefas do menu (§44): Minhas (responsável = quem olha) ou Todas. Só as abertas, a menos que o
+   * Status diga outra coisa; Prioridade e Urgência em botões; sem Responsável na barra e sem "Minhas tarefas
+   * primeiro" (o escopo substitui); colunas Tarefa, Projeto, Status, Responsável, Prioridade, Urgência e Prazo.
+   */
+  scope?: TaskScope
 }
 
+/** Ordem das colunas na Lista de tarefas do menu (§44); as que não estão aqui ficam no fim. */
+const SCOPE_COLUMN_ORDER = ['code', 'project', 'status', 'assignee', 'priority', 'urgency', 'due_date']
+/** Ocultas por padrão na Lista de tarefas do menu (continuam em "Colunas"). */
+const SCOPE_HIDDEN_COLUMNS = { area: false, type: false, plan_item: false, tags: false, category: false, updated_at: false }
+
 /** Listagem padrão de tarefas (página Tarefas e aba do projeto). */
-export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot, marks }: TasksTableProps) {
+export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot, marks, scope }: TasksTableProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const navigate = useNavigate()
@@ -59,11 +70,12 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const canViewPlan = useCan('plan.view')
 
   const table = useDataTableState(tableId, {
-    sort: { id: 'updated_at', direction: 'desc' },
-    columnVisibility: { category: false, tags: false, plan_item: false, in_report: false, it_visible: false },
+    sort: scope ? TASK_SCOPE_SORT[scope] : { id: 'updated_at', direction: 'desc' },
+    columnVisibility: scope ? SCOPE_HIDDEN_COLUMNS : { category: false, tags: false, plan_item: false, in_report: false, it_visible: false },
   })
   // só os filtros da barra (ajuste 18/11): Área, Situação, Tipo, Projeto… guardados de antes não filtram escondidos — e saem do navegador
-  const filters = useMemo(() => taskListFilters(table.query.filters), [table.query.filters])
+  // (na Lista de tarefas do menu, também o Responsável: quem decide é o escopo, §44)
+  const filters = useMemo(() => (scope ? scopeBarFilters(table.query.filters) : taskListFilters(table.query.filters)), [table.query.filters, scope])
   const { setFilter } = table
   useEffect(() => {
     Object.keys(table.state.filters)
@@ -77,10 +89,17 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
     setSearch(search)
     onSearchApplied?.()
   }, [search, setSearch, onSearchApplied])
-  // minhas tarefas primeiro (padrão ligado): o servidor ordena; as da pessoa ganham a marca "Tuya"
-  const [mineFirst, setMineFirst] = useMineFirst()
+  // Lista de tarefas do menu (§44): cada escopo abre na sua ordem (Minhas pelo prazo; Todas pelas mais recentes)
+  const { setSort } = table
+  useEffect(() => {
+    if (scope) setSort(TASK_SCOPE_SORT[scope])
+  }, [scope, setSort])
+  // minhas tarefas primeiro (padrão ligado; fora da Lista de tarefas do menu): o servidor ordena; as da pessoa ganham a marca "Tuya"
+  const [mineFirstChoice, setMineFirst] = useMineFirst()
+  const mineFirst = !scope && mineFirstChoice
   const me = useSession().current?.user.id
-  const tasks = useTasksList({ ...table.query, filters }, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
+  const apiFilters = useMemo(() => (scope ? scopedTaskFilters(filters, scope) : filters), [filters, scope])
+  const tasks = useTasksList({ ...table.query, filters: apiFilters }, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
   const statuses = useStatuses(true)
   const priorities = usePriorities(true)
   const { remove, setInReport, setItVisible } = useTaskMutations()
@@ -104,23 +123,33 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         pinned: true,
         size: 360,
         minSize: 240,
-        cell: (task) => (
-          <div className="min-w-0">
-            <span className="flex items-center gap-2">
-              <TaskCode task={task} />
-              {mineFirst && me && task.assignee?.id === me && (
-                <AppBadge tone="primary" className="px-1.5 py-0 text-[10px]" data-testid="task-mine">
-                  {t('tasks.mine.badge')}
-                </AppBadge>
-              )}
-            </span>
-            <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <TagList tags={task.tags} max={3} className="mt-0.5" />
-              <TaskIndicators task={task} />
-            </span>
-          </div>
-        ),
+        cell: (task) =>
+          scope ? (
+            // Lista de tarefas do menu (§44): o título primeiro e o código embaixo
+            <div className="min-w-0">
+              <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <TaskCode task={task} />
+                <TaskIndicators task={task} />
+              </span>
+            </div>
+          ) : (
+            <div className="min-w-0">
+              <span className="flex items-center gap-2">
+                <TaskCode task={task} />
+                {mineFirst && me && task.assignee?.id === me && (
+                  <AppBadge tone="primary" className="px-1.5 py-0 text-[10px]" data-testid="task-mine">
+                    {t('tasks.mine.badge')}
+                  </AppBadge>
+                )}
+              </span>
+              <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <TagList tags={task.tags} max={3} className="mt-0.5" />
+                <TaskIndicators task={task} />
+              </span>
+            </div>
+          ),
       },
       {
         id: 'status',
@@ -136,7 +165,10 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         sortable: true,
         size: 140,
         cell: (task) => <TaskPriorityBadge priority={task.priority} />,
-        filter: { label: t('tasks.fields.priority'), options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
+        // na Lista de tarefas do menu, botões como nas listas de projetos (§37/§44): vários ao mesmo tempo
+        filter: scope
+          ? { label: t('tasks.fields.priority'), variant: 'buttons' as const, options: (priorities.data ?? []).filter((p) => p.isActive).map((p) => ({ value: p.id, label: p.name })) }
+          : { label: t('tasks.fields.priority'), options: (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name })) },
       },
       {
         // semáforo: quem edita troca com um clique, sem abrir a tarefa
@@ -144,14 +176,15 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.urgency'),
         size: 170,
         cell: (task) => <UrgencyCell task={task} canEdit={canEdit} />,
-        filter: { label: t('tasks.fields.urgency'), options: urgencyOptions },
+        filter: { label: t('tasks.fields.urgency'), options: urgencyOptions, ...(scope ? { variant: 'buttons' as const } : {}) },
       },
       {
         id: 'assignee',
         header: t('tasks.fields.assignee'),
         size: 180,
         cell: (task) => <PersonCell person={task.assignee} />,
-        filter: { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.assignedToMe') }] },
+        // na Lista de tarefas do menu o escopo (Minhas / Todas) faz o papel deste filtro
+        ...(scope ? {} : { filter: { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.assignedToMe') }] } }),
       },
       {
         // área responsável: quem edita troca com um clique, sem abrir a tarefa
@@ -181,7 +214,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.dueDate'),
         sortable: true,
         size: 130,
-        cell: (task) => <DueDate task={task} />,
+        cell: (task) => <DueDate task={task} showLabel={!!scope} />,
       },
       // elemento da Gestão que a tarefa executa (quem vê a Gestão); oculta por padrão
       ...(canViewPlan
@@ -242,14 +275,19 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, mineFirst, me],
+    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, mineFirst, me, scope],
   )
+  const ordered = useMemo(() => {
+    if (!scope) return columns
+    const rank = (id: string) => (SCOPE_COLUMN_ORDER.includes(id) ? SCOPE_COLUMN_ORDER.indexOf(id) : SCOPE_COLUMN_ORDER.length)
+    return [...columns].sort((a, b) => rank(a.id) - rank(b.id))
+  }, [columns, scope])
 
   return (
     <>
       <AppDataTable
         caption={t('tasks.title')}
-        columns={columns}
+        columns={ordered}
         data={tasks.data?.items ?? EMPTY}
         total={tasks.data?.total ?? 0}
         getRowId={(task) => task.id}
@@ -261,15 +299,17 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         searchPlaceholder={t('tasks.searchPlaceholder')}
         actionsSlot={actionsSlot}
         toolbar={
-          <AppButton
-            variant={mineFirst ? 'soft' : 'secondary'}
-            leftIcon={<UserCheck />}
-            aria-pressed={mineFirst}
-            title={t('tasks.mine.hint')}
-            onClick={() => setMineFirst(!mineFirst)}
-          >
-            {t('tasks.mine.toggle')}
-          </AppButton>
+          scope ? undefined : (
+            <AppButton
+              variant={mineFirst ? 'soft' : 'secondary'}
+              leftIcon={<UserCheck />}
+              aria-pressed={mineFirst}
+              title={t('tasks.mine.hint')}
+              onClick={() => setMineFirst(!mineFirst)}
+            >
+              {t('tasks.mine.toggle')}
+            </AppButton>
+          )
         }
         actions={{
           // só na aba Tarefas do projeto: o que sai no informe (aba Informe) e o que o Responsável TI vê

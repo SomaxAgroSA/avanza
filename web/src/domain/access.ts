@@ -13,6 +13,13 @@ export interface AccessModule {
   actions: PermissionCode[]
   /** Partes do módulo que a pessoa vê (só Projetos: as seções de cada projeto, regras §35). */
   sections?: PermissionCode[]
+  /**
+   * Permissão de outro módulo sem a qual este não serve (Lista de tarefas → ver tarefas, §44): ligar este liga
+   * aquela; desligar aquela desliga este.
+   */
+  requires?: PermissionCode
+  /** Chave de i18n da explicação curta embaixo do nome do módulo. */
+  hintKey?: string
 }
 
 export const ACCESS_MODULES: AccessModule[] = [
@@ -23,6 +30,8 @@ export const ACCESS_MODULES: AccessModule[] = [
     sections: ['projects.charter', 'projects.history', 'projects.members', 'projects.report'],
   },
   { module: 'tasks', view: 'tasks.view', actions: ['tasks.create', 'tasks.edit', 'tasks.assign', 'tasks.link', 'tasks.fork', 'tasks.delete'] },
+  // Lista de tarefas (§44): o item "Tarefas" do menu; as tarefas dentro dos projetos seguem "ver tarefas"
+  { module: 'task_list', view: 'tasks.list', actions: [], requires: 'tasks.view', hintKey: 'taskList.moduleHint' },
   { module: 'kanban', view: 'kanban.view', actions: [] },
   { module: 'plan', view: 'plan.view', actions: ['plan.edit', 'plan.manage'] },
   { module: 'reports', view: 'reports.view', actions: [] },
@@ -49,7 +58,8 @@ export const PROJECT_SECTION_CHIPS: { key: string; code: PermissionCode }[] = [
 
 /**
  * Liga ou desliga uma permissão mantendo a coerência: ligar uma ação (ou seção) liga também o "ver" do
- * módulo; desligar o "ver" desliga todas as ações e seções do módulo.
+ * módulo; desligar o "ver" desliga todas as ações e seções do módulo. Módulo que depende de outro
+ * (`requires`, ex.: Lista de tarefas → ver tarefas): ligar liga a dependência; desligá-la desliga o módulo.
  */
 export function togglePermission(current: readonly PermissionCode[], code: PermissionCode, on: boolean): PermissionCode[] {
   const set = new Set(current)
@@ -57,14 +67,20 @@ export function togglePermission(current: readonly PermissionCode[], code: Permi
   if (on) {
     set.add(code)
     if (mod?.view) set.add(mod.view)
+    if (mod?.requires) set.add(mod.requires)
   } else {
     set.delete(code)
     if (mod && mod.view === code) mod.actions.concat(mod.sections ?? []).forEach((a) => set.delete(a))
+    ACCESS_MODULES.filter((m) => m.requires === code).forEach((m) => {
+      if (m.view) set.delete(m.view)
+      m.actions.forEach((a) => set.delete(a))
+    })
   }
   return [...set].sort()
 }
 
 export function moduleVisible(perms: readonly PermissionCode[], mod: AccessModule): boolean {
+  if (mod.requires && !perms.includes(mod.requires)) return false
   return mod.view ? perms.includes(mod.view) : mod.actions.some((a) => perms.includes(a))
 }
 

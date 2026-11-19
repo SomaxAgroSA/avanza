@@ -572,6 +572,7 @@
     "modules": {
       "projects": "Proyectos",
       "tasks": "Tareas",
+      "task_list": "Lista de tareas",
       "kanban": "Kanban",
       "users": "Usuarios",
       "reports": "Informes",
@@ -593,6 +594,7 @@
       "tasks.assign": "Asignar responsables",
       "tasks.fork": "Crear fork de tareas",
       "tasks.link": "Relacionar tareas",
+      "tasks.list": "Ver la lista de tareas (menú Tareas)",
       "kanban.view": "Ver Kanban",
       "users.view": "Ver usuarios",
       "users.create": "Crear usuarios",
@@ -1817,6 +1819,15 @@
       "toggle": "Mis tareas primero",
       "hint": "Muestra arriba las tareas en las que eres responsable; las demás siguen debajo."
     }
+  },
+  "taskList": {
+    "subtitle": "Las tareas de los proyectos a los que tienes acceso.",
+    "scopeLabel": "Qué tareas ver",
+    "mine": "Mis tareas",
+    "all": "Ver todas",
+    "openOnly": "Solo las abiertas. Para ver terminadas o canceladas, elige el Estado.",
+    "overdue": "vencida",
+    "moduleHint": "Menú «Tareas»: abre en «Mis tareas»; con «Ver todas», las de los proyectos a los que la persona tiene acceso. Necesita «Tareas» prendido; apagado, las tareas siguen dentro de cada proyecto."
   },
   "tags": {
     "title": "Etiquetas",

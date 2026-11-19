@@ -18,6 +18,8 @@ export interface NavItem {
   icon?: LucideIcon
   /** Exige ao menos uma destas permissões para aparecer. */
   anyOf?: PermissionCode[]
+  /** Exige todas estas permissões para aparecer (ex.: Tarefas = Lista de tarefas + ver tarefas, §44). */
+  allOf?: PermissionCode[]
   /** Fase do roadmap em que o módulo será entregue (página "em breve" até lá). */
   phase?: number
   children?: NavItem[]
@@ -50,12 +52,12 @@ export const NAV_ITEMS: NavItem[] = [
       { id: 'projects-mine', labelKey: 'nav.projectsMine', to: '/projects/mine', hidden: true },
     ],
   },
+  // Lista de tarefas (§44): logo depois de Projetos, só para o perfil com o módulo (que depende de ver
+  // tarefas); sem ele, as tarefas continuam dentro de cada projeto
+  { id: 'tasks', labelKey: 'nav.tasks', to: '/tasks', icon: CheckSquare, allOf: ['tasks.list', 'tasks.view'] },
   // só visões de todos os projetos: as de um projeto (Gestão, Planejamento, Kanban do projeto, Cronograma)
   // ficam nas abas da página do projeto
   { id: 'kanban', labelKey: 'nav.kanban', to: '/kanban', icon: KanbanSquare, anyOf: ['kanban.view'] },
-  // fora do menu: as tarefas se veem dentro de cada projeto; a lista de todas segue pelo endereço, pela
-  // paleta de comandos e pelos links de notificações e e-mails
-  { id: 'tasks', labelKey: 'nav.tasks', to: '/tasks', icon: CheckSquare, anyOf: ['tasks.view'], hidden: true },
   { id: 'docs', labelKey: 'nav.docs', to: '/docs', icon: BookOpen, anyOf: ['docs.view'] },
   { id: 'users', labelKey: 'nav.users', to: '/users', icon: Users, anyOf: ['users.view'] },
   {
@@ -86,6 +88,7 @@ export const NAV_ITEMS: NavItem[] = [
 export function visibleNavItems(permissions: readonly string[], items: NavItem[] = NAV_ITEMS): NavItem[] {
   return items
     .filter((item) => !item.anyOf || canAny(permissions, item.anyOf))
+    .filter((item) => !item.allOf || item.allOf.every((code) => permissions.includes(code)))
     .map((item) => (item.children ? { ...item, children: visibleNavItems(permissions, item.children) } : item))
     .filter((item) => !item.children || item.children.length > 0)
 }

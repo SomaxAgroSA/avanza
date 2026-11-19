@@ -5,7 +5,7 @@ import { NAV_ITEMS, visibleNavItems, type NavItem } from './nav-items'
  * Telas que podem ser a página inicial de uma pessoa (regras §38) — a mesma lista fechada do servidor
  * (backend/src/domain/user.js#HOME_PAGES), sem o '' (automática).
  */
-export const HOME_PAGE_PATHS = ['/tracking', '/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/kanban', '/docs'] as const
+export const HOME_PAGE_PATHS = ['/tracking', '/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/tasks', '/kanban', '/docs'] as const
 
 export interface HomePageOption {
   path: string

@@ -20,6 +20,8 @@ export const PERMISSION_CODES = [
   'tasks.assign',
   'tasks.fork',
   'tasks.link',
+  // Lista de tarefas (§44): o item "Tarefas" do menu e a página /tasks (só tela; depende de tasks.view)
+  'tasks.list',
   'kanban.view',
   'users.view',
   'users.create',
@@ -57,7 +59,10 @@ export function canAny(granted: readonly string[], permissions: readonly Permiss
   return permissions.some((permission) => granted.includes(permission))
 }
 
-/** Módulo de uma permissão ("tasks.edit" -> "tasks"). */
+/** Permissões com módulo próprio, fora do prefixo do código (espelha o `module` do catálogo do backend). */
+const MODULE_OVERRIDES: Record<string, string> = { 'tasks.list': 'task_list' }
+
+/** Módulo de uma permissão ("tasks.edit" -> "tasks"; "tasks.list" -> "task_list"). */
 export function permissionModule(code: string): string {
-  return code.split('.')[0] ?? code
+  return MODULE_OVERRIDES[code] ?? code.split('.')[0] ?? code
 }
