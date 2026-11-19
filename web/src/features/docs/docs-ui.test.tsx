@@ -27,6 +27,7 @@ const SPACE: DocSpace = {
   color: 'blue',
   visibility: 'company',
   project: null,
+  module: null,
   homePageId: 'home',
   pageCount: 3,
   createdAt: null,

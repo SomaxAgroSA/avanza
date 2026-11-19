@@ -408,6 +408,10 @@ const executiveDashboard = configAction('executive', (s, ctx, r) => s.getDashboa
 
 // ---------------------------------------------------------------- documentação (expansão, Onda 2)
 
+const listDocModules = configAction('docModules', (s, ctx) => s.listModules(ctx))
+const createDocModule = configAction('docModules', (s, ctx, r) => s.createModule(ctx, r.body()), 201)
+const updateDocModule = configAction('docModules', (s, ctx, r) => s.updateModule(ctx, r.id, r.body()))
+const deleteDocModule = configAction('docModules', (s, ctx, r) => s.deleteModule(ctx, r.id))
 const listDocSpaces = configAction('docSpaces', (s, ctx) => s.listSpaces(ctx))
 const createDocSpace = configAction('docSpaces', (s, ctx, r) => s.createSpace(ctx, r.body()), 201)
 const getDocSpace = configAction('docSpaces', (s, ctx, r) => s.getSpace(ctx, r.id))
@@ -770,6 +774,10 @@ module.exports = {
   executiveDashboard,
   getPreference,
   savePreference,
+  listDocModules,
+  createDocModule,
+  updateDocModule,
+  deleteDocModule,
   listDocSpaces,
   createDocSpace,
   getDocSpace,

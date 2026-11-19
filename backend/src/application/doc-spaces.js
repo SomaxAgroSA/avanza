@@ -5,7 +5,10 @@
  * - Configurar/excluir: quem gerencia o espaço (domain/docs.js). A chave não muda; o projeto muda (para
  *   outro que a pessoa gerencia, ou nenhum — aí o espaço precisa ser "Toda a empresa").
  * - Árvore: cada página traz as tarefas vinculadas que a pessoa vê (doc-links.js).
- * - Auditoria: doc_space.created/updated/deleted (a troca de projeto entra no updated, com as chaves).
+ * - Módulo (§43): `module_id` na criação e na configuração ('' ou null = Sem módulo); devolvido como
+ *   `module: { id, name, color } | null`. Trocar de módulo exige configurar o espaço.
+ * - Auditoria: doc_space.created/updated/deleted (a troca de projeto e de módulo entram no updated, com
+ *   as chaves do projeto e os nomes dos módulos).
  */
 
 const { appError } = require('../core/errors')
@@ -31,6 +34,7 @@ const RULES = {
   icon: [iconRule(docsDomain.SPACE_ICONS)],
   color: [colorRule(OPTION_COLORS)],
   project_id: [idRule],
+  module_id: [idRule],
   visibility: [rules.required(), rules.oneOf(docsDomain.SPACE_VISIBILITIES)],
 }
 const EDITABLE = ['name', 'description', 'icon', 'color', 'visibility']
@@ -62,8 +66,22 @@ function createDocSpaceService(deps) {
     await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'doc_space', entityId, action, oldValue, newValue }))
   }
 
-  async function present(space, spaceAccess, pageCount) {
+  /** Módulo existente (DOC_MODULE_NOT_FOUND). */
+  async function existingModule(moduleId) {
+    const found = await deps.docModuleRepository.findById(moduleId)
+    if (!found) throw appError('DOC_MODULE_NOT_FOUND')
+    return found
+  }
+
+  async function moduleName(moduleId) {
+    const found = moduleId ? await deps.docModuleRepository.findById(moduleId) : null
+    return found ? found.name : null
+  }
+
+  /** `modules`: mapa id → módulo já carregado (lista); sem ele, busca o do espaço. */
+  async function present(space, spaceAccess, pageCount, modules) {
     const project = space.projectId ? await deps.projectRepository.findById(space.projectId) : null
+    const docModule = !space.moduleId ? null : modules ? modules[space.moduleId] || null : await deps.docModuleRepository.findById(space.moduleId)
     return {
       id: space.id,
       key: space.key,
@@ -73,6 +91,7 @@ function createDocSpaceService(deps) {
       color: space.color || 'blue',
       visibility: space.visibility,
       project: project ? { id: project.id, key: project.key, name: project.name } : null,
+      module: docModule ? { id: docModule.id, name: docModule.name, color: docModule.color || 'blue' } : null,
       home_page_id: space.homePageId || null,
       page_count: pageCount === undefined ? null : pageCount,
       created_at: iso(space.createdAt),
@@ -84,8 +103,12 @@ function createDocSpaceService(deps) {
   async function listSpaces(ctx) {
     const readable = await access.readableSpaces(ctx)
     const counts = await deps.docPageRepository.countPublishedBySpaces(readable.map((item) => item.space.id))
+    const modules = {}
+    ;(await deps.docModuleRepository.list()).forEach((m) => {
+      modules[m.id] = m
+    })
     const presented = []
-    for (const item of readable) presented.push(await present(item.space, item.access, counts[item.space.id] || 0))
+    for (const item of readable) presented.push(await present(item.space, item.access, counts[item.space.id] || 0, modules))
     return presented.sort((a, b) => a.name.localeCompare(b.name))
   }
 
@@ -121,6 +144,7 @@ function createDocSpaceService(deps) {
     const visibilityIssue = docsDomain.visibilityIssue(data.visibility, data.project_id)
     if (visibilityIssue) throw invalid({ visibility: visibilityIssue })
     if (data.project_id) await managedProject(ctx, data.project_id)
+    if (data.module_id) await existingModule(data.module_id)
     if (await spaces.findByKey(data.key)) throw appError('DOC_SPACE_KEY_IN_USE')
 
     const now = deps.clock.now()
@@ -136,6 +160,7 @@ function createDocSpaceService(deps) {
         icon: data.icon || 'book',
         color: data.color || 'blue',
         projectId: data.project_id || null,
+        moduleId: data.module_id || null,
         visibility: data.visibility,
         createdBy: ctx.principal.userId,
       })
@@ -155,7 +180,9 @@ function createDocSpaceService(deps) {
       })
       await repos.docPageVersionRepository.create({ pageId: page.id, version: 1, title: data.name, content: cleaned.doc, author: ctx.principal.userId })
       const saved = await repos.docSpaceRepository.update(space.id, { homePageId: page.id })
-      await audit(repos, ctx, space.id, 'doc_space.created', null, { key: space.key, name: space.name, visibility: space.visibility })
+      const created = { key: space.key, name: space.name, visibility: space.visibility }
+      if (data.module_id) created.module = await moduleName(data.module_id)
+      await audit(repos, ctx, space.id, 'doc_space.created', null, created)
       return saved
     })
     return present(created, await access.accessOf(ctx, created), 1)
@@ -180,13 +207,22 @@ function createDocSpaceService(deps) {
       if (nextProject && nextProject !== currentProject) await managedProject(ctx, nextProject)
     }
     const projectChanged = nextProject !== currentProject
+    // módulo: '' ou null = Sem módulo; outro id precisa existir
+    const currentModule = loaded.space.moduleId || null
+    let nextModule = currentModule
+    if (Object.prototype.hasOwnProperty.call(source, 'module_id')) {
+      const raw = source.module_id
+      nextModule = raw === null || raw === '' ? null : assertValid({ module_id: raw }, { module_id: RULES.module_id }).module_id
+      if (nextModule && nextModule !== currentModule) await existingModule(nextModule)
+    }
+    const moduleChanged = nextModule !== currentModule
     if (data.visibility || projectChanged) {
       const issue = docsDomain.visibilityIssue(data.visibility || loaded.space.visibility, nextProject)
       if (issue) throw invalid({ visibility: issue })
     }
     const before = { name: loaded.space.name, description: loaded.space.description || '', icon: loaded.space.icon, color: loaded.space.color, visibility: loaded.space.visibility }
     const change = diff(before, data, EDITABLE)
-    if (!change && !projectChanged) return present(loaded.space, loaded.access)
+    if (!change && !projectChanged && !moduleChanged) return present(loaded.space, loaded.access)
     const oldValue = Object.assign({}, change ? change.oldValue : {})
     const newValue = Object.assign({}, change ? change.newValue : {})
     const patch = Object.assign({}, newValue)
@@ -194,6 +230,11 @@ function createDocSpaceService(deps) {
       oldValue.project = await projectKey(currentProject)
       newValue.project = await projectKey(nextProject)
       patch.projectId = nextProject
+    }
+    if (moduleChanged) {
+      oldValue.module = await moduleName(currentModule)
+      newValue.module = await moduleName(nextModule)
+      patch.moduleId = nextModule
     }
     const saved = await deps.unitOfWork.run(async (repos) => {
       const updated = await repos.docSpaceRepository.update(loaded.space.id, patch)

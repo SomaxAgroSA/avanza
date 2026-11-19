@@ -11,7 +11,8 @@ import { FIELD_TYPE_ICONS, TASK_TYPE_ICON_COMPONENTS, optionColor, optionTint } 
  * Escolha de cor: a paleta (radiogroup acessível) e a cor personalizada (regras §24). `onPick` avisa só
  * a escolha de uma cor da paleta (o ColorButton fecha); a personalizada muda enquanto a pessoa ajusta.
  */
-export function ColorPicker({ label, value, onChange, onPick }: { label: string; value: OptionColor; onChange: (color: OptionColor) => void; onPick?: (color: OptionColor) => void }) {
+/** Paleta de cores; `custom={false}` tira a cor livre (lugares de paleta fixa, como os módulos da documentação). */
+export function ColorPicker({ label, value, onChange, onPick, custom = true }: { label: string; value: OptionColor; onChange: (color: OptionColor) => void; onPick?: (color: OptionColor) => void; custom?: boolean }) {
   const { t } = useTranslation()
   return (
     <AppFormField label={label}>
@@ -41,7 +42,7 @@ export function ColorPicker({ label, value, onChange, onPick }: { label: string;
               </button>
             )
           })}
-          <CustomColorSwatch value={isHexColor(value) ? value : null} onChange={onChange} swatchStyle={(hex) => ({ backgroundColor: optionColor(hex) })} />
+          {custom && <CustomColorSwatch value={isHexColor(value) ? value : null} onChange={onChange} swatchStyle={(hex) => ({ backgroundColor: optionColor(hex) })} />}
         </div>
       )}
     </AppFormField>

@@ -27,7 +27,7 @@ import { toProjectTaskCounts, toTeamActivity } from './mappers'
 import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
 import { toItPeople, toTiDependencies } from './mappers'
 import type { ItPeopleDto, TiDependenciesDto } from './dtos'
-import { toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
+import { toDocModule, toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
 import type { ColumnTypePreview } from '@/domain/plan-columns'
@@ -44,8 +44,8 @@ import { fromEmailPatch, toEmailSettings, toOutboxSummary, toResetTokenCheck } f
 import type { FlushResult } from '@/domain/email'
 import type { IssueInput, JournalInput } from '@/domain/plan-management'
 import type { PlanBulkInput, PlanBulkResult, PlanGroupInput, PlanImportResult, PlanImportRow, PlanItemInput } from '@/domain/plan'
-import type { DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
-import type { DocFile, DocSpaceInput, RichContent } from '@/domain/docs'
+import type { DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
+import type { DocFile, DocModuleInput, DocSpaceInput, RichContent } from '@/domain/docs'
 import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
 import type { AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
@@ -1153,7 +1153,16 @@ function docSpaceBody(input: DocSpaceInput): Record<string, unknown> {
   if (input.icon !== undefined) body.icon = input.icon
   if (input.color !== undefined) body.color = input.color
   if (input.projectId !== undefined) body.project_id = input.projectId
+  if (input.moduleId !== undefined) body.module_id = input.moduleId
   if (input.visibility !== undefined) body.visibility = input.visibility
+  return body
+}
+
+function docModuleBody(input: DocModuleInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (input.name !== undefined) body.name = input.name
+  if (input.color !== undefined) body.color = input.color
+  if (input.position !== undefined) body.position = input.position
   return body
 }
 
@@ -1167,6 +1176,18 @@ export function createHttpDocsRepository(api: ApiClient): DocsRepository {
   return {
     async listSpaces() {
       return (await api.get<DocSpaceDto[]>('/docs/spaces')).data.map(toDocSpace)
+    },
+    async listModules() {
+      return (await api.get<DocModuleDto[]>('/docs/modules')).data.map(toDocModule)
+    },
+    async createModule(input) {
+      return toDocModule((await api.post<DocModuleDto>('/docs/modules', docModuleBody(input))).data)
+    },
+    async updateModule(id, input) {
+      return toDocModule((await api.patch<DocModuleDto>(`/docs/modules/${encodeURIComponent(id)}`, docModuleBody(input))).data)
+    },
+    async deleteModule(id) {
+      return (await api.del<{ deleted: boolean; spaces: number }>(`/docs/modules/${encodeURIComponent(id)}`)).data.spaces
     },
     async getSpace(key) {
       const { data } = await api.get<{ space: DocSpaceDto; pages: DocTreePageDto[]; capabilities: { edit: boolean; manage: boolean } }>(space(key))

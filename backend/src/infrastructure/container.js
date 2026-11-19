@@ -39,6 +39,7 @@ const { createPlanCollaborationService } = require('../application/plan-collabor
 const { createPlanManagementService } = require('../application/plan-management')
 const { createPlanColumnsService } = require('../application/plan-columns')
 const { createDocSpaceService } = require('../application/doc-spaces')
+const { createDocModuleService } = require('../application/doc-modules')
 const { createDocPageService } = require('../application/doc-pages')
 const { createDocLinkService } = require('../application/doc-links')
 const { createTeamActivityService } = require('../application/team-activity')
@@ -133,6 +134,7 @@ function createContainer(runtime, options) {
     planManagement: createPlanManagementService(deps),
     planColumns: createPlanColumnsService(deps),
     docSpaces: createDocSpaceService(deps),
+    docModules: createDocModuleService(deps),
     docPages: createDocPageService(deps),
     docLinks: createDocLinkService(deps),
     teamActivity: createTeamActivityService(deps),

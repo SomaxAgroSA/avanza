@@ -77,9 +77,12 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
         <AppBreadcrumb
           items={[
             { label: t('docs.title'), to: '/docs' },
+            // o módulo leva à tela inicial filtrada por ele (§43)
+            ...(detail.space.module ? [{ label: detail.space.module.name, to: `/docs?module=${encodeURIComponent(detail.space.module.id)}` }] : []),
             { label: detail.space.name, to: `/docs/${encodeURIComponent(detail.space.key)}` },
             ...page.ancestors.map((a) => ({ label: a.title, to: pagePath(page.space.key, a.id) })),
-            { label: page.title },
+            // na página inicial o espaço já é o último nível
+            ...(page.isHome ? [] : [{ label: page.title }]),
           ]}
         />
       </div>

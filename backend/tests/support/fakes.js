@@ -6,6 +6,7 @@
  */
 
 const { DEFAULT_ROLES, DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } = require('../../src/domain/permissions')
+const { appError } = require('../../src/core/errors')
 
 let seq = 0
 const nextId = (prefix) => `${prefix}${++seq}`
@@ -83,6 +84,7 @@ function createFakeStore() {
     planColumns: [],
     planIssues: [],
     docSpaces: [],
+    docModules: [],
     docPages: [],
     docPageTasks: [],
     docVersions: [],
@@ -1037,10 +1039,41 @@ function createFakeRepositories(store) {
       return space
     },
     update: (id, patch) => Object.assign(docSpaceRepository.findById(id), patch, { updatedAt: stamp() }),
+    /** Tira os espaços do módulo (ficam "Sem módulo"); devolve quantos. */
+    clearModule: (moduleId) => {
+      const inModule = store.docSpaces.filter((sp) => sp.moduleId === moduleId)
+      inModule.forEach((sp) => Object.assign(sp, { moduleId: null, updatedAt: stamp() }))
+      return inModule.length
+    },
     delete: (id) => {
       const pageIds = store.docPages.filter((p) => p.spaceId === id).map((p) => p.id)
       docPageRepository.deleteMany(pageIds)
       store.docSpaces = store.docSpaces.filter((s) => s.id !== id)
+    },
+  }
+  const docModuleRepository = {
+    findById: (id) => store.docModules.find((m) => m.id === id) || null,
+    list: () => store.docModules.slice().sort((a, b) => a.position - b.position || a.name.localeCompare(b.name)),
+    create: (data) => {
+      if (store.docModules.some((m) => m.nameKey === data.nameKey)) throw appError('DOC_MODULE_NAME_IN_USE')
+      const module = Object.assign({ id: nextDocId('module'), createdAt: stamp(), updatedAt: stamp() }, data)
+      store.docModules.push(module)
+      return module
+    },
+    update: (id, patch) => {
+      if (patch.nameKey && store.docModules.some((m) => m.id !== id && m.nameKey === patch.nameKey)) throw appError('DOC_MODULE_NAME_IN_USE')
+      return Object.assign(docModuleRepository.findById(id), patch, { updatedAt: stamp() })
+    },
+    /** Posições 0, 1, 2… na ordem dos ids. */
+    setPositions: (ids) => {
+      ids.forEach((id, index) => {
+        const module = docModuleRepository.findById(id)
+        if (module) module.position = index
+      })
+    },
+    delete: (id) => {
+      store.docSpaces.filter((sp) => sp.moduleId === id).forEach((sp) => (sp.moduleId = null))
+      store.docModules = store.docModules.filter((m) => m.id !== id)
     },
   }
   const docPageRepository = {
@@ -1521,6 +1554,7 @@ function createFakeRepositories(store) {
     planIssueRepository,
     planSettingsRepository,
     docSpaceRepository,
+    docModuleRepository,
     docPageRepository,
     docPageVersionRepository,
     docFileRepository,

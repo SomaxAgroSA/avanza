@@ -11,7 +11,7 @@ import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relat
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { ExecutiveDashboard, ExecutiveQuery } from './executive'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
-import type { DocDraft, DocFile, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
+import type { DocDraft, DocFile, DocModule, DocModuleInput, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
 import type { ItPeople, TiDependencies } from './ti-dependencies'
@@ -584,6 +584,12 @@ export interface DocsRepository {
   unlinkTask(pageId: string, taskId: string): Promise<void>
   /** Páginas vinculadas à tarefa (só as dos espaços que a pessoa lê). */
   listTaskDocs(taskId: string): Promise<TaskDocLink[]>
+  /** Módulos da tela inicial (§43), na ordem da lista. */
+  listModules(): Promise<DocModule[]>
+  createModule(input: DocModuleInput): Promise<DocModule>
+  updateModule(id: string, input: DocModuleInput): Promise<DocModule>
+  /** Os espaços do módulo ficam "Sem módulo"; devolve quantos. */
+  deleteModule(id: string): Promise<number>
 }
 
 /** Relacionamentos, subtarefas e fork. */

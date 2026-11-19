@@ -1,10 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { applyMove, type DocMoveTarget, type DocPage, type DocSpaceDetail, type DocSpaceInput, type RichContent } from '@/domain/docs'
+import { applyMove, type DocModuleInput, type DocMoveTarget, type DocPage, type DocSpaceDetail, type DocSpaceInput, type RichContent } from '@/domain/docs'
 import { useRepositories } from '@/presentation/common/repositories-context'
 
 export const docsKeys = {
   all: ['docs'] as const,
   spaces: ['docs', 'spaces'] as const,
+  modules: ['docs', 'modules'] as const,
   space: (key: string) => ['docs', 'space', key] as const,
   page: (id: string) => ['docs', 'page', id] as const,
   draft: (id: string) => ['docs', 'draft', id] as const,
@@ -19,6 +20,24 @@ export const docsKeys = {
 export function useDocSpaces(enabled = true) {
   const { docs } = useRepositories()
   return useQuery({ queryKey: docsKeys.spaces, queryFn: () => docs.listSpaces(), enabled })
+}
+
+/** Módulos da tela inicial (§43), na ordem da lista. */
+export function useDocModules(enabled = true) {
+  const { docs } = useRepositories()
+  return useQuery({ queryKey: docsKeys.modules, queryFn: () => docs.listModules(), enabled })
+}
+
+/** Criar, editar/reordenar e excluir módulos: atualiza módulos e espaços (o espaço traz o módulo). */
+export function useModuleMutations() {
+  const { docs } = useRepositories()
+  const queryClient = useQueryClient()
+  const invalidate = () => void queryClient.invalidateQueries({ queryKey: docsKeys.all })
+  return {
+    create: useMutation({ mutationFn: (input: DocModuleInput) => docs.createModule(input), onSuccess: invalidate }),
+    update: useMutation({ mutationFn: ({ id, input }: { id: string; input: DocModuleInput }) => docs.updateModule(id, input), onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: (id: string) => docs.deleteModule(id), onSuccess: invalidate }),
+  }
 }
 
 export function useDocSpace(key: string) {

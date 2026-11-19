@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { isAppError } from '@/core/errors/app-error'
-import { SPACE_ICONS, SPACE_VISIBILITIES, type DocSpace } from '@/domain/docs'
+import { orderedModules, SPACE_ICONS, SPACE_VISIBILITIES, type DocSpace } from '@/domain/docs'
 import { suggestKey } from '@/domain/projects'
 import { docSpaceSchema, type DocSpaceFormInput } from '@/domain/validation'
 import { AppButton, AppDialog, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
@@ -14,15 +14,17 @@ import { useProjects } from '@/features/projects/queries'
 import { ProjectAvatar } from '@/features/projects/project-visuals'
 import { SPACE_ICON_COMPONENTS } from './docs-theme'
 import { IconPicker } from '@/features/icons/IconPicker'
-import { SpaceAvatar } from './docs-visuals'
-import { useSpaceMutations } from './queries'
+import { ModuleSwatch, SpaceAvatar } from './docs-visuals'
+import { useDocModules, useSpaceMutations } from './queries'
 
 const PROJECT_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
-const SERVER_FIELDS: Record<string, keyof DocSpaceFormInput> = { project_id: 'projectId' }
+const SERVER_FIELDS: Record<string, keyof DocSpaceFormInput> = { project_id: 'projectId', module_id: 'moduleId' }
+/** Opção "Sem módulo" do select (o Radix não aceita valor vazio; ids de módulo nunca são "none"). */
+const NO_MODULE = 'none'
 
-function defaults(space?: DocSpace | null, projectId?: string): DocSpaceFormInput {
+function defaults(space?: DocSpace | null, projectId?: string, moduleId?: string): DocSpaceFormInput {
   // criado da aba Documentação do projeto: já vinculado e só para quem participa
-  if (!space && projectId) return { name: '', key: '', description: '', icon: 'book', color: 'blue', visibility: 'project', projectId }
+  if (!space && projectId) return { name: '', key: '', description: '', icon: 'book', color: 'blue', visibility: 'project', projectId, moduleId: moduleId ?? '' }
   return {
     name: space?.name ?? '',
     key: space?.key ?? '',
@@ -31,6 +33,7 @@ function defaults(space?: DocSpace | null, projectId?: string): DocSpaceFormInpu
     color: space?.color ?? 'blue',
     visibility: space?.visibility ?? 'company',
     projectId: space?.project?.id ?? '',
+    moduleId: space ? (space.module?.id ?? '') : (moduleId ?? ''),
   }
 }
 
@@ -41,13 +44,15 @@ export interface SpaceFormDialogProps {
   space?: DocSpace | null
   /** Criação já vinculada a este projeto (aba Documentação do projeto). */
   defaultProjectId?: string
+  /** Criação já neste módulo (tela inicial filtrada por um módulo). */
+  defaultModuleId?: string | undefined
 }
 
 /**
  * Criação/configuração de espaço. A chave só se escolhe na criação; o projeto pode mudar depois (vinculado
  * por engano): a lista traz os projetos que a pessoa gerencia, e um aviso diz quem ganha e quem perde acesso.
  */
-export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }: SpaceFormDialogProps) {
+export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId, defaultModuleId }: SpaceFormDialogProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const errorMessage = useErrorMessage()
@@ -55,15 +60,16 @@ export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }:
   const { create, update } = useSpaceMutations()
   const pending = create.isPending || update.isPending
   const projects = useProjects(PROJECT_QUERY, open)
+  const modules = useDocModules(open)
 
   const { register, handleSubmit, reset, control, setValue, setError, formState } = useForm<DocSpaceFormInput>({
     resolver: zodResolver(docSpaceSchema),
-    defaultValues: defaults(space, defaultProjectId),
+    defaultValues: defaults(space, defaultProjectId, defaultModuleId),
   })
 
   useEffect(() => {
-    if (open) reset(defaults(space, defaultProjectId))
-  }, [open, space, defaultProjectId, reset])
+    if (open) reset(defaults(space, defaultProjectId, defaultModuleId))
+  }, [open, space, defaultProjectId, defaultModuleId, reset])
 
   const [name, icon, color, visibility, projectId] = useWatch({ control, name: ['name', 'icon', 'color', 'visibility', 'projectId'] })
 
@@ -77,10 +83,14 @@ export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }:
     }
     const common = { name: values.name.trim(), description: values.description, icon: values.icon, color: values.color, visibility: values.visibility }
     if (space) {
-      // o projeto só vai quando mudou ('' tira o vínculo)
+      // o projeto e o módulo só vão quando mudaram ('' tira o vínculo / Sem módulo)
       const projectChanged = (values.projectId || '') !== (space.project?.id ?? '')
+      const moduleChanged = (values.moduleId || '') !== (space.module?.id ?? '')
       update.mutate(
-        { id: space.id, input: projectChanged ? { ...common, projectId: values.projectId || '' } : common },
+        {
+          id: space.id,
+          input: { ...common, ...(projectChanged ? { projectId: values.projectId || '' } : {}), ...(moduleChanged ? { moduleId: values.moduleId || '' } : {}) },
+        },
         {
           onSuccess: () => {
             notify.success(t('docs.space.updated'))
@@ -92,7 +102,7 @@ export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }:
       return
     }
     create.mutate(
-      { ...common, key: values.key.trim().toUpperCase(), ...(values.projectId ? { projectId: values.projectId } : {}) },
+      { ...common, key: values.key.trim().toUpperCase(), ...(values.projectId ? { projectId: values.projectId } : {}), ...(values.moduleId ? { moduleId: values.moduleId } : {}) },
       {
         onSuccess: (created) => {
           notify.success(t('docs.space.created', { name: created.name }))
@@ -120,6 +130,10 @@ export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }:
   const currentProject = space?.project ?? null
   const nextProject = allProjects.find((p) => p.id === projectId) ?? null
   const projectChanged = isEdit && (projectId || '') !== (currentProject?.id ?? '')
+  const moduleOptions = [
+    ...orderedModules(modules.data ?? []).map((m) => ({ value: m.id, label: m.name, textValue: m.name, prefix: <ModuleSwatch color={m.color} /> })),
+    { value: NO_MODULE, label: t('docs.modules.none'), textValue: t('docs.modules.none'), prefix: <ModuleSwatch color={null} /> },
+  ]
   const visibilityOptions = SPACE_VISIBILITIES.filter((v) => v === 'company' || !!projectId).map((v) => ({
     value: v,
     label: t(`docs.visibility.${v}`),
@@ -161,6 +175,20 @@ export function SpaceFormDialog({ open, onOpenChange, space, defaultProjectId }:
             />
           </div>
           <AppTextarea label={t('docs.space.fields.description')} rows={3} maxLength={500} error={errors.description?.message} {...register('description')} />
+          <Controller
+            control={control}
+            name="moduleId"
+            render={({ field }) => (
+              <AppSelect
+                label={t('docs.modules.field')}
+                value={field.value || NO_MODULE}
+                onValueChange={(value) => field.onChange(value === NO_MODULE ? '' : value)}
+                options={moduleOptions}
+                hint={t('docs.modules.fieldHint')}
+                error={errors.moduleId?.message}
+              />
+            )}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={control}

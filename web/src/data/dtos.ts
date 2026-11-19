@@ -351,11 +351,20 @@ export interface DocSpaceDto {
   color: string
   visibility: string
   project: { id: string; key: string; name: string } | null
+  module?: { id: string; name: string; color: string } | null
   home_page_id: string | null
   page_count: number | null
   created_at: string | null
   updated_at: string | null
   capabilities: { edit: boolean; manage: boolean }
+}
+
+export interface DocModuleDto {
+  id: string
+  name: string
+  color: string
+  position: number
+  space_count: number
 }
 
 export interface DocTreePageDto {
