@@ -8,7 +8,7 @@ import { isOverdue, type Project, type ProjectPriority, type ProjectStatus, type
 export const ONGOING_STATUSES: readonly ProjectStatus[] = ['planning', 'active', 'paused']
 const HIGH_PRIORITIES: readonly ProjectPriority[] = ['high', 'critical']
 
-/** Indicadores clicáveis do topo; o primeiro (Em andamento) é a seleção inicial. */
+/** Indicadores clicáveis do topo. Ao entrar nenhum fica selecionado e o painel mostra os em andamento. */
 export const KPI_IDS = ['ongoing', 'planning', 'active', 'high', 'completed'] as const
 export type KpiId = (typeof KPI_IDS)[number]
 
@@ -30,46 +30,55 @@ const KPI_RULES: Record<KpiId, KpiRule> = {
 export const NO_AREA = 'none'
 export const areaKey = (project: Pick<Project, 'area'>): string => project.area?.id ?? NO_AREA
 
-/** O que o painel inteiro está filtrando: indicador, estado (faixa) e departamento (pizza). */
+/** O que o painel inteiro está filtrando: indicador (null = nenhum: os em andamento), estado (faixa) e departamento (pizza). */
 export interface PanelFilter {
-  kpi: KpiId
+  kpi: KpiId | null
   status: ProjectStatus | null
   area: string | null
 }
 
-export const DEFAULT_PANEL: PanelFilter = { kpi: 'ongoing', status: null, area: null }
+export const DEFAULT_PANEL: PanelFilter = { kpi: null, status: null, area: null }
 
-export const isPanelFiltered = (filter: PanelFilter): boolean => filter.kpi !== DEFAULT_PANEL.kpi || filter.status !== null || filter.area !== null
+/** Indicador que vale para o recorte: sem nenhum escolhido, os em andamento. */
+export const kpiOf = (filter: Pick<PanelFilter, 'kpi'>): KpiId => filter.kpi ?? 'ongoing'
+
+export const isPanelFiltered = (filter: PanelFilter): boolean => filter.kpi !== null || filter.status !== null || filter.area !== null
 
 export const matchesKpi = (project: Project, kpi: KpiId): boolean => {
   const rule = KPI_RULES[kpi]
   return rule.statuses.includes(project.status) && (!rule.priorities || rule.priorities.includes(project.priority))
 }
 
-/** Quantos projetos há em cada indicador e quanto isso é do total (percentual inteiro; total 0 = 0). */
-export function kpiStats(projects: readonly Project[]): Record<KpiId, { count: number; percent: number }> {
-  const total = projects.length
-  const stats = {} as Record<KpiId, { count: number; percent: number }>
+/** Indicadores sem percentual: Em andamento é a base; Finalizados fica fora do cálculo. */
+const KPI_WITHOUT_PERCENT: readonly KpiId[] = ['ongoing', 'completed']
+
+/**
+ * Quantos projetos há em cada indicador e quanto isso é dos **em andamento** (planejamento + em curso +
+ * pausados; percentual inteiro, base 0 = 0). Em andamento e Finalizados vêm sem percentual (null).
+ */
+export function kpiStats(projects: readonly Project[]): { base: number; stats: Record<KpiId, { count: number; percent: number | null }> } {
+  const base = projects.filter((p) => matchesKpi(p, 'ongoing')).length
+  const stats = {} as Record<KpiId, { count: number; percent: number | null }>
   KPI_IDS.forEach((kpi) => {
     const count = projects.filter((p) => matchesKpi(p, kpi)).length
-    stats[kpi] = { count, percent: percentOf(count, total) }
+    stats[kpi] = { count, percent: KPI_WITHOUT_PERCENT.includes(kpi) ? null : percentOf(count, base) }
   })
-  return stats
+  return { base, stats }
 }
 
 export const percentOf = (part: number, whole: number): number => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 
 /** Indicador + estado + departamento: o que o Gantt, as tarefas, o Equipo ahora e a tabela mostram. */
 export const panelScope = (projects: readonly Project[], filter: PanelFilter): Project[] =>
-  projects.filter((p) => matchesKpi(p, filter.kpi) && (!filter.status || p.status === filter.status) && (!filter.area || areaKey(p) === filter.area))
+  projects.filter((p) => matchesKpi(p, kpiOf(filter)) && (!filter.status || p.status === filter.status) && (!filter.area || areaKey(p) === filter.area))
 
 /** Para a pizza: indicador + estado (o departamento escolhido não esconde as outras fatias). */
 export const departmentScope = (projects: readonly Project[], filter: PanelFilter): Project[] =>
-  projects.filter((p) => matchesKpi(p, filter.kpi) && (!filter.status || p.status === filter.status))
+  projects.filter((p) => matchesKpi(p, kpiOf(filter)) && (!filter.status || p.status === filter.status))
 
 /** Para a faixa de estado: indicador + departamento (o estado escolhido não esconde os outros trechos). */
 export const statusScope = (projects: readonly Project[], filter: PanelFilter): Project[] =>
-  projects.filter((p) => matchesKpi(p, filter.kpi) && (!filter.area || areaKey(p) === filter.area))
+  projects.filter((p) => matchesKpi(p, kpiOf(filter)) && (!filter.area || areaKey(p) === filter.area))
 
 /* ------------------------------------------------------------------ departamentos (pizza) */
 
@@ -237,7 +246,7 @@ const intersect = <T extends string>(base: readonly T[], other: readonly string[
  * interseção. `empty` = não existe projeto que cumpra os dois (a tabela fica vazia sem perguntar).
  */
 export function tableFilters(panel: PanelFilter, bar: Record<string, string>): { filters: Record<string, string>; empty: boolean } {
-  const rule = KPI_RULES[panel.kpi]
+  const rule = KPI_RULES[kpiOf(panel)]
   const statuses = intersect(intersect(rule.statuses, panel.status ? [panel.status] : null), csv(bar.status))
   const priorities = rule.priorities ? intersect(rule.priorities, csv(bar.priority)) : null
   const filters: Record<string, string> = { ...bar, status: statuses.join(',') }

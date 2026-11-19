@@ -610,6 +610,10 @@ describe('repositórios de tarefas (Postgres)', () => {
     assert.deepEqual(ids(await r.relations.precedenceFrom([t1.id])), [blocks.id])
     assert.deepEqual(ids(await r.relations.precedenceFrom([t2.id])), [depends.id])
     assert.deepEqual(await r.relations.precedenceFrom([]), [])
+    // §42: relações que tocam as tarefas, em qualquer sentido e tipo
+    assert.deepEqual(ids(await r.relations.listByTasks([t1.id])), [blocks.id, related.id])
+    assert.deepEqual(ids(await r.relations.listByTasks([t3.id, t1.id])), [blocks.id, depends.id, related.id])
+    assert.deepEqual(await r.relations.listByTasks([]), [])
     const blockers = await r.relations.blockersOf([t2.id, t3.id])
     assert.deepEqual(
       blockers.sort((x, y) => (x.taskId < y.taskId ? -1 : 1)),

@@ -248,6 +248,9 @@ describe('repositórios de projetos e membros', () => {
     await members.add({ projectId: extra.id, userId: users.caio.id, role: 'it' })
     assert.equal((await members.find(extra.id, users.caio.id)).role, 'it')
     assert.deepEqual(await members.rolesForUser(users.caio.id, [extra.id]), { [extra.id]: 'it' })
+    // §42: Responsáveis TI dos projetos, em lote
+    assert.deepEqual(await members.listByRole('it', [extra.id, p.alpha.id]), [{ projectId: extra.id, userId: users.caio.id }])
+    assert.deepEqual(await members.listByRole('it', []), [])
   })
 
   describe('arquivos do projeto', () => {

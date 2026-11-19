@@ -133,6 +133,7 @@ export function fakeRepositories(overrides: {
       list: () => Promise.resolve({ items: [], page: 1, perPage: 20, total: 0, totalPages: 0 }),
       teamActivity: () => Promise.resolve({ windowDays: 7, people: [] }),
       taskCounts: () => Promise.resolve([]),
+      tiDependencies: () => Promise.resolve({ today: '2026-01-01', people: [], projects: [] }),
       get: notImplemented,
       create: notImplemented,
       update: notImplemented,
@@ -388,6 +389,8 @@ export function fakeRepositories(overrides: {
       uploadBranding: notImplemented,
       removeBranding: notImplemented,
       runRetention: notImplemented,
+      getItPeople: () => Promise.resolve({ userIds: [], users: [], candidates: [] }),
+      updateItPeople: notImplemented,
       ...overrides.platform,
     },
     email: {

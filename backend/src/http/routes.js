@@ -238,6 +238,9 @@ const configAction = (service, fn, status) => (e) =>
 
 const getTeamActivity = configAction('teamActivity', (s, ctx) => s.getTeamActivity(ctx))
 const getProjectTaskCounts = configAction('teamActivity', (s, ctx) => s.getProjectTaskCounts(ctx))
+const getTiDependencies = configAction('tiDependencies', (s, ctx, r) => s.getTiDependencies(ctx, r.query()))
+const getItPeople = configAction('platformSettings', (s, ctx) => s.getItPeople(ctx))
+const updateItPeople = configAction('platformSettings', (s, ctx, r) => s.updateItPeople(ctx, r.body()))
 const listCustomFields = configAction('customFields', (s, ctx, r) => s.listFields(ctx, r.query()))
 const getCustomField = configAction('customFields', (s, ctx, r) => s.getField(ctx, r.id))
 const createCustomField = configAction('customFields', (s, ctx, r) => s.createField(ctx, r.body()), 201)
@@ -686,6 +689,9 @@ module.exports = {
   projectCovers,
   getTeamActivity,
   getProjectTaskCounts,
+  getTiDependencies,
+  getItPeople,
+  updateItPeople,
   updateProject,
   archiveProject,
   unarchiveProject,
