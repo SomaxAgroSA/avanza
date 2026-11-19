@@ -134,21 +134,21 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
               </span>
             </div>
           ) : (
-          <div className="min-w-0">
-            <span className="flex items-center gap-2">
-              <TaskCode task={task} />
-              {mineFirst && me && task.assignee?.id === me && (
-                <AppBadge tone="primary" className="px-1.5 py-0 text-[10px]" data-testid="task-mine">
-                  {t('tasks.mine.badge')}
-                </AppBadge>
-              )}
-            </span>
-            <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <TagList tags={task.tags} max={3} className="mt-0.5" />
-              <TaskIndicators task={task} />
-            </span>
-          </div>
+            <div className="min-w-0">
+              <span className="flex items-center gap-2">
+                <TaskCode task={task} />
+                {mineFirst && me && task.assignee?.id === me && (
+                  <AppBadge tone="primary" className="px-1.5 py-0 text-[10px]" data-testid="task-mine">
+                    {t('tasks.mine.badge')}
+                  </AppBadge>
+                )}
+              </span>
+              <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <TagList tags={task.tags} max={3} className="mt-0.5" />
+                <TaskIndicators task={task} />
+              </span>
+            </div>
           ),
       },
       {
@@ -300,15 +300,15 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         actionsSlot={actionsSlot}
         toolbar={
           scope ? undefined : (
-          <AppButton
-            variant={mineFirst ? 'soft' : 'secondary'}
-            leftIcon={<UserCheck />}
-            aria-pressed={mineFirst}
-            title={t('tasks.mine.hint')}
-            onClick={() => setMineFirst(!mineFirst)}
-          >
-            {t('tasks.mine.toggle')}
-          </AppButton>
+            <AppButton
+              variant={mineFirst ? 'soft' : 'secondary'}
+              leftIcon={<UserCheck />}
+              aria-pressed={mineFirst}
+              title={t('tasks.mine.hint')}
+              onClick={() => setMineFirst(!mineFirst)}
+            >
+              {t('tasks.mine.toggle')}
+            </AppButton>
           )
         }
         actions={{
