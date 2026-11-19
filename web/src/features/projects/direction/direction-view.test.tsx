@@ -259,21 +259,14 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     ;['Planificación', 'En curso', 'Pausado', 'Entrega vencida'].forEach((label) => expect(within(timeline).getByText(label)).toBeInTheDocument())
   })
 
-  it('tareas por proyecto: porcentaje a la derecha del nombre y barra de dos partes con los números; sin conteos, el bloque no aparece', async () => {
-    const { unmount } = setup()
+  it('Estado de ejecución va al lado de Proyectos por departamento; el bloque Tareas por proyecto ya no aparece', async () => {
+    setup()
     const panel = await screen.findByTestId('direction-panel')
-    const tasks = await within(panel).findByRole('region', { name: 'Tareas por proyecto' })
-    const alfa = within(tasks).getByRole('img', { name: /^Alfa: 41 de 75 tareas ejecutadas \(55 %\) · faltan 34/ })
-    expect(alfa).toHaveTextContent('55 %')
-    expect(alfa).toHaveTextContent('41')
-    expect(alfa).toHaveTextContent('34')
-    // los de mayor cantidad por hacer primero; Épsilon (completado) y proyectos sin tareas no entran en "En marcha"
-    expect(within(tasks).getAllByRole('img').map((e) => e.getAttribute('aria-label')?.split(':')[0])).toEqual(['Alfa', 'Beta'])
-    unmount()
-    setup({ counts: false })
-    const second = await screen.findByTestId('direction-panel')
-    await within(second).findByRole('region', { name: 'Proyectos por departamento' })
-    expect(within(second).queryByRole('region', { name: 'Tareas por proyecto' })).toBeNull()
+    const departments = await within(panel).findByRole('region', { name: 'Proyectos por departamento' })
+    const status = within(panel).getByRole('region', { name: 'Estado de ejecución' })
+    // los dos en la misma fila (mismo contenedor de la grilla)
+    expect(status.parentElement).toBe(departments.parentElement)
+    expect(within(panel).queryByRole('region', { name: 'Tareas por proyecto' })).toBeNull()
   })
 
   it('Equipo ahora: una tarjeta por persona, con los grupos y los movimientos; respeta el filtro', async () => {

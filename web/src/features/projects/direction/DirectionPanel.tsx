@@ -21,7 +21,6 @@ import {
   pieSlicePaths,
   statusScope,
   statusSlices,
-  taskBars,
   teamInScope,
   type KpiId,
   type PanelFilter,
@@ -29,7 +28,6 @@ import {
 import { DirectionTeam } from './DirectionTeam'
 import { TiDrawer, TiFlag, TiStrip } from './TiDependencies'
 import { tiAffected, tiInScope } from './ti-data'
-import { TaskBar } from './TaskBar'
 
 /** Cor da marca de cada estado; o nome vai sempre ao lado (a cor nunca fica sozinha). */
 const dot = (color: string) => <span aria-hidden className="inline-block size-2.5 shrink-0 rounded-full" style={{ background: color }} />
@@ -65,11 +63,11 @@ export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, t
       <TiStrip scope={tiScope} onOpen={() => setTiView({ only: null })} />
       <Timeline projects={scope} affected={affected} onTi={(projectId) => setTiView({ only: projectId })} />
       <TiDrawer ti={ti} scope={tiShown} only={tiView?.only ?? null} open={!!tiView} onClose={() => setTiView(null)} onShowAll={() => setTiView({ only: null })} />
-      <div className={cn('mb-4 grid gap-3', taskCounts && taskCounts.length > 0 ? 'lg:grid-cols-2' : '')}>
+      {/* departamentos e estado de execução lado a lado (o bloco "Tarefas por projeto" saiu a pedido da coordenação) */}
+      <div className="mb-4 grid gap-3 lg:grid-cols-2">
         <Departments projects={departmentScope(projects, filter)} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />
-        {taskCounts && taskCounts.length > 0 && <TasksCard projects={scope} counts={taskCounts} />}
+        <StatusStrip projects={statusScope(projects, filter)} status={filter.status} onSelect={(status) => set({ status: filter.status === status ? null : status })} />
       </div>
-      <StatusStrip projects={statusScope(projects, filter)} status={filter.status} onSelect={(status) => set({ status: filter.status === status ? null : status })} />
       {team && <DirectionTeam team={teamInScope(team.data, scope)} projects={projects} counts={taskCounts} pending={team.pending} error={team.error} onRetry={team.retry} />}
     </div>
   )
@@ -281,62 +279,14 @@ function Departments({ projects, area, onSelect }: { projects: Project[]; area: 
   )
 }
 
-/* ------------------------------------------------------------------ tarefas por projeto */
-
-function TasksCard({ projects, counts }: { projects: Project[]; counts: ProjectTaskCount[] }) {
-  const { t } = useTranslation()
-  const bars = useMemo(() => taskBars(projects, counts), [projects, counts])
-  const legend = (
-    <span className="flex gap-3 text-xs text-fg">
-      <span className="inline-flex items-center gap-1.5">
-        <span aria-hidden className="inline-block size-2.5 rounded-full bg-primary" />
-        {t('direction.tasks.done')}
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span aria-hidden className="inline-block size-2.5 rounded-full bg-border-strong" />
-        {t('direction.tasks.open')}
-      </span>
-    </span>
-  )
-  return (
-    <Card title={t('direction.tasks.title')} aside={legend} className="mb-0">
-      {bars.length === 0 ? (
-        <p className="py-2 text-sm text-muted">{t('direction.tasks.empty')}</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {bars.map((bar) => {
-            const total = bar.done + bar.open
-            const tip = t('direction.tasks.tip', { name: bar.project.name, done: bar.done, total, percent: bar.percent, open: bar.open })
-            return (
-              <li key={bar.project.id}>
-                <AppTooltip content={tip}>
-                  <div aria-label={tip} role="img">
-                    <div className="mb-0.5 flex justify-between gap-2.5 text-[12.5px] text-fg">
-                      <span className="truncate" title={bar.project.name}>
-                        {bar.project.name}
-                      </span>
-                      <span className="shrink-0 text-xs font-bold tabular-nums text-fg">{bar.percent} %</span>
-                    </div>
-                    <TaskBar done={bar.done} open={bar.open} />
-                  </div>
-                </AppTooltip>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </Card>
-  )
-}
-
 /* ------------------------------------------------------------------ estado de execução */
 
 function StatusStrip({ projects, status, onSelect }: { projects: Project[]; status: ProjectStatus | null; onSelect: (status: ProjectStatus) => void }) {
   const { t } = useTranslation()
   const slices = useMemo(() => statusSlices(projects), [projects])
   return (
-    <Card title={t('direction.status.title')} aside={<span className="text-xs text-muted">· {t('direction.status.count', { count: projects.length })}</span>}>
-      <div role="group" aria-label={t('direction.status.bar')} className="my-2 flex h-3 gap-0.5 overflow-hidden rounded-md">
+    <Card title={t('direction.status.title')} aside={<span className="text-xs text-muted">· {t('direction.status.count', { count: projects.length })}</span>} className="mb-0">
+      <div role="group" aria-label={t('direction.status.bar')} className="mb-4 mt-2 flex h-4 gap-0.5 overflow-hidden rounded-md">
         {slices
           .filter((slice) => slice.count > 0)
           .map((slice) => {
@@ -356,19 +306,19 @@ function StatusStrip({ projects, status, onSelect }: { projects: Project[]; stat
             )
           })}
       </div>
-      <ul className="flex flex-wrap gap-x-6 gap-y-1">
+      <ul className="flex flex-col">
         {slices.map((slice) => (
           <li key={slice.status}>
             <button
               type="button"
               aria-pressed={status === slice.status}
               onClick={() => onSelect(slice.status)}
-              className="inline-flex items-center gap-2 rounded-lg px-2 py-0.5 text-[13px] text-fg hover:bg-surface-2 aria-pressed:bg-surface-2 aria-pressed:font-semibold focus-visible:outline-2 focus-visible:outline-ring"
+              className="grid w-full grid-cols-[14px_minmax(0,1fr)_auto_44px] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-fg hover:bg-surface-2 aria-pressed:bg-surface-2 aria-pressed:font-semibold focus-visible:outline-2 focus-visible:outline-ring"
             >
               {dot(STATUS_COLORS[slice.status])}
               <span>{t(`projects.status.${slice.status}`)}</span>
               <b className="tabular-nums">{slice.count}</b>
-              <span className="text-xs tabular-nums text-muted">{slice.percent} %</span>
+              <span className="text-right text-xs tabular-nums text-muted">{slice.percent} %</span>
             </button>
           </li>
         ))}
