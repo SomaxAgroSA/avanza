@@ -210,22 +210,21 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'planning,active,paused' }))
   })
 
-  it('la faja de Estado de ejecución filtra todo (junto al indicador), atenúa los otros tramos y vuelve a quitarse', async () => {
+  it('Estado de ejecución: una fila con barra por estado; tocar una filtra todo (junto al indicador), atenúa las otras y vuelve a quitarse', async () => {
     const { list } = setup()
     const panel = await screen.findByTestId('direction-panel')
-    const strip = within(panel).getByRole('region', { name: 'Estado de ejecución' })
-    expect(strip).toHaveTextContent('· 4 proyectos')
-    expect(within(strip).queryByRole('button', { name: /^Completado/ })).toBeNull()
-    expect(within(strip).getAllByRole('button', { name: /^En curso/ })).toHaveLength(2) // tramo de la barra + leyenda
-    const legend = within(strip).getByRole('list')
-    await userEvent.click(within(legend).getByRole('button', { name: /^Pausado/ }))
+    const card = within(panel).getByRole('region', { name: 'Estado de ejecución' })
+    expect(card).toHaveTextContent('4 proyectos')
+    expect(within(card).queryByRole('button', { name: /^Completado/ })).toBeNull()
+    expect(within(card).getAllByRole('button', { name: /^En curso/ })).toHaveLength(1) // una fila por estado
+    await userEvent.click(within(card).getByRole('button', { name: /^Pausado/ }))
     expect(await screen.findByRole('status')).toHaveTextContent('Filtrando todo el panel: En marcha · Pausado (1 proyecto)')
     await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'paused' }))
-    // la barra mantiene todos los tramos, atenuados los demás
-    const segments = within(strip).getAllByRole('button', { pressed: false }).filter((b) => b.getAttribute('aria-label')?.includes('clic para filtrar'))
-    expect(segments.length).toBe(2)
-    segments.forEach((segment) => expect(segment.style.opacity).toBe('0.3'))
-    await userEvent.click(within(legend).getByRole('button', { name: /^Pausado/ }))
+    // las demás filas siguen a la vista, atenuadas
+    const others = within(card).getAllByRole('button', { pressed: false })
+    expect(others.length).toBe(2)
+    others.forEach((row) => expect(row.style.opacity).toBe('0.45'))
+    await userEvent.click(within(card).getByRole('button', { name: /^Pausado/ }))
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
   })
 
@@ -259,21 +258,19 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     ;['Planificación', 'En curso', 'Pausado', 'Entrega vencida'].forEach((label) => expect(within(timeline).getByText(label)).toBeInTheDocument())
   })
 
-  it('tareas por proyecto: porcentaje a la derecha del nombre y barra de dos partes con los números; sin conteos, el bloque no aparece', async () => {
-    const { unmount } = setup()
+  it('Estado de ejecución va al lado de Proyectos por departamento; el bloque Tareas por proyecto ya no aparece', async () => {
+    setup()
     const panel = await screen.findByTestId('direction-panel')
-    const tasks = await within(panel).findByRole('region', { name: 'Tareas por proyecto' })
-    const alfa = within(tasks).getByRole('img', { name: /^Alfa: 41 de 75 tareas ejecutadas \(55 %\) · faltan 34/ })
-    expect(alfa).toHaveTextContent('55 %')
-    expect(alfa).toHaveTextContent('41')
-    expect(alfa).toHaveTextContent('34')
-    // los de mayor cantidad por hacer primero; Épsilon (completado) y proyectos sin tareas no entran en "En marcha"
-    expect(within(tasks).getAllByRole('img').map((e) => e.getAttribute('aria-label')?.split(':')[0])).toEqual(['Alfa', 'Beta'])
-    unmount()
-    setup({ counts: false })
-    const second = await screen.findByTestId('direction-panel')
-    await within(second).findByRole('region', { name: 'Proyectos por departamento' })
-    expect(within(second).queryByRole('region', { name: 'Tareas por proyecto' })).toBeNull()
+    const departments = await within(panel).findByRole('region', { name: 'Proyectos por departamento' })
+    const status = within(panel).getByRole('region', { name: 'Estado de ejecución' })
+    // los dos en la misma fila (mismo contenedor de la grilla)
+    expect(status.parentElement).toBe(departments.parentElement)
+    expect(within(panel).queryByRole('region', { name: 'Tareas por proyecto' })).toBeNull()
+    // una barra por estado, una debajo de la otra (ya no hay una barra dividida)
+    expect(within(status).queryByRole('group', { name: /barra/i })).toBeNull()
+    const rows = within(status).getAllByRole('button')
+    expect(rows.map((r) => r.querySelector('[data-bar]') !== null)).toEqual(rows.map(() => true))
+    expect(rows[0]).toHaveTextContent('Planificación')
   })
 
   it('Equipo ahora: una tarjeta por persona, con los grupos y los movimientos; respeta el filtro', async () => {
