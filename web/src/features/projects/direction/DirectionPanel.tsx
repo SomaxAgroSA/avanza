@@ -284,44 +284,37 @@ function Departments({ projects, area, onSelect }: { projects: Project[]; area: 
 function StatusStrip({ projects, status, onSelect }: { projects: Project[]; status: ProjectStatus | null; onSelect: (status: ProjectStatus) => void }) {
   const { t } = useTranslation()
   const slices = useMemo(() => statusSlices(projects), [projects])
+  // uma barra por estado, uma embaixo da outra (o comprimento é o % do estado)
   return (
-    <Card title={t('direction.status.title')} aside={<span className="text-xs text-muted">· {t('direction.status.count', { count: projects.length })}</span>} className="mb-0">
-      <div role="group" aria-label={t('direction.status.bar')} className="mb-4 mt-2 flex h-4 gap-0.5 overflow-hidden rounded-md">
-        {slices
-          .filter((slice) => slice.count > 0)
-          .map((slice) => {
-            const label = t(`projects.status.${slice.status}`)
-            const tip = t('direction.status.segment', { label, count: slice.count, percent: slice.percent })
-            return (
-              <AppTooltip key={slice.status} content={tip}>
+    <Card title={t('direction.status.title')} aside={<span className="text-xs text-muted">{t('direction.status.count', { count: projects.length })}</span>} className="mb-0">
+      <ul className="mt-4 flex flex-col gap-2">
+        {slices.map((slice) => {
+          const label = t(`projects.status.${slice.status}`)
+          const tip = t('direction.status.segment', { label, count: slice.count, percent: slice.percent })
+          return (
+            <li key={slice.status}>
+              <AppTooltip content={tip}>
                 <button
                   type="button"
-                  aria-label={tip}
                   aria-pressed={status === slice.status}
                   onClick={() => onSelect(slice.status)}
-                  className="h-full cursor-pointer motion-safe:transition-opacity hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-                  style={{ flex: slice.count, background: STATUS_COLORS[slice.status], opacity: status && status !== slice.status ? 0.3 : 1 }}
-                />
+                  className="grid w-full grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)_2.25rem_3rem] items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-fg hover:bg-surface-2 aria-pressed:bg-surface-2 aria-pressed:font-semibold focus-visible:outline-2 focus-visible:outline-ring motion-safe:transition-opacity"
+                  style={{ opacity: status && status !== slice.status ? 0.45 : 1 }}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {dot(STATUS_COLORS[slice.status])}
+                    <span className="truncate">{label}</span>
+                  </span>
+                  <span data-bar aria-hidden className="h-3.5 overflow-hidden rounded-[5px] bg-surface-2">
+                    <span className="block h-full rounded-[5px]" style={{ width: `${slice.count ? Math.max(2, slice.percent) : 0}%`, background: STATUS_COLORS[slice.status] }} />
+                  </span>
+                  <b className="text-right tabular-nums">{slice.count}</b>
+                  <span className="text-right text-xs tabular-nums text-muted">{slice.percent} %</span>
+                </button>
               </AppTooltip>
-            )
-          })}
-      </div>
-      <ul className="flex flex-col">
-        {slices.map((slice) => (
-          <li key={slice.status}>
-            <button
-              type="button"
-              aria-pressed={status === slice.status}
-              onClick={() => onSelect(slice.status)}
-              className="grid w-full grid-cols-[14px_minmax(0,1fr)_auto_44px] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-fg hover:bg-surface-2 aria-pressed:bg-surface-2 aria-pressed:font-semibold focus-visible:outline-2 focus-visible:outline-ring"
-            >
-              {dot(STATUS_COLORS[slice.status])}
-              <span>{t(`projects.status.${slice.status}`)}</span>
-              <b className="tabular-nums">{slice.count}</b>
-              <span className="text-right text-xs tabular-nums text-muted">{slice.percent} %</span>
-            </button>
-          </li>
-        ))}
+            </li>
+          )
+        })}
       </ul>
     </Card>
   )
