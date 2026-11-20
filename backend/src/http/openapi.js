@@ -500,6 +500,7 @@ function build() {
             { name: 'status_id', in: 'query', schema: { type: 'string' } },
             { name: 'priority_id', in: 'query', schema: { type: 'string' }, description: 'um ou vários ids separados por vírgula (§44)' },
             { name: 'assignee_id', in: 'query', schema: { type: 'string' }, description: 'ID ou "me"' },
+            { name: 'responsible_id', in: 'query', schema: { type: 'string' }, description: 'ID ou "me": o Responsável da Lista de tarefas — quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída' },
             { name: 'category', in: 'query', schema: { type: 'string' }, description: 'categorias de status separadas por vírgula (ex.: backlog,todo,in_progress)' },
             { name: 'tag_id', in: 'query', schema: { type: 'string' } },
             { name: 'sprint_id', in: 'query', schema: { type: 'string' }, description: 'id da sprint ou `none` (sem sprint)' },

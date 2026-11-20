@@ -777,6 +777,7 @@ function createFakeRepositories(store) {
       if (query.statusIds) items = items.filter((t) => query.statusIds.includes(t.statusId))
       if (query.priorityId) items = items.filter((t) => [].concat(query.priorityId).includes(t.priorityId))
       if (query.assigneeId) items = items.filter((t) => t.assigneeId === query.assigneeId)
+      if (query.responsibleId) items = items.filter((t) => (t.demandOwnerId || t.assigneeId) === query.responsibleId)
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.planItemId) items = items.filter((t) => t.planItemId === query.planItemId)
