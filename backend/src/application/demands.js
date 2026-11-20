@@ -32,7 +32,7 @@ const { createNotifier } = require('./notifications')
 /** A caixa das demandas: a primeira chave livre da lista (a migration 0031 usa a mesma). */
 const INBOX = Object.freeze({ name: 'Demandas internas', keys: ['DEM', 'DEMINT', 'DEMANDAS', 'DEMANDA', 'DEMSYS'], icon: 'inbox', cover: 'slate' })
 const MAX_HOURS = 100000
-const OWNER_SEARCH_LIMIT = 50
+const OWNER_SEARCH_LIMIT = 500
 const TEAM_LIMIT = 500
 
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))

@@ -381,3 +381,104 @@ describe('application/demands — caixas e carga da equipe', () => {
     assert.deepEqual((await s.demands.owners(s.ctx.ana, { search: 'jor' })).map((u) => u.name), ['Jorge'])
   })
 })
+
+describe('application/demands — tarefa de projeto com responsável (o mesmo fluxo, ligada ao projeto)', () => {
+  /** Projeto Finanças (dono Admin; Ana e Fabi membros). César, Jorge e Carlos (TI) não são membros. */
+  async function withProject() {
+    const s = await setup()
+    const fin = await s.deps.projectRepository.create({ name: 'Finanças', key: 'FIN', ownerId: s.users.admin.id, createdBy: s.users.admin.id, status: 'active', priority: 'medium', kind: '' })
+    await s.deps.projectMemberRepository.add({ projectId: fin.id, userId: s.users.ana.id, role: 'member' })
+    await s.deps.projectMemberRepository.add({ projectId: fin.id, userId: s.users.fabi.id, role: 'member' })
+    const base = { project_id: fin.id, task_type_id: s.types.dev.id, custom_values: { versao: '1' } }
+    const task = await s.tasks.createTask(s.ctx.ana, Object.assign({ title: 'Publicar o dashboard', demand_owner_id: s.users.cesar.id }, base))
+    const other = await s.tasks.createTask(s.ctx.ana, Object.assign({ title: 'Conciliação bancária', assignee_id: s.users.ana.id }, base))
+    return Object.assign(s, { fin, task, other, base })
+  }
+
+  it('criar com responsável: fica no projeto, Sem atribuir, e o responsável é avisado', async () => {
+    const s = await withProject()
+    assert.equal(s.task.code, 'FIN-1')
+    assert.deepEqual(s.task.project, { id: s.fin.id, key: 'FIN', name: 'Finanças' })
+    assert.equal(s.task.demand.status, 'unassigned')
+    assert.equal(s.task.demand.owner.name, 'César')
+    assert.deepEqual(s.task.custom_values, { versao: '1' })
+    assert.ok(s.deps.store.notifications.some((n) => n.userId === s.users.cesar.id && n.type === 'demand_received' && n.taskId === s.task.id))
+    // sem responsável, como sempre
+    assert.equal(s.other.demand, null)
+    // com responsável, executor e prazo são do fluxo
+    assert.equal(
+      await codeOf(() => s.tasks.createTask(s.ctx.ana, Object.assign({ title: 'x', demand_owner_id: s.users.cesar.id, assignee_id: s.users.ana.id }, s.base))),
+      'VALIDATION_ERROR:{"assignee_id":"demand_flow"}',
+    )
+  })
+
+  it('responsável e executor de fora do projeto: veem e trabalham só nessa tarefa, não no resto do projeto', async () => {
+    const s = await withProject()
+    assert.equal((await s.tasks.getTask(s.ctx.cesar, s.task.id)).id, s.task.id)
+    assert.equal(await codeOf(() => s.tasks.getTask(s.ctx.cesar, s.other.id)), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.projects.getProject(s.ctx.cesar, s.fin.id)), 'PROJECT_NOT_FOUND')
+    assert.deepEqual((await s.tasks.listTasks(s.ctx.cesar, { project_id: s.fin.id })).items.map((t) => t.code), ['FIN-1'])
+    // a equipe do responsável não ganha a tarefa de projeto só por ser da área
+    assert.equal(await codeOf(() => s.tasks.getTask(s.ctx.jorge, s.task.id)), 'TASK_NOT_FOUND')
+
+    // só a equipe do responsável recebe — mesmo um membro do projeto de fora da equipe não
+    assert.equal(await codeOf(() => s.demands.assign(s.ctx.cesar, s.task.id, { assignee_id: s.users.fabi.id, due_at: FUTURE })), 'VALIDATION_ERROR:{"assignee_id":"not_in_team"}')
+    const assigned = await s.demands.assign(s.ctx.cesar, s.task.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 3 })
+    assert.equal(assigned.assignee.name, 'Jorge')
+    assert.equal(assigned.project.key, 'FIN')
+
+    const jorgeSees = await s.tasks.getTask(s.ctx.jorge, s.task.id)
+    assert.deepEqual(jorgeSees.capabilities, { edit: true, delete: false, assign: false, link: false, fork: false, comment: true })
+    assert.deepEqual(jorgeSees.demand.actions, { assign: false, start: true, pass: true, conclude: true, validate: false, return: false })
+    assert.equal(jorgeSees.plan_item, null)
+    await s.comments.createComment(s.ctx.jorge, s.task.id, { content: 'Começo amanhã.' })
+    assert.equal(await codeOf(() => s.tasks.getTask(s.ctx.jorge, s.other.id)), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.tasks.deleteTask(s.ctx.jorge, s.task.id)), 'FORBIDDEN')
+
+    await s.demands.start(s.ctx.jorge, s.task.id)
+    await s.demands.pass(s.ctx.jorge, s.task.id, { assignee_id: s.users.carlos.id, comment: 'Carlos conhece o servidor.' })
+    // Jorge passou e continua vendo
+    assert.equal((await s.tasks.getTask(s.ctx.jorge, s.task.id)).assignee.name, 'Carlos')
+    await s.demands.conclude(s.ctx.carlos, s.task.id, { comment: 'Publicado.' })
+    const done = await s.demands.validate(s.ctx.ana, s.task.id)
+    assert.equal(done.demand.status, 'done')
+    assert.equal(done.status.key, 'DONE')
+  })
+
+  it('aparece nas caixas e na carga da equipe, com o projeto; continua no projeto e nos relatórios', async () => {
+    const s = await withProject()
+    await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'Demanda sem projeto' }))
+    await s.demands.assign(s.ctx.cesar, s.task.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 3 })
+    const received = (await s.demands.listDemands(s.ctx.cesar, { box: 'received' })).items
+    assert.deepEqual(received.map((t) => [t.code, t.project ? t.project.name : null]).sort(), [['DEM-1', null], ['FIN-1', 'Finanças']])
+    assert.deepEqual((await s.demands.overview(s.ctx.cesar)).team.find((m) => m.user.name === 'Jorge'), { user: received.find((t) => t.code === 'FIN-1').assignee, open_count: 1, estimated_hours: 3 })
+    // Com projeto · Sem projeto: a tarefa com responsável é "com projeto"
+    const kinds = async (kind) => (await s.tasks.listTasks(s.ctx.admin, { kind })).items.map((t) => t.code).sort()
+    assert.deepEqual(await kinds('project'), ['FIN-1', 'FIN-2'])
+    assert.deepEqual(await kinds('demand'), ['DEM-1'])
+    const report = await s.deps.taskRepository.listForReport({ scope: { userId: s.users.admin.id, viewAll: true }, includeArchived: true, withTitles: true })
+    assert.deepEqual(report.map((t) => t.code).sort(), ['FIN-1', 'FIN-2'])
+  })
+
+  it('PATCH: pôr o responsável numa tarefa que já existe (sem perder executor e status) e tirar volta ao normal', async () => {
+    const s = await withProject()
+    const withOwner = await s.tasks.updateTask(s.ctx.ana, s.other.id, { demand_owner_id: s.users.cesar.id })
+    assert.equal(withOwner.demand.status, 'assigned')
+    assert.equal(withOwner.demand.owner.name, 'César')
+    assert.equal(withOwner.assignee.name, 'Ana')
+    assert.ok(s.deps.store.notifications.some((n) => n.userId === s.users.cesar.id && n.taskId === s.other.id && n.type === 'demand_received'))
+    assert.equal(s.deps.store.audit.filter((e) => e.entityId === s.other.id).at(-1).newValue.demand_owner, 'César')
+    // com o fluxo ligado, status e executor só pelo fluxo; o resto edita normal
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ana, s.other.id, { status_id: s.statuses.done.id })), 'VALIDATION_ERROR:{"status_id":"demand_flow"}')
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ana, s.other.id, { assignee_id: s.users.fabi.id })), 'VALIDATION_ERROR:{"assignee_id":"demand_flow"}')
+    assert.equal((await s.tasks.updateTask(s.ctx.ana, s.other.id, { title: 'Conciliação' })).title, 'Conciliação')
+    assert.equal(await codeOf(() => s.tasks.moveTask(s.ctx.ana, s.other.id, { status_id: s.statuses.dev.id })), 'VALIDATION_ERROR:{"status_id":"demand_flow"}')
+    // o responsável de fora do projeto não troca o responsável
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.cesar, s.other.id, { demand_owner_id: s.users.otto.id })), 'FORBIDDEN')
+    const cleared = await s.tasks.updateTask(s.ctx.ana, s.other.id, { demand_owner_id: null })
+    assert.equal(cleared.demand, null)
+    assert.equal(cleared.assignee.name, 'Ana')
+    assert.equal(await codeOf(() => s.tasks.getTask(s.ctx.cesar, s.other.id)), 'TASK_NOT_FOUND')
+    assert.equal((await s.tasks.updateTask(s.ctx.ana, s.other.id, { status_id: s.statuses.dev.id })).status.key, 'DEV')
+  })
+})

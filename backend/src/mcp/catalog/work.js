@@ -51,6 +51,9 @@ const TASK_FIELDS = {
   },
 }
 
+const DEMAND_OWNER =
+  'Owner who receives and distributes the task (any active user, even outside the project): turns on the request flow (unassigned → assigned → in progress → to validate → done); status, assignee, due date and estimate then change only through that flow, done in the app.'
+
 const PLAN_GROUP =
   'Project management stage (group or subgroup id from get_plan, same project): creates a new element in that stage named after the task, with its planned start (or today) and due date (or the start), owned by the assignee, and links the task to it. Copied only at that moment. Needs plan view permission (not plan edit).'
 
@@ -67,6 +70,7 @@ const TASK_CREATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   plan_group_id: id(PLAN_GROUP),
   urgency: urgency(),
   area_id: id(AREA),
+  demand_owner_id: id(DEMAND_OWNER),
 })
 
 const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
@@ -83,6 +87,7 @@ const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   plan_group_id: id(`${PLAN_GROUP} Only for a task not linked to any element yet (otherwise VALIDATION_ERROR).`),
   urgency: nullableUrgency(),
   area_id: nullableId(AREA),
+  demand_owner_id: nullableId(`${DEMAND_OWNER} null turns the flow off (the task goes back to normal).`),
 })
 
 const REPORT_FILTERS = {

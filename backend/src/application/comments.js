@@ -58,8 +58,13 @@ function createCommentService(deps) {
       .filter((m) => taskDomain.memberSeesTask(project, m, m.userId, task))
       .map((m) => m.userId)
     if (ids.indexOf(project.ownerId) < 0) ids.push(project.ownerId)
+    // tarefa de projeto com responsável (§45): quem participa do fluxo também, mesmo sem ser do projeto
+    const flow = demandDomain.isDemand(task) ? [task.reporterId, task.demandOwnerId, task.assigneeId].concat(task.demandPastAssignees || []) : []
+    flow.forEach((id) => {
+      if (id && ids.indexOf(id) < 0) ids.push(id)
+    })
     if (access && access.scoped) {
-      const involved = [project.ownerId, task.creatorId, task.assigneeId, task.reporterId].concat((await comments.listByTask(task.id)).map((c) => c.userId))
+      const involved = [project.ownerId, task.creatorId, task.assigneeId, task.reporterId].concat(flow, (await comments.listByTask(task.id)).map((c) => c.userId))
       ids = ids.filter((id) => involved.indexOf(id) >= 0)
     }
     return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')

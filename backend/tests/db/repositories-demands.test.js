@@ -128,5 +128,19 @@ describe('repositórios — demandas internas (Postgres)', () => {
     // relatórios, dependências e painel executivo: só tarefas de projeto
     const report = await tasks.listForReport({ scope: { userId: u.cesar.id, viewAll: true }, includeArchived: true })
     assert.deepEqual(report.map((x) => x.id), [p1.id])
+
+    // tarefa de projeto com responsável: fica no projeto (Com projeto, relatórios) e quem participa do fluxo
+    // a vê mesmo sem ser membro; a área do responsável não ganha a tarefa de projeto
+    const p2 = await seed(regular, { reporterId: u.cesar.id, demandStatus: 'in_progress', demandOwnerId: u.fabi.id, assigneeId: u.jorge.id, estimatedHours: 2 })
+    assert.deepEqual(await list(as(u.fabi)), [p2.id])
+    assert.deepEqual(await list(as(u.jorge)), [d2.id, p2.id])
+    assert.deepEqual(await list(as(u.carlos, [u.carlos.id, u.fabi.id])), [d2.id])
+    assert.deepEqual(await list(as(u.cesar), { kind: 'project' }), [p1.id, p2.id])
+    assert.deepEqual(await list(as(u.cesar), { kind: 'demand' }), [d1.id, d2.id])
+    assert.deepEqual(await list(all, { demandBox: { box: 'received', userId: u.fabi.id } }), [p2.id])
+    assert.deepEqual(await tasks.demandCounts(u.fabi.id), { received: { in_progress: 1 }, assigned: {}, requested: {} })
+    assert.deepEqual(await tasks.demandLoad([u.jorge.id], ['assigned', 'in_progress']), { [u.jorge.id]: { open: 1, hours: 2 } })
+    const withProject = await tasks.listForReport({ scope: { userId: u.cesar.id, viewAll: true }, includeArchived: true })
+    assert.deepEqual(withProject.map((x) => x.id).sort(), [p1.id, p2.id].sort())
   })
 })

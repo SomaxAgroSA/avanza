@@ -634,8 +634,8 @@ function createFakeRepositories(store) {
         .sort((x, y) => y.updatedAt - x.updatedAt),
     listForReport: (query) =>
       store.tasks
-        // demandas internas (§45) ficam fora dos relatórios
-        .filter((t) => !t.demandStatus)
+        // demandas internas (§45) ficam fora dos relatórios (a tarefa de projeto com responsável fica)
+        .filter((t) => !(store.projects.find((p) => p.id === t.projectId) || {}).kind)
         .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
@@ -716,14 +716,20 @@ function createFakeRepositories(store) {
       [...new Set(store.tasks.filter((t) => statuses.includes(t.demandStatus) && t.demandOwnerId === ownerId && t.assigneeId).map((t) => t.assigneeId))].sort(),
     list: (query) => {
       const me = query.scope.userId
-      // demandas internas (§45): quem pediu, responsável, quem executa (agora ou antes) e a área do responsável
+      const internal = (t) => !!(store.projects.find((p) => p.id === t.projectId) || {}).kind
+      // fluxo do responsável (§45): quem pediu, responsável, quem executa (agora ou antes); na demanda
+      // interna, também a área do responsável
       const seesDemand = (t) =>
         !!t.demandStatus &&
-        (t.reporterId === me || t.demandOwnerId === me || t.assigneeId === me || (t.demandPastAssignees || []).includes(me) || (query.scope.areaMates || []).includes(t.demandOwnerId))
+        (t.reporterId === me ||
+          t.demandOwnerId === me ||
+          t.assigneeId === me ||
+          (t.demandPastAssignees || []).includes(me) ||
+          (internal(t) && (query.scope.areaMates || []).includes(t.demandOwnerId)))
       const visible = (t) => query.scope.viewAll || seesTask(t, me) || seesDemand(t)
       let items = store.tasks.filter(visible)
-      if (query.kind === 'project') items = items.filter((t) => !t.demandStatus)
-      if (query.kind === 'demand') items = items.filter((t) => !!t.demandStatus)
+      if (query.kind === 'project') items = items.filter((t) => !internal(t))
+      if (query.kind === 'demand') items = items.filter((t) => internal(t))
       if (query.mineId) items = items.filter((t) => t.assigneeId === query.mineId || (!!t.demandStatus && (t.reporterId === query.mineId || t.demandOwnerId === query.mineId)))
       if (query.demandBox) {
         const field = { received: 'demandOwnerId', assigned: 'assigneeId', requested: 'reporterId' }[query.demandBox.box]

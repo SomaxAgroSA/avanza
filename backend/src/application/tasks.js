@@ -14,6 +14,9 @@
  * - Demanda interna (§45, application/demands.js): sai sem projeto (`project: null`) e com `demand` (passo,
  *   responsável, prazo com hora, ações); a edição comum só muda título, descrição, tipo, prioridade,
  *   departamento e urgência — status, executor, prazo e estimativa são do fluxo da demanda.
+ * - Tarefa de projeto com responsável (§45, `demand_owner_id`): o mesmo fluxo, ligada ao projeto. Criar ou
+ *   editar com o responsável liga o fluxo (status, executor, prazo e estimativa passam a ser dele); `null`
+ *   desliga e a tarefa volta a ser como sempre. Quem participa do fluxo sem ser do projeto vê só essa tarefa.
  * - Responsável TI (§33/§36): vê e atualiza só as tarefas atribuídas a ele ou marcadas "Visível para TI"
  *   (domain/task.js#scopedAccess); nelas, referências a módulos e tarefas que ele não vê (elemento da
  *   Gestão, tarefa pai ou de origem) saem vazias. Marcar "Visível para TI" é de quem edita a tarefa, não
@@ -72,10 +75,15 @@ const BASE_RULES = {
   urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS)],
   // área responsável (§32): só área ativa; null limpa
   area_id: [idRule],
+  // Responsável que recebe e distribui (§45): liga o fluxo da demanda na tarefa de projeto; null desliga
+  demand_owner_id: [idRule],
 }
 
 /** Campos que aceitam `null` para limpar. */
-const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id', 'urgency', 'area_id']
+const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id', 'urgency', 'area_id', 'demand_owner_id']
+
+/** Com o fluxo do responsável ligado (§45), estes mudam só pelo fluxo (application/demands.js). */
+const FLOW_FIELDS = ['status_id', 'assignee_id', 'due_date', 'estimated_hours']
 
 const SORTABLE = {
   code: 'code',
@@ -436,7 +444,8 @@ function createTaskService(deps) {
       number: task.number,
       title: task.title,
       // demanda interna (§45): sem projeto — a caixa de sistema não é projeto de ninguém
-      project: project && !isDemand ? { id: project.id, key: project.key, name: project.name } : null,
+      project: project && !demandDomain.isSystemProject(project) ? { id: project.id, key: project.key, name: project.name } : null,
+      // fluxo do responsável (demanda interna ou tarefa de projeto com responsável)
       demand: isDemand
         ? { status: task.demandStatus, owner: user(task.demandOwnerId), due_at: iso(task.dueDate), opened_at: iso(task.createdAt) }
         : null,
@@ -484,8 +493,8 @@ function createTaskService(deps) {
 
   async function presentDetail(ctx, task, project, access) {
     const refs = Object.assign(await refsFor([task]), access.scoped ? { scoped: { [task.projectId]: true } } : {})
-    if (demandDomain.isDemand(task)) {
-      // demanda (§45): sem campos personalizados; com o que a pessoa pode fazer no fluxo
+    if (demandDomain.isDemand(task) && demandDomain.isSystemProject(project)) {
+      // demanda interna (§45): sem campos personalizados; com o que a pessoa pode fazer no fluxo
       const summary = presentSummary(task, refs)
       return Object.assign(summary, {
         description: task.description || '',
@@ -504,7 +513,8 @@ function createTaskService(deps) {
     links.forEach((link) => {
       if (saved[link.field.id] !== undefined) customValues[link.field.name] = saved[link.field.id]
     })
-    return Object.assign(presentSummary(task, refs), {
+    const summary = presentSummary(task, refs)
+    return Object.assign(summary, {
       description: task.description || '',
       custom_values: customValues,
       checklist: task.checklist || [],
@@ -512,7 +522,22 @@ function createTaskService(deps) {
       forked_from: relatedRef(access, task, refs.related[task.forkedFromTaskId]),
       fields: links,
       capabilities: taskDomain.taskCapabilities(access, project, task),
+      // tarefa de projeto com responsável (§45): os botões do fluxo para quem consulta
+      ...(summary.demand ? { demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task) }) } : {}),
     })
+  }
+
+  /** Responsável que recebe e distribui (§45): pessoa ativa cujo perfil vê tarefas (não precisa ser do projeto). */
+  async function flowOwner(userId) {
+    const user = await deps.userRepository.findById(userId)
+    const role = user ? await deps.roleRepository.findById(user.roleId) : null
+    const ok =
+      !!user &&
+      user.status === 'active' &&
+      !!role &&
+      rbac.can(rbac.createPrincipal({ userId: user.id, roleId: role.id, roleCode: role.code, permissions: await deps.roleRepository.getPermissionCodes(role.id) }), 'tasks.view')
+    if (!ok) throw invalid({ demand_owner_id: 'invalid_option' })
+    return user
   }
 
   // ---------------------------------------------------------------- histórico legível
@@ -556,6 +581,7 @@ function createTaskService(deps) {
       parent: task.parentTaskId ? taskLabel(refs.related[task.parentTaskId]) || task.parentTaskId : null,
       assignee: name(refs.users, task.assigneeId),
       reporter: name(refs.users, task.reporterId),
+      demand_owner: name(refs.users, task.demandOwnerId),
       start_date: dayOf(task.startDate),
       due_date: dayOf(task.dueDate),
       estimated_hours: task.estimatedHours === undefined ? null : task.estimatedHours,
@@ -749,6 +775,16 @@ function createTaskService(deps) {
     if (!priority) throw invalid({ priority_id: 'required' })
     const area = data.area_id ? activeOrInvalid(refs.areas[data.area_id], 'area_id') : null
 
+    // Responsável que recebe e distribui (§45): nasce Sem atribuir; executor, status, prazo e estimativa são do fluxo
+    const owner = data.demand_owner_id ? await flowOwner(data.demand_owner_id) : null
+    if (owner) {
+      const flow = {}
+      FLOW_FIELDS.forEach((key) => {
+        if (data[key] !== undefined) flow[key] = 'demand_flow'
+      })
+      if (Object.keys(flow).length > 0) throw invalid(flow)
+    }
+
     if (data.assignee_id) {
       taskDomain.assertTaskAccess(access, project, 'assign')
       await assertParticipant(project, data.assignee_id, 'assignee_id', false)
@@ -804,6 +840,9 @@ function createTaskService(deps) {
         planItemId: row ? row.id : data.plan_item_id || null,
         urgency: data.urgency || null,
         areaId: area ? area.id : null,
+        demandStatus: owner ? 'unassigned' : '',
+        demandOwnerId: owner ? owner.id : null,
+        demandPastAssignees: [],
         startDate: data.start_date || null,
         dueDate: data.due_date || null,
         estimatedHours: data.estimated_hours === undefined ? null : data.estimated_hours,
@@ -821,6 +860,7 @@ function createTaskService(deps) {
       const after = await snapshot(withTags, checked.values, links, auditRefs)
       await audit(repos, ctx, task, 'task.created', null, Object.assign({ code: task.code }, forkedFrom ? { forked_from: taskLabel(forkedFrom) } : {}, compact(after)))
       await notifier.notify(repos, { task, project, actorId: ctx.principal.userId, entries: [{ userId: task.assigneeId, type: 'assigned' }] })
+      if (owner) await notifier.notify(repos, { task, project, actorId: ctx.principal.userId, entries: [{ userId: owner.id, type: 'demand_received' }] })
       // fork: cópia de anexos/relações e histórico da origem, na mesma transação
       if (opts.extras) await opts.extras(repos, task, links)
       return task
@@ -831,7 +871,7 @@ function createTaskService(deps) {
   /** `options.position`: posição na coluna (moveTask e priorização do backlog); sem ela, troca de status vai para o fim. */
   async function updateTask(ctx, id, input, options) {
     const loaded = await loadTask(ctx, id)
-    if (demandDomain.isDemand(loaded.task)) return updateDemand(ctx, loaded, input || {})
+    if (demandDomain.isDemand(loaded.task) && demandDomain.isSystemProject(loaded.project)) return updateDemand(ctx, loaded, input || {})
     const { task, project, access } = loaded
     taskDomain.assertTaskAccess(access, project, 'edit', task)
     const raw = input || {}
@@ -842,6 +882,37 @@ function createTaskService(deps) {
     const refs = await lookups()
 
     const patch = {}
+    // Responsável que recebe e distribui (§45): ligar, trocar ou desligar o fluxo — de quem colabora no
+    // projeto (quem só participa do fluxo não troca o responsável)
+    const ownerChange = cleared.indexOf('demand_owner_id') >= 0 ? null : data.demand_owner_id
+    let newOwner = null
+    if (ownerChange !== undefined && ownerChange !== (task.demandOwnerId || null)) {
+      if (access.scoped) throw appError('FORBIDDEN')
+      if (ownerChange) {
+        newOwner = await flowOwner(ownerChange)
+        patch.demandOwnerId = newOwner.id
+        if (!demandDomain.isDemand(task)) {
+          const current = refs.statuses[task.statusId]
+          patch.demandStatus = demandDomain.statusFromTask(task, current ? current.category : null)
+        }
+      } else {
+        patch.demandOwnerId = null
+        patch.demandStatus = ''
+        patch.demandPastAssignees = []
+      }
+    }
+    // com o fluxo ligado (antes e depois desta edição), status, executor, prazo e estimativa só pelo fluxo
+    if (demandDomain.isDemand(task) && patch.demandStatus !== '') {
+      const flow = {}
+      if (data.status_id !== undefined && data.status_id !== task.statusId) flow.status_id = 'demand_flow'
+      const nextAssignee = cleared.indexOf('assignee_id') >= 0 ? null : data.assignee_id
+      if (nextAssignee !== undefined && nextAssignee !== (task.assigneeId || null)) flow.assignee_id = 'demand_flow'
+      const nextDue = cleared.indexOf('due_date') >= 0 ? null : data.due_date
+      if (nextDue !== undefined && (nextDue ? nextDue.getTime() : null) !== (task.dueDate ? new Date(task.dueDate).getTime() : null)) flow.due_date = 'demand_flow'
+      const nextHours = cleared.indexOf('estimated_hours') >= 0 ? null : data.estimated_hours
+      if (nextHours !== undefined && nextHours !== (task.estimatedHours || null)) flow.estimated_hours = 'demand_flow'
+      if (Object.keys(flow).length > 0) throw invalid(flow)
+    }
     if (data.title !== undefined) patch.title = data.title
     if (data.description !== undefined) patch.description = data.description
     if (data.task_type_id !== undefined && data.task_type_id !== task.typeId) patch.typeId = activeOrInvalid(refs.types[data.task_type_id], 'task_type_id').id
@@ -956,6 +1027,7 @@ function createTaskService(deps) {
       if (valuesChanged) await repos.taskValueRepository.replace(task.id, checked.values, typesOf(links))
       await audit(repos, ctx, task, 'task.updated', change.oldValue, change.newValue)
       if (patch.assigneeId) await notifier.notify(repos, { task: result, project, actorId: ctx.principal.userId, entries: [{ userId: patch.assigneeId, type: 'assigned' }] })
+      if (newOwner) await notifier.notify(repos, { task: result, project, actorId: ctx.principal.userId, entries: [{ userId: newOwner.id, type: 'demand_received' }] })
       if (patch.statusId) {
         await notifier.notify(repos, {
           task: result,

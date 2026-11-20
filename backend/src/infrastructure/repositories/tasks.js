@@ -199,17 +199,21 @@ function createTaskRepository(db) {
     }
     if (!query.scope.viewAll) {
       const user = param(query.scope.userId)
-      // demandas internas (§45): quem pediu, o responsável, quem executa (agora ou antes) e quem está na
-      // mesma área do responsável (`areaMates` = colegas de área de quem consulta, inclusive ela)
-      const mates = query.scope.areaMates && query.scope.areaMates.length ? ` OR tasks.demand_owner_id = ANY(${param(query.scope.areaMates)}::text[])` : ''
+      // fluxo do responsável (§45; demanda interna ou tarefa de projeto com responsável): quem pediu, o
+      // responsável e quem executa (agora ou antes); na demanda interna, também quem está na mesma área do
+      // responsável (`areaMates` = colegas de área de quem consulta, inclusive ela)
+      const mates =
+        query.scope.areaMates && query.scope.areaMates.length
+          ? ` OR (tasks.demand_owner_id = ANY(${param(query.scope.areaMates)}::text[]) AND tasks.project_id IN (SELECT id FROM projects WHERE "kind" <> ''))`
+          : ''
       where.push(
         `(${visibleTasksClause(user, 'tasks.')} OR (tasks.demand_status <> '' AND (tasks.reporter_id = ${user} OR tasks.demand_owner_id = ${user}` +
           ` OR tasks.assignee_id = ${user} OR ${user}::text = ANY(tasks.demand_past_assignees)${mates})))`,
       )
     }
-    // Com projeto · Sem projeto (§45)
-    if (query.kind === 'project') where.push(`tasks.demand_status = ''`)
-    if (query.kind === 'demand') where.push(`tasks.demand_status <> ''`)
+    // Com projeto · Sem projeto (§45): sem projeto = a caixa de sistema das demandas internas
+    if (query.kind === 'project') where.push(`tasks.project_id IN (SELECT id FROM projects WHERE "kind" = '')`)
+    if (query.kind === 'demand') where.push(`tasks.project_id IN (SELECT id FROM projects WHERE "kind" <> '')`)
     // "Minhas tarefas": as atribuídas a mim e, nas demandas, também as que pedi ou recebi
     if (query.mineId) {
       const me = param(query.mineId)
@@ -400,7 +404,8 @@ function createTaskRepository(db) {
       }
       if (query.scope && !query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), ''))
       // relatórios, dependências e painel executivo são de projetos: demandas internas (§45) ficam de fora
-      where.push(`demand_status = ''`)
+      // (a tarefa de projeto com responsável continua: é do projeto)
+      where.push(`project_id IN (SELECT id FROM projects WHERE "kind" = '')`)
       if (!query.includeArchived) where.push('project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)')
       if (query.projectId) where.push(`project_id = ${param(query.projectId)}`)
       if (query.projectIds) where.push(`project_id = ANY(${param(query.projectIds)}::text[])`)

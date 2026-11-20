@@ -205,6 +205,41 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.equal((await people.jorge.client.post(`/tasks/${created.id}/comments`, { content: 'Vejo isso amanhã.' })).status, 201)
   })
 
+  it('tarefa de projeto com responsável (POST e PATCH /tasks): o fluxo vale, quem é de fora vê só a tarefa', async () => {
+    const fin = (await admin.post('/projects', { name: 'Finanças', key: 'FIN', status: 'active' })).body.data
+    assert.equal((await admin.post(`/projects/${fin.id}/members`, { user_id: people.ana.user.id, role: 'member' })).status, 201)
+    const created = await people.ana.client.post('/tasks', { project_id: fin.id, task_type_id: type.id, title: 'Publicar o dashboard', demand_owner_id: people.cesar.user.id })
+    assert.equal(created.status, 201, JSON.stringify(created.body))
+    let saved = (await people.ana.client.get(`/tasks/${created.body.data.id}`)).body.data
+    assert.equal(saved.project.key, 'FIN')
+    assert.equal(saved.demand.status, 'unassigned')
+    assert.equal(saved.demand.owner.id, people.cesar.user.id)
+    // César não é do projeto: vê a tarefa, não o projeto
+    assert.equal((await people.cesar.client.get(`/tasks/${saved.id}`)).status, 200)
+    assert.equal((await people.cesar.client.get(`/projects/${fin.id}`)).status, 404)
+    const assigned = await people.cesar.client.post(`/demands/${saved.id}/assign`, { assignee_id: people.carlos.user.id, due_at: DUE, estimated_hours: 2 })
+    assert.equal(assigned.status, 200, JSON.stringify(assigned.body))
+    assert.equal((await people.carlos.client.post(`/demands/${saved.id}/start`)).status, 200)
+    assert.equal((await people.carlos.client.post(`/tasks/${saved.id}/comments`, { content: 'Em andamento.' })).status, 201)
+    const received = (await people.cesar.client.get('/demands?box=received')).body.data.find((t) => t.id === saved.id)
+    assert.equal(received.project.name, 'Finanças')
+
+    // PATCH numa tarefa que já existe: liga o fluxo (executor e status ficam) e null desliga
+    const plain = (await people.ana.client.post('/tasks', { project_id: fin.id, task_type_id: type.id, title: 'Conciliação', assignee_id: people.ana.user.id })).body.data
+    assert.equal(plain.demand, null)
+    const linked = await people.ana.client.patch(`/tasks/${plain.id}`, { demand_owner_id: people.cesar.user.id })
+    assert.equal(linked.status, 200, JSON.stringify(linked.body))
+    saved = (await people.cesar.client.get(`/tasks/${plain.id}`)).body.data
+    assert.equal(saved.demand.owner.id, people.cesar.user.id)
+    assert.equal(saved.demand.status, 'assigned')
+    assert.equal(saved.assignee.id, people.ana.user.id)
+    const doneStatus = (await admin.get('/statuses')).body.data.find((st) => st.category === 'done')
+    assert.equal((await people.ana.client.patch(`/tasks/${plain.id}`, { status_id: doneStatus.id })).body.error.details.fields.status_id, 'demand_flow')
+    assert.equal((await people.cesar.client.patch(`/tasks/${plain.id}`, { demand_owner_id: people.jorge.user.id })).status, 403)
+    assert.equal((await people.ana.client.patch(`/tasks/${plain.id}`, { demand_owner_id: null })).body.data.demand, null)
+    assert.equal((await people.cesar.client.get(`/tasks/${plain.id}`)).status, 404)
+  })
+
   it('a caixa de sistema e as demandas ficam fora de Kanban, relatórios, painéis e dependências', async () => {
     const inbox = (await pb.query(`SELECT id FROM projects WHERE "kind" = 'demands'`))[0].id
     assert.equal((await admin.get(`/projects/${inbox}`)).status, 404)

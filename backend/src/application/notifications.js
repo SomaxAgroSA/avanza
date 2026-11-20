@@ -29,7 +29,9 @@ function createNotifier(deps) {
    * Demanda interna (§45): quem pediu, o responsável, quem executa (agora ou antes) e a equipe do responsável.
    */
   async function hasAccess(project, userId, task) {
-    if (demandDomain.isDemandsProject(project)) return !!task && demandDomain.isDemand(task) && (await taskAccess.userSeesDemand(userId, task))
+    if (demandDomain.isDemandsProject(project)) return !!task && demandDomain.isDemand(task) && (await taskAccess.userSeesDemand(userId, task, project))
+    // tarefa de projeto com responsável: quem participa do fluxo recebe, mesmo sem ser do projeto
+    if (task && demandDomain.isDemand(task) && demandDomain.isFlowParticipant(task, userId)) return true
     if (project.ownerId === userId) return true
     const membership = await deps.projectMemberRepository.find(project.id, userId)
     if (!membership) return false

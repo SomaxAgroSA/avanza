@@ -167,7 +167,8 @@ function createRelationService(deps) {
     if (relationDomain.VIEW_TYPES.indexOf(raw.type) < 0) throw invalid({ type: 'invalid_option' })
     const target = typeof raw.target_id === 'string' && raw.target_id ? await tasks.findById(raw.target_id) : null
     // demanda interna (§45) não entra em relações (bloqueios e dependências são de projetos)
-    if (!target || demandDomain.isDemand(target) || !(await canDo(ctx, target, 'view'))) throw invalid({ target_id: 'invalid_option' })
+    const targetProject = target ? await deps.projectRepository.findById(target.projectId) : null
+    if (!target || demandDomain.isSystemProject(targetProject) || !(await canDo(ctx, target, 'view'))) throw invalid({ target_id: 'invalid_option' })
     const rel = relationDomain.normalize(raw.type, task.id, target.id)
     if (!rel) throw invalid({ target_id: 'invalid_option' })
     if (relationDomain.isDuplicate(await relations.listBetween(task.id, target.id), rel)) throw appError('RELATION_EXISTS')

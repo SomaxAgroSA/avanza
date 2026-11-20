@@ -4,9 +4,12 @@
  * - tarefa de projeto: o vínculo com o projeto (domain/project.js#resolveAccess) e, para o Responsável
  *   TI, só as tarefas visíveis a ele (domain/task.js#scopedAccess, §33/§36);
  * - demanda interna (§45): quem pediu, o responsável, quem executa (agora ou antes) e a equipe do
- *   responsável (domain/demand.js#demandAccess); a equipe vem de "Dependências por área".
+ *   responsável (domain/demand.js#demandAccess); a equipe vem de "Dependências por área";
+ * - tarefa de projeto com responsável (§45): quem vê o projeto, como sempre; quem participa do fluxo sem
+ *   ver o projeto trabalha só nessa tarefa (domain/demand.js#participantAccess).
  */
 
+const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
 const taskDomain = require('../domain/task')
 const demandDomain = require('../domain/demand')
@@ -30,11 +33,21 @@ function createTaskAccess(deps) {
       return demandDomain.demandAccess(principal, task, await teamOf(task.demandOwnerId))
     }
     const membership = await deps.projectMemberRepository.find(project.id, principal.userId)
-    return taskDomain.scopedAccess(projectDomain.resolveAccess(principal, project, membership), task)
+    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(principal, project, membership), task)
+    if (access.canView || demandDomain.isSystemProject(project)) return access
+    // tarefa de projeto com responsável: quem participa do fluxo trabalha nessa tarefa, sem ver o projeto
+    if (demandDomain.isDemand(task) && demandDomain.isFlowParticipant(task, principal.userId) && rbac.can(principal, 'tasks.view')) {
+      return demandDomain.participantAccess(principal)
+    }
+    return access
   }
 
-  /** Só com o id da pessoa (notificações e menções): ela enxerga a demanda? */
-  async function userSeesDemand(userId, task) {
+  /**
+   * Só com o id da pessoa (notificações e menções): ela enxerga a demanda? Na demanda interna, também a
+   * equipe do responsável; na tarefa de projeto com responsável, quem participa do fluxo.
+   */
+  async function userSeesDemand(userId, task, project) {
+    if (project && !demandDomain.isDemandsProject(project)) return demandDomain.isFlowParticipant(task, userId)
     return demandDomain.seesDemand(task, userId, await teamOf(task.demandOwnerId))
   }
 

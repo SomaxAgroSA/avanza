@@ -608,7 +608,7 @@ function build() {
         ),
       },
       '/demands/owners': {
-        get: op('Responsáveis possíveis no formulário de demanda (tasks.create): pessoas ativas, até 50, pela busca em nome ou e-mail', ['demands'], { 200: ok('Pessoas', { type: 'array', items: ref('UserSummary') }) }, {
+        get: op('Responsáveis possíveis no formulário de demanda e no campo "Responsável (recebe e distribui)" da tarefa (tasks.create): pessoas ativas, até 500, pela busca em nome ou e-mail', ['demands'], { 200: ok('Pessoas', { type: 'array', items: ref('UserSummary') }) }, {
           parameters: [{ name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } }],
         }),
       },
@@ -1901,6 +1901,11 @@ function build() {
           type: 'object',
           properties: {
             project_id: { type: 'string', description: 'Só na criação' },
+            demand_owner_id: {
+              type: ['string', 'null'],
+              description:
+                'Responsável que recebe e distribui (§45): qualquer pessoa ativa com tasks.view, mesmo de fora do projeto. Liga o fluxo da demanda na tarefa (Sem atribuir → Atribuída → Em andamento → Para validar → Concluída; ações em /demands/{id}/…); status_id, assignee_id, due_date e estimated_hours passam a mudar só pelo fluxo (fields = demand_flow). Numa tarefa que já existe, o passo vem do que ela tem (executor e status ficam); null desliga e a tarefa volta ao normal. Quem participa do fluxo sem ser do projeto vê e trabalha só nessa tarefa; quem só participa não troca o responsável (FORBIDDEN)',
+            },
             task_type_id: { type: 'string', description: 'Trocar o tipo descarta valores de campos que o novo tipo não tem' },
             parent_task_id: { type: ['string', 'null'], description: 'Subtarefa: pai do mesmo projeto, sem ciclo; null solta' },
             sprint_id: { type: ['string', 'null'], description: 'Sprint aberto do mesmo projeto; null tira da sprint' },

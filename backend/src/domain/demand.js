@@ -13,6 +13,10 @@
  *   Só o responsável atribui; só quem executa começa, passa e conclui; só quem pediu valida e devolve.
  * - O status do fluxo de trabalho da tarefa (`statusId`) acompanha o passo (`workflowStatusFor`): assim a
  *   demanda concluída sai das "abertas", ganha as datas de início e conclusão e os lembretes de prazo valem.
+ * - Tarefa de projeto com responsável (extensão aprovada em 20/11/2026): o mesmo fluxo, mas a tarefa
+ *   continua no projeto. Quem não é do projeto e participa (quem pediu, o responsável, quem executa agora ou
+ *   antes) vê e trabalha só nessa tarefa (`participantAccess`); a equipe do responsável não ganha a tarefa
+ *   só por ser da área (isso é das demandas internas).
  */
 
 const rbac = require('./rbac')
@@ -96,6 +100,31 @@ function seesDemand(task, userId, team) {
   const roles = rolesIn(task, userId)
   if (roles.requester || roles.owner || roles.assignee || roles.past) return true
   return !!team && !!userId && team.memberIds.indexOf(userId) >= 0
+}
+
+/** Participa do fluxo da tarefa: quem pediu, o responsável ou quem executa (agora ou antes). */
+function isFlowParticipant(task, userId) {
+  const roles = rolesIn(task, userId)
+  return roles.requester || roles.owner || roles.assignee || roles.past
+}
+
+/**
+ * Tarefa de projeto com responsável: quem participa do fluxo sem ver o projeto trabalha nessa tarefa como
+ * colaborador dela (`scoped`, como o Responsável TI, §33): vê, edita, comenta e anexa; não exclui, não
+ * reatribui pela edição, não relaciona nem faz fork, e as referências ao resto do projeto ficam ocultas.
+ */
+function participantAccess(principal) {
+  return { principal, viewAll: false, isOwner: false, role: 'member', isManager: false, limited: false, scoped: true, canView: true, flow: true }
+}
+
+/**
+ * Passo de uma tarefa de projeto que ganha responsável agora (`category` = categoria do status atual): sem
+ * executor, Sem atribuir; com executor, Atribuída (ou Em andamento, se já está em andamento); encerrada, Concluída.
+ */
+function statusFromTask(task, category) {
+  if (category === 'done' || category === 'cancelled') return 'done'
+  if (!task.assigneeId) return 'unassigned'
+  return category === 'in_progress' ? 'in_progress' : 'assigned'
 }
 
 /**
@@ -210,6 +239,9 @@ module.exports = {
   areaMatesOf,
   rolesIn,
   seesDemand,
+  isFlowParticipant,
+  participantAccess,
+  statusFromTask,
   demandAccess,
   actionIssue,
   demandActions,
