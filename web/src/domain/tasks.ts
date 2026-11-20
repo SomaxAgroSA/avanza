@@ -6,6 +6,7 @@ import type { UserSummary } from './projects'
 import { isRequiredIn, valueIssue, type FieldValue, type OptionColor, type TaskTypeField, type TaskTypeIcon } from './task-config'
 import type { AreaRef, StatusCategory } from './workflow'
 import type { Urgency } from './urgency'
+import type { DemandInfo } from './demands'
 
 export interface TaskStatusRef {
   id: string
@@ -96,6 +97,11 @@ export interface TaskSummary {
   urgency: Urgency | null
   /** Área responsável; null = sem área. */
   area: AreaRef | null
+  /**
+   * Demanda interna (§45): tarefa sem projeto (`project` = null), pedida a uma pessoa (o responsável).
+   * null/ausente = tarefa de projeto.
+   */
+  demand?: DemandInfo | null
 }
 
 export interface TaskCapabilities {
@@ -161,6 +167,11 @@ export interface TaskInput {
   planGroupId?: string
   /** Área responsável ativa (null limpa). */
   areaId?: string | null
+  /**
+   * Responsável que recebe e distribui (§45): qualquer pessoa ativa, mesmo de fora do projeto. Liga o fluxo
+   * da demanda na tarefa (status, executor, prazo e estimativa passam a mudar só pelo fluxo); null desliga.
+   */
+  demandOwnerId?: string | null
 }
 
 // ---------------------------------------------------------------- menções (@)
@@ -238,6 +249,9 @@ export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee'] a
 export type TaskScope = 'mine' | 'all'
 export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency'] as const
 
+/** Com projeto · Sem projeto (§45): tarefas de projeto, demandas internas ou as duas. */
+export type TaskKind = 'all' | 'project' | 'demand'
+
 /** Categorias de status das tarefas abertas (o filtro `category` da API). */
 export const OPEN_TASK_CATEGORIES = 'backlog,todo,in_progress'
 
@@ -257,19 +271,25 @@ export function scopeBarFilters(filters: Record<string, string>): Record<string,
 }
 
 /**
- * O que a Lista de tarefas pede à API: os filtros da barra + o escopo (Minhas = responsável "me") e, sem
- * Status escolhido, só as abertas — escolher um Status (aberto ou encerrado) mostra esse status.
+ * O que a Lista de tarefas pede à API: os filtros da barra + o escopo (Minhas = `mine=true`: as atribuídas
+ * a quem olha e as demandas que ela pediu ou recebeu, §45), Com/Sem projeto (`kind`) e, sem Status
+ * escolhido, só as abertas — escolher um Status (aberto ou encerrado) mostra esse status.
  */
-export function scopedTaskFilters(filters: Record<string, string>, scope: TaskScope): Record<string, string> {
+export function scopedTaskFilters(filters: Record<string, string>, scope: TaskScope, kind: TaskKind = 'all'): Record<string, string> {
   const out = scopeBarFilters(filters)
-  if (scope === 'mine') out.assignee = 'me'
+  if (scope === 'mine') out.mine = 'true'
+  if (kind !== 'all') out.kind = kind
   if (!out.status) out.category = OPEN_TASK_CATEGORIES
   return out
 }
 
 /** Quantas abertas há em cada escopo (os números de "Minhas tarefas (n)" e "Ver todas (n)"), sem os filtros da barra. */
-export function scopeCountFilters(scope: TaskScope): Record<string, string> {
-  return scope === 'mine' ? { assignee: 'me', category: OPEN_TASK_CATEGORIES } : { category: OPEN_TASK_CATEGORIES }
+export function scopeCountFilters(scope: TaskScope, kind: TaskKind = 'all'): Record<string, string> {
+  return {
+    ...(scope === 'mine' ? { mine: 'true' } : {}),
+    ...(kind !== 'all' ? { kind } : {}),
+    category: OPEN_TASK_CATEGORIES,
+  }
 }
 
 /** Só os filtros da barra: um filtro antigo guardado no navegador (ex.: Área) não pode filtrar escondido. */

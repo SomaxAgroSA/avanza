@@ -53,9 +53,16 @@ describe('domain/tasks — filtros da lista (ajuste 18/11)', () => {
 })
 
 describe('domain/tasks — Lista de tarefas do menu (§44)', () => {
-  it('Minhas = atribuídas a quem olha; Todas = sem responsável fixo; Responsável sai da barra (o escopo decide)', () => {
-    expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'mine')).toEqual({ priority: 'p1,p2', assignee: 'me', category: OPEN_TASK_CATEGORIES })
+  it('Minhas = atribuídas a quem olha e as demandas que pediu ou recebeu (§45); Todas = sem responsável fixo; Responsável sai da barra', () => {
+    expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'mine')).toEqual({ priority: 'p1,p2', mine: 'true', category: OPEN_TASK_CATEGORIES })
     expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'all')).toEqual({ priority: 'p1,p2', category: OPEN_TASK_CATEGORIES })
+  })
+
+  it('Com projeto · Sem projeto (§45): kind só quando escolhido', () => {
+    expect(scopedTaskFilters({}, 'all', 'demand')).toEqual({ kind: 'demand', category: OPEN_TASK_CATEGORIES })
+    expect(scopedTaskFilters({}, 'mine', 'project')).toEqual({ mine: 'true', kind: 'project', category: OPEN_TASK_CATEGORIES })
+    expect(scopedTaskFilters({}, 'all', 'all')).toEqual({ category: OPEN_TASK_CATEGORIES })
+    expect(scopeCountFilters('mine', 'demand')).toEqual({ mine: 'true', kind: 'demand', category: OPEN_TASK_CATEGORIES })
   })
 
   it('só as abertas, a menos que o Status diga outra coisa (aí vale o status escolhido, aberto ou encerrado)', () => {
@@ -65,7 +72,7 @@ describe('domain/tasks — Lista de tarefas do menu (§44)', () => {
   })
 
   it('contagens: abertas em cada escopo, sem os filtros da barra', () => {
-    expect(scopeCountFilters('mine')).toEqual({ assignee: 'me', category: OPEN_TASK_CATEGORIES })
+    expect(scopeCountFilters('mine')).toEqual({ mine: 'true', category: OPEN_TASK_CATEGORIES })
     expect(scopeCountFilters('all')).toEqual({ category: OPEN_TASK_CATEGORIES })
   })
 

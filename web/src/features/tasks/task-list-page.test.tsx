@@ -58,9 +58,9 @@ const other = task({ id: 'k2', code: 'ADP-1', title: 'Unir la base de clientes',
 /** As contagens pedem uma linha só (perPage 1); a tabela, a página. */
 function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'projects.view'] as Parameters<typeof makeCurrentUser>[0]) {
   const list = vi.fn<TaskRepository['list']>((query) => {
-    const total = query.filters.assignee === 'me' ? 3 : 12
+    const total = query.filters.mine === 'true' ? 3 : 12
     if (query.perPage === 1) return Promise.resolve({ items: [], page: 1, perPage: 1, total, totalPages: total })
-    const items = query.filters.assignee === 'me' ? [mine] : [mine, other]
+    const items = query.filters.mine === 'true' ? [mine] : [mine, other]
     return Promise.resolve({ items, page: 1, perPage: 20, total: items.length, totalPages: 1 })
   })
   renderRoutes([{ path: '/tasks', element: <TasksPage /> }], {
@@ -78,7 +78,7 @@ function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'proje
 }
 
 describe('Lista de tarefas do menu (§44)', () => {
-  it('abre em "Minhas tarefas": pede assignee_id=me, só as abertas, pelo prazo; mostra quantas abertas há em cada escopo', async () => {
+  it('abre em "Minhas tarefas": pede mine=true (atribuídas e demandas pedidas ou recebidas, §45), só as abertas, pelo prazo; mostra quantas abertas há em cada escopo', async () => {
     const { tableCalls } = setup()
     expect(await screen.findByRole('heading', { name: 'Tarefas' })).toBeInTheDocument()
     expect(screen.getByText(i18n.t('taskList.subtitle'))).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('Lista de tarefas do menu (§44)', () => {
     expect(within(scope).getByRole('radio', { name: /Ver todas/ })).toHaveTextContent('Ver todas12')
     await screen.findByText(mine.title)
     const [query, options] = tableCalls().at(-1)!
-    expect(query.filters).toEqual({ assignee: 'me', category: OPEN_TASK_CATEGORIES })
+    expect(query.filters).toEqual({ mine: 'true', category: OPEN_TASK_CATEGORIES })
     expect(query.sort).toEqual({ id: 'due_date', direction: 'asc' })
     // sem "Minhas tarefas primeiro": o escopo substitui
     expect(options).toEqual({})
@@ -125,7 +125,7 @@ describe('Lista de tarefas do menu (§44)', () => {
     const priority = screen.getByRole('group', { name: 'Prioridade' })
     await userEvent.click(within(priority).getByRole('button', { name: 'Alta' }))
     await userEvent.click(within(screen.getByRole('group', { name: 'Urgência' })).getByRole('button', { name: 'Sem urgência' }))
-    await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ priority: 'p1', urgency: 'none', assignee: 'me', category: OPEN_TASK_CATEGORIES }))
+    await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ priority: 'p1', urgency: 'none', mine: 'true', category: OPEN_TASK_CATEGORIES }))
   })
 
   it('escolher um Status mostra esse status (inclusive encerrado): sai o "só abertas"', async () => {
@@ -133,14 +133,14 @@ describe('Lista de tarefas do menu (§44)', () => {
     await screen.findByText(mine.title)
     await userEvent.click(screen.getByRole('combobox', { name: 'Status' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Concluído' }))
-    await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ status: 's9', assignee: 'me' }))
+    await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ status: 's9', mine: 'true' }))
   })
 
   it('um Responsável (ou Área) guardado no navegador não filtra escondido', async () => {
     window.localStorage.setItem('kamban.table.task-list', JSON.stringify({ filters: { assignee: 'u9', area: 'a1', urgency: 'high' } }))
     const { tableCalls } = setup()
     await screen.findByText(mine.title)
-    tableCalls().forEach(([query]) => expect(query.filters).toEqual({ urgency: 'high', assignee: 'me', category: OPEN_TASK_CATEGORIES }))
+    tableCalls().forEach(([query]) => expect(query.filters).toEqual({ urgency: 'high', mine: 'true', category: OPEN_TASK_CATEGORIES }))
     await waitFor(() => expect(JSON.parse(window.localStorage.getItem('kamban.table.task-list') ?? '{}').filters).toEqual({ urgency: 'high' }))
   })
 })

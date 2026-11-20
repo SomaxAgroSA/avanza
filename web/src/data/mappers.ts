@@ -37,6 +37,8 @@ import { toIcon } from '@/domain/icons'
 import type { AreaRefDto, AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { isUrgency } from '@/domain/urgency'
+import { DEMAND_ACTIONS, DEMAND_BOXES, DEMAND_STATUSES, isDemandStatus, type DemandActions, type DemandInfo, type DemandOverview } from '@/domain/demands'
+import type { DemandDto, DemandOverviewDto } from './dtos'
 import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
 import { CHARTER_SECTIONS, FEATURE_STATES, MEASURE_FREQUENCIES, OBJECTIVE_STATES, RESULT_SITUATIONS, type CharterItem, type CharterMeasurement, type ProjectBrief, type ProjectCharter } from '@/domain/charter'
 import { SPRINT_STATES, type Sprint } from '@/domain/sprints'
@@ -297,6 +299,36 @@ export function toReportTask(dto: ReportTaskDto): ReportTask {
   return { ...toTaskSummary(dto), metricHours: dto.metric_hours ?? null }
 }
 
+/** Demanda interna (§45) da tarefa; passo desconhecido vira "Sem atribuir". */
+export function toDemandInfo(dto: DemandDto | null | undefined): DemandInfo | null {
+  if (!dto) return null
+  const actions = dto.actions
+    ? (Object.fromEntries(DEMAND_ACTIONS.map((action) => [action, !!dto.actions?.[action]])) as DemandActions)
+    : undefined
+  return {
+    status: isDemandStatus(dto.status) ? dto.status : 'unassigned',
+    owner: dto.owner ? toUserSummary(dto.owner) : null,
+    dueAt: toDate(dto.due_at),
+    openedAt: toDate(dto.opened_at),
+    ...(actions ? { actions } : {}),
+  }
+}
+
+export function toDemandOverview(dto: DemandOverviewDto): DemandOverview {
+  const counts = {} as DemandOverview['counts']
+  DEMAND_BOXES.forEach((box) => {
+    const raw = dto.counts?.[box] ?? {}
+    counts[box] = { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 }
+    DEMAND_STATUSES.forEach((status) => {
+      counts[box][status] = Number(raw[status] ?? 0)
+    })
+  })
+  return {
+    counts,
+    team: (dto.team ?? []).map((member) => ({ user: toUserSummary(member.user), openCount: member.open_count, estimatedHours: member.estimated_hours })),
+  }
+}
+
 export function toTaskSummary(dto: TaskDto): TaskSummary {
   return {
     id: dto.id,
@@ -335,6 +367,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     itVisible: !!dto.it_visible,
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
+    demand: toDemandInfo(dto.demand),
   }
 }
 
@@ -378,7 +411,7 @@ export function toNotification(dto: NotificationDto): AppNotification {
     task: dto.task ?? null,
     planItem: dto.plan_item ? { id: dto.plan_item.id, projectId: dto.plan_item.project_id ?? '', name: dto.plan_item.name, projectName: dto.plan_item.project_name } : null,
     actor: dto.actor ? toUserSummary(dto.actor) : null,
-    data: { comment: text('comment') ?? text('update'), status: text('status'), due_date: text('due_date') },
+    data: { comment: text('comment') ?? text('update'), status: text('status'), due_date: text('due_date'), assignee: text('assignee') },
     read: !!dto.read,
     createdAt: toDate(dto.created_at),
   }

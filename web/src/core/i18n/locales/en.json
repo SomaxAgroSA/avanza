@@ -4835,6 +4835,16 @@
       "returned": "returned it for changes",
       "edited": "edited: {{fields}}",
       "attached": "attached {{name}}"
+    },
+    "projectFlow": {
+      "owner": "Owner (receives and distributes)",
+      "ownerHint": "Optional. This person receives the task and assigns it to someone on their team, even if they are not in the project; status, assignee, deadline and estimate then follow their flow.",
+      "none": "Nobody (as usual)",
+      "locked": "With an owner who distributes, this changes through the flow (Assign, Start, Complete…)",
+      "title": "Receives and distributes",
+      "step": "Step",
+      "assignee": "Assigned to",
+      "deadline": "Deadline"
     }
   }
 }

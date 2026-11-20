@@ -186,6 +186,23 @@ export interface TaskDto {
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */
   area?: AreaRefDto | null
+  /** Demanda interna (§45); null/ausente = tarefa de projeto. */
+  demand?: DemandDto | null
+}
+
+/** Parte da demanda interna na tarefa (§45). */
+export interface DemandDto {
+  status: string
+  owner: UserSummaryDto | null
+  due_at: string | null
+  opened_at: string | null
+  /** Só no detalhe: o que quem consulta pode fazer. */
+  actions?: Record<string, boolean>
+}
+
+export interface DemandOverviewDto {
+  counts: Record<string, Record<string, number>>
+  team: Array<{ user: UserSummaryDto; open_count: number; estimated_hours: number }>
 }
 
 /** Área resumida que vem na tarefa e no projeto. */

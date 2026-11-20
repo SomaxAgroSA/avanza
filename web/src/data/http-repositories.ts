@@ -57,6 +57,8 @@ import { fromProjectFilterSettings, toProjectFilterSettings } from './mappers'
 import { projectFilterKey } from '@/domain/project-filter'
 import type { PreferenceRepository } from '@/domain/repositories'
 import { toArea, toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
+import { toDemandOverview } from './mappers'
+import type { DemandOverviewDto } from './dtos'
 import type {
   AttachmentRepository,
   ProjectFileRepository,
@@ -80,6 +82,7 @@ import type {
   LookupInput,
   LookupRepository,
   TaskRepository,
+  DemandRepository,
   TaskTypeInput,
   TaskTypeRepository,
 } from '@/domain/repositories'
@@ -612,6 +615,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     priorities: createHttpLookupRepository(api, '/priorities', toPriority),
     areas: createHttpLookupRepository(api, '/areas', toArea),
     tasks: createHttpTaskRepository(api),
+    demands: createHttpDemandRepository(api),
     tags: createHttpTagRepository(api),
     icons: createHttpIconLibraryRepository(api),
     comments: createHttpCommentRepository(api),
@@ -640,6 +644,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
 function taskBody(data: TaskInput) {
   return {
     project_id: data.projectId,
+    demand_owner_id: data.demandOwnerId,
     task_type_id: data.taskTypeId,
     title: data.title,
     description: data.description,
@@ -1348,6 +1353,61 @@ const TASK_FILTERS: Record<string, string> = {
   in_report: 'in_report',
   it_visible: 'it_visible',
   urgency: 'urgency',
+  // Lista de tarefas do menu (§45): "Minhas" (atribuídas + demandas pedidas ou recebidas) e Com/Sem projeto
+  mine: 'mine',
+  kind: 'kind',
+}
+
+/** Demandas internas (§45): caixas, números, equipe e as ações do fluxo. */
+export function createHttpDemandRepository(api: ApiClient): DemandRepository {
+  const path = (id: string) => `/demands/${encodeURIComponent(id)}`
+  return {
+    async list(box, options) {
+      const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/demands', {
+        query: { box, status: options?.statuses?.length ? options.statuses.join(',') : undefined, perPage: 100 },
+      })
+      return { items: data.map(toTaskSummary), ...meta }
+    },
+    async create(data) {
+      const body = {
+        task_type_id: data.taskTypeId,
+        title: data.title,
+        description: data.description,
+        demand_owner_id: data.ownerId,
+        area_id: data.areaId,
+        priority_id: data.priorityId,
+      }
+      return toTaskDetail((await api.post<TaskDetailDto>('/demands', body)).data)
+    },
+    async overview() {
+      return toDemandOverview((await api.get<DemandOverviewDto>('/demands/overview')).data)
+    },
+    async owners(search) {
+      return (await api.get<UserSummaryDto[]>('/demands/owners', { query: { search: search?.trim() || undefined } })).data.map(toUserSummary)
+    },
+    async team(id) {
+      return (await api.get<UserSummaryDto[]>(`${path(id)}/team`)).data.map(toUserSummary)
+    },
+    async assign(id, input) {
+      const body = { assignee_id: input.assigneeId, due_at: input.dueAt, estimated_hours: input.estimatedHours }
+      return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/assign`, body)).data)
+    },
+    async start(id) {
+      return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/start`)).data)
+    },
+    async pass(id, input) {
+      return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/pass`, { assignee_id: input.assigneeId, comment: input.comment })).data)
+    },
+    async conclude(id, comment) {
+      return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/conclude`, { comment })).data)
+    },
+    async validate(id) {
+      return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/validate`)).data)
+    },
+    async returnDemand(id, comment) {
+      return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/return`, { comment })).data)
+    },
+  }
 }
 
 export function createHttpTaskRepository(api: ApiClient): TaskRepository {

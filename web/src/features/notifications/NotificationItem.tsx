@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import { AtSign, BellRing, CalendarClock, CircleDot, MessageSquare, Reply, UserCheck, type LucideIcon } from 'lucide-react'
+import { AtSign, BellRing, CalendarClock, CircleCheckBig, CircleDot, ClipboardCheck, Inbox, MessageSquare, Repeat, Reply, Undo2, UserCheck, type LucideIcon } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatDateTime, formatDay, formatRelative } from '@/core/utils/format'
 import { notificationLink, type AppNotification, type NotificationType } from '@/domain/notifications'
@@ -16,6 +16,11 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   overdue: BellRing,
   plan_mention: AtSign,
   plan_reply: Reply,
+  demand_received: Inbox,
+  demand_passed: Repeat,
+  demand_concluded: ClipboardCheck,
+  demand_validated: CircleCheckBig,
+  demand_returned: Undo2,
 }
 
 /** Linha de notificação: quem, o quê, em qual tarefa e quando. Clicar abre a tarefa e marca como lida. */
@@ -28,7 +33,13 @@ export function NotificationItem({ notification, onOpen }: { notification: AppNo
   const actor = notification.actor?.name ?? t('notifications.system')
 
   const detail =
-    notification.type === 'mention' || notification.type === 'comment' || notification.type === 'plan_mention' || notification.type === 'plan_reply'
+    notification.type === 'mention' ||
+    notification.type === 'comment' ||
+    notification.type === 'plan_mention' ||
+    notification.type === 'plan_reply' ||
+    notification.type === 'demand_passed' ||
+    notification.type === 'demand_concluded' ||
+    notification.type === 'demand_returned'
       ? notification.data.comment
       : notification.type === 'status_changed'
         ? t('notifications.newStatus', { status: notification.data.status ?? '' })
@@ -68,7 +79,7 @@ export function NotificationItem({ notification, onOpen }: { notification: AppNo
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm text-fg">
-          {t(`notifications.types.${notification.type}`, { actor, code: notification.task?.code ?? '', name: notification.planItem?.name ?? '' })}
+          {t(`notifications.types.${notification.type}`, { actor, code: notification.task?.code ?? '', name: notification.planItem?.name ?? '', assignee: notification.data.assignee ?? '' })}
         </span>
         <span className="block truncate text-xs text-muted">{notification.task ? notification.task.title : t('notifications.planItemIn', { project: notification.planItem?.projectName ?? '' })}</span>
         {detail && <span className="mt-0.5 line-clamp-2 block text-xs text-subtle">{detail}</span>}

@@ -104,6 +104,9 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
       ['projeto — membros', `/projects/${p}/members`],
       ['projeto — histórico', `/projects/${p}/history`],
       ['tarefas', '/tasks'],
+      // demandas internas (§45): as três caixas
+      ['demandas — recebidas', '/tasks/demands'],
+      ['demandas — pedidas', '/tasks/demands?box=requested'],
       ['tarefa', `/tasks/${a.id}`],
       ['tarefa — comentários', `/tasks/${a.id}?tab=comments`],
       ['tarefa — relações', `/tasks/${a.id}?tab=relations`],
@@ -180,12 +183,15 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
         await check(page, label)
       }
 
-      // sobreposições: formulário de nova tarefa e paleta de comandos
+      // sobreposições: formulário de nova tarefa (de projeto e demanda interna, §45) e paleta de comandos
       await page.goto(`${app.baseUrl}/tasks`)
       await settle(page)
-      await page.getByRole('button', { name: 'Nova tarefa' }).first().click()
+      await page.getByRole('button', { name: 'Tarefa de projeto' }).first().click()
       await page.getByRole('dialog').waitFor()
       await check(page, 'formulário de tarefa')
+      await page.getByRole('dialog').getByRole('button', { name: 'Demanda interna' }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Criar demanda' }).waitFor()
+      await check(page, 'formulário de demanda interna')
       await page.keyboard.press('Escape')
       await page.keyboard.press('Control+k')
       await page.getByRole('dialog').waitFor()

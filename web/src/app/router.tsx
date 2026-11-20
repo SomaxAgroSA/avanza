@@ -119,7 +119,11 @@ export const routes: RouteObject[] = [
           // Lista de tarefas do menu (§44): também a página, não só o item do menu; a tarefa aberta por link segue com tasks.view
           {
             element: <PermissionGate permission="tasks.list" />,
-            children: [{ path: 'tasks', ...page(() => import('@/features/tasks/TasksPage').then((m) => ({ default: m.TasksPage }))) }],
+            children: [
+              { path: 'tasks', ...page(() => import('@/features/tasks/TasksPage').then((m) => ({ default: m.TasksPage }))) },
+              // demandas internas (§45): Recebidas por mim, Atribuídas a mim e Pedidas por mim
+              { path: 'tasks/demands', ...page(() => import('@/features/demands/DemandsPage').then((m) => ({ default: m.DemandsPage }))) },
+            ],
           },
           { path: 'tasks/:taskId', ...page(() => import('@/features/tasks/TaskDetailPage').then((m) => ({ default: m.TaskDetailPage }))) },
         ],

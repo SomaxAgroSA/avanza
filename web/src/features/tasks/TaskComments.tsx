@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MessageSquare, Paperclip, Pencil, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
@@ -23,8 +23,19 @@ import { DeleteAttachmentDialog } from './TaskAttachments'
 import { useAttachmentUploader } from './use-attachment-uploader'
 import { usePendingFiles } from './use-pending-files'
 
-/** Comentários da tarefa com menções (@) e anexos — qualquer pessoa com acesso ao projeto comenta. */
-export function TaskComments({ task }: { task: TaskDetail }) {
+/** Evento do histórico intercalado com os comentários (linha do tempo da demanda interna, §45). */
+export interface TimelineEvent {
+  id: string
+  at: Date | null
+  node: ReactNode
+}
+
+/**
+ * Comentários da tarefa com menções (@) e anexos — qualquer pessoa com acesso ao projeto comenta.
+ * Com `events` (linha do tempo da demanda, §45): os eventos do histórico entram entre os comentários,
+ * do mais antigo ao mais novo, e o campo de comentar fica no fim.
+ */
+export function TaskComments({ task, events }: { task: TaskDetail; events?: TimelineEvent[] }) {
   const { t } = useTranslation()
   const comments = useTaskComments(task.id)
   const candidates = useMentionCandidates(task.id, task.capabilities.comment)
@@ -36,36 +47,49 @@ export function TaskComments({ task }: { task: TaskDetail }) {
   const errorMessage = useErrorMessage()
   const people: MentionPerson[] = (candidates.data ?? []).map((u) => ({ id: u.id, name: u.name }))
 
+  const editor = task.capabilities.comment ? (
+    <CommentEditor taskId={task.id} people={people} />
+  ) : (
+    <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">{t('comments.readOnly')}</p>
+  )
+  const renderComment = (comment: TaskComment) =>
+    editingId === comment.id ? (
+      <CommentEditor taskId={task.id} people={people} comment={comment} onDone={() => setEditingId(null)} />
+    ) : (
+      <CommentItem comment={comment} onEdit={() => setEditingId(comment.id)} onDelete={() => setDeleting(comment)} onDeleteAttachment={setDeletingFile} />
+    )
+  // linha do tempo: comentários e eventos juntos, do mais antigo ao mais novo
+  const timeline = events
+    ? [
+        ...(comments.data ?? []).map((comment) => ({ key: `c:${comment.id}`, at: comment.createdAt, node: renderComment(comment) })),
+        ...events.map((event) => ({ key: `e:${event.id}`, at: event.at, node: event.node })),
+      ].sort((a, b) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0))
+    : null
+
   return (
     <div className="flex flex-col gap-5">
-      {task.capabilities.comment ? (
-        <CommentEditor taskId={task.id} people={people} />
-      ) : (
-        <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">{t('comments.readOnly')}</p>
-      )}
+      {!timeline && editor}
 
       {comments.isPending ? (
         <AppSkeleton className="h-24" />
+      ) : timeline ? (
+        timeline.length > 0 && (
+          <ol className="flex flex-col gap-4" aria-label={t('comments.title')}>
+            {timeline.map((item) => (
+              <li key={item.key}>{item.node}</li>
+            ))}
+          </ol>
+        )
       ) : (comments.data ?? []).length === 0 ? (
         <AppEmptyState compact icon={<MessageSquare />} title={t('comments.empty')} description={t('comments.emptyHint')} />
       ) : (
         <ol className="flex flex-col gap-4" aria-label={t('comments.title')}>
           {[...(comments.data ?? [])].reverse().map((comment) => (
-            <li key={comment.id}>
-              {editingId === comment.id ? (
-                <CommentEditor taskId={task.id} people={people} comment={comment} onDone={() => setEditingId(null)} />
-              ) : (
-                <CommentItem
-                  comment={comment}
-                  onEdit={() => setEditingId(comment.id)}
-                  onDelete={() => setDeleting(comment)}
-                  onDeleteAttachment={setDeletingFile}
-                />
-              )}
-            </li>
+            <li key={comment.id}>{renderComment(comment)}</li>
           ))}
         </ol>
       )}
+      {timeline && editor}
 
       <AppConfirmDialog
         open={!!deleting}

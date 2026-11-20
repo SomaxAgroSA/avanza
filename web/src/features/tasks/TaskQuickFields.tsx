@@ -75,7 +75,8 @@ export function TaskQuickFields({ task, className }: { task: TaskDetail; classNa
         size="sm"
         label={t('tasks.fields.status')}
         value={task.status?.id}
-        disabled={!task.capabilities.edit || update.isPending}
+        // com quem recebe e distribui (§45), o status muda pelo fluxo
+        disabled={!task.capabilities.edit || !!task.demand || update.isPending}
         onValueChange={(statusId) => quickChange({ statusId }, { statusId: task.status?.id })}
         options={withCurrent<LookupOption>(statusChoices(statuses.data ?? [], task.status?.id), task.status).map((s) => ({ value: s.id, label: <LookupBadge item={s} /> }))}
       />
@@ -91,7 +92,7 @@ export function TaskQuickFields({ task, className }: { task: TaskDetail; classNa
         size="sm"
         label={t('tasks.fields.assignee')}
         value={task.assignee?.id ?? NONE}
-        disabled={!task.capabilities.assign || update.isPending}
+        disabled={!task.capabilities.assign || !!task.demand || update.isPending}
         onValueChange={(value) => quickChange({ assigneeId: value === NONE ? null : value }, { assigneeId: task.assignee?.id ?? null })}
         options={[
           { value: NONE, label: t('tasks.unassigned') },

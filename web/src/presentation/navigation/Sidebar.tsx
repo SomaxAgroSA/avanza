@@ -122,9 +122,23 @@ export interface SidebarProps {
   /** Fecha o menu móvel ao navegar. */
   onNavigate?: () => void
   showCollapseToggle?: boolean
+  /** Selo com um número ao lado do item (ex.: Tarefas = demandas recebidas sem atribuir, §45): { id do item: { count, label } }. */
+  badges?: Partial<Record<string, { count: number; label: string }>>
 }
 
-export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = true }: SidebarProps) {
+/** Selo de contagem do item do menu (some com zero); recolhido, vira um ponto sobre o ícone. */
+function NavCount({ badge, collapsed }: { badge?: { count: number; label: string }; collapsed: boolean }) {
+  if (!badge || badge.count <= 0) return null
+  if (collapsed) return <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" aria-label={badge.label} role="img" />
+  return (
+    <span className="ml-auto rounded-full bg-primary px-1.5 text-[11px] leading-[18px] font-semibold tabular-nums text-primary-fg" title={badge.label} data-testid="nav-count">
+      <span aria-hidden>{badge.count}</span>
+      <span className="sr-only">{badge.label}</span>
+    </span>
+  )
+}
+
+export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = true, badges }: SidebarProps) {
   const { t } = useTranslation()
   const toggleSidebar = useUiStore((s) => s.toggleSidebar)
 
@@ -143,9 +157,10 @@ export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = tru
                   <NavGroup item={item} collapsed={collapsed} onNavigate={onNavigate} />
                 ) : collapsed ? (
                   <AppTooltip content={t(item.labelKey)} side="right">
-                    <NavLink to={item.to} onClick={onNavigate} className={cn(linkBase, 'justify-center px-0')}>
+                    <NavLink to={item.to} onClick={onNavigate} className={cn(linkBase, 'relative justify-center px-0')}>
                       {Icon && <Icon className="size-[18px]" aria-hidden />}
                       <span className="sr-only">{t(item.labelKey)}</span>
+                      <NavCount badge={badges?.[item.id]} collapsed />
                     </NavLink>
                   </AppTooltip>
                 ) : (
@@ -153,6 +168,7 @@ export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = tru
                     {Icon && <Icon className="size-[18px]" aria-hidden />}
                     <span className="truncate">{t(item.labelKey)}</span>
                     <PhaseBadge phase={item.phase} />
+                    <NavCount badge={badges?.[item.id]} collapsed={false} />
                   </NavLink>
                 )}
               </li>
