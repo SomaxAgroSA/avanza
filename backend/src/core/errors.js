@@ -101,6 +101,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   AREA_IN_USE: { status: 409, message: 'Area is used by tasks or projects' },
   TAG_NAME_IN_USE: { status: 409, message: 'Tag name already in use' },
   TRANSITION_NOT_ALLOWED: { status: 409, message: 'This status change is not allowed' },
+  DEMAND_STATE_CONFLICT: { status: 409, message: 'This action is not available at the current step of the demand' },
   RELATION_EXISTS: { status: 409, message: 'These tasks are already related this way' },
   RELATION_CYCLE: { status: 409, message: 'This relation would create a cycle' },
   NOT_IN_BACKLOG: { status: 409, message: 'The task is no longer in the backlog' },

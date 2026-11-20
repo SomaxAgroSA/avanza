@@ -223,6 +223,18 @@ describe('mcp/tools', () => {
     })
   })
 
+  it('list_tasks: demanda interna (§45) sai sem projeto e com o passo, o responsável e o prazo; kind filtra', async () => {
+    const summary = {
+      id: 't9', code: 'DEM-3', title: 'Vista DMR', project: null, type: { id: 'ty', name: 'Desenvolvimento' }, status: null, priority: null, assignee: null, tags: [],
+      demand: { status: 'unassigned', owner: { id: 'u5', name: 'César', email: 'c@x', avatar_url: null }, due_at: null, opened_at: '2026-11-20T12:00:00.000Z' },
+    }
+    const { calls, services } = spyServices({ 'tasks.listTasks': { items: [summary], meta: { page: 1, perPage: 20, total: 1, totalPages: 1 } } })
+    const out = await byName('list_tasks').run({ kind: 'demand' }, { services, ctx })
+    assert.equal(calls[0].args[0].kind, 'demand')
+    assert.equal(out.items[0].project, null)
+    assert.deepEqual(out.items[0].demand, { status: 'unassigned', owner: { id: 'u5', name: 'César' }, due_at: null })
+  })
+
   it('update_task e move_task: o id vai no caminho, o resto vira o corpo', async () => {
     const { calls, services } = spyServices()
     await byName('update_task').run({ task_id: 't1', title: 'Novo', due_date: null, urgency: null }, { services, ctx })

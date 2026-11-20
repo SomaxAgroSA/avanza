@@ -414,7 +414,8 @@ function createFakeRepositories(store) {
   const FACET_VALUE = { status: (p) => p.status, priority: (p) => p.priority, urgency: (p) => p.urgency || 'none' }
   const filterProjects = (query, skip) => {
     const memberOf = (p) => store.projectMembers.some((m) => m.projectId === p.id && m.userId === query.scope.userId)
-    let items = store.projects.filter((p) => (query.view === 'mine' || !query.scope.viewAll ? memberOf(p) : true))
+    // projeto de sistema (caixa das demandas, §45) nunca entra na lista
+    let items = store.projects.filter((p) => !p.kind).filter((p) => (query.view === 'mine' || !query.scope.viewAll ? memberOf(p) : true))
     items = items.filter((p) => (query.view === 'archived' ? !!p.archivedAt : !p.archivedAt))
     const viewStatuses = { ongoing: ['planning', 'active', 'paused'], finished: ['completed', 'cancelled'] }[query.view]
     if (viewStatuses) items = items.filter((p) => viewStatuses.includes(p.status))
@@ -475,7 +476,17 @@ function createFakeRepositories(store) {
       })
     },
     findManyByIds: (ids) => store.projects.filter((p) => ids.includes(p.id)),
-    listAll: (query) => store.projects.filter((p) => !(query && query.ids) || query.ids.includes(p.id)).slice().sort((x, y) => (x.key > y.key ? 1 : -1)),
+    listAll: (query) => store.projects.filter((p) => !p.kind && (!(query && query.ids) || query.ids.includes(p.id))).slice().sort((x, y) => (x.key > y.key ? 1 : -1)),
+    findSystem: (kind) => store.projects.find((p) => p.kind === kind) || null,
+    ensureSystem: (kind, data) => {
+      const found = store.projects.find((p) => p.kind === kind)
+      if (found) return found
+      const key = data.keys.find((k) => !store.projects.some((p) => p.key === k))
+      if (!key) return null
+      const project = { id: nextId('sys_'), name: data.name, key, kind, ownerId: null, status: 'active', priority: 'medium', icon: data.icon || '', cover: data.cover || '', archivedAt: null, createdAt: new Date(), updatedAt: new Date() }
+      store.projects.push(project)
+      return project
+    },
     countChildren: (ids) => {
       const counts = {}
       store.projects
@@ -488,7 +499,7 @@ function createFakeRepositories(store) {
     /** Abertos que a pessoa enxerga (dono, membro ou viewAll), pela chave; `ids` restringe. */
     listVisible: (query) =>
       store.projects
-        .filter((p) => !p.archivedAt)
+        .filter((p) => !p.archivedAt && !p.kind)
         .filter((p) => query.viewAll || p.ownerId === query.userId || store.projectMembers.some((m) => m.projectId === p.id && m.userId === query.userId))
         .filter((p) => !query.ids || query.ids.includes(p.id))
         .slice()
@@ -623,6 +634,8 @@ function createFakeRepositories(store) {
         .sort((x, y) => y.updatedAt - x.updatedAt),
     listForReport: (query) =>
       store.tasks
+        // demandas internas (§45) ficam fora dos relatórios
+        .filter((t) => !t.demandStatus)
         .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
@@ -673,9 +686,50 @@ function createFakeRepositories(store) {
     },
     listForReminders: (query) =>
       store.tasks.filter((t) => t.dueDate && t.dueDate < query.before && t.assigneeId && query.statusIds.includes(t.statusId)),
+    demandCounts: (userId) => {
+      const out = { received: {}, assigned: {}, requested: {} }
+      const add = (box, t) => {
+        out[box][t.demandStatus] = (out[box][t.demandStatus] || 0) + 1
+      }
+      store.tasks
+        .filter((t) => t.demandStatus)
+        .forEach((t) => {
+          if (t.demandOwnerId === userId) add('received', t)
+          if (t.assigneeId === userId) add('assigned', t)
+          if (t.reporterId === userId) add('requested', t)
+        })
+      return out
+    },
+    demandLoad: (userIds, statuses) => {
+      const out = {}
+      store.tasks
+        .filter((t) => statuses.includes(t.demandStatus) && userIds.includes(t.assigneeId))
+        .forEach((t) => {
+          const entry = out[t.assigneeId] || { open: 0, hours: 0 }
+          entry.open += 1
+          entry.hours += t.estimatedHours || 0
+          out[t.assigneeId] = entry
+        })
+      return out
+    },
+    demandAssignees: (ownerId, statuses) =>
+      [...new Set(store.tasks.filter((t) => statuses.includes(t.demandStatus) && t.demandOwnerId === ownerId && t.assigneeId).map((t) => t.assigneeId))].sort(),
     list: (query) => {
-      const visible = (t) => query.scope.viewAll || seesTask(t, query.scope.userId)
+      const me = query.scope.userId
+      // demandas internas (§45): quem pediu, responsável, quem executa (agora ou antes) e a área do responsável
+      const seesDemand = (t) =>
+        !!t.demandStatus &&
+        (t.reporterId === me || t.demandOwnerId === me || t.assigneeId === me || (t.demandPastAssignees || []).includes(me) || (query.scope.areaMates || []).includes(t.demandOwnerId))
+      const visible = (t) => query.scope.viewAll || seesTask(t, me) || seesDemand(t)
       let items = store.tasks.filter(visible)
+      if (query.kind === 'project') items = items.filter((t) => !t.demandStatus)
+      if (query.kind === 'demand') items = items.filter((t) => !!t.demandStatus)
+      if (query.mineId) items = items.filter((t) => t.assigneeId === query.mineId || (!!t.demandStatus && (t.reporterId === query.mineId || t.demandOwnerId === query.mineId)))
+      if (query.demandBox) {
+        const field = { received: 'demandOwnerId', assigned: 'assigneeId', requested: 'reporterId' }[query.demandBox.box]
+        items = items.filter((t) => !!t.demandStatus && t[field] === query.demandBox.userId)
+      }
+      if (query.demandStatuses) items = items.filter((t) => query.demandStatuses.includes(t.demandStatus))
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
       if (query.statusIds) items = items.filter((t) => query.statusIds.includes(t.statusId))

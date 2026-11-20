@@ -62,6 +62,8 @@ function listFilter(query, skip) {
     params.push(value)
     return `$${params.length}`
   }
+  // projeto de sistema (caixa das demandas internas, §45) nunca entra na lista de projetos
+  where.push(`"kind" = ''`)
   if (query.view === 'mine' || !query.scope.viewAll) {
     where.push(`id IN (SELECT project_id FROM project_members WHERE user_id = ${param(query.scope.userId)})`)
   }
@@ -104,6 +106,8 @@ function createProjectRepository(db) {
     // responsável pelo desenvolvimento (execução técnica; não dá permissão)
     devLeadId: ['dev_lead_id', 'relation'],
     createdBy: ['created_by', 'relation'],
+    // '' = projeto comum; 'demands' = caixa das demandas internas (§45)
+    kind: ['kind', 'text'],
     startDate: ['start_date', 'date'],
     dueDate: ['due_date', 'date'],
     archivedAt: ['archived_at', 'date'],
@@ -125,7 +129,8 @@ function createProjectRepository(db) {
       urgency: row.urgency || null,
       areaId: row.area_id || null,
       parentId: row.parent_id || null,
-      ownerId: row.owner_id,
+      ownerId: row.owner_id || null,
+      kind: row.kind || '',
       leadId: row.lead_id || null,
       devLeadId: row.dev_lead_id || null,
       createdBy: row.created_by || '',
@@ -162,7 +167,7 @@ function createProjectRepository(db) {
     return `ORDER BY ${parts.concat(['"id" ASC']).join(', ')}`
   }
 
-  return {
+  const repo = {
     async findById(id) {
       const row = await findRow(db, TABLE, id)
       return row ? toEntity(row) : null
@@ -204,9 +209,10 @@ function createProjectRepository(db) {
     /**
      * Projetos abertos (não arquivados) que a pessoa enxerga, pela chave: todos com `viewAll`; senão,
      * os que ela é dona ou membro (mesma regra de domain/project.js#resolveAccess). `ids` restringe.
+     * O projeto de sistema (§45) nunca entra.
      */
     async listVisible(query) {
-      const where = ['archived_at IS NULL']
+      const where = ['archived_at IS NULL', `"kind" = ''`]
       const params = []
       const param = (value) => {
         params.push(value)
@@ -221,11 +227,43 @@ function createProjectRepository(db) {
       return rows.map(toEntity)
     },
 
-    /** Todos os projetos, inclusive arquivados, pela chave (painel executivo); `ids` restringe. */
+    /**
+     * Todos os projetos, inclusive arquivados, pela chave (painel executivo, dependências, Equipo ahora,
+     * cores); `ids` restringe. O projeto de sistema (§45) nunca entra.
+     */
     async listAll(query) {
       const ids = query && query.ids
-      const rows = ids ? await db.query('SELECT * FROM projects WHERE id = ANY($1::text[]) ORDER BY "key" ASC, "id" ASC', [ids]) : await db.query('SELECT * FROM projects ORDER BY "key" ASC, "id" ASC')
+      const rows = ids
+        ? await db.query(`SELECT * FROM projects WHERE "kind" = '' AND id = ANY($1::text[]) ORDER BY "key" ASC, "id" ASC`, [ids])
+        : await db.query(`SELECT * FROM projects WHERE "kind" = '' ORDER BY "key" ASC, "id" ASC`)
       return rows.map(toEntity)
+    },
+
+    /** Projeto de sistema do tipo (`demands` = caixa das demandas internas, §45) ou null. */
+    async findSystem(kind) {
+      const row = await db.one('SELECT * FROM projects WHERE "kind" = $1', [kind])
+      return row ? toEntity(row) : null
+    },
+
+    /**
+     * Garante o projeto de sistema (a migration 0031 cria; uma importação que esvazia a tabela o apaga):
+     * a primeira chave livre de `data.keys`, sem dono. Concorrência: o índice único de `kind` (e o da
+     * chave) fazem o INSERT não gravar nada; quem perdeu lê o que o outro gravou.
+     */
+    async ensureSystem(kind, data) {
+      const found = await repo.findSystem(kind)
+      if (found) return found
+      for (const key of data.keys) {
+        const row = await db.one(
+          `INSERT INTO projects ("id", "name", "key", "kind", "description", "icon", "cover", "status", "priority", "owner_id", "created_by")
+           VALUES ($1, $2, $3, $4, '', $5, $6, 'active', 'medium', NULL, NULL) ON CONFLICT DO NOTHING RETURNING *`,
+          [newId(), data.name, key, kind, data.icon || '', data.cover || ''],
+        )
+        if (row) return toEntity(row)
+        const raced = await repo.findSystem(kind)
+        if (raced) return raced
+      }
+      return null
     },
 
     async create(data) {
@@ -257,6 +295,7 @@ function createProjectRepository(db) {
       return counts
     },
   }
+  return repo
 }
 
 function createProjectMemberRepository(db) {

@@ -504,6 +504,8 @@ function build() {
             { name: 'it_visible', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'marcada (true) ou não (false) como visível para o Responsável TI (§36)' },
             { name: 'urgency', in: 'query', schema: { type: 'string' }, description: 'urgência (semáforo): high, medium, low ou none (sem urgência); um ou vários separados por vírgula (§44)' },
             { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
+            { name: 'kind', in: 'query', schema: { type: 'string', enum: ['project', 'demand'] }, description: 'Com projeto (project) ou Sem projeto = demandas internas (demand) (§45); sem o filtro, as duas' },
+            { name: 'mine', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: '"Minhas tarefas": atribuídas a quem consulta e, nas demandas internas, também as que ela pediu ou recebeu como responsável (§45)' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
@@ -562,6 +564,115 @@ function build() {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({ type: 'object', required: ['area_id'], properties: { area_id: { type: ['string', 'null'], description: 'área ativa de /areas' } } }),
         }),
+      },
+      '/demands': {
+        get: op(
+          'Demandas internas de uma caixa (§45; tasks.view): box = received (recebidas por mim como responsável), assigned (atribuídas a mim) ou requested (pedidas por mim); status = passos separados por vírgula (unassigned, assigned, in_progress, to_validate, done). Mais recentes primeiro; até 100 por página. Cada item é um resumo de tarefa com project = null e demand = { status, owner, due_at, opened_at }',
+          ['demands'],
+          { 200: ok('Página de demandas', { type: 'array', items: ref('Task') }, true), 400: errorResponse('VALIDATION_ERROR') },
+          {
+            parameters: [
+              { name: 'box', in: 'query', required: true, schema: { type: 'string', enum: ['received', 'assigned', 'requested'] } },
+              { name: 'status', in: 'query', schema: { type: 'string' } },
+              { name: 'page', in: 'query', schema: { type: 'integer' } },
+              { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
+            ],
+          },
+        ),
+        post: op(
+          'Abre uma demanda interna, tarefa sem projeto (§45; tasks.create): nasce "Sem atribuir", numerada DEM-n, sem executor e sem prazo (o responsável define ao atribuir); a abertura é automática. O responsável recebe a notificação demand_received. Campos de fluxo (assignee_id, due_date, status_id…) enviados aqui são ignorados. Erros em fields: required, invalid_option (tipo, departamento ou prioridade inativos; responsável inexistente, inativo ou sem tasks.view)',
+          ['demands'],
+          { 201: ok('Criada', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN') },
+          {
+            parameters: [csrfHeader],
+            requestBody: jsonBody({
+              type: 'object',
+              required: ['task_type_id', 'title', 'demand_owner_id', 'area_id'],
+              properties: {
+                task_type_id: { type: 'string' },
+                title: { type: 'string', maxLength: 200 },
+                description: { type: 'string', maxLength: 50000, description: 'Markdown simples' },
+                demand_owner_id: { type: 'string', description: 'Responsável: qualquer pessoa ativa (GET /demands/owners); recebe e distribui à equipe dela' },
+                area_id: { type: 'string', description: 'Departamento que pede (área ativa de /areas)' },
+                priority_id: { type: 'string', description: 'sem ela, a prioridade padrão' },
+              },
+            }),
+          },
+        ),
+      },
+      '/demands/overview': {
+        get: op(
+          'Números da tela Demandas (§45): counts.received|assigned|requested = { unassigned, assigned, in_progress, to_validate, done } de quem consulta (o selo do menu Tarefas = received.unassigned) e team = carga da equipe [{ user, open_count, estimated_hours }] — as outras pessoas da área de quem consulta (Dependências por área) e quem executa as demandas que ela recebeu; conta atribuídas e em andamento',
+          ['demands'],
+          { 200: ok('Resumo', { type: 'object' }) },
+        ),
+      },
+      '/demands/owners': {
+        get: op('Responsáveis possíveis no formulário de demanda (tasks.create): pessoas ativas, até 50, pela busca em nome ou e-mail', ['demands'], { 200: ok('Pessoas', { type: 'array', items: ref('UserSummary') }) }, {
+          parameters: [{ name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } }],
+        }),
+      },
+      '/demands/{id}/team': {
+        get: op(
+          'Quem pode receber a demanda (diálogos Atribuir e Passar a…): o responsável vê a equipe dele (ele incluído); quem executa vê a mesma lista sem ele. Responsável fora de área: as pessoas ativas. Outros: FORBIDDEN',
+          ['demands'],
+          { 200: ok('Pessoas', { type: 'array', items: ref('UserSummary') }), 403: errorResponse('FORBIDDEN'), 404: errorResponse('TASK_NOT_FOUND') },
+          { parameters: [idParam] },
+        ),
+      },
+      '/demands/{id}/assign': {
+        post: op(
+          'O responsável atribui ou reatribui (Sem atribuir, Atribuída ou Em andamento): quem executa (equipe do responsável — fields.assignee_id = not_in_team fora dela), prazo com data e hora (due_at, obrigatório) e estimativa em horas (ausente mantém; null limpa). Trocar a pessoa volta para Atribuída; histórico task.demand_assigned/task.demand_reassigned; notificação assigned para quem recebe',
+          ['demands'],
+          { 200: ok('Demanda', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') },
+          {
+            parameters: [idParam, csrfHeader],
+            requestBody: jsonBody({
+              type: 'object',
+              required: ['assignee_id', 'due_at'],
+              properties: { assignee_id: { type: 'string' }, due_at: { type: 'string', format: 'date-time' }, estimated_hours: { type: ['number', 'null'], exclusiveMinimum: 0 } },
+            }),
+          },
+        ),
+      },
+      '/demands/{id}/start': {
+        post: op('Quem executa começa (Atribuída → Em andamento); histórico task.demand_started', ['demands'], { 200: ok('Demanda', ref('TaskDetail')), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') }, {
+          parameters: [idParam, csrfHeader],
+        }),
+      },
+      '/demands/{id}/pass': {
+        post: op(
+          'Quem executa passa a outra pessoa da equipe do responsável, com comentário obrigatório (comment): volta para Atribuída; quem passou continua vendo; avisa quem recebe (assigned) e o responsável (demand_passed); histórico task.demand_passed com a nota. fields.assignee_id: not_in_team, same_assignee',
+          ['demands'],
+          { 200: ok('Demanda', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') },
+          {
+            parameters: [idParam, csrfHeader],
+            requestBody: jsonBody({ type: 'object', required: ['assignee_id', 'comment'], properties: { assignee_id: { type: 'string' }, comment: { type: 'string', maxLength: 5000 } } }),
+          },
+        ),
+      },
+      '/demands/{id}/conclude': {
+        post: op(
+          'Quem executa conclui com o comentário do que foi entregue (obrigatório) → Para validar; avisa quem pediu e o responsável (demand_concluded); histórico task.demand_concluded',
+          ['demands'],
+          { 200: ok('Demanda', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') },
+          { parameters: [idParam, csrfHeader], requestBody: jsonBody({ type: 'object', required: ['comment'], properties: { comment: { type: 'string', maxLength: 5000 } } }) },
+        ),
+      },
+      '/demands/{id}/validate': {
+        post: op('Quem pediu valida a entrega (Para validar → Concluída); avisa quem executa e o responsável (demand_validated)', ['demands'], {
+          200: ok('Demanda', ref('TaskDetail')),
+          403: errorResponse('FORBIDDEN'),
+          409: errorResponse('DEMAND_STATE_CONFLICT'),
+        }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/demands/{id}/return': {
+        post: op(
+          'Quem pediu devolve com comentário obrigatório (Para validar → Em andamento); avisa quem executa e o responsável (demand_returned); histórico task.demand_returned',
+          ['demands'],
+          { 200: ok('Demanda', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') },
+          { parameters: [idParam, csrfHeader], requestBody: jsonBody({ type: 'object', required: ['comment'], properties: { comment: { type: 'string', maxLength: 5000 } } }) },
+        ),
       },
       '/tasks/{id}/history': {
         get: op('Histórico da tarefa com valores legíveis', ['tasks'], { 200: ok('Registros', { type: 'array', items: ref('AuditEntry') }, true) }, { parameters: [idParam] }),
@@ -1420,7 +1531,23 @@ function build() {
             code: { type: 'string', examples: ['CRM-12'] },
             number: { type: 'integer' },
             title: { type: 'string' },
-            project: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' } } },
+            project: { oneOf: [{ type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' } } }, { type: 'null' }], description: 'null na demanda interna (§45)' },
+            demand: {
+              oneOf: [
+                {
+                  type: 'object',
+                  description: 'demanda interna (§45); no detalhe, também actions = { assign, start, pass, conclude, validate, return } de quem consulta',
+                  properties: {
+                    status: { type: 'string', enum: ['unassigned', 'assigned', 'in_progress', 'to_validate', 'done'] },
+                    owner: { oneOf: [ref('UserSummary'), { type: 'null' }], description: 'Responsável (quem recebeu o pedido)' },
+                    due_at: { type: ['string', 'null'], format: 'date-time', description: 'prazo com data e hora (definido ao atribuir)' },
+                    opened_at: { type: 'string', format: 'date-time', description: 'abertura (automática)' },
+                    actions: { type: 'object', additionalProperties: { type: 'boolean' } },
+                  },
+                },
+                { type: 'null' },
+              ],
+            },
             type: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, icon: { type: 'string' }, color: { type: 'string' } } },
             status: ref('Status'),
             priority: ref('Priority'),

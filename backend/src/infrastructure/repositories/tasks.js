@@ -113,6 +113,10 @@ function createTaskRepository(db) {
       reportExcluded: !!row.report_excluded,
       itVisible: !!row.it_visible,
       urgency: row.urgency || null,
+      // demanda interna (§45): '' = tarefa de projeto
+      demandStatus: row.demand_status || '',
+      demandOwnerId: row.demand_owner_id || null,
+      demandPastAssignees: row.demand_past_assignees || [],
       position: row.position,
       createdAt: row.created,
       updatedAt: row.updated,
@@ -123,7 +127,8 @@ function createTaskRepository(db) {
   const CARD_COLUMNS = [
     'id', 'project_id', 'number', 'code', 'title', 'task_type_id', 'status_id', 'priority_id', 'creator_id', 'assignee_id',
     'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'area_id', 'start_date', 'due_date', 'started_at', 'completed_at',
-    'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'it_visible', 'urgency', 'position', 'created', 'updated',
+    'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'it_visible', 'urgency', 'demand_status', 'demand_owner_id', 'demand_past_assignees',
+    'position', 'created', 'updated',
   ]
     .map(ident)
     .join(', ')
@@ -145,6 +150,7 @@ function createTaskRepository(db) {
     sprintId: 'sprint_id',
     planItemId: 'plan_item_id',
     areaId: 'area_id',
+    demandOwnerId: 'demand_owner_id',
   }
   const DATES = { startDate: 'start_date', dueDate: 'due_date', startedAt: 'started_at', completedAt: 'completed_at' }
   const NUMBERS = { estimatedHours: 'estimated_hours', actualHours: 'actual_hours' }
@@ -164,6 +170,8 @@ function createTaskRepository(db) {
       else if (key === 'itVisible') values.it_visible = !!value
       // urgência vazia = '' (texto vazio, nunca NULL)
       else if (key === 'urgency') values.urgency = value || ''
+      else if (key === 'demandStatus') values.demand_status = value || ''
+      else if (key === 'demandPastAssignees') values.demand_past_assignees = (value || []).slice()
       else if (key === 'position') values.position = value
     })
     return values
@@ -189,7 +197,30 @@ function createTaskRepository(db) {
       params.push(value)
       return `$${params.length}`
     }
-    if (!query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), 'tasks.'))
+    if (!query.scope.viewAll) {
+      const user = param(query.scope.userId)
+      // demandas internas (§45): quem pediu, o responsável, quem executa (agora ou antes) e quem está na
+      // mesma área do responsável (`areaMates` = colegas de área de quem consulta, inclusive ela)
+      const mates = query.scope.areaMates && query.scope.areaMates.length ? ` OR tasks.demand_owner_id = ANY(${param(query.scope.areaMates)}::text[])` : ''
+      where.push(
+        `(${visibleTasksClause(user, 'tasks.')} OR (tasks.demand_status <> '' AND (tasks.reporter_id = ${user} OR tasks.demand_owner_id = ${user}` +
+          ` OR tasks.assignee_id = ${user} OR ${user}::text = ANY(tasks.demand_past_assignees)${mates})))`,
+      )
+    }
+    // Com projeto · Sem projeto (§45)
+    if (query.kind === 'project') where.push(`tasks.demand_status = ''`)
+    if (query.kind === 'demand') where.push(`tasks.demand_status <> ''`)
+    // "Minhas tarefas": as atribuídas a mim e, nas demandas, também as que pedi ou recebi
+    if (query.mineId) {
+      const me = param(query.mineId)
+      where.push(`(tasks.assignee_id = ${me} OR (tasks.demand_status <> '' AND (tasks.reporter_id = ${me} OR tasks.demand_owner_id = ${me})))`)
+    }
+    // caixas da tela Demandas: recebidas por mim, atribuídas a mim, pedidas por mim
+    if (query.demandBox) {
+      const column = { received: 'demand_owner_id', assigned: 'assignee_id', requested: 'reporter_id' }[query.demandBox.box]
+      where.push(`tasks.demand_status <> '' AND tasks.${column} = ${param(query.demandBox.userId)}`)
+    }
+    if (query.demandStatuses) where.push(`tasks.demand_status = ANY(${param(query.demandStatuses)}::text[])`)
     if (query.projectId) where.push(`tasks.project_id = ${param(query.projectId)}`)
     if (query.typeId) where.push(`tasks.task_type_id = ${param(query.typeId)}`)
     // prioridade e urgência: um valor ou vários (lista = "ou")
@@ -368,6 +399,8 @@ function createTaskRepository(db) {
         return `$${params.length}`
       }
       if (query.scope && !query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), ''))
+      // relatórios, dependências e painel executivo são de projetos: demandas internas (§45) ficam de fora
+      where.push(`demand_status = ''`)
       if (!query.includeArchived) where.push('project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)')
       if (query.projectId) where.push(`project_id = ${param(query.projectId)}`)
       if (query.projectIds) where.push(`project_id = ANY(${param(query.projectIds)}::text[])`)
@@ -393,6 +426,49 @@ function createTaskRepository(db) {
         dueDate: r.due_date,
         ...(query.withTitles ? { code: r.code, title: r.title } : {}),
       }))
+    },
+
+    /**
+     * Demandas internas (§45) por caixa e passo da pessoa: { received, assigned, requested } com
+     * { [demandStatus]: total } — recebidas (responsável), atribuídas (quem executa) e pedidas (quem pediu).
+     */
+    async demandCounts(userId) {
+      const rows = await db.query(
+        `SELECT 'received' AS box, demand_status, count(*)::int AS total FROM tasks WHERE demand_status <> '' AND demand_owner_id = $1 GROUP BY demand_status
+         UNION ALL SELECT 'assigned', demand_status, count(*)::int FROM tasks WHERE demand_status <> '' AND assignee_id = $1 GROUP BY demand_status
+         UNION ALL SELECT 'requested', demand_status, count(*)::int FROM tasks WHERE demand_status <> '' AND reporter_id = $1 GROUP BY demand_status`,
+        [userId],
+      )
+      const out = { received: {}, assigned: {}, requested: {} }
+      rows.forEach((row) => {
+        out[row.box][row.demand_status] = Number(row.total)
+      })
+      return out
+    },
+
+    /** Carga por pessoa (Carga da minha equipe, §45): { userId: { open, hours } } nas demandas dos passos indicados. */
+    async demandLoad(userIds, statuses) {
+      const out = {}
+      if (!userIds || userIds.length === 0 || !statuses || statuses.length === 0) return out
+      const rows = await db.query(
+        `SELECT assignee_id, count(*)::int AS open, COALESCE(sum(estimated_hours), 0)::float AS hours FROM tasks
+         WHERE demand_status = ANY($2::text[]) AND assignee_id = ANY($1::text[]) GROUP BY assignee_id`,
+        [userIds, statuses],
+      )
+      rows.forEach((row) => {
+        out[row.assignee_id] = { open: Number(row.open), hours: Number(row.hours) }
+      })
+      return out
+    },
+
+    /** Quem executa as demandas do responsável nos passos indicados (sem repetir). */
+    async demandAssignees(ownerId, statuses) {
+      if (!statuses || statuses.length === 0) return []
+      const rows = await db.query(
+        `SELECT DISTINCT assignee_id FROM tasks WHERE demand_status = ANY($2::text[]) AND demand_owner_id = $1 AND assignee_id IS NOT NULL ORDER BY assignee_id`,
+        [ownerId, statuses],
+      )
+      return rows.map((row) => row.assignee_id)
     },
 
     async listChildren(parentId) {

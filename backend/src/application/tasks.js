@@ -11,6 +11,9 @@
  * - Informe do projeto (§29), urgência (§31) e área responsável (§32): ligar/desligar a tarefa no
  *   informe e trocar a urgência ou a área têm casos de uso próprios, que não exigem os campos
  *   obrigatórios do status (um clique na lista).
+ * - Demanda interna (§45, application/demands.js): sai sem projeto (`project: null`) e com `demand` (passo,
+ *   responsável, prazo com hora, ações); a edição comum só muda título, descrição, tipo, prioridade,
+ *   departamento e urgência — status, executor, prazo e estimativa são do fluxo da demanda.
  * - Responsável TI (§33/§36): vê e atualiza só as tarefas atribuídas a ele ou marcadas "Visível para TI"
  *   (domain/task.js#scopedAccess); nelas, referências a módulos e tarefas que ele não vê (elemento da
  *   Gestão, tarefa pai ou de origem) saem vazias. Marcar "Visível para TI" é de quem edita a tarefa, não
@@ -29,11 +32,13 @@ const workflow = require('../domain/workflow')
 const sprintDomain = require('../domain/sprint')
 const relationDomain = require('../domain/relation')
 const planDomain = require('../domain/plan')
+const demandDomain = require('../domain/demand')
 const { buildAuditEntry, truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createCustomFieldService } = require('./custom-fields')
 const { createNotifier } = require('./notifications')
 const { createPlanSupport } = require('./plan-support')
+const { createTaskAccess } = require('./task-access')
 
 const MAX_HOURS = 100000
 const MAX_TAGS = 20
@@ -113,7 +118,18 @@ const LIST_SCHEMA = {
       typeof value === 'string' && value.split(',').every((c) => workflow.STATUS_CATEGORIES.indexOf(c.trim()) >= 0) ? null : 'invalid_option',
     ),
   ],
+  // Com projeto · Sem projeto (§45)
+  kind: [rules.oneOf(['project', 'demand'])],
+  // "Minhas tarefas" (§44/§45): atribuídas a mim e as demandas que pedi ou recebi
+  mine: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
 }
+
+/** Na demanda interna (§45), a edição comum só mexe nestes; o resto é do fluxo da demanda (ou não se aplica). */
+const DEMAND_EDITABLE = ['title', 'description', 'task_type_id', 'priority_id', 'area_id', 'urgency']
+const DEMAND_FLOW = [
+  'status_id', 'assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id',
+  'plan_item_id', 'plan_group_id', 'custom_values', 'tag_ids', 'checklist',
+]
 
 function invalid(fields) {
   return appError('VALIDATION_ERROR', undefined, { fields })
@@ -141,6 +157,7 @@ function createTaskService(deps) {
   const fieldService = createCustomFieldService(deps)
   const notifier = createNotifier(deps)
   const planSupport = createPlanSupport(deps)
+  const taskAccess = createTaskAccess(deps)
 
   // ---------------------------------------------------------------- apoio
 
@@ -156,12 +173,13 @@ function createTaskService(deps) {
     rbac.assertAuthenticated(ctx.principal)
     const task = id ? await tasks.findById(id) : null
     if (!task) throw appError('TASK_NOT_FOUND')
-    const found = await projectAccess(ctx.principal, task.projectId)
-    if (!found.project) throw appError('TASK_NOT_FOUND')
-    // Responsável TI: a tarefa visível a ele abre como colaborador daquela tarefa (§33)
-    const access = taskDomain.scopedAccess(found.access, task)
-    taskDomain.assertTaskAccess(access, found.project, 'view', task)
-    return { task, project: found.project, access }
+    const project = await deps.projectRepository.findById(task.projectId)
+    if (!project) throw appError('TASK_NOT_FOUND')
+    // Responsável TI: a tarefa visível a ele abre como colaborador daquela tarefa (§33); demanda interna:
+    // quem pediu, o responsável, quem executa e a equipe do responsável (§45)
+    const access = await taskAccess.forTask(ctx.principal, task, project)
+    taskDomain.assertTaskAccess(access, project, 'view', task)
+    return { task, project, access }
   }
 
   /** Campos configurados no tipo, com a definição completa (mesmo formato do formulário). */
@@ -348,7 +366,7 @@ function createTaskService(deps) {
     const userIds = (extraUserIds || []).slice()
     list.forEach((t) => {
       if (projectIds.indexOf(t.projectId) < 0) projectIds.push(t.projectId)
-      ;[t.creatorId, t.assigneeId, t.reporterId].forEach((id) => {
+      ;[t.creatorId, t.assigneeId, t.reporterId, t.demandOwnerId].forEach((id) => {
         if (id && userIds.indexOf(id) < 0) userIds.push(id)
       })
     })
@@ -411,12 +429,17 @@ function createTaskService(deps) {
     const area = task.areaId ? refs.areas[task.areaId] : null
     const sprint = task.sprintId ? refs.sprints[task.sprintId] : null
     const user = (id) => (id && refs.users[id] ? toUserSummary(refs.users[id]) : null)
+    const isDemand = demandDomain.isDemand(task)
     return {
       id: task.id,
       code: task.code,
       number: task.number,
       title: task.title,
-      project: project ? { id: project.id, key: project.key, name: project.name } : null,
+      // demanda interna (§45): sem projeto — a caixa de sistema não é projeto de ninguém
+      project: project && !isDemand ? { id: project.id, key: project.key, name: project.name } : null,
+      demand: isDemand
+        ? { status: task.demandStatus, owner: user(task.demandOwnerId), due_at: iso(task.dueDate), opened_at: iso(task.createdAt) }
+        : null,
       // nome do tipo no idioma da requisição (o histórico guarda o original)
       type: type ? { id: type.id, key: type.key, name: contentLocale.localize(type, deps.locale, ['name']).name, icon: type.icon || 'check-square', color: type.color || 'blue' } : null,
       status: status ? { id: status.id, key: status.key, name: status.name, color: status.color, category: status.category } : null,
@@ -461,6 +484,20 @@ function createTaskService(deps) {
 
   async function presentDetail(ctx, task, project, access) {
     const refs = Object.assign(await refsFor([task]), access.scoped ? { scoped: { [task.projectId]: true } } : {})
+    if (demandDomain.isDemand(task)) {
+      // demanda (§45): sem campos personalizados; com o que a pessoa pode fazer no fluxo
+      const summary = presentSummary(task, refs)
+      return Object.assign(summary, {
+        description: task.description || '',
+        custom_values: {},
+        checklist: task.checklist || [],
+        parent: null,
+        forked_from: null,
+        fields: [],
+        capabilities: taskDomain.taskCapabilities(access, project, task),
+        demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task) }),
+      })
+    }
     const links = await typeLinks(task.typeId)
     const saved = (await values.listByTasks([task.id]))[task.id] || {}
     const customValues = {}
@@ -612,6 +649,8 @@ function createTaskService(deps) {
         it_visible: pick('it_visible'),
         urgency: pick('urgency'),
         area_id: pick('area_id'),
+        kind: pick('kind'),
+        mine: pick('mine'),
       },
       LIST_SCHEMA,
     )
@@ -635,8 +674,12 @@ function createTaskService(deps) {
       search = { text: filters.search, fieldIds }
     }
 
+    const viewAll = rbac.can(ctx.principal, 'projects.view_all')
     const result = await tasks.list({
-      scope: { userId: ctx.principal.userId, viewAll: rbac.can(ctx.principal, 'projects.view_all') },
+      // demandas internas (§45): também as dos responsáveis da mesma área de quem consulta
+      scope: { userId: ctx.principal.userId, viewAll, areaMates: viewAll ? [] : demandDomain.areaMatesOf(await taskAccess.areas(), ctx.principal.userId) },
+      kind: filters.kind,
+      mineId: filters.mine === 'true' ? ctx.principal.userId : undefined,
       projectId: filters.project_id,
       typeId: filters.task_type_id,
       statusIds,
@@ -787,7 +830,9 @@ function createTaskService(deps) {
 
   /** `options.position`: posição na coluna (moveTask e priorização do backlog); sem ela, troca de status vai para o fim. */
   async function updateTask(ctx, id, input, options) {
-    const { task, project, access } = await loadTask(ctx, id)
+    const loaded = await loadTask(ctx, id)
+    if (demandDomain.isDemand(loaded.task)) return updateDemand(ctx, loaded, input || {})
+    const { task, project, access } = loaded
     taskDomain.assertTaskAccess(access, project, 'edit', task)
     const raw = input || {}
     if (raw.project_id !== undefined && raw.project_id !== task.projectId) throw invalid({ project_id: 'immutable' })
@@ -929,14 +974,63 @@ function createTaskService(deps) {
   }
 
   /**
+   * Edição comum da demanda interna (§45): título, descrição, tipo, prioridade, departamento (obrigatório)
+   * e urgência — quem pediu, o responsável, quem executa e `projects.view_all`. Status, executor, prazo e
+   * estimativa mudam pelo fluxo (application/demands.js); o resto não se aplica (`demand_flow`).
+   */
+  async function updateDemand(ctx, loaded, raw) {
+    const { task, project, access } = loaded
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const blocked = {}
+    DEMAND_FLOW.forEach((key) => {
+      if (raw[key] !== undefined) blocked[key] = 'demand_flow'
+    })
+    if (raw.project_id !== undefined && raw.project_id !== task.projectId) blocked.project_id = 'demand_flow'
+    if (Object.keys(blocked).length > 0) throw invalid(blocked)
+    const editable = {}
+    DEMAND_EDITABLE.forEach((key) => {
+      if (raw[key] !== undefined) editable[key] = raw[key]
+    })
+    const parsed = await parseInput(editable, true)
+    const data = parsed.data
+    if (parsed.cleared.indexOf('area_id') >= 0) throw invalid({ area_id: 'required' })
+    const refs = await lookups()
+    const patch = {}
+    if (data.title !== undefined) patch.title = data.title
+    if (data.description !== undefined) patch.description = data.description
+    if (data.task_type_id !== undefined && data.task_type_id !== task.typeId) patch.typeId = activeOrInvalid(refs.types[data.task_type_id], 'task_type_id').id
+    if (data.priority_id !== undefined && data.priority_id !== task.priorityId) patch.priorityId = activeOrInvalid(refs.priorities[data.priority_id], 'priority_id').id
+    if (data.area_id !== undefined && data.area_id !== task.areaId) patch.areaId = activeOrInvalid(refs.areas[data.area_id], 'area_id').id
+    const urgency = parsed.cleared.indexOf('urgency') >= 0 ? null : data.urgency
+    if (urgency !== undefined && urgency !== (task.urgency || null)) patch.urgency = urgency
+    const name = (map, key) => (key && map[key] ? map[key].name : null)
+    const view = (t) => ({
+      title: t.title,
+      description: truncate(t.description || '', 1000),
+      task_type: name(refs.types, t.typeId),
+      task_priority: name(refs.priorities, t.priorityId),
+      area: name(refs.areas, t.areaId),
+      urgency: t.urgency || null,
+    })
+    const change = changes(view(task), view(Object.assign({}, task, patch)))
+    if (!change) return presentDetail(ctx, task, project, access)
+    const updated = await deps.unitOfWork.run(async (repos) => {
+      const result = await repos.taskRepository.update(task.id, patch)
+      await audit(repos, ctx, task, 'task.updated', change.oldValue, change.newValue)
+      return result
+    })
+    return presentDetail(ctx, updated, project, access)
+  }
+
+  /**
    * Liga/desliga a tarefa no informe do projeto (§29). Não passa pela edição completa: não exige os
    * obrigatórios do status nem mexe em outros campos; grava no histórico.
    */
   async function setTaskReport(ctx, id, input) {
     const { task, project, access } = await loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'edit', task)
-    // o que sai no informe é da seção Informe (§35); o Responsável TI não tem a seção
-    if (access.scoped || !projectDomain.canSeeSection(access, 'report')) throw appError('FORBIDDEN')
+    // o que sai no informe é da seção Informe (§35); o Responsável TI não tem a seção; demanda não tem informe (§45)
+    if (access.scoped || access.demand || !projectDomain.canSeeSection(access, 'report')) throw appError('FORBIDDEN')
     const value = (input || {}).in_report
     if (typeof value !== 'boolean') throw invalid({ in_report: 'invalid_type' })
     if (value === !task.reportExcluded) return presentDetail(ctx, task, project, access)
@@ -955,7 +1049,8 @@ function createTaskService(deps) {
   async function setTaskItVisible(ctx, id, input) {
     const { task, project, access } = await loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'edit', task)
-    if (access.scoped) throw appError('FORBIDDEN')
+    // demanda interna (§45) não tem Responsável TI de projeto
+    if (access.scoped || access.demand) throw appError('FORBIDDEN')
     const value = (input || {}).it_visible
     if (typeof value !== 'boolean') throw invalid({ it_visible: 'invalid_type' })
     if (value === !!task.itVisible) return presentDetail(ctx, task, project, access)
@@ -1031,6 +1126,8 @@ function createTaskService(deps) {
    */
   async function moveTask(ctx, id, input) {
     const { task, project, access } = await loadTask(ctx, id)
+    // demanda interna (§45): o passo muda pelo fluxo da demanda, não pelo quadro
+    if (demandDomain.isDemand(task)) throw invalid({ status_id: 'demand_flow' })
     taskDomain.assertTaskAccess(access, project, 'edit', task)
     const raw = input || {}
     const statusId = typeof raw.status_id === 'string' && raw.status_id ? raw.status_id : task.statusId

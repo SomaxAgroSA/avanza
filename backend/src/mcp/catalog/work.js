@@ -131,6 +131,8 @@ function compactTask(task) {
     blocked: !!task.blocked,
     parent_task_id: task.parent_task_id || null,
     updated_at: task.updated_at || null,
+    // demanda interna (§45): tarefa sem projeto, com o passo, o responsável e o prazo com hora
+    ...(task.demand ? { demand: { status: task.demand.status, owner: task.demand.owner ? { id: task.demand.owner.id, name: task.demand.owner.name } : null, due_at: task.demand.due_at || null } } : {}),
   }
 }
 
@@ -397,6 +399,7 @@ const TOOLS = [
           area_id: areaFilter(),
           in_report: bool('true = only tasks included in the project report; false = only the excluded ones.'),
           it_visible: bool('true = only tasks marked visible to the IT owner of the project; false = only the unmarked ones.'),
+          kind: { type: 'string', enum: ['project', 'demand'], description: 'project = only tasks that belong to a project; demand = only internal requests (tasks without a project, code DEM-n).' },
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: code, title, created_at, updated_at, due_date, priority, status. Default: code.'),
         },
         PAGE,
@@ -404,7 +407,7 @@ const TOOLS = [
     ),
     annotations: READ,
     run: async (args, { services, ctx }) => {
-      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'sort']), pageQuery(args))
+      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'kind', 'sort']), pageQuery(args))
       if (args.categories && args.categories.length > 0) query.category = args.categories.join(',')
       if (args.in_report !== undefined) query.in_report = String(args.in_report)
       if (args.it_visible !== undefined) query.it_visible = String(args.it_visible)

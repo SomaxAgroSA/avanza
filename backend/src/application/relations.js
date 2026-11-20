@@ -14,13 +14,14 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const projectDomain = require('../domain/project')
 const taskDomain = require('../domain/task')
 const workflow = require('../domain/workflow')
 const relationDomain = require('../domain/relation')
+const demandDomain = require('../domain/demand')
 const { buildAuditEntry } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createTaskService } = require('./tasks')
+const { createTaskAccess } = require('./task-access')
 
 const FILE_TYPES = ['image', 'file']
 
@@ -35,18 +36,20 @@ function createRelationService(deps) {
   const tasks = deps.taskRepository
   const relations = deps.relationRepository
   const taskService = createTaskService(deps)
+  const taskAccess = createTaskAccess(deps)
 
+  /** Acesso à tarefa (inclusive demanda interna, §45, e Responsável TI, §33). */
   async function accessTo(ctx, task) {
     const project = await deps.projectRepository.findById(task.projectId)
     if (!project) return { project: null, access: null }
-    return { project, access: projectDomain.resolveAccess(ctx.principal, project, await deps.projectMemberRepository.find(project.id, ctx.principal.userId)) }
+    return { project, access: await taskAccess.forTask(ctx.principal, task, project) }
   }
 
   async function canDo(ctx, task, action) {
     const { project, access } = await accessTo(ctx, task)
     if (!project) return false
     try {
-      taskDomain.assertTaskAccess(taskDomain.scopedAccess(access, task), project, action, task)
+      taskDomain.assertTaskAccess(access, project, action, task)
       return true
     } catch (_) {
       return false
@@ -60,7 +63,7 @@ function createRelationService(deps) {
     if (!task) throw appError('TASK_NOT_FOUND')
     const found = await accessTo(ctx, task)
     if (!found.project) throw appError('TASK_NOT_FOUND')
-    const access = taskDomain.scopedAccess(found.access, task)
+    const access = found.access
     taskDomain.assertTaskAccess(access, found.project, 'view', task)
     return { task, project: found.project, access }
   }
@@ -163,7 +166,8 @@ function createRelationService(deps) {
     const raw = input || {}
     if (relationDomain.VIEW_TYPES.indexOf(raw.type) < 0) throw invalid({ type: 'invalid_option' })
     const target = typeof raw.target_id === 'string' && raw.target_id ? await tasks.findById(raw.target_id) : null
-    if (!target || !(await canDo(ctx, target, 'view'))) throw invalid({ target_id: 'invalid_option' })
+    // demanda interna (§45) não entra em relações (bloqueios e dependências são de projetos)
+    if (!target || demandDomain.isDemand(target) || !(await canDo(ctx, target, 'view'))) throw invalid({ target_id: 'invalid_option' })
     const rel = relationDomain.normalize(raw.type, task.id, target.id)
     if (!rel) throw invalid({ target_id: 'invalid_option' })
     if (relationDomain.isDuplicate(await relations.listBetween(task.id, target.id), rel)) throw appError('RELATION_EXISTS')

@@ -131,7 +131,10 @@
     "color_in_use": "Outro projeto já usa esta cor",
     "not_a_member": "Escolha o dono ou um membro do projeto (gestor ou membro).",
     "exclusive": "Escolha só um: a etapa ou o elemento da Gestão",
-    "already_linked": "A tarefa já está na Gestão"
+    "already_linked": "A tarefa já está na Gestão",
+    "not_in_team": "Escolha alguém da equipe do responsável",
+    "same_assignee": "Escolha outra pessoa",
+    "demand_flow": "Na demanda, isso muda pelo fluxo (Atribuir, Começar, Concluir…)"
   },
   "errors": {
     "VALIDATION_ERROR": "Verifique os campos destacados.",
@@ -237,7 +240,8 @@
     "ICON_IN_USE": "Este ícone está em uso por projetos, tipos de tarefa ou espaços e não pode ser removido.",
     "ICON_NOT_FOUND": "Este ícone não está na biblioteca.",
     "CHARTER_ITEM_NOT_FOUND": "Item da ficha não encontrado.",
-    "PROJECT_HAS_DOCS": "Este projeto tem documentação: escolha se quer movê-la, deixá-la como espaço geral ou excluí-la."
+    "PROJECT_HAS_DOCS": "Este projeto tem documentação: escolha se quer movê-la, deixá-la como espaço geral ou excluí-la.",
+    "DEMAND_STATE_CONFLICT": "Esta ação não está disponível no passo atual da demanda. Atualize a página."
   },
   "nav": {
     "main": "Navegação principal",
@@ -825,7 +829,11 @@
       "spaces": "Espaços",
       "position": "Posição",
       "lead": "Responsável pela gestão",
-      "dev_lead": "Responsável pelo desenvolvimento"
+      "dev_lead": "Responsável pelo desenvolvimento",
+      "demand_owner": "Responsável da demanda",
+      "due_at": "Prazo",
+      "note": "Comentário",
+      "demand_status": "Passo da demanda"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -978,7 +986,14 @@
       "charter_item.reordered": "Itens da ficha reordenados",
       "charter_item.measured": "Medição registrada",
       "task.doc_linked": "Documentação vinculada",
-      "task.doc_unlinked": "Documentação desvinculada"
+      "task.doc_unlinked": "Documentação desvinculada",
+      "task.demand_assigned": "Atribuiu a demanda",
+      "task.demand_reassigned": "Reatribuiu a demanda",
+      "task.demand_started": "Começou a demanda",
+      "task.demand_passed": "Passou a demanda",
+      "task.demand_concluded": "Concluiu a demanda",
+      "task.demand_validated": "Validou a demanda",
+      "task.demand_returned": "Devolveu a demanda"
     }
   },
   "projects": {
@@ -1822,13 +1837,21 @@
     }
   },
   "taskList": {
-    "subtitle": "As tarefas dos projetos a que você tem acesso.",
+    "subtitle": "As tarefas dos projetos e as demandas internas.",
     "scopeLabel": "Quais tarefas ver",
     "mine": "Minhas tarefas",
     "all": "Ver todas",
     "openOnly": "Só as abertas. Para ver concluídas ou canceladas, escolha o Status.",
     "overdue": "vencida",
-    "moduleHint": "Menu \"Tarefas\": abre em \"Minhas tarefas\"; com \"Ver todas\", as dos projetos a que a pessoa tem acesso. Precisa de \"Tarefas\" ligado; desligado, as tarefas continuam dentro de cada projeto."
+    "moduleHint": "Menu \"Tarefas\": abre em \"Minhas tarefas\"; com \"Ver todas\", as dos projetos a que a pessoa tem acesso. Precisa de \"Tarefas\" ligado; desligado, as tarefas continuam dentro de cada projeto.",
+    "kindLabel": "Com ou sem projeto",
+    "kindAll": "Todas",
+    "kindProject": "Com projeto",
+    "kindDemand": "Sem projeto",
+    "mineHint": "\"Minhas tarefas\" inclui as demandas que você pediu ou recebeu, mesmo que outra pessoa as resolva.",
+    "viewLabel": "Visão",
+    "viewList": "Lista",
+    "viewDemands": "Demandas"
   },
   "tags": {
     "title": "Tags",
@@ -1963,7 +1986,12 @@
       "due_soon": "{{code}} vence amanhã",
       "overdue": "{{code}} está com o prazo vencido",
       "plan_mention": "{{actor}} mencionou você em “{{name}}”",
-      "plan_reply": "{{actor}} respondeu sua atualização em “{{name}}”"
+      "plan_reply": "{{actor}} respondeu sua atualização em “{{name}}”",
+      "demand_received": "{{actor}} pediu {{code}} a você",
+      "demand_passed": "{{actor}} passou {{code}} para {{assignee}}",
+      "demand_concluded": "{{actor}} concluiu {{code}}: falta validar",
+      "demand_validated": "{{actor}} validou {{code}}",
+      "demand_returned": "{{actor}} devolveu {{code}}"
     },
     "planItemIn": "Quadro de {{project}}"
   },
@@ -4645,6 +4673,168 @@
         "too_many": "No máximo 20 áreas.",
         "too_many_people": "No máximo 50 pessoas por área."
       }
+    }
+  },
+  "demands": {
+    "newProjectTask": "Tarefa de projeto",
+    "newDemand": "Demanda interna",
+    "kindGroup": "Tipo de tarefa",
+    "kindHint": {
+      "project": "Faz parte de um projeto, como sempre.",
+      "demand": "Sem projeto: você pede a uma pessoa e ela atribui à equipe dela."
+    },
+    "chip": "Demanda interna",
+    "status": {
+      "unassigned": "Sem atribuir",
+      "assigned": "Atribuída",
+      "in_progress": "Em andamento",
+      "to_validate": "Para validar",
+      "done": "Concluída"
+    },
+    "groups": {
+      "unassigned": "Sem atribuir",
+      "assigned": "Atribuídas",
+      "in_progress": "Em andamento",
+      "to_validate": "Para validar",
+      "done": "Concluídas"
+    },
+    "form": {
+      "createTitle": "Nova tarefa",
+      "createDescription": "Escolha se é uma tarefa de projeto ou uma demanda interna.",
+      "editTitle": "Editar {{code}}",
+      "titlePlaceholder": "Ex.: Vista de carteira: adicionar o campo Ciclo",
+      "descriptionPlaceholder": "O que você precisa, onde (vista, sistema, tela) e qual resultado espera. Se já existe um chamado de suporte, coloque o número.",
+      "owner": "Responsável",
+      "ownerHint": "Essa pessoa recebe e pode atribuir a alguém da equipe; continua vendo mesmo se passar.",
+      "ownerFixed": "O responsável não muda depois de aberta.",
+      "department": "Departamento que pede",
+      "opening": "Abertura",
+      "openingAuto": "{{date}} · automática",
+      "deadline": "Prazo",
+      "deadlineLocked": "O responsável define ao atribuir (data e hora)",
+      "submit": "Criar demanda"
+    },
+    "created": "{{code}} criada e enviada para {{owner}}",
+    "saved": "{{code}} salva",
+    "page": {
+      "title": "Demandas",
+      "tabsLabel": "Caixas de demandas",
+      "kpis": "Demandas por passo"
+    },
+    "tabs": {
+      "received": "Recebidas por mim",
+      "assigned": "Atribuídas a mim",
+      "requested": "Pedidas por mim"
+    },
+    "hints": {
+      "received": "O que pediram a você. Atribua à sua equipe e acompanhe tudo, mesmo depois de passar.",
+      "assigned": "O que atribuíram a você. Comece, passe a um colega da equipe ou conclua.",
+      "requested": "O que você pediu. Quando chegar em \"Para validar\", valide a entrega ou devolva com um comentário."
+    },
+    "empty": {
+      "received": "Nenhuma demanda recebida por enquanto.",
+      "assigned": "Você não tem demandas abertas.",
+      "requested": "Você ainda não pediu nenhuma demanda."
+    },
+    "row": {
+      "due": "prazo {{date}}",
+      "priority": "Prioridade {{name}}",
+      "noAssignee": "Sem atribuir"
+    },
+    "load": {
+      "title": "Carga da minha equipe",
+      "hint": "Horas estimadas do que cada um tem aberto (e quantas demandas).",
+      "foot": "Conta o que cada um tem hoje: se alguém passa uma demanda, ela muda de barra.",
+      "value": "{{count}} · {{hours}} h",
+      "empty": "Sua equipe sai de Configurações → Dependências por área.",
+      "aria": "{{name}}: {{count}} demandas, {{hours}} horas"
+    },
+    "badge_one": "{{count}} demanda recebida sem atribuir",
+    "badge_other": "{{count}} demandas recebidas sem atribuir",
+    "actions": {
+      "assign": "Atribuir",
+      "reassign": "Reatribuir",
+      "start": "Começar",
+      "pass": "Passar a…",
+      "conclude": "Concluir",
+      "validate": "Validar",
+      "return": "Devolver"
+    },
+    "assign": {
+      "title": "Atribuir · {{code}}",
+      "reassignTitle": "Reatribuir · {{code}}",
+      "assignee": "Atribuir a (minha equipe)",
+      "dueDate": "Prazo · data",
+      "dueTime": "Hora",
+      "estimate": "Estimativa (horas)",
+      "submit": "Atribuir",
+      "done": "{{code}} atribuída a {{name}}"
+    },
+    "pass": {
+      "title": "Passar a um colega · {{code}}",
+      "to": "Passar a",
+      "toHint": "Pessoas da equipe de {{owner}}.",
+      "comment": "Comentário",
+      "placeholder": "Por que você passa e o que falta",
+      "note": "O comentário é obrigatório; {{owner}} vê na linha do tempo e na carga da equipe.",
+      "submit": "Passar",
+      "done": "{{code}} passada a {{name}}"
+    },
+    "conclude": {
+      "title": "Concluir · {{code}}",
+      "delivered": "O que foi entregue",
+      "placeholder": "O que você fez e onde ficou",
+      "note": "Vai para \"Para validar\" de {{requester}}; {{owner}} vê na caixa dele.",
+      "submit": "Concluir",
+      "done": "{{code}} enviada para validar"
+    },
+    "return": {
+      "title": "Devolver · {{code}}",
+      "comment": "O que falta",
+      "placeholder": "O que ainda falta para aceitar a entrega",
+      "note": "Volta para Em andamento com {{name}}.",
+      "submit": "Devolver",
+      "done": "{{code}} devolvida a {{name}}"
+    },
+    "validated": "{{code}} concluída",
+    "started": "{{code}} em andamento",
+    "detail": {
+      "backTo": "Voltar a {{place}}",
+      "places": {
+        "tasks": "Tarefas",
+        "received": "Recebidas por mim",
+        "assigned": "Atribuídas a mim",
+        "requested": "Pedidas por mim"
+      },
+      "priority": "Prioridade {{name}}",
+      "description": "Descrição",
+      "timeline": "Linha do tempo e comentários",
+      "properties": "Propriedades",
+      "requester": "Pediu",
+      "department": "Departamento que pede",
+      "owner": "Responsável",
+      "assignee": "Atribuída a",
+      "unassigned": "— sem atribuir",
+      "opened": "Abertura",
+      "openedLocked": "Abertura automática (não muda)",
+      "deadline": "Prazo",
+      "estimate": "Estimativa",
+      "hours": "{{hours}} h",
+      "attachments": "Anexos"
+    },
+    "events": {
+      "opened": "abriu a demanda para {{owner}}",
+      "assigned": "atribuiu a {{name}}",
+      "reassigned": "reatribuiu a {{name}}",
+      "deadline": "prazo {{date}}",
+      "estimate": "{{hours}} h",
+      "passed": "passou a {{name}}",
+      "started": "começou a trabalhar",
+      "concluded": "concluiu e enviou para validar",
+      "validated": "validou a entrega",
+      "returned": "devolveu para ajustes",
+      "edited": "editou: {{fields}}",
+      "attached": "anexou {{name}}"
     }
   }
 }

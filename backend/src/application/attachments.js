@@ -10,11 +10,11 @@
 
 const { appError } = require('../core/errors')
 const rbac = require('../domain/rbac')
-const projectDomain = require('../domain/project')
 const taskDomain = require('../domain/task')
 const attachmentDomain = require('../domain/attachment')
 const { buildAuditEntry, truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
+const { createTaskAccess } = require('./task-access')
 
 function invalid(fields, details) {
   return appError('VALIDATION_ERROR', undefined, Object.assign({ fields }, details || {}))
@@ -22,15 +22,15 @@ function invalid(fields, details) {
 
 function createAttachmentService(deps) {
   const attachments = deps.attachmentRepository
+  const taskAccess = createTaskAccess(deps)
 
   async function loadTask(ctx, taskId, notFound) {
     rbac.assertAuthenticated(ctx.principal)
     const task = taskId ? await deps.taskRepository.findById(taskId) : null
     const project = task ? await deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError(notFound || 'TASK_NOT_FOUND')
-    const membership = await deps.projectMemberRepository.find(project.id, ctx.principal.userId)
-    // Responsável TI: anexa e baixa nas tarefas visíveis a ele (§33)
-    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(ctx.principal, project, membership), task)
+    // Responsável TI: anexa e baixa nas tarefas visíveis a ele (§33); demanda interna: quem a enxerga (§45)
+    const access = await taskAccess.forTask(ctx.principal, task, project)
     try {
       taskDomain.assertTaskAccess(access, project, 'view', task)
     } catch (err) {

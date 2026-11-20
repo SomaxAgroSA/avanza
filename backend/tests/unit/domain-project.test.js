@@ -178,3 +178,18 @@ describe('domain/project — projeto pai (§34)', () => {
     assert.equal(project.parentIssue(null, null, false), 'invalid_option')
   })
 })
+
+describe('domain/project — projeto de sistema (demandas internas, §45)', () => {
+  const system = { id: 'sys', ownerId: null, kind: 'demands', archivedAt: null }
+
+  it('ninguém abre o projeto de sistema como projeto, nem quem vê todos', () => {
+    const admin = project.resolveAccess(principal(ALL.concat(['projects.view_all'])), system, null)
+    assert.equal(admin.canView, false)
+    assert.equal(admin.isManager, false)
+    assert.equal(admin.canEdit, false)
+    assert.throws(() => project.assertAccess(admin, system, 'brief'), { code: 'PROJECT_NOT_FOUND' })
+    assert.throws(() => project.assertAccess(admin, system, 'archive'), { code: 'PROJECT_NOT_FOUND' })
+    assert.throws(() => project.assertAccess(admin, system, 'delete'), { code: 'PROJECT_NOT_FOUND' })
+    assert.deepEqual(project.capabilities(admin, system).sections, [])
+  })
+})

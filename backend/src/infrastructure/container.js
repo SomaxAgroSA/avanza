@@ -17,6 +17,7 @@ const { createCustomFieldService } = require('../application/custom-fields')
 const { createTaskTypeService } = require('../application/task-types')
 const { createLookupService } = require('../application/lookups')
 const { createTaskService } = require('../application/tasks')
+const { createDemandService } = require('../application/demands')
 const { createTagService } = require('../application/tags')
 const { createIconLibraryService } = require('../application/icon-library')
 const { createCommentService } = require('../application/comments')
@@ -112,6 +113,7 @@ function createContainer(runtime, options) {
     priorities: createLookupService(deps, 'priority'),
     areas: createLookupService(deps, 'area'),
     tasks: createTaskService(deps),
+    demands: createDemandService(deps),
     tags: createTagService(deps),
     iconLibrary: createIconLibraryService(deps),
     comments: createCommentService(deps),
