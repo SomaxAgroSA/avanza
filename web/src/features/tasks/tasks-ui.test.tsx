@@ -127,9 +127,12 @@ function repositories(tasks: Partial<TaskRepository> = {}) {
   })
 }
 
+/** Escolhe a opção (na lista com busca, a opção é um botão dentro da lista). */
 async function chooseOption(label: RegExp, option: string) {
   await userEvent.click(screen.getByRole('combobox', { name: label }))
-  await userEvent.click(await screen.findByRole('option', { name: option }))
+  const listbox = await screen.findByRole('listbox')
+  const button = within(listbox).queryByRole('button', { name: option })
+  await userEvent.click(button ?? within(listbox).getByRole('option', { name: option }))
 }
 
 describe('TaskFormDialog', () => {
@@ -148,6 +151,25 @@ describe('TaskFormDialog', () => {
     await chooseOption(/^Tipo/, 'Bug')
     expect(await screen.findByLabelText(/^Versão/)).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /^Severidade/ })).toHaveTextContent('Média')
+  })
+
+  it('Tipo e Área aceitam busca pelo nome (sem acento/maiúscula) e mostram o nome, não o id', async () => {
+    setup()
+    await screen.findByRole('dialog')
+    await waitFor(() => expect(screen.getByRole('combobox', { name: /^Tipo/ })).toBeEnabled())
+    await userEvent.click(screen.getByRole('combobox', { name: /^Tipo/ }))
+    await userEvent.type(await screen.findByRole('searchbox'), 'bu')
+    const listbox = screen.getByRole('listbox')
+    expect(within(listbox).getByRole('button', { name: 'Bug' })).toBeInTheDocument()
+    expect(within(listbox).queryByText('t1')).not.toBeInTheDocument()
+    await userEvent.click(within(listbox).getByRole('button', { name: 'Bug' }))
+    expect(screen.getByRole('combobox', { name: /^Tipo/ })).toHaveTextContent('Bug')
+
+    await userEvent.click(screen.getByRole('combobox', { name: /^Área/ }))
+    await userEvent.type(await screen.findByRole('searchbox'), 'MARK')
+    const areas = screen.getByRole('listbox')
+    expect(within(areas).getByRole('button', { name: 'Marketing' })).toBeInTheDocument()
+    expect(within(areas).queryByRole('button', { name: 'Dpto. TI' })).not.toBeInTheDocument()
   })
 
   it('valida título e campos obrigatórios do tipo antes de enviar', async () => {
