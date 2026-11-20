@@ -147,12 +147,8 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
 
   const typeOptions = [...(types.data ?? []), ...(task?.type && !(types.data ?? []).some((x) => x.id === task.type?.id) ? [task.type] : [])].map((type) => ({
     value: type.id,
-    label: (
-      <span className="inline-flex items-center gap-2">
-        <TaskTypeIconBadge icon={type.icon} color={type.color} size="sm" />
-        {type.name}
-      </span>
-    ),
+    label: type.name,
+    prefix: <TaskTypeIconBadge icon={type.icon} color={type.color} size="sm" />,
   }))
   const priorityOptions = (priorities.data ?? []).map((item) => ({ value: item.id, label: <LookupBadge item={item} /> }))
   const areaOptions = [...(areas.data ?? []), ...(task?.area && !(areas.data ?? []).some((a) => a.id === task.area?.id) ? [task.area] : [])].map((area) => ({ value: area.id, label: area.name }))
@@ -285,6 +281,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
           <AppSelect
             label={t('tasks.fields.type')}
             required
+            searchable
             value={draft.typeId || undefined}
             placeholder={t('fields.selectPlaceholder')}
             error={errors.task_type_id}
@@ -332,6 +329,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
         <aside aria-label={t('tasks.properties')} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:border-l lg:border-border lg:pl-8">
           <AppSelect
             label={t('companies.field')}
+            searchable
             required={needsCompany && (!isEdit || !!task?.company)}
             value={draft.companyId || undefined}
             placeholder={t('companies.placeholder')}

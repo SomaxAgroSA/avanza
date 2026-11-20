@@ -142,7 +142,7 @@ const field = () => screen.findByRole('combobox', { name: STAGE })
 async function fillRequired() {
   const form = await screen.findByRole('dialog', { name: 'Nova tarefa' })
   await userEvent.click(within(form).getByRole('combobox', { name: /^Tipo/ }))
-  await userEvent.click(await screen.findByRole('option', { name: 'Tarefa' }))
+  await userEvent.click(clickable(await screen.findByRole('option', { name: 'Tarefa' })))
   await userEvent.type(within(form).getByLabelText(/^Título/), 'Unir a base de clientes')
   return form
 }
@@ -167,7 +167,7 @@ describe('Nova tarefa: campo "Etapa da gestão"', () => {
     const { create } = createForm()
     const form = await fillRequired()
     await userEvent.click(await field())
-    await userEvent.click(await screen.findByRole('option', { name: '2.1 Plano do projeto' }))
+    await userEvent.click(clickable(await screen.findByRole('option', { name: '2.1 Plano do projeto' })))
     await userEvent.click(within(form).getByRole('button', { name: 'Nova tarefa' }))
     await waitFor(() => expect(create).toHaveBeenCalledOnce())
     expect(create.mock.calls[0]?.[0]).toMatchObject({ projectId: 'p1', title: 'Unir a base de clientes', planGroupId: 'g21' })
@@ -226,7 +226,7 @@ describe('Editar tarefa: etapa da gestão', () => {
     const combo = await field()
     expect(combo).not.toBeDisabled()
     await userEvent.click(combo)
-    await userEvent.click(await screen.findByRole('option', { name: '2.0 Planejamento' }))
+    await userEvent.click(clickable(await screen.findByRole('option', { name: '2.0 Planejamento' })))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(update).toHaveBeenCalledOnce())
     expect(update.mock.calls[0]?.[1]).toMatchObject({ planGroupId: 'g2' })
@@ -241,7 +241,7 @@ describe('Editar tarefa: etapa da gestão', () => {
       initialPath: '/',
     })
     await userEvent.click(await field())
-    await userEvent.click(await screen.findByRole('option', { name: '1.0 Iniciação' }))
+    await userEvent.click(clickable(await screen.findByRole('option', { name: '1.0 Iniciação' })))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     expect(await screen.findByText('A tarefa já está na Gestão')).toBeInTheDocument()
   })
@@ -263,3 +263,8 @@ describe('Detalhe da tarefa: elemento vinculado', () => {
     expect(link).toHaveAttribute('href', '/projects/p1/management?item=i1')
   })
 })
+
+/** Na lista com busca a opção é um botão dentro do item; nas listas simples, o próprio item. */
+function clickable(option: HTMLElement): HTMLElement {
+  return within(option).queryByRole('button') ?? option
+}
