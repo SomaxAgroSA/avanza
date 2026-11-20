@@ -3,15 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { CornerDownRight } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
-import { isRequiredIn, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
+import type { FieldValue, OptionColor, TaskTypeField } from '@/domain/task-config'
 import { customValueIssues, datesIssue, parseHours, type TaskDetail, type TaskInput } from '@/domain/tasks'
 import { planItemStage, planStageChoices } from '@/domain/plan-tasks'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
-import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppSkeleton, AppTextField, AppTextarea, notify } from '@/presentation/components'
+import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
 import { useProject, useProjectMembers, useProjects } from '@/features/projects/queries'
-import { CustomFieldInput } from '@/features/task-config/CustomFieldInput'
 import { ColorDot, TaskTypeIconBadge } from '@/features/task-config/config-visuals'
 import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
 import { useFieldOptionCreator } from '@/features/task-config/use-field-option-creator'
@@ -20,6 +19,7 @@ import { AreaBadge } from '@/features/workflow/area-visuals'
 import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskAttachments, useTaskMutations } from './queries'
 import { PROJECT_OPTIONS_QUERY } from './required-fields'
+import { TaskTypeFieldsSection } from './TaskTypeFieldsSection'
 import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from './use-attachment-uploader'
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
@@ -472,32 +472,19 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
               />
             ))}
           {draft.typeId && (
-            <section aria-labelledby="task-fields-title" className="flex flex-col gap-4 rounded-xl border border-border p-4">
-              <h3 id="task-fields-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
-                {selectedType && <TaskTypeIconBadge icon={selectedType.icon} color={selectedType.color} size="sm" />}
-                {t('tasks.typeFields', { name: selectedType?.name ?? '' })}
-              </h3>
-              {typeDetail.isPending ? (
-                <AppSkeleton className="h-24" />
-              ) : fields.length === 0 ? (
-                <p className="text-sm text-muted">{t('tasks.noTypeFields')}</p>
-              ) : (
-                fields.map((link) => (
-                  <CustomFieldInput
-                    key={link.field.id}
-                    field={link.field}
-                    required={isRequiredIn(link, draft.statusId)}
-                    value={draft.values[link.field.name]}
-                    error={valueErrors[link.field.name]}
-                    references={references}
-                    onChange={(value) => {
-                      setDraft((d) => ({ ...d, values: { ...d.values, [link.field.name]: value } }))
-                      setValueErrors(({ [link.field.name]: _removed, ...rest }) => rest)
-                    }}
-                  />
-                ))
-              )}
-            </section>
+            <TaskTypeFieldsSection
+              type={selectedType}
+              loading={typeDetail.isPending}
+              fields={fields}
+              values={draft.values}
+              errors={valueErrors}
+              statusId={draft.statusId}
+              references={references}
+              onChange={(name, value) => {
+                setDraft((d) => ({ ...d, values: { ...d.values, [name]: value } }))
+                setValueErrors(({ [name]: _removed, ...rest }) => rest)
+              }}
+            />
           )}
         </div>
 

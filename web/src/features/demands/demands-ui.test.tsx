@@ -2,10 +2,11 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
+import { AppError } from '@/core/errors/app-error'
 import type { AuditEntry } from '@/domain/entities'
 import type { DemandOverview, DemandStatus } from '@/domain/demands'
-import type { DemandRepository, TaskRepository } from '@/domain/repositories'
-import type { TaskType } from '@/domain/task-config'
+import type { DemandRepository, TaskRepository, TaskTypeRepository } from '@/domain/repositories'
+import type { CustomField, TaskType, TaskTypeDetail, TaskTypeField } from '@/domain/task-config'
 import type { TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import type { Area, TaskPriority, TaskStatus } from '@/domain/workflow'
 import { AppShell } from '@/presentation/layouts/AppShell'
@@ -97,7 +98,9 @@ function overview(received: Partial<Record<DemandStatus, number>>, team: DemandO
 
 const page = (items: TaskSummary[]) => ({ items, page: 1, perPage: 100, total: items.length, totalPages: 1 })
 
-function repos(options: { me?: typeof ana; demands?: Partial<DemandRepository>; tasks?: Partial<TaskRepository>; permissions?: Parameters<typeof makeCurrentUser>[0] } = {}) {
+function repos(
+  options: { me?: typeof ana; demands?: Partial<DemandRepository>; tasks?: Partial<TaskRepository>; taskTypes?: Partial<TaskTypeRepository>; permissions?: Parameters<typeof makeCurrentUser>[0] } = {},
+) {
   const me = options.me ?? ana
   return fakeRepositories({
     auth: {
@@ -106,7 +109,7 @@ function repos(options: { me?: typeof ana; demands?: Partial<DemandRepository>; 
         return { ...current, user: { ...current.user, id: me.id, name: me.name } }
       },
     },
-    taskTypes: { list: () => Promise.resolve([devType]) },
+    taskTypes: { list: () => Promise.resolve([devType]), get: () => Promise.resolve({ ...devType, fields: [] }), ...options.taskTypes },
     statuses: { list: () => Promise.resolve([backlog]) },
     priorities: { list: () => Promise.resolve([alta, media]) },
     areas: { list: () => Promise.resolve([estrategia]) },
@@ -187,6 +190,109 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
     const kind = screen.getByRole('radiogroup', { name: i18n.t('taskList.kindLabel') })
     await userEvent.click(within(kind).getByRole('radio', { name: 'Sem projeto' }))
     await waitFor(() => expect(list.mock.calls.filter(([query]) => query.perPage !== 1).at(-1)![0].filters).toMatchObject({ kind: 'demand', mine: 'true' }))
+  })
+})
+
+describe('Demanda interna — campos do tipo (§45, como na tarefa de projeto)', () => {
+  function field(overrides: Partial<CustomField>): CustomField {
+    return { id: 'f', name: 'f', label: 'F', type: 'text', description: '', config: {}, defaultValue: null, searchable: false, filterable: false, sortable: false, options: [], usedBy: [], createdAt: null, updatedAt: null, ...overrides }
+  }
+  const ambiente = field({
+    id: 'f1',
+    name: 'ambiente',
+    label: 'Ambiente',
+    type: 'select',
+    defaultValue: 'o1',
+    options: [
+      { id: 'o1', label: 'Produção', color: 'red', order: 0, isActive: true },
+      { id: 'o2', label: 'Homologação', color: 'amber', order: 1, isActive: true },
+    ],
+  })
+  const passos = field({ id: 'f2', name: 'passos_para_reproducao', label: 'Passos para reprodução', type: 'textarea' })
+  const testador = field({ id: 'f3', name: 'testador', label: 'Testador', type: 'user' })
+  // exigida só em Desenvolvimento: nem na abertura (Backlog) nem na edição em Backlog
+  const causa = field({ id: 'f4', name: 'causa', label: 'Causa', type: 'text' })
+  const link = (f: CustomField, order: number, extra: Partial<TaskTypeField> = {}): TaskTypeField => ({ field: f, order, required: false, visible: true, showOnCard: false, requiredStatusIds: [], ...extra })
+  const erroType: TaskType = { ...devType, id: 't2', key: 'ERRO', name: 'Erro', translations: typeTexts('Erro'), icon: 'bug', color: 'red', fieldCount: 4 }
+  const erroFields = [link(ambiente, 0, { required: true }), link(passos, 1, { required: true }), link(testador, 2), link(causa, 3, { requiredStatusIds: ['s2'] })]
+  const erroDetail: TaskTypeDetail = { ...erroType, fields: erroFields }
+  const typeRepo = {
+    list: () => Promise.resolve([devType, erroType]),
+    get: (id: string) => Promise.resolve(id === 't2' ? erroDetail : { ...devType, fields: [] }),
+  }
+
+  it('"＋ Demanda interna": escolher o tipo mostra os campos; o obrigatório vazio é pedido e os valores vão em custom_values', async () => {
+    const create = vi.fn<DemandRepository['create']>(() => Promise.resolve(demand()))
+    renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos({ demands: { create }, taskTypes: typeRepo }), initialPath: '/tasks' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Demanda interna' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).queryByRole('heading', { name: 'Campos de Erro' })).toBeNull()
+    await chooseOption(/^Tipo/, 'Erro')
+    const section = (await within(dialog).findByRole('heading', { name: 'Campos de Erro' })).closest('section')!
+    expect(await within(section).findByLabelText(/^Passos para reprodução/)).toBeRequired()
+    // padrão do tipo já preenchido; Causa (exigida só em Desenvolvimento) aparece, sem ser obrigatória
+    expect(within(section).getByRole('combobox', { name: /^Ambiente/ })).toHaveTextContent('Produção')
+    expect(within(section).getByLabelText(/^Causa/)).not.toBeRequired()
+    await userEvent.type(within(dialog).getByLabelText(/^Título/), 'Erro ao exportar o DRE')
+    await chooseOption(/^Responsável/, /César/)
+    await chooseOption(/^Departamento que pede/, 'Estratégia')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
+    expect(await within(section).findByText('Campo obrigatório')).toBeInTheDocument()
+    expect(create).not.toHaveBeenCalled()
+    await userEvent.type(within(section).getByLabelText(/^Passos para reprodução/), '1. Abrir o DRE')
+    await chooseOption(/^Testador/, 'Jorge')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ taskTypeId: 't2', title: 'Erro ao exportar o DRE', ownerId: 'u2', areaId: 'a1' })
+    expect(create.mock.calls[0]?.[0].customValues).toEqual({ ambiente: 'o1', passos_para_reproducao: '1. Abrir o DRE', testador: 'u3', causa: null })
+  })
+
+  it('o erro do servidor num campo do tipo aparece no próprio campo', async () => {
+    const create = vi.fn<DemandRepository['create']>(() =>
+      Promise.reject(new AppError({ code: 'VALIDATION_ERROR', message: 'x', status: 400, details: { fields: { 'custom_values.passos_para_reproducao': 'too_long' } } })),
+    )
+    renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos({ demands: { create }, taskTypes: typeRepo }), initialPath: '/tasks' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Demanda interna' }))
+    const dialog = await screen.findByRole('dialog')
+    await chooseOption(/^Tipo/, 'Erro')
+    await userEvent.type(await within(dialog).findByLabelText(/^Passos para reprodução/), 'Passos')
+    await userEvent.type(within(dialog).getByLabelText(/^Título/), 'Erro ao exportar o DRE')
+    await chooseOption(/^Responsável/, /César/)
+    await chooseOption(/^Departamento que pede/, 'Estratégia')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(await within(dialog).findByText(i18n.t('validation.too_long'))).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('editar a demanda: os campos vêm preenchidos, o status atual decide os obrigatórios e os valores são salvos', async () => {
+    const task = demand({ type: { id: 't2', key: 'ERRO', name: 'Erro', icon: 'bug', color: 'red' }, fields: erroFields, customValues: { ambiente: 'o2', passos_para_reproducao: 'Passo 1' } })
+    const update = vi.fn<TaskRepository['update']>(() => Promise.resolve(task))
+    renderRoutes([{ path: '/', element: <TaskFormDialog open task={task} onOpenChange={() => {}} /> }], {
+      repositories: fakeRepositories({
+        auth: { me: async () => makeCurrentUser(['tasks.view', 'tasks.edit']) },
+        taskTypes: typeRepo,
+        statuses: { list: () => Promise.resolve([backlog]) },
+        priorities: { list: () => Promise.resolve([alta, media]) },
+        areas: { list: () => Promise.resolve([estrategia]) },
+        tasks: { update },
+        attachments: { list: () => Promise.resolve([]) },
+      }),
+      initialPath: '/',
+    })
+    const dialog = await screen.findByRole('dialog')
+    const steps = await within(dialog).findByLabelText(/^Passos para reprodução/)
+    expect(steps).toHaveValue('Passo 1')
+    expect(within(dialog).getByRole('combobox', { name: /^Ambiente/ })).toHaveTextContent('Homologação')
+    // em Backlog, a Causa (exigida só em Desenvolvimento) não trava a edição
+    expect(within(dialog).getByLabelText(/^Causa/)).not.toBeRequired()
+    await userEvent.type(steps, ' e 2')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+    const [id, data] = update.mock.calls[0]!
+    expect(id).toBe('d1')
+    expect(data).toMatchObject({ taskTypeId: 't2', title: 'Vista DMR: agregar Fecha cuenta', areaId: 'a1' })
+    expect(data.customValues).toEqual({ ambiente: 'o2', passos_para_reproducao: 'Passo 1 e 2', testador: null, causa: null })
   })
 })
 

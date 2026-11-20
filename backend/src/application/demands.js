@@ -3,8 +3,9 @@
  * pessoa (o responsável), que as distribui à equipe dela.
  *
  * - Abrir: quem tem `tasks.create` — tipo, título, responsável (qualquer pessoa ativa que vê tarefas),
- *   departamento que pede, empresa (§46: obrigatória quando existe empresa ativa; só ativa), descrição e
- *   prioridade. Nasce "Sem atribuir", sem executor e sem prazo (quem
+ *   departamento que pede, empresa (§46: obrigatória quando existe empresa ativa; só ativa), descrição,
+ *   prioridade e os campos do tipo (`custom_values`, as mesmas regras da tarefa: obrigatórios do status em
+ *   que nasce). Nasce "Sem atribuir", sem executor e sem prazo (quem
  *   define é o responsável); a abertura (`created_at`) é automática. O responsável é avisado.
  * - Fluxo (domain/demand.js): o responsável atribui/reatribui com prazo (data e hora, obrigatório) e
  *   estimativa — quem tem `projects.view_all` também, em qualquer demanda (o histórico guarda quem fez); quem executa começa, passa a alguém da equipe (comentário obrigatório; o responsável é
@@ -30,7 +31,7 @@ const workflow = require('../domain/workflow')
 const { buildAuditEntry, truncate } = require('./audit')
 const { toUserSummary } = require('./presenters')
 const companyDomain = require('../domain/company')
-const { createTaskService } = require('./tasks')
+const { createTaskService, customValuesInput, typesOf } = require('./tasks')
 const { createTaskAccess } = require('./task-access')
 const { createNotifier } = require('./notifications')
 
@@ -208,6 +209,10 @@ function createDemandService(deps) {
     const statusId = demandDomain.workflowStatusFor('unassigned', statuses, null)
     if (!statusId) throw invalid({ status_id: 'required' })
     const status = statuses.find((s) => s.id === statusId)
+    // campos do tipo: os mesmos da tarefa de projeto, exigidos no status em que a demanda nasce
+    const links = await taskService.typeLinks(type.id)
+    const custom = await taskService.checkCustomValues(ctx, links, customValuesInput(raw.custom_values), status, { creating: true })
+    const shown = await taskService.customDisplay(links, custom.values)
 
     const project = await inbox()
     const now = deps.clock.now()
@@ -246,6 +251,7 @@ function createDemandService(deps) {
         demandPastAssignees: [],
         position: ((await repos.taskRepository.maxPosition(project.id, status.id)) || 0) + workflow.POSITION_STEP,
       })
+      await repos.taskValueRepository.replace(task.id, custom.values, typesOf(links))
       const values = {
         code: task.code,
         title: task.title,
@@ -257,6 +263,7 @@ function createDemandService(deps) {
         reporter: requester ? requester.name : null,
         demand_owner: owner.name,
         demand_status: 'unassigned',
+        ...shown,
       }
       Object.keys(values).forEach((key) => {
         if (values[key] === null || values[key] === '') delete values[key]

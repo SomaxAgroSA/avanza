@@ -1,4 +1,5 @@
 import type { UserSummary } from './projects'
+import type { FieldValue } from './task-config'
 import type { TaskSummary } from './tasks'
 
 /**
@@ -74,6 +75,8 @@ export interface DemandInput {
   priorityId?: string
   /** Empresa ativa (§46): obrigatória quando existe alguma ativa. */
   companyId?: string
+  /** Campos do tipo, por nome técnico (os mesmos da tarefa de projeto). */
+  customValues?: Record<string, FieldValue>
 }
 
 export interface AssignInput {

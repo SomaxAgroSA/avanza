@@ -1409,6 +1409,7 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
         area_id: data.areaId,
         priority_id: data.priorityId,
         company_id: data.companyId || undefined,
+        custom_values: data.customValues,
       }
       return toTaskDetail((await api.post<TaskDetailDto>('/demands', body)).data)
     },
