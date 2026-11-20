@@ -185,3 +185,19 @@ Permissão global **e** regra do espaço (`domain/docs.js` → `spaceAccess`):
 ## Tokens de API
 - `api_tokens.create`: criar os próprios tokens (Admin e Gestor por padrão; dá para conceder a outros perfis na matriz). Listar e revogar os próprios não exige permissão — quem perdeu a permissão ainda consegue revogar os que criou.
 - O token não tem permissões próprias: em cada chamada valem as do perfil atual da pessoa (o RBAC é o mesmo da sessão).
+
+## Demandas internas e o responsável que recebe e distribui (§45)
+
+Sem permissão nova: abrir uma demanda exige `tasks.create`; ver, `tasks.view`; a tela Demandas fica dentro de Tarefas (`tasks.list`). O que cada pessoa faz vem do **papel na demanda**, não do projeto:
+
+| Quem | Vê | Faz |
+|---|---|---|
+| Quem pediu | a demanda | edita os campos, comenta, anexa, **valida** ou **devolve** (com comentário) quando está Para validar; exclui o que criou (com `tasks.delete`) |
+| Responsável | a demanda | **atribui/reatribui** à equipe (prazo com data e hora + estimativa), edita, comenta, anexa |
+| Quem executa (agora) | a demanda | **começa**, **passa** a alguém da equipe (comentário obrigatório), **conclui** (o que foi entregue), edita, comenta, anexa |
+| Quem já executou | a demanda | comenta |
+| Pessoas da área do responsável (só demanda interna) | a demanda | comenta |
+| `projects.view_all` | todas | edita, comenta, anexa, exclui |
+| Os demais | nada (`TASK_NOT_FOUND`) | — |
+
+Na **tarefa de projeto com responsável**, quem vê o projeto continua com as regras do projeto; quem participa do fluxo sem ser do projeto vê e trabalha **só nessa tarefa** (como o Responsável TI na tarefa dele: não exclui, não relaciona, não faz fork, não troca o responsável). Pôr, trocar ou tirar o responsável da tarefa de projeto exige poder atribuir no projeto (`tasks.assign` + colaborar). O projeto de sistema das demandas não é projeto de ninguém: nem `projects.view_all` o abre, edita, arquiva ou exclui.
