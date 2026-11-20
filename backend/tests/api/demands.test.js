@@ -332,9 +332,16 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
   })
 
   it('campos do tipo (POST /demands e PATCH /tasks/{id}): obrigatórios do tipo, gravados, no histórico e editáveis', async () => {
-    const ambiente = (await admin.post('/custom-fields', { label: 'Ambiente', type: 'select', options: [{ label: 'Produção', color: 'red' }, { label: 'Homologação', color: 'amber' }] })).body.data
-    const passos = (await admin.post('/custom-fields', { label: 'Passos para reprodução', type: 'textarea' })).body.data
-    const erro = (await admin.post('/task-types', { key: 'ERRO_DEMANDA', name: 'Erro' })).body.data
+    // rótulos próprios: "Ambiente" e "Passos para reprodução" já existem na carga inicial (tipo Bug)
+    const created201 = (res) => {
+      assert.equal(res.status, 201, JSON.stringify(res.body))
+      return res.body.data
+    }
+    const ambiente = created201(
+      await admin.post('/custom-fields', { label: 'Ambiente do erro', type: 'select', options: [{ label: 'Produção', color: 'red' }, { label: 'Homologação', color: 'amber' }] }),
+    )
+    const passos = created201(await admin.post('/custom-fields', { label: 'Passos do erro', type: 'textarea' }))
+    const erro = created201(await admin.post('/task-types', { key: 'ERRO_DEMANDA', name: 'Erro da demanda' }))
     const linked = await admin.put(`/task-types/${erro.id}/fields`, { fields: [{ field_id: ambiente.id, required: true }, { field_id: passos.id, required: true }] })
     assert.equal(linked.status, 200, JSON.stringify(linked.body))
     const production = ambiente.options.find((o) => o.label === 'Produção').id
@@ -355,7 +362,7 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.deepEqual(saved.custom_values, values)
     assert.deepEqual(saved.fields.map((link) => link.field.name), [ambiente.name, passos.name])
     const opened = (await people.ana.client.get(`${path}/history`)).body.data.find((e) => e.action === 'task.created')
-    assert.equal(opened.new_value['cf:Ambiente'], 'Produção')
+    assert.equal(opened.new_value['cf:Ambiente do erro'], 'Produção')
 
     // edição (o formulário manda os campos): grava; obrigatório vazio é recusado
     const edited = await people.ana.client.patch(path, { title: 'Erro ao exportar', custom_values: { [ambiente.name]: production, [passos.name]: 'Passos revistos' } })
