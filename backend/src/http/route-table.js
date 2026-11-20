@@ -281,6 +281,9 @@ const ROUTES = [
   ['POST', '/api/v1/tags', 'createTag', JSON_LIMIT],
   ['PATCH', '/api/v1/tags/:id', 'updateTag', JSON_LIMIT],
   ['DELETE', '/api/v1/tags/:id', 'deleteTag'],
+  ['GET', '/api/v1/companies', 'listCompanies'],
+  ['POST', '/api/v1/companies', 'createCompany', JSON_LIMIT],
+  ['PATCH', '/api/v1/companies/:id', 'updateCompany', JSON_LIMIT],
 ]
 
 /** Rotas multipart (upload de arquivos): o limite vale para o conjunto dos arquivos. */

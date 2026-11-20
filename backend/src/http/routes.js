@@ -346,6 +346,9 @@ function taskHistory(e) {
 // ---------------------------------------------------------------- tags & comments
 
 const listTags = configAction('tags', (s, ctx) => s.listTags(ctx))
+const listCompanies = configAction('companies', (s, ctx, r) => s.list(ctx, r.query()))
+const createCompany = configAction('companies', (s, ctx, r) => s.create(ctx, r.body()), 201)
+const updateCompany = configAction('companies', (s, ctx, r) => s.update(ctx, r.id, r.body()))
 const listIcons = configAction('iconLibrary', (s, ctx) => s.list(ctx))
 const importIcons = configAction('iconLibrary', (s, ctx, r) => s.importIcons(ctx, r.body()))
 const removeIcon = (e) => handle(e, async ({ ctx, services, param }) => ({ data: await services.iconLibrary.removeIcon(ctx, param('name')) }))
@@ -788,6 +791,9 @@ module.exports = {
   returnDemand,
   taskHistory,
   listTags,
+  listCompanies,
+  createCompany,
+  updateCompany,
   listIcons,
   importIcons,
   removeIcon,

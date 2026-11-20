@@ -36,12 +36,14 @@ const sprintDomain = require('../domain/sprint')
 const relationDomain = require('../domain/relation')
 const planDomain = require('../domain/plan')
 const demandDomain = require('../domain/demand')
+const companyDomain = require('../domain/company')
 const { buildAuditEntry, truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createCustomFieldService } = require('./custom-fields')
 const { createNotifier } = require('./notifications')
 const { createPlanSupport } = require('./plan-support')
 const { createTaskAccess } = require('./task-access')
+const { companyRef } = require('./companies')
 
 const MAX_HOURS = 100000
 const MAX_TAGS = 20
@@ -77,10 +79,12 @@ const BASE_RULES = {
   area_id: [idRule],
   // Responsável que recebe e distribui (§45): liga o fluxo da demanda na tarefa de projeto; null desliga
   demand_owner_id: [idRule],
+  // empresa (§46): só na demanda interna (a tarefa de projeto herda a do projeto); só ativa
+  company_id: [idRule],
 }
 
 /** Campos que aceitam `null` para limpar. */
-const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id', 'urgency', 'area_id', 'demand_owner_id']
+const NULLABLE = ['assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id', 'plan_item_id', 'urgency', 'area_id', 'demand_owner_id', 'company_id']
 
 /** Com o fluxo do responsável ligado (§45), estes mudam só pelo fluxo (application/demands.js). */
 const FLOW_FIELDS = ['status_id', 'assignee_id', 'due_date', 'estimated_hours']
@@ -126,6 +130,8 @@ const LIST_SCHEMA = {
       typeof value === 'string' && value.split(',').every((c) => workflow.STATUS_CATEGORIES.indexOf(c.trim()) >= 0) ? null : 'invalid_option',
     ),
   ],
+  // empresa (§46; a da demanda interna ou a do projeto); `none` = sem empresa
+  company_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   // Com projeto · Sem projeto (§45)
   kind: [rules.oneOf(['project', 'demand'])],
   // "Minhas tarefas" (§44/§45): atribuídas a mim e as demandas que pedi ou recebi
@@ -133,7 +139,7 @@ const LIST_SCHEMA = {
 }
 
 /** Na demanda interna (§45), a edição comum só mexe nestes; o resto é do fluxo da demanda (ou não se aplica). */
-const DEMAND_EDITABLE = ['title', 'description', 'task_type_id', 'priority_id', 'area_id', 'urgency']
+const DEMAND_EDITABLE = ['title', 'description', 'task_type_id', 'priority_id', 'area_id', 'urgency', 'company_id']
 const DEMAND_FLOW = [
   'status_id', 'assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id',
   'plan_item_id', 'plan_group_id', 'custom_values', 'tag_ids', 'checklist',
@@ -212,6 +218,7 @@ function createTaskService(deps) {
       statuses: byId(await deps.statusRepository.list({ includeInactive: true })),
       priorities: byId(await deps.priorityRepository.list({ includeInactive: true })),
       areas: byId(await deps.areaRepository.list({ includeInactive: true })),
+      companies: byId(await deps.companyRepository.list({ includeInactive: true })),
     }
   }
 
@@ -438,6 +445,7 @@ function createTaskService(deps) {
     const sprint = task.sprintId ? refs.sprints[task.sprintId] : null
     const user = (id) => (id && refs.users[id] ? toUserSummary(refs.users[id]) : null)
     const isDemand = demandDomain.isDemand(task)
+    const companyId = companyDomain.effectiveCompanyId(task, project)
     return {
       id: task.id,
       code: task.code,
@@ -478,6 +486,8 @@ function createTaskService(deps) {
       it_visible: !!task.itVisible,
       urgency: task.urgency || null,
       area: area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null,
+      // empresa (§46): a da demanda interna ou, na tarefa de projeto, a do projeto
+      company: companyId ? companyRef(refs.companies[companyId]) : null,
     }
   }
 
@@ -675,6 +685,7 @@ function createTaskService(deps) {
         it_visible: pick('it_visible'),
         urgency: pick('urgency'),
         area_id: pick('area_id'),
+        company_id: pick('company_id'),
         kind: pick('kind'),
         mine: pick('mine'),
       },
@@ -718,6 +729,7 @@ function createTaskService(deps) {
       itVisible: filters.it_visible === undefined ? undefined : filters.it_visible === 'true',
       urgency: toList(filters.urgency),
       areaId: filters.area_id,
+      companyId: filters.company_id,
       search,
       sort: parseSort(q.sort, SORTABLE, 'code'),
       // "Minhas tarefas primeiro": as atribuídas a quem consulta vêm antes, cada grupo na ordem pedida
@@ -1075,6 +1087,15 @@ function createTaskService(deps) {
     if (data.task_type_id !== undefined && data.task_type_id !== task.typeId) patch.typeId = activeOrInvalid(refs.types[data.task_type_id], 'task_type_id').id
     if (data.priority_id !== undefined && data.priority_id !== task.priorityId) patch.priorityId = activeOrInvalid(refs.priorities[data.priority_id], 'priority_id').id
     if (data.area_id !== undefined && data.area_id !== task.areaId) patch.areaId = activeOrInvalid(refs.areas[data.area_id], 'area_id').id
+    if (parsed.cleared.indexOf('company_id') >= 0) {
+      // com empresa ativa, a demanda não volta a ficar sem empresa
+      if (task.companyId && companyDomain.companyRequired(Object.values(refs.companies))) throw invalid({ company_id: 'required' })
+      if (task.companyId) patch.companyId = null
+    } else if (data.company_id !== undefined && data.company_id !== task.companyId) {
+      const company = refs.companies[data.company_id]
+      if (!company || company.active === false) throw invalid({ company_id: 'invalid_option' })
+      patch.companyId = company.id
+    }
     const urgency = parsed.cleared.indexOf('urgency') >= 0 ? null : data.urgency
     if (urgency !== undefined && urgency !== (task.urgency || null)) patch.urgency = urgency
     const name = (map, key) => (key && map[key] ? map[key].name : null)
@@ -1084,6 +1105,7 @@ function createTaskService(deps) {
       task_type: name(refs.types, t.typeId),
       task_priority: name(refs.priorities, t.priorityId),
       area: name(refs.areas, t.areaId),
+      company: name(refs.companies, t.companyId),
       urgency: t.urgency || null,
     })
     const change = changes(view(task), view(Object.assign({}, task, patch)))

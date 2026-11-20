@@ -211,14 +211,15 @@ describe('mcp/tools', () => {
       tags: [{ id: 'g', name: 'api', color: 'red' }], due_date: '2026-11-01T00:00:00.000Z', blocked: false,
       checklist_progress: { done: 0, total: 0 }, comment_count: 3, urgency: 'high', in_report: false, it_visible: true,
       area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' },
+      company: { id: 'c1', name: 'Somax', short_code: 'SMX' },
     }
     const { calls, services } = spyServices({ 'tasks.listTasks': { items: [summary], meta: { page: 1, perPage: 5, total: 1, totalPages: 1 } } })
-    const out = await byName('list_tasks').run({ project_id: 'p1', categories: ['todo', 'in_progress'], assignee_id: 'me', urgency: 'none', in_report: false, it_visible: true, per_page: 5 }, { services, ctx })
-    assert.deepEqual(calls[0], { service: 'tasks', method: 'listTasks', args: [{ project_id: 'p1', category: 'todo,in_progress', assignee_id: 'me', urgency: 'none', in_report: 'false', it_visible: 'true', perPage: 5 }] })
+    const out = await byName('list_tasks').run({ project_id: 'p1', categories: ['todo', 'in_progress'], assignee_id: 'me', urgency: 'none', company_id: 'c1', in_report: false, it_visible: true, per_page: 5 }, { services, ctx })
+    assert.deepEqual(calls[0], { service: 'tasks', method: 'listTasks', args: [{ project_id: 'p1', category: 'todo,in_progress', assignee_id: 'me', urgency: 'none', company_id: 'c1', in_report: 'false', it_visible: 'true', perPage: 5 }] })
     assert.deepEqual(out.meta, { page: 1, perPage: 5, total: 1, totalPages: 1 })
     assert.deepEqual(out.items[0], {
       id: 't1', code: 'CRM-1', title: 'Tarefa', project: 'CRM', type: 'Bug', status: { id: 's1', name: 'A fazer', category: 'todo' },
-      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', area: { id: 'a1', name: 'Dpto. TI' }, in_report: false, it_visible: true, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
+      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', area: { id: 'a1', name: 'Dpto. TI' }, company: { id: 'c1', name: 'Somax' }, in_report: false, it_visible: true, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
       tags: ['api'], blocked: false, parent_task_id: null, updated_at: null,
     })
   })

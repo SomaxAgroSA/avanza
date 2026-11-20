@@ -19,6 +19,7 @@ const { createLookupService } = require('../application/lookups')
 const { createTaskService } = require('../application/tasks')
 const { createDemandService } = require('../application/demands')
 const { createTagService } = require('../application/tags')
+const { createCompanyService } = require('../application/companies')
 const { createIconLibraryService } = require('../application/icon-library')
 const { createCommentService } = require('../application/comments')
 const { createAttachmentService } = require('../application/attachments')
@@ -115,6 +116,7 @@ function createContainer(runtime, options) {
     tasks: createTaskService(deps),
     demands: createDemandService(deps),
     tags: createTagService(deps),
+    companies: createCompanyService(deps),
     iconLibrary: createIconLibraryService(deps),
     comments: createCommentService(deps),
     attachments: createAttachmentService(deps),
