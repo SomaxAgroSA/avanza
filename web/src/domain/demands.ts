@@ -14,9 +14,21 @@ export type DemandStatus = (typeof DEMAND_STATUSES)[number]
 /** Os quatro primeiros passos ganham um cartão de número na caixa Recebidas por mim. */
 export const DEMAND_KPI_STATUSES: readonly DemandStatus[] = ['unassigned', 'assigned', 'in_progress', 'to_validate']
 
-/** Caixas da tela Demandas. */
-export const DEMAND_BOXES = ['received', 'assigned', 'requested'] as const
+/**
+ * Caixas da tela Demandas: as três de quem participa e Todas (`all`: todas as demandas, só para quem tem
+ * `projects.view_all`; o servidor recusa as demais pessoas).
+ */
+export const DEMAND_BOXES = ['received', 'assigned', 'requested', 'all'] as const
 export type DemandBox = (typeof DEMAND_BOXES)[number]
+
+/** Filtros da lista de uma caixa (a caixa Todas usa Responsável e Atribuída a). */
+export interface DemandListFilters {
+  statuses?: DemandStatus[]
+  /** Só as demandas desse responsável. */
+  ownerId?: string
+  /** Só as demandas atribuídas a essa pessoa. */
+  assigneeId?: string
+}
 
 export const DEMAND_ACTIONS = ['assign', 'start', 'pass', 'conclude', 'validate', 'return'] as const
 export type DemandAction = (typeof DEMAND_ACTIONS)[number]
@@ -43,9 +55,12 @@ export interface TeamLoad {
 }
 
 export interface DemandOverview {
+  /** `all` só vem preenchido para quem tem `projects.view_all` (para os demais, zeros). */
   counts: DemandCounts
   /** Carga da equipe: atribuídas e em andamento de cada pessoa, com as horas estimadas. */
   team: TeamLoad[]
+  /** Carga das equipes (caixa Todas): todas as pessoas com demandas abertas; vazia sem `projects.view_all`. */
+  allTeam: TeamLoad[]
 }
 
 export interface DemandInput {
@@ -69,6 +84,7 @@ export const EMPTY_DEMAND_COUNTS: DemandCounts = {
   received: { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 },
   assigned: { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 },
   requested: { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 },
+  all: { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 },
 }
 
 export function isDemandStatus(value: unknown): value is DemandStatus {

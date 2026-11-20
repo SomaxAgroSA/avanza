@@ -4678,11 +4678,6 @@
   "demands": {
     "newProjectTask": "Project task",
     "newDemand": "Internal request",
-    "kindGroup": "Task kind",
-    "kindHint": {
-      "project": "Part of a project, as usual.",
-      "demand": "No project: you ask one person and they assign it to their team."
-    },
     "chip": "Internal request",
     "status": {
       "unassigned": "Unassigned",
@@ -4699,8 +4694,8 @@
       "done": "Done"
     },
     "form": {
-      "createTitle": "New task",
-      "createDescription": "Choose whether it is a project task or an internal request.",
+      "createTitle": "New internal request",
+      "createDescription": "Ask a person: they receive it and assign it to their team.",
       "editTitle": "Edit {{code}}",
       "titlePlaceholder": "E.g.: Portfolio view: add the Cycle field",
       "descriptionPlaceholder": "What you need, where (view, system, screen) and the result you expect. If there is already a support ticket, add its number.",
@@ -4719,27 +4714,32 @@
     "page": {
       "title": "Requests",
       "tabsLabel": "Request boxes",
-      "kpis": "Requests by step"
+      "kpis": "Requests by step",
+      "truncated": "Showing the {{shown}} most recent of {{total}}. Use the filters to see the rest."
     },
     "tabs": {
       "received": "Received by me",
       "assigned": "Assigned to me",
-      "requested": "Requested by me"
+      "requested": "Requested by me",
+      "all": "All"
     },
     "hints": {
       "received": "What people asked of you. Assign it to your team and keep track of everything, even after passing it on.",
       "assigned": "What was assigned to you. Start, pass it to a teammate or complete it.",
-      "requested": "What you asked for. When it reaches \"To validate\", validate the delivery or return it with a note."
+      "requested": "What you asked for. When it reaches \"To validate\", validate the delivery or return it with a note.",
+      "all": "Every request in the company, internal and project ones. Filter by owner or by assignee."
     },
     "empty": {
       "received": "No requests received yet.",
       "assigned": "You have no open requests.",
-      "requested": "You have not requested anything yet."
+      "requested": "You have not requested anything yet.",
+      "all": "No requests here."
     },
     "row": {
       "due": "due {{date}}",
       "priority": "{{name}} priority",
-      "noAssignee": "Unassigned"
+      "noAssignee": "Unassigned",
+      "owner": "Owner: {{name}}"
     },
     "load": {
       "title": "My team's load",
@@ -4748,6 +4748,18 @@
       "value": "{{count}} · {{hours}} h",
       "empty": "Your team comes from Settings → Dependencies by area.",
       "aria": "{{name}}: {{count}} requests, {{hours}} hours"
+    },
+    "allLoad": {
+      "title": "Teams' load",
+      "hint": "Per person: assigned and in-progress requests and their estimated hours.",
+      "foot": "Counts what each person has open today, across all teams.",
+      "empty": "Nobody has assigned or in-progress requests."
+    },
+    "filters": {
+      "label": "Request filters",
+      "owner": "Owner",
+      "assignee": "Assigned to",
+      "any": "Everyone"
     },
     "badge_one": "{{count}} received request unassigned",
     "badge_other": "{{count}} received requests unassigned",
@@ -4804,7 +4816,8 @@
         "tasks": "Tasks",
         "received": "Received by me",
         "assigned": "Assigned to me",
-        "requested": "Requested by me"
+        "requested": "Requested by me",
+        "all": "All requests"
       },
       "priority": "{{name}} priority",
       "description": "Description",

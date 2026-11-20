@@ -14,6 +14,9 @@
  * - As demandas moram no projeto de sistema `kind = 'demands'` (oculto); `inbox()` o recria se sumir.
  * - Caixas da tela Demandas: Recebidas por mim, Atribuídas a mim e Pedidas por mim; `overview` traz os
  *   números de cada passo (o selo do menu Tarefas = Recebidas "Sem atribuir") e a carga da equipe.
+ * - Caixa Todas (`all`, só com `projects.view_all`; sem ela, FORBIDDEN): todas as demandas — internas e
+ *   tarefas de projeto com responsável —, com filtros por responsável e por quem executa; o `overview`
+ *   dessas pessoas traz também os números de todas e a carga de todas as pessoas (`all_team`).
  */
 
 const { appError } = require('../core/errors')
@@ -58,6 +61,8 @@ const LIST_SCHEMA = {
       typeof value === 'string' && value.split(',').every((s) => demandDomain.DEMAND_STATUSES.indexOf(s.trim()) >= 0) ? null : 'invalid_option',
     ),
   ],
+  owner_id: [idRule],
+  assignee_id: [idRule],
 }
 
 function invalid(fields) {
@@ -365,18 +370,26 @@ function createDemandService(deps) {
 
   // ---------------------------------------------------------------- consultas
 
-  /** Caixas da tela Demandas (`box` = received | assigned | requested; `status` = passos separados por vírgula). */
+  /**
+   * Caixas da tela Demandas (`box` = received | assigned | requested | all; `status` = passos separados por
+   * vírgula; `owner_id` e `assignee_id` filtram pelo responsável e por quem executa). `all` = todas as
+   * demandas, só para quem tem `projects.view_all` (FORBIDDEN para os demais).
+   */
   async function listDemands(ctx, query) {
     rbac.assertAuthenticated(ctx.principal)
     rbac.assertCan(ctx.principal, 'tasks.view')
     const q = query || {}
     const pick = (key) => (q[key] === undefined || q[key] === '' ? undefined : q[key])
-    const filters = assertValid({ box: pick('box'), status: pick('status') }, LIST_SCHEMA)
+    const filters = assertValid({ box: pick('box'), status: pick('status'), owner_id: pick('owner_id'), assignee_id: pick('assignee_id') }, LIST_SCHEMA)
+    const issue = demandDomain.boxIssue(ctx.principal, filters.box)
+    if (issue) throw appError(issue)
     const pagination = parsePagination(q, { defaultPerPage: 100, maxPerPage: 100 })
     const result = await tasks.list({
-      // a caixa já é de quem participa: tudo nela é visível à pessoa
+      // a caixa já é de quem participa (ou, em Todas, de quem vê todas): tudo nela é visível à pessoa
       scope: { userId: ctx.principal.userId, viewAll: true },
       demandBox: { box: filters.box, userId: ctx.principal.userId },
+      demandOwnerId: filters.owner_id,
+      assigneeId: filters.assignee_id,
       demandStatuses: filters.status ? filters.status.split(',').map((s) => s.trim()) : undefined,
       sort: [{ column: 'created', direction: 'DESC' }],
       pagination,
@@ -384,18 +397,29 @@ function createDemandService(deps) {
     return { items: await taskService.summarize(result.items, ctx), meta: buildPageMeta(pagination, result.total) }
   }
 
+  /** Carga por pessoa, das mais carregadas para as menos: { user, open_count, estimated_hours }. */
+  async function loadOf(ids, load) {
+    const users = ids.length ? await deps.userRepository.findManyByIds(ids) : []
+    return users
+      .filter((u) => u.status === 'active' || load[u.id])
+      .map((u) => ({ user: toUserSummary(u), open_count: load[u.id] ? load[u.id].open : 0, estimated_hours: load[u.id] ? round2(load[u.id].hours) : 0 }))
+      .sort((a, b) => b.estimated_hours - a.estimated_hours || b.open_count - a.open_count || byName(a.user, b.user))
+  }
+
   /**
    * Números da tela Demandas e o selo do menu: quantas há em cada passo nas três caixas, e a carga da
    * equipe (as outras pessoas da área de quem consulta + quem executa as demandas que ela recebeu):
-   * demandas atribuídas e em andamento e as horas estimadas delas.
+   * demandas atribuídas e em andamento e as horas estimadas delas. Com `projects.view_all`, também a
+   * caixa Todas (`counts.all`) e a carga de todas as pessoas com demandas abertas (`all_team`).
    */
   async function overview(ctx) {
     rbac.assertAuthenticated(ctx.principal)
     rbac.assertCan(ctx.principal, 'tasks.view')
     const me = ctx.principal.userId
-    const raw = await tasks.demandCounts(me)
+    const seesAll = demandDomain.seesAllDemands(ctx.principal)
+    const raw = await tasks.demandCounts(me, { all: seesAll })
     const counts = {}
-    demandDomain.DEMAND_BOXES.forEach((box) => {
+    ;(seesAll ? demandDomain.DEMAND_BOXES : demandDomain.PERSONAL_BOXES).forEach((box) => {
       counts[box] = {}
       demandDomain.DEMAND_STATUSES.forEach((status) => {
         counts[box][status] = (raw[box] && raw[box][status]) || 0
@@ -403,13 +427,11 @@ function createDemandService(deps) {
     })
     const mates = demandDomain.teamOf(await taskAccess.areas(), me).memberIds
     const ids = mates.concat(await tasks.demandAssignees(me, demandDomain.LOAD_STATUSES)).filter((id, i, all) => id && all.indexOf(id) === i)
-    const load = await tasks.demandLoad(ids, demandDomain.LOAD_STATUSES)
-    const users = ids.length ? await deps.userRepository.findManyByIds(ids) : []
-    const team = users
-      .filter((u) => u.status === 'active' || load[u.id])
-      .map((u) => ({ user: toUserSummary(u), open_count: load[u.id] ? load[u.id].open : 0, estimated_hours: load[u.id] ? round2(load[u.id].hours) : 0 }))
-      .sort((a, b) => b.estimated_hours - a.estimated_hours || b.open_count - a.open_count || byName(a.user, b.user))
-    return { counts, team }
+    const team = await loadOf(ids, await tasks.demandLoad(ids, demandDomain.LOAD_STATUSES))
+    if (!seesAll) return { counts, team }
+    // Carga das equipes (caixa Todas): todas as pessoas com demandas atribuídas ou em andamento
+    const everyone = await tasks.demandLoadAll(demandDomain.LOAD_STATUSES)
+    return { counts, team, all_team: await loadOf(Object.keys(everyone), everyone) }
   }
 
   /**

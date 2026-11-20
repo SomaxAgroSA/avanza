@@ -686,8 +686,9 @@ function createFakeRepositories(store) {
     },
     listForReminders: (query) =>
       store.tasks.filter((t) => t.dueDate && t.dueDate < query.before && t.assigneeId && query.statusIds.includes(t.statusId)),
-    demandCounts: (userId) => {
-      const out = { received: {}, assigned: {}, requested: {} }
+    demandCounts: (userId, options) => {
+      const all = !!(options && options.all)
+      const out = all ? { received: {}, assigned: {}, requested: {}, all: {} } : { received: {}, assigned: {}, requested: {} }
       const add = (box, t) => {
         out[box][t.demandStatus] = (out[box][t.demandStatus] || 0) + 1
       }
@@ -697,6 +698,19 @@ function createFakeRepositories(store) {
           if (t.demandOwnerId === userId) add('received', t)
           if (t.assigneeId === userId) add('assigned', t)
           if (t.reporterId === userId) add('requested', t)
+          if (all) add('all', t)
+        })
+      return out
+    },
+    demandLoadAll: (statuses) => {
+      const out = {}
+      store.tasks
+        .filter((t) => statuses.includes(t.demandStatus) && t.assigneeId)
+        .forEach((t) => {
+          const entry = out[t.assigneeId] || { open: 0, hours: 0 }
+          entry.open += 1
+          entry.hours += t.estimatedHours || 0
+          out[t.assigneeId] = entry
         })
       return out
     },
@@ -733,8 +747,9 @@ function createFakeRepositories(store) {
       if (query.mineId) items = items.filter((t) => t.assigneeId === query.mineId || (!!t.demandStatus && (t.reporterId === query.mineId || t.demandOwnerId === query.mineId)))
       if (query.demandBox) {
         const field = { received: 'demandOwnerId', assigned: 'assigneeId', requested: 'reporterId' }[query.demandBox.box]
-        items = items.filter((t) => !!t.demandStatus && t[field] === query.demandBox.userId)
+        items = items.filter((t) => !!t.demandStatus && (!field || t[field] === query.demandBox.userId))
       }
+      if (query.demandOwnerId) items = items.filter((t) => t.demandOwnerId === query.demandOwnerId)
       if (query.demandStatuses) items = items.filter((t) => query.demandStatuses.includes(t.demandStatus))
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)

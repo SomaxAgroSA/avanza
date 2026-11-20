@@ -4678,11 +4678,6 @@
   "demands": {
     "newProjectTask": "Tarea de proyecto",
     "newDemand": "Demanda interna",
-    "kindGroup": "Tipo de tarea",
-    "kindHint": {
-      "project": "Forma parte de un proyecto, como hoy.",
-      "demand": "Sin proyecto: se la pides a una persona y ella la asigna a su equipo."
-    },
     "chip": "Demanda interna",
     "status": {
       "unassigned": "Sin asignar",
@@ -4699,8 +4694,8 @@
       "done": "Concluidas"
     },
     "form": {
-      "createTitle": "Nueva tarea",
-      "createDescription": "Elige si es una tarea de proyecto o una demanda interna.",
+      "createTitle": "Nueva demanda interna",
+      "createDescription": "Pídela a una persona: ella la recibe y la asigna a su equipo.",
       "editTitle": "Editar {{code}}",
       "titlePlaceholder": "Ej.: Vista de cartera: agregar el campo Ciclo",
       "descriptionPlaceholder": "Qué necesitas, dónde (vista, sistema, pantalla) y qué resultado esperas. Si ya hay un ticket de soporte, pon su número.",
@@ -4719,27 +4714,32 @@
     "page": {
       "title": "Demandas",
       "tabsLabel": "Bandejas de demandas",
-      "kpis": "Demandas por paso"
+      "kpis": "Demandas por paso",
+      "truncated": "Mostrando las {{shown}} más recientes de {{total}}. Usa los filtros para ver las demás."
     },
     "tabs": {
       "received": "Recibidas por mí",
       "assigned": "Asignadas a mí",
-      "requested": "Pedidas por mí"
+      "requested": "Pedidas por mí",
+      "all": "Todas"
     },
     "hints": {
       "received": "Lo que te pidieron a ti. Asígnalo a tu equipo y síguelo todo, aunque lo pases.",
       "assigned": "Lo que te asignaron. Empieza, pásala a un compañero del equipo o concluye.",
-      "requested": "Lo que pediste. Cuando llegue a «Para validar», valida la entrega o devuélvela con un comentario."
+      "requested": "Lo que pediste. Cuando llegue a «Para validar», valida la entrega o devuélvela con un comentario.",
+      "all": "Todas las demandas de la empresa, internas y de proyecto. Filtra por responsable o por quien ejecuta."
     },
     "empty": {
       "received": "Todavía no recibiste demandas.",
       "assigned": "No tienes demandas abiertas.",
-      "requested": "Todavía no pediste ninguna demanda."
+      "requested": "Todavía no pediste ninguna demanda.",
+      "all": "No hay demandas por aquí."
     },
     "row": {
       "due": "plazo {{date}}",
       "priority": "Prioridad {{name}}",
-      "noAssignee": "Sin asignar"
+      "noAssignee": "Sin asignar",
+      "owner": "Responsable: {{name}}"
     },
     "load": {
       "title": "Carga de mi equipo",
@@ -4748,6 +4748,18 @@
       "value": "{{count}} · {{hours}} h",
       "empty": "Tu equipo sale de Configuración → Dependencias por área.",
       "aria": "{{name}}: {{count}} demandas, {{hours}} horas"
+    },
+    "allLoad": {
+      "title": "Carga de los equipos",
+      "hint": "Por persona: demandas asignadas y en curso y sus horas estimadas.",
+      "foot": "Cuenta lo que cada persona tiene abierto hoy, en todos los equipos.",
+      "empty": "Nadie tiene demandas asignadas o en curso."
+    },
+    "filters": {
+      "label": "Filtros de las demandas",
+      "owner": "Responsable",
+      "assignee": "Asignada a",
+      "any": "Todos"
     },
     "badge_one": "{{count}} demanda recibida sin asignar",
     "badge_other": "{{count}} demandas recibidas sin asignar",
@@ -4804,7 +4816,8 @@
         "tasks": "Tareas",
         "received": "Recibidas por mí",
         "assigned": "Asignadas a mí",
-        "requested": "Pedidas por mí"
+        "requested": "Pedidas por mí",
+        "all": "Todas las demandas"
       },
       "priority": "Prioridad {{name}}",
       "description": "Descripción",

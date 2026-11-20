@@ -567,13 +567,15 @@ function build() {
       },
       '/demands': {
         get: op(
-          'Demandas internas de uma caixa (§45; tasks.view): box = received (recebidas por mim como responsável), assigned (atribuídas a mim) ou requested (pedidas por mim); status = passos separados por vírgula (unassigned, assigned, in_progress, to_validate, done). Mais recentes primeiro; até 100 por página. Cada item é um resumo de tarefa com project = null e demand = { status, owner, due_at, opened_at }',
+          'Demandas de uma caixa (§45; tasks.view): box = received (recebidas por mim como responsável), assigned (atribuídas a mim), requested (pedidas por mim) ou all (Todas: todas as demandas internas e tarefas de projeto com responsável — só com projects.view_all; sem ela, 403 FORBIDDEN); status = passos separados por vírgula (unassigned, assigned, in_progress, to_validate, done); owner_id e assignee_id filtram pelo responsável e por quem executa. Mais recentes primeiro; até 100 por página. Cada item é um resumo de tarefa com project (null na demanda interna) e demand = { status, owner, due_at, opened_at }',
           ['demands'],
-          { 200: ok('Página de demandas', { type: 'array', items: ref('Task') }, true), 400: errorResponse('VALIDATION_ERROR') },
+          { 200: ok('Página de demandas', { type: 'array', items: ref('Task') }, true), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN') },
           {
             parameters: [
-              { name: 'box', in: 'query', required: true, schema: { type: 'string', enum: ['received', 'assigned', 'requested'] } },
+              { name: 'box', in: 'query', required: true, schema: { type: 'string', enum: ['received', 'assigned', 'requested', 'all'] } },
               { name: 'status', in: 'query', schema: { type: 'string' } },
+              { name: 'owner_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas desse responsável' },
+              { name: 'assignee_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas atribuídas a essa pessoa' },
               { name: 'page', in: 'query', schema: { type: 'integer' } },
               { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
             ],
@@ -602,7 +604,7 @@ function build() {
       },
       '/demands/overview': {
         get: op(
-          'Números da tela Demandas (§45): counts.received|assigned|requested = { unassigned, assigned, in_progress, to_validate, done } de quem consulta (o selo do menu Tarefas = received.unassigned) e team = carga da equipe [{ user, open_count, estimated_hours }] — as outras pessoas da área de quem consulta (Dependências por área) e quem executa as demandas que ela recebeu; conta atribuídas e em andamento',
+          'Números da tela Demandas (§45): counts.received|assigned|requested = { unassigned, assigned, in_progress, to_validate, done } de quem consulta (o selo do menu Tarefas = received.unassigned) e team = carga da equipe [{ user, open_count, estimated_hours }] — as outras pessoas da área de quem consulta (Dependências por área) e quem executa as demandas que ela recebeu; conta atribuídas e em andamento. Com projects.view_all, também counts.all (todas as demandas, caixa Todas) e all_team (Carga das equipes: todas as pessoas com demandas atribuídas ou em andamento, no mesmo formato); sem ela, as duas chaves não vêm',
           ['demands'],
           { 200: ok('Resumo', { type: 'object' }) },
         ),

@@ -1364,7 +1364,13 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
   return {
     async list(box, options) {
       const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/demands', {
-        query: { box, status: options?.statuses?.length ? options.statuses.join(',') : undefined, perPage: 100 },
+        query: {
+          box,
+          status: options?.statuses?.length ? options.statuses.join(',') : undefined,
+          owner_id: options?.ownerId || undefined,
+          assignee_id: options?.assigneeId || undefined,
+          perPage: 100,
+        },
       })
       return { items: data.map(toTaskSummary), ...meta }
     },

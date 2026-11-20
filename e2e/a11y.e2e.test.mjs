@@ -104,9 +104,10 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
       ['projeto — membros', `/projects/${p}/members`],
       ['projeto — histórico', `/projects/${p}/history`],
       ['tarefas', '/tasks'],
-      // demandas internas (§45): as três caixas
+      // demandas internas (§45): as caixas (Todas só para quem vê todas — o admin)
       ['demandas — recebidas', '/tasks/demands'],
       ['demandas — pedidas', '/tasks/demands?box=requested'],
+      ['demandas — todas', '/tasks/demands?box=all'],
       ['tarefa', `/tasks/${a.id}`],
       ['tarefa — comentários', `/tasks/${a.id}?tab=comments`],
       ['tarefa — relações', `/tasks/${a.id}?tab=relations`],
@@ -189,7 +190,10 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
       await page.getByRole('button', { name: 'Tarefa de projeto' }).first().click()
       await page.getByRole('dialog').waitFor()
       await check(page, 'formulário de tarefa')
-      await page.getByRole('dialog').getByRole('button', { name: 'Demanda interna' }).click()
+      // cada botão abre só o seu formulário (sem os botões de tipo dentro)
+      await page.keyboard.press('Escape')
+      await page.getByRole('dialog').waitFor({ state: 'detached' })
+      await page.getByRole('button', { name: 'Demanda interna' }).first().click()
       await page.getByRole('dialog').getByRole('button', { name: 'Criar demanda' }).waitFor()
       await check(page, 'formulário de demanda interna')
       await page.keyboard.press('Escape')

@@ -1,31 +1,49 @@
 import { Link, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Inbox } from 'lucide-react'
-import { DEMAND_BOXES, DEMAND_KPI_STATUSES, demandActionsFor, groupByStatus, loadPercent, type DemandBox, type TeamLoad } from '@/domain/demands'
+import {
+  DEMAND_BOXES,
+  DEMAND_KPI_STATUSES,
+  demandActionsFor,
+  groupByStatus,
+  loadPercent,
+  type DemandBox,
+  type DemandCounts,
+  type DemandListFilters,
+  type TeamLoad,
+} from '@/domain/demands'
+import type { UserSummary } from '@/domain/projects'
 import type { TaskSummary } from '@/domain/tasks'
-import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSkeleton } from '@/presentation/components'
+import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSelect, AppSkeleton } from '@/presentation/components'
 import { formatNumber, formatShortDateTime } from '@/core/utils/format'
-import { useSession } from '@/features/auth/session'
+import { useCan, useSession } from '@/features/auth/session'
 import { TasksHeader } from '@/features/tasks/TasksHeader'
 import { DemandActions } from './DemandActions'
 import { DemandChip, DemandStatusBadge, ProjectChip } from './demand-visuals'
-import { useDemandList, useDemandOverview } from './queries'
+import { useDemandList, useDemandOverview, useDemandOwners } from './queries'
 
 const isBox = (value: string | null): value is DemandBox => !!value && (DEMAND_BOXES as readonly string[]).includes(value)
+/** Opção "Todos" dos filtros de pessoa. */
+const ANY = '__any__'
 
 /**
  * Demandas internas (§45) dentro de Tarefas: Recebidas por mim (grupos por passo, números dos quatro
  * primeiros, Atribuir/Reatribuir e a Carga da minha equipe), Atribuídas a mim (Começar · Passar a… ·
- * Concluir) e Pedidas por mim (Validar · Devolver). A caixa fica no endereço (`?box=`).
+ * Concluir), Pedidas por mim (Validar · Devolver) e — só com `projects.view_all` — Todas (todas as
+ * demandas, com os números, os filtros Responsável e Atribuída a e a Carga das equipes). A caixa e os
+ * filtros ficam no endereço (`?box=&owner=&assignee=`).
  */
 export function DemandsPage() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
+  const seesAll = useCan('projects.view_all')
+  const boxes = DEMAND_BOXES.filter((b) => b !== 'all' || seesAll)
   const raw = params.get('box')
-  const box: DemandBox = isBox(raw) ? raw : 'received'
+  const box: DemandBox = isBox(raw) && boxes.includes(raw) ? raw : 'received'
   const overview = useDemandOverview()
   const counts = overview.data?.counts
   const open = (b: DemandBox) => (counts ? DEMAND_KPI_STATUSES.reduce((sum, status) => sum + counts[b][status], 0) : undefined)
+  const filters = box === 'all' ? personFilters(params) : {}
 
   const label = (text: string, total: number | undefined) => (
     <>
@@ -33,6 +51,13 @@ export function DemandsPage() {
       {total !== undefined && <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted">{total}</span>}
     </>
   )
+
+  const setFilter = (key: 'owner' | 'assignee', value: string) => {
+    const next = new URLSearchParams(params)
+    if (value === ANY) next.delete(key)
+    else next.set(key, value)
+    setParams(next, { replace: true })
+  }
 
   return (
     <>
@@ -42,24 +67,21 @@ export function DemandsPage() {
         className="mb-4"
         value={box}
         onValueChange={(value) => setParams(value === 'received' ? {} : { box: value }, { replace: true })}
-        options={DEMAND_BOXES.map((b) => ({ value: b, label: label(t(`demands.tabs.${b}`), open(b)) }))}
+        options={boxes.map((b) => ({ value: b, label: label(t(`demands.tabs.${b}`), open(b)) }))}
       />
-      {box === 'received' && counts && (
-        <section aria-label={t('demands.page.kpis')} className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {DEMAND_KPI_STATUSES.map((status) => (
-            <div key={status} className="rounded-xl border border-border bg-surface px-4 py-3 shadow-card">
-              <p className="text-xs font-medium text-muted">{t(`demands.groups.${status}`)}</p>
-              <p className="text-2xl font-semibold tabular-nums text-fg" data-testid={`kpi-${status}`}>
-                {counts.received[status]}
-              </p>
-            </div>
-          ))}
-        </section>
-      )}
+      {(box === 'received' || box === 'all') && counts && <KpiCards counts={counts[box]} />}
       {box === 'received' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <DemandBoxList box="received" />
           <TeamLoadCard team={overview.data?.team ?? []} loading={overview.isPending} />
+        </div>
+      ) : box === 'all' ? (
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-3">
+            <PersonFilters filters={filters} team={overview.data?.allTeam ?? []} onChange={setFilter} />
+            <DemandBoxList box="all" filters={filters} />
+          </div>
+          <TeamLoadCard variant="all" team={overview.data?.allTeam ?? []} loading={overview.isPending} />
         </div>
       ) : (
         <DemandBoxList box={box} />
@@ -68,13 +90,83 @@ export function DemandsPage() {
   )
 }
 
+/** Filtros de pessoa da caixa Todas, lidos do endereço (`owner`, `assignee`). */
+function personFilters(params: URLSearchParams): DemandListFilters {
+  const out: DemandListFilters = {}
+  const owner = params.get('owner')
+  const assignee = params.get('assignee')
+  if (owner) out.ownerId = owner
+  if (assignee) out.assigneeId = assignee
+  return out
+}
+
+/** Números dos quatro primeiros passos (Sem atribuir, Atribuídas, Em andamento, Para validar). */
+function KpiCards({ counts }: { counts: DemandCounts[DemandBox] }) {
+  const { t } = useTranslation()
+  return (
+    <section aria-label={t('demands.page.kpis')} className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {DEMAND_KPI_STATUSES.map((status) => (
+        <div key={status} className="rounded-xl border border-border bg-surface px-4 py-3 shadow-card">
+          <p className="text-xs font-medium text-muted">{t(`demands.groups.${status}`)}</p>
+          <p className="text-2xl font-semibold tabular-nums text-fg" data-testid={`kpi-${status}`}>
+            {counts[status]}
+          </p>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+/**
+ * Filtros da caixa Todas: Responsável e Atribuída a. As pessoas vêm da lista de responsáveis possíveis
+ * (pessoas ativas) somada a quem aparece na Carga das equipes.
+ */
+function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters; team: TeamLoad[]; onChange: (key: 'owner' | 'assignee', value: string) => void }) {
+  const { t } = useTranslation()
+  const owners = useDemandOwners(useCan('tasks.create'))
+  const people = new Map<string, UserSummary>()
+  ;[...(owners.data ?? []), ...team.map((member) => member.user)].forEach((person) => people.set(person.id, person))
+  const sorted = [...people.values()].sort((a, b) => a.name.localeCompare(b.name))
+  const options = [
+    { value: ANY, label: t('demands.filters.any') },
+    ...sorted.map((person) => ({ value: person.id, label: person.name, prefix: <AppAvatar name={person.name} src={person.avatarUrl} size="xs" /> })),
+  ]
+  const known = (id: string | undefined) => (id && people.has(id) ? id : ANY)
+  return (
+    <div role="group" aria-label={t('demands.filters.label')} className="flex flex-wrap items-end gap-3">
+      <AppSelect
+        size="sm"
+        searchable
+        label={t('demands.filters.owner')}
+        value={known(filters.ownerId)}
+        onValueChange={(value) => onChange('owner', value)}
+        options={options}
+        className="min-w-48"
+      />
+      <AppSelect
+        size="sm"
+        searchable
+        label={t('demands.filters.assignee')}
+        value={known(filters.assigneeId)}
+        onValueChange={(value) => onChange('assignee', value)}
+        options={options}
+        className="min-w-48"
+      />
+    </div>
+  )
+}
+
 /** Uma caixa: as demandas agrupadas por passo (as concluídas por último), cada uma com os botões dela. */
-function DemandBoxList({ box }: { box: DemandBox }) {
+function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListFilters }) {
   const { t } = useTranslation()
   const me = useSession().current?.user.id
-  const list = useDemandList(box)
+  const [params] = useSearchParams()
+  const list = useDemandList(box, filters)
   // Atribuídas a mim: só o que ainda está comigo (as concluídas ficam na lista de tarefas)
   const items = (list.data?.items ?? []).filter((task) => box !== 'assigned' || task.demand?.status !== 'done')
+  const total = list.data?.total ?? 0
+  // o "← Voltar" da página da tarefa volta para a mesma caixa (com os filtros)
+  const back = box === 'received' ? '/tasks/demands' : `/tasks/demands?${params.toString()}`
 
   if (list.isPending) return <AppSkeleton className="h-64 rounded-2xl" />
   if (list.isError) return <AppErrorState onRetry={() => void list.refetch()} />
@@ -95,18 +187,22 @@ function DemandBoxList({ box }: { box: DemandBox }) {
           <ul>
             {group.items.map((task) => (
               <li key={task.id} className="border-t border-border first:border-t-0">
-                <DemandRow task={task} box={box} actions={demandActionsFor(me, task)} />
+                <DemandRow task={task} box={box} back={back} actions={demandActionsFor(me, task)} />
               </li>
             ))}
           </ul>
         </section>
       ))}
+      {box === 'all' && total > items.length && <p className="border-t border-border py-3 text-xs text-muted">{t('demands.page.truncated', { shown: items.length, total })}</p>}
     </AppCard>
   )
 }
 
-/** Linha: código · tipo · departamento, título (abre a página inteira), passo, quem executa e prazo (ou prioridade) e os botões. */
-function DemandRow({ task, box, actions }: { task: TaskSummary; box: DemandBox; actions: ReturnType<typeof demandActionsFor> }) {
+/**
+ * Linha: código · tipo · departamento, título (abre a página inteira), passo, quem executa e prazo (ou
+ * prioridade) e os botões. Na caixa Todas, também o responsável.
+ */
+function DemandRow({ task, box, back, actions }: { task: TaskSummary; box: DemandBox; back: string; actions: ReturnType<typeof demandActionsFor> }) {
   const { t, i18n } = useTranslation()
   const demand = task.demand
   return (
@@ -117,13 +213,10 @@ function DemandRow({ task, box, actions }: { task: TaskSummary; box: DemandBox; 
           {task.project ? <ProjectChip name={task.project.name} className="shrink-0" /> : <DemandChip className="shrink-0" />}
           <span className="truncate">{[task.code, task.type?.name, task.area?.name].filter(Boolean).join(' · ')}</span>
         </p>
-        <Link
-          to={`/tasks/${task.id}`}
-          state={{ from: { to: box === 'received' ? '/tasks/demands' : `/tasks/demands?box=${box}`, place: box } }}
-          className="line-clamp-2 font-semibold text-fg hover:underline"
-        >
+        <Link to={`/tasks/${task.id}`} state={{ from: { to: back, place: box } }} className="line-clamp-2 font-semibold text-fg hover:underline">
           {task.title}
         </Link>
+        {box === 'all' && demand?.owner && <p className="truncate text-xs text-muted">{t('demands.row.owner', { name: demand.owner.name })}</p>}
       </div>
       <div>{demand && <DemandStatusBadge status={demand.status} />}</div>
       <div className="min-w-0 text-xs text-muted">
@@ -146,17 +239,21 @@ function DemandRow({ task, box, actions }: { task: TaskSummary; box: DemandBox; 
   )
 }
 
-/** Carga da minha equipe: por pessoa, demandas atribuídas e em andamento e as horas estimadas (barra pelas horas). */
-function TeamLoadCard({ team, loading }: { team: TeamLoad[]; loading: boolean }) {
+/**
+ * Carga por pessoa: demandas atribuídas e em andamento e as horas estimadas (barra pelas horas). `team` =
+ * Carga da minha equipe (Recebidas por mim); `all` = Carga das equipes (Todas: todas as pessoas).
+ */
+function TeamLoadCard({ team, loading, variant = 'team' }: { team: TeamLoad[]; loading: boolean; variant?: 'team' | 'all' }) {
   const { t, i18n } = useTranslation()
+  const keys = variant === 'all' ? 'demands.allLoad' : 'demands.load'
   return (
-    <AppCard title={t('demands.load.title')} description={t('demands.load.hint')}>
+    <AppCard title={t(`${keys}.title`)} description={t(`${keys}.hint`)}>
       {loading ? (
         <AppSkeleton className="h-24" />
       ) : team.length === 0 ? (
-        <p className="text-sm text-muted">{t('demands.load.empty')}</p>
+        <p className="text-sm text-muted">{t(`${keys}.empty`)}</p>
       ) : (
-        <ul className="flex flex-col gap-3" aria-label={t('demands.load.title')}>
+        <ul className="flex flex-col gap-3" aria-label={t(`${keys}.title`)}>
           {team.map((member) => {
             const hours = formatNumber(member.estimatedHours, i18n.language)
             return (
@@ -174,7 +271,7 @@ function TeamLoadCard({ team, loading }: { team: TeamLoad[]; loading: boolean })
           })}
         </ul>
       )}
-      <p className="mt-3 text-xs text-muted">{t('demands.load.foot')}</p>
+      <p className="mt-3 text-xs text-muted">{t(`${keys}.foot`)}</p>
     </AppCard>
   )
 }

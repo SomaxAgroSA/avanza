@@ -10,7 +10,7 @@ import { TaskFormDialog, type TaskKindChoice } from './TaskFormDialog'
 
 /**
  * Cabeçalho do módulo Tarefas (§44/§45): título, os dois botões pequenos "＋ Tarefa de projeto" e
- * "＋ Demanda interna" (com `tasks.create`) e as visões Lista · Demandas (com o número de demandas
+ * "＋ Demanda interna" (com `tasks.create`; cada um abre só o seu formulário) e as visões Lista · Demandas (com o número de demandas
  * recebidas ainda sem atribuir). `?new=1` (paleta de comandos) abre o formulário de tarefa de projeto;
  * `?new=demand`, o de demanda.
  */
@@ -69,7 +69,6 @@ export function TasksHeader({ description }: { description: string }) {
       />
       <TaskFormDialog
         open={!!kind}
-        kindSwitch
         initialKind={kind ?? 'project'}
         onOpenChange={(open) => {
           if (open) return

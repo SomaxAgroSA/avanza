@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CornerDownRight, Plus } from 'lucide-react'
+import { CornerDownRight } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
 import { isRequiredIn, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
@@ -38,10 +38,9 @@ export interface TaskFormDialogProps {
   initial?: TaskFormInitial
   onSaved?: (task: TaskDetail) => void
   /**
-   * Criação no módulo Tarefas (§45): os dois botões "＋ Tarefa de projeto · ＋ Demanda interna" no topo
-   * trocam o formulário (o de projeto continua igual). `initialKind` = qual abre primeiro.
+   * Criação no módulo Tarefas (§45): qual formulário abre — o de tarefa de projeto (o de sempre) ou o da
+   * demanda interna. Cada botão do cabeçalho abre só o seu; não há troca de tipo dentro da janela.
    */
-  kindSwitch?: boolean
   initialKind?: TaskKindChoice
 }
 
@@ -114,52 +113,17 @@ function draftFrom(task: TaskDetail | null | undefined, projectId: string | unde
 }
 
 /**
- * Remonta o formulário a cada abertura (rascunho novo, sem efeitos). Demanda interna (§45) em edição
- * abre o formulário curto da demanda; na criação com `kindSwitch`, os dois botões do topo escolhem.
+ * Remonta o formulário a cada abertura (rascunho novo, sem efeitos). Demanda interna (§45) — em edição ou
+ * na criação com `initialKind = 'demand'` — abre o formulário curto da demanda; o resto, o de sempre.
  */
 export function TaskFormDialog(props: TaskFormDialogProps) {
   const key = props.open ? (props.task?.id ?? `new:${props.projectId ?? ''}:${props.initialKind ?? ''}`) : 'closed'
   if (props.task?.demand && !props.task.project) return <DemandFormDialog open={props.open} onOpenChange={props.onOpenChange} task={props.task} onSaved={props.onSaved} />
-  if (props.kindSwitch && !props.task && !props.projectId) return <KindSwitchForm key={key} {...props} />
+  if (props.initialKind === 'demand' && !props.task && !props.projectId) return <DemandFormDialog open={props.open} onOpenChange={props.onOpenChange} onSaved={props.onSaved} />
   return <TaskForm key={key} {...props} />
 }
 
-/** Criação com a escolha no topo: o formulário de sempre ou o da demanda interna. */
-function KindSwitchForm(props: TaskFormDialogProps) {
-  const { t } = useTranslation()
-  const [kind, setKind] = useState<TaskKindChoice>(props.initialKind ?? 'project')
-  const header = <TaskKindButtons kind={kind} onChange={setKind} />
-  return kind === 'demand' ? (
-    <DemandFormDialog
-      open={props.open}
-      onOpenChange={props.onOpenChange}
-      header={header}
-      title={t('demands.form.createTitle')}
-      description={t('demands.form.createDescription')}
-      onSaved={props.onSaved}
-    />
-  ) : (
-    <TaskForm {...props} header={header} />
-  )
-}
-
-/** Os dois botões pequenos do topo da criação (mesmo estilo do "＋ Nova tarefa"). */
-export function TaskKindButtons({ kind, onChange }: { kind: TaskKindChoice; onChange: (kind: TaskKindChoice) => void }) {
-  const { t } = useTranslation()
-  return (
-    <div role="group" aria-label={t('demands.kindGroup')} className="mb-5 flex flex-wrap items-center gap-2">
-      <AppButton size="sm" variant={kind === 'project' ? 'primary' : 'secondary'} leftIcon={<Plus />} aria-pressed={kind === 'project'} onClick={() => onChange('project')}>
-        {t('demands.newProjectTask')}
-      </AppButton>
-      <AppButton size="sm" variant={kind === 'demand' ? 'primary' : 'secondary'} leftIcon={<Plus />} aria-pressed={kind === 'demand'} onClick={() => onChange('demand')}>
-        {t('demands.newDemand')}
-      </AppButton>
-      <span className="text-xs text-muted">{t(`demands.kindHint.${kind}`)}</span>
-    </div>
-  )
-}
-
-function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved, header }: TaskFormDialogProps & { header?: ReactNode }) {
+function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: TaskFormDialogProps) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const canAssign = useCan('tasks.assign')
@@ -414,7 +378,6 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved, heade
         </>
       }
     >
-      {header}
       <form
         noValidate
         className="grid items-start gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_20rem]"

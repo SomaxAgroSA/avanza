@@ -25,8 +25,13 @@ const DEMANDS_KIND = 'demands'
 const DEMAND_STATUSES = Object.freeze(['unassigned', 'assigned', 'in_progress', 'to_validate', 'done'])
 /** Contam na carga de quem executa (Carga da minha equipe): atribuídas e em andamento. */
 const LOAD_STATUSES = Object.freeze(['assigned', 'in_progress'])
-/** Caixas da tela Demandas: recebidas por mim, atribuídas a mim e pedidas por mim. */
-const DEMAND_BOXES = Object.freeze(['received', 'assigned', 'requested'])
+/**
+ * Caixas da tela Demandas: recebidas por mim, atribuídas a mim, pedidas por mim e Todas (`all`: todas as
+ * demandas — internas e tarefas de projeto com responsável —, só para quem tem `projects.view_all`).
+ */
+const DEMAND_BOXES = Object.freeze(['received', 'assigned', 'requested', 'all'])
+/** Caixas de quem participa (a pessoa está no fluxo); `all` é a visão de quem vê todas. */
+const PERSONAL_BOXES = Object.freeze(['received', 'assigned', 'requested'])
 /** Comentário obrigatório de passar, concluir e devolver. */
 const NOTE_MAX = 5000
 
@@ -218,6 +223,16 @@ function workflowStatusFor(demandStatus, statuses, currentId) {
   return found ? found.id : currentId || null
 }
 
+/** Vê todas as demandas (caixa Todas, números e carga de todas as pessoas): quem tem `projects.view_all`. */
+function seesAllDemands(principal) {
+  return rbac.can(principal, 'projects.view_all')
+}
+
+/** null = pode abrir a caixa; senão FORBIDDEN (a caixa Todas sem `projects.view_all`). */
+function boxIssue(principal, box) {
+  return box === 'all' && !seesAllDemands(principal) ? 'FORBIDDEN' : null
+}
+
 /** Comentário obrigatório (passar, concluir, devolver): texto aparado ou o código do erro. */
 function noteIssue(note) {
   if (typeof note !== 'string' || !note.trim()) return 'required'
@@ -229,6 +244,7 @@ module.exports = {
   DEMAND_STATUSES,
   LOAD_STATUSES,
   DEMAND_BOXES,
+  PERSONAL_BOXES,
   DEMAND_ACTIONS,
   NOTE_MAX,
   isSystemProject,
@@ -250,4 +266,6 @@ module.exports = {
   pastAssigneesAfter,
   workflowStatusFor,
   noteIssue,
+  seesAllDemands,
+  boxIssue,
 }
