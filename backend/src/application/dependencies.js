@@ -8,6 +8,8 @@
  *   TI das antigas Pessoas de TI, `it_people`) + o Responsável TI de cada projeto (papel `it` do membro, só
  *   no projeto dele), que conta na área TI.
  * - `getDependencies` traz todas as áreas; `getTiDependencies` (rota antiga `/ti-dependencies`) só a TI.
+ * - Demandas internas (§45): as abertas que a pessoa enxerga (todas com `projects.view_all`) entram como
+ *   entregas da área de quem executa, no bloco "Demandas internas" (`project.kind = 'demands'`).
  * - Leitura em lote (projetos, tarefas abertas, membros `it`, relações das entregas) e o cálculo em
  *   domain/dependencies.js.
  * - Filtros: `project_ids` (separados por vírgula; só esses blocos voltam) e `tz_offset` (minutos, como em
@@ -21,9 +23,11 @@ const taskDomain = require('../domain/task')
 const workflow = require('../domain/workflow')
 const report = require('../domain/report')
 const depDomain = require('../domain/dependencies')
+const demandDomain = require('../domain/demand')
 const settingsDomain = require('../domain/platform-settings')
 const { currentSettings } = require('./platform-settings')
 const { iso, toUserSummary } = require('./presenters')
+const { createTaskAccess } = require('./task-access')
 
 const MAX_PROJECT_IDS = 200
 const ID_PATTERN = /^[A-Za-z0-9_]{1,64}$/
@@ -48,6 +52,8 @@ function chunks(list) {
 }
 
 function createDependenciesService(deps) {
+  const taskAccess = createTaskAccess(deps)
+
   function parse(query) {
     const q = query || {}
     const source = {}
@@ -89,7 +95,14 @@ function createDependenciesService(deps) {
       }
       return true
     })
-    if (visible.length === 0) return empty
+    // demandas internas (§45): a caixa de sistema entra como um bloco a mais, com as demandas que a pessoa enxerga
+    const inbox = await deps.projectRepository.findSystem(demandDomain.DEMANDS_KIND)
+    const statuses = await deps.statusRepository.list({ includeInactive: true })
+    const closed = statuses.filter((s) => workflow.isClosedCategory(s.category)).map((s) => s.id)
+    const demandTasks = inbox
+      ? (await taskAccess.visibleDemands(ctx.principal, await deps.taskRepository.listForReport({ demandsOnly: true, withTitles: true }))).filter((t) => closed.indexOf(t.statusId) < 0)
+      : []
+    if (visible.length === 0 && demandTasks.length === 0) return empty
     const ids = visible.map((p) => p.id)
 
     const itMembers = {}
@@ -98,15 +111,14 @@ function createDependenciesService(deps) {
     })
     if (areas.every((a) => a.user_ids.length === 0) && Object.keys(itMembers).length === 0) return empty
 
-    const statuses = await deps.statusRepository.list({ includeInactive: true })
-    const closed = statuses.filter((s) => workflow.isClosedCategory(s.category)).map((s) => s.id)
-    const tasks = (await deps.taskRepository.listForReport({ projectIds: ids, withTitles: true })).filter((t) => closed.indexOf(t.statusId) < 0)
+    const projectTasks = ids.length ? (await deps.taskRepository.listForReport({ projectIds: ids, withTitles: true })).filter((t) => closed.indexOf(t.statusId) < 0) : []
+    const tasks = projectTasks.concat(demandTasks)
     const deliveryIds = tasks.filter((t) => depDomain.areaOf(t, areas, itMembers)).map((t) => t.id)
     const relations = []
     for (const part of chunks(deliveryIds)) relations.push(...(await deps.relationRepository.listByTasks(part)))
 
     const result = depDomain.buildDependencies({
-      projects: visible,
+      projects: demandTasks.length ? visible.concat([{ id: inbox.id, key: inbox.key, name: inbox.name, kind: inbox.kind, dueDate: null }]) : visible,
       tasks,
       relations: relations.filter((r, i, list) => list.findIndex((other) => other.id === r.id) === i),
       areas,

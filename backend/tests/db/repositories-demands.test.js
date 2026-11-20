@@ -1,7 +1,7 @@
 /**
  * Demandas internas (§45) no Postgres real: a migration 0031 (caixa de sistema, colunas e restrição), o
  * projeto de sistema fora das listas, as colunas da demanda gravadas e lidas, a visibilidade na lista
- * geral, as caixas, os números, a carga da equipe e os relatórios sem demandas.
+ * geral, as caixas, os números, a carga da equipe e os relatórios (demandas internas só com `demandsOnly`).
  */
 
 const { describe, it, before, after } = require('node:test')
@@ -125,7 +125,7 @@ describe('repositórios — demandas internas (Postgres)', () => {
     assert.deepEqual(await tasks.demandLoad([u.carlos.id, u.jorge.id], ['assigned', 'in_progress']), { [u.carlos.id]: { open: 1, hours: 3 } })
     assert.deepEqual(await tasks.demandAssignees(u.cesar.id, ['assigned', 'in_progress']), [u.carlos.id])
 
-    // relatórios, dependências e painel executivo: só tarefas de projeto
+    // relatórios, dependências e painel executivo: por padrão, só tarefas de projeto
     const report = await tasks.listForReport({ scope: { userId: u.cesar.id, viewAll: true }, includeArchived: true })
     assert.deepEqual(report.map((x) => x.id), [p1.id])
 
@@ -151,5 +151,24 @@ describe('repositórios — demandas internas (Postgres)', () => {
     assert.deepEqual(await tasks.demandLoadAll(['assigned', 'in_progress']), { [u.carlos.id]: { open: 1, hours: 3 }, [u.jorge.id]: { open: 1, hours: 2 } })
     const withProject = await tasks.listForReport({ scope: { userId: u.cesar.id, viewAll: true }, includeArchived: true })
     assert.deepEqual(withProject.map((x) => x.id).sort(), [p1.id, p2.id].sort())
+
+    // Relatórios e Em andamento: as demandas internas à parte (`demandsOnly`), com o fluxo para filtrar
+    // quem enxerga; os filtros comuns valem
+    const demandRows = await tasks.listForReport({ demandsOnly: true, withTitles: true })
+    assert.deepEqual(demandRows.map((x) => x.id), [d1.id, d2.id])
+    const second = demandRows.find((x) => x.id === d2.id)
+    assert.equal(second.code, d2.code)
+    assert.equal(second.reporterId, u.ana.id)
+    assert.equal(second.demandOwnerId, u.cesar.id)
+    assert.deepEqual(second.demandPastAssignees, [u.jorge.id])
+    assert.equal(second.demandStatus, 'in_progress')
+    assert.deepEqual((await tasks.listForReport({ demandsOnly: true, assigneeId: u.carlos.id })).map((x) => x.id), [d2.id])
+    const activity = await tasks.listActivity([inbox.id, regular.id], new Date(0))
+    const fromInbox = activity.find((x) => x.id === d2.id)
+    assert.equal(fromInbox.demandOwnerId, u.cesar.id)
+    assert.equal(fromInbox.reporterId, u.ana.id)
+    assert.deepEqual(fromInbox.demandPastAssignees, [u.jorge.id])
+    assert.equal(fromInbox.demandStatus, 'in_progress')
+    assert.equal(activity.find((x) => x.id === p1.id).demandStatus, '')
   })
 })

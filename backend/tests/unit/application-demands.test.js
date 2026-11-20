@@ -11,6 +11,8 @@ const { createReportService } = require('../../src/application/reports')
 const { createTaskTypeService } = require('../../src/application/task-types')
 const { createCustomFieldService } = require('../../src/application/custom-fields')
 const { createLookupService } = require('../../src/application/lookups')
+const { createDependenciesService } = require('../../src/application/dependencies')
+const { createTeamActivityService } = require('../../src/application/team-activity')
 const { createPrincipal } = require('../../src/domain/rbac')
 
 async function ctxOf(deps, user) {
@@ -150,7 +152,7 @@ describe('application/demands — abrir', () => {
 
   it('a caixa de sistema não aparece nas listas de projetos e não abre como projeto (nem para o admin)', async () => {
     const s = await setup()
-    const created = await s.demands.createDemand(s.ctx.ana, newDemand(s))
+    await s.demands.createDemand(s.ctx.ana, newDemand(s))
     const inbox = await s.deps.projectRepository.findSystem('demands')
     assert.equal(inbox.key, 'DEM')
     const listed = await s.projects.listProjects(s.ctx.admin, {})
@@ -160,9 +162,6 @@ describe('application/demands — abrir', () => {
     assert.equal(await codeOf(() => s.projects.updateProject(s.ctx.admin, inbox.id, { name: 'X' })), 'PROJECT_NOT_FOUND')
     // criar tarefa comum dentro da caixa também não
     assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.admin, { project_id: inbox.id, task_type_id: s.types.dev.id, title: 'x', custom_values: { versao: '1' } })), 'PROJECT_NOT_FOUND')
-    // relatórios são de projetos
-    const report = await s.reports.getReport(s.ctx.admin, {})
-    assert.equal(JSON.stringify(report).includes(created.id), false)
   })
 })
 
@@ -440,6 +439,62 @@ describe('application/demands — caixas e carga da equipe', () => {
     assert.ok(names.includes('César'))
     assert.ok(!names.includes('Otto'))
     assert.deepEqual((await s.demands.owners(s.ctx.ana, { search: 'jor' })).map((u) => u.name), ['Jorge'])
+  })
+})
+
+describe('application/demands — Relatórios e Em andamento (demandas internas entram, sob "Demandas internas")', () => {
+  /** DEM-1: Ana pede ao César, que atribui ao Jorge (TI) com prazo vencido. */
+  async function assigned() {
+    const s = await setup()
+    const created = await s.demands.createDemand(s.ctx.ana, newDemand(s))
+    await s.demands.assign(s.ctx.cesar, created.id, { assignee_id: s.users.jorge.id, due_at: '2026-01-05T12:00:00.000Z', estimated_hours: 3 })
+    const inbox = await s.deps.projectRepository.findSystem('demands')
+    return Object.assign(s, { id: created.id, inbox })
+  }
+
+  it('relatório: entram nos números, no detalhamento por projeto (rótulo "Demandas internas") e nas atrasadas', async () => {
+    const s = await assigned()
+    const report = await s.reports.getReport(s.ctx.admin, { group_by: 'project' })
+    assert.equal(report.indicators.total, 1)
+    assert.equal(report.indicators.overdue, 1)
+    assert.deepEqual(report.breakdown.rows.map((r) => [r.label, r.total]), [[{ id: s.inbox.id, key: 'DEM', name: 'Demandas internas', kind: 'demands' }, 1]])
+    assert.deepEqual(report.overdue_tasks.map((t) => t.code), ['DEM-1'])
+    const drill = await s.reports.listIndicatorTasks(s.ctx.admin, { metric: 'open' })
+    assert.deepEqual(drill.items.map((t) => t.code), ['DEM-1'])
+    // filtro por projeto: só o projeto
+    assert.equal((await s.reports.getReport(s.ctx.admin, { project_id: s.project.id })).indicators.total, 0)
+  })
+
+  it('relatório: cada um vê só as demandas que enxerga (quem pediu, responsável, equipe, quem executa)', async () => {
+    const s = await assigned()
+    for (const name of ['ana', 'cesar', 'jorge', 'carlos']) assert.equal((await s.reports.getReport(s.ctx[name], {})).indicators.total, 1, name)
+    for (const name of ['fabi', 'otto']) assert.equal((await s.reports.getReport(s.ctx[name], {})).indicators.total, 0, name)
+  })
+
+  it('Dependências por área: a demanda aberta atribuída a alguém de uma área é entrega, no bloco "Demandas internas"', async () => {
+    const s = await assigned()
+    const deps = createDependenciesService(s.deps)
+    const result = await deps.getDependencies(s.ctx.admin, {})
+    assert.deepEqual(result.projects.map((p) => p.project), [{ id: s.inbox.id, key: 'DEM', name: 'Demandas internas', kind: 'demands', due_date: null }])
+    assert.deepEqual(result.projects[0].deliveries.map((d) => [d.code, d.area.key, d.assignee_id]), [['DEM-1', 'ti', s.users.jorge.id]])
+    assert.equal(result.areas.find((a) => a.key === 'ti').deliveries, 1)
+    assert.equal((await deps.getDependencies(s.ctx.carlos, {})).totals.deliveries, 1)
+    assert.equal((await deps.getDependencies(s.ctx.fabi, {})).totals.deliveries, 0)
+  })
+
+  it('Equipo ahora: a demanda conta na atividade de quem executa, no bloco "Demandas internas"', async () => {
+    const s = await assigned()
+    await s.demands.start(s.ctx.jorge, s.id)
+    // o relógio falso das tarefas não acompanha o do serviço: a mudança é de agora
+    s.deps.store.tasks.find((t) => t.id === s.id).updatedAt = s.deps.clock.now()
+    const team = createTeamActivityService(s.deps)
+    const jorge = (await team.getTeamActivity(s.ctx.admin)).people.find((p) => p.user.id === s.users.jorge.id)
+    assert.deepEqual(jorge.projects.map((p) => [p.project, p.state, p.in_progress]), [
+      [{ id: s.inbox.id, key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', kind: 'demands' }, 'working', 1],
+    ])
+    assert.deepEqual(jorge.projects[0].tasks.map((t) => t.code), ['DEM-1'])
+    assert.equal((await team.getTeamActivity(s.ctx.ana)).people.length, 1)
+    assert.deepEqual((await team.getTeamActivity(s.ctx.fabi)).people, [])
   })
 })
 

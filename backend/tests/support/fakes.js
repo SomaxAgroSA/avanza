@@ -628,15 +628,31 @@ function createFakeRepositories(store) {
         .filter((t) => projectIds.includes(t.projectId) && t.assigneeId)
         .map((t) => {
           const st = store.statuses.find((x) => x.id === t.statusId) || { id: t.statusId, name: '', color: 'gray', category: 'todo' }
-          return { id: t.id, code: t.code, title: t.title, projectId: t.projectId, assigneeId: t.assigneeId, updatedAt: t.updatedAt, status: { id: st.id, name: st.name, color: st.color, category: st.category } }
+          return {
+            id: t.id,
+            code: t.code,
+            title: t.title,
+            projectId: t.projectId,
+            assigneeId: t.assigneeId,
+            updatedAt: t.updatedAt,
+            reporterId: t.reporterId || null,
+            demandOwnerId: t.demandOwnerId || null,
+            demandPastAssignees: t.demandPastAssignees || [],
+            demandStatus: t.demandStatus || '',
+            status: { id: st.id, name: st.name, color: st.color, category: st.category },
+          }
         })
         .filter((t) => !['done', 'cancelled'].includes(t.status.category) || t.updatedAt >= since)
         .sort((x, y) => y.updatedAt - x.updatedAt),
     listForReport: (query) =>
       store.tasks
-        // demandas internas (§45) ficam fora dos relatórios (a tarefa de projeto com responsável fica)
-        .filter((t) => !(store.projects.find((p) => p.id === t.projectId) || {}).kind)
-        .filter((t) => !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
+        // por padrão, só tarefas de projeto (a tarefa de projeto com responsável fica); `demandsOnly`: só as
+        // demandas internas (§45), sem `scope` (quem chama filtra)
+        .filter((t) => {
+          const system = !!(store.projects.find((p) => p.id === t.projectId) || {}).kind
+          return query.demandsOnly ? system && !!t.demandStatus : !system
+        })
+        .filter((t) => query.demandsOnly || !query.scope || query.scope.viewAll || seesTask(t, query.scope.userId))
         .filter((t) => query.includeArchived || !(store.projects.find((p) => p.id === t.projectId) || {}).archivedAt)
         .filter((t) => !query.projectId || t.projectId === query.projectId)
         .filter((t) => !query.projectIds || query.projectIds.includes(t.projectId))
@@ -656,6 +672,9 @@ function createFakeRepositories(store) {
           completedAt: t.completedAt || null,
           dueDate: t.dueDate ? new Date(t.dueDate) : null,
           ...(query.withTitles ? { code: t.code, title: t.title } : {}),
+          ...(query.demandsOnly
+            ? { reporterId: t.reporterId || null, demandOwnerId: t.demandOwnerId || null, demandPastAssignees: t.demandPastAssignees || [], demandStatus: t.demandStatus }
+            : {}),
         })),
     listChildren: (parentId) => store.tasks.filter((t) => t.parentTaskId === parentId).slice().sort((a, b) => a.number - b.number),
     listForks: (taskId) => store.tasks.filter((t) => t.forkedFromTaskId === taskId).slice().sort((a, b) => a.number - b.number),

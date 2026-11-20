@@ -74,7 +74,19 @@ function createTaskAccess(deps) {
     return (await deps.userRepository.searchActive({ search: '', excludeIds: [] })).filter((u) => ids.indexOf(u.roleId) >= 0)
   }
 
-  return { areas, teamOf, forTask, userSeesDemand, principalOf, seesAll, viewAllUsers }
+  /**
+   * Demandas internas (linhas com reporterId, demandOwnerId, assigneeId e demandPastAssignees) que o
+   * principal enxerga: todas com `projects.view_all`; senão quem pediu, o responsável, quem executa (agora ou
+   * antes) e a equipe do responsável (Relatórios e Em andamento).
+   */
+  async function visibleDemands(principal, rows) {
+    if (rbac.can(principal, 'projects.view_all')) return rows
+    if (!rows.length) return rows
+    const list = await areas()
+    return rows.filter((row) => demandDomain.seesDemand(row, principal.userId, demandDomain.teamOf(list, row.demandOwnerId)))
+  }
+
+  return { areas, teamOf, forTask, userSeesDemand, principalOf, seesAll, viewAllUsers, visibleDemands }
 }
 
 module.exports = { createTaskAccess }

@@ -61,7 +61,7 @@ const RISK_ORDER = { overdue: 0, none_due: 1, ok: 2 }
 /**
  * Monta o resultado por projeto.
  * input = {
- *   projects: [{ id, key, name, dueDate }]   — os que a pessoa vê por inteiro,
+ *   projects: [{ id, key, name, dueDate, kind? }] — os que a pessoa vê por inteiro (+ a caixa das demandas internas),
  *   tasks: [{ id, projectId, code, title, assigneeId, dueDate, createdAt, startedAt }] — só as abertas desses projetos,
  *   relations: [{ id, type, sourceId, targetId }] — as que tocam alguma entrega,
  *   areas: [{ key, name, user_ids }], itMembers: { projectId: [userId] }, today: 'AAAA-MM-DD',
@@ -91,7 +91,8 @@ function buildDependencies(input) {
     }
   })
   const linkable = input.linkableProjectIds || []
-  const projectRef = (id) => ({ id, key: projects[id].key, name: projects[id].name })
+  // a caixa das demandas internas (§45) leva `kind` (a interface mostra "Demandas internas", sem link)
+  const projectRef = (id) => Object.assign({ id, key: projects[id].key, name: projects[id].name }, projects[id].kind ? { kind: projects[id].kind } : {})
   const taskRef = (t) => ({ id: t.id, code: t.code, title: t.title, project: projectRef(t.projectId), due_date: dayOf(t.dueDate) })
   const deliveryRef = (t) => Object.assign(taskRef(t), { area: areaById[t.id] })
 
