@@ -162,7 +162,7 @@ Detalhes em [regras-de-negocio.md](regras-de-negocio.md#7-relacionamentos-subtar
 ## Relatórios (Fase 8)
 | Ação | Exige |
 |---|---|
-| Relatórios e indicadores do dashboard | `reports.view`; contagens só dos projetos visíveis (`projects.view` + vínculo, ou `projects.view_all`) |
+| Relatórios e indicadores do dashboard | `reports.view`; contagens só dos projetos visíveis (`projects.view` + vínculo, ou `projects.view_all`) e das demandas internas que a pessoa enxerga (§45; todas com `projects.view_all`) |
 
 ## Documentação (expansão — Onda 2)
 Permissão global **e** regra do espaço (`domain/docs.js` → `spaceAccess`):
@@ -197,7 +197,9 @@ Sem permissão nova: abrir uma demanda exige `tasks.create`; ver, `tasks.view`; 
 | Quem executa (agora) | a demanda | **começa**, **passa** a alguém da equipe (comentário obrigatório), **conclui** (o que foi entregue), edita, comenta, anexa |
 | Quem já executou | a demanda | comenta |
 | Pessoas da área do responsável (só demanda interna) | a demanda | comenta |
-| `projects.view_all` | todas (também a aba **Todas** da tela Demandas, com os números e a Carga das equipes; sem ela, `box=all` dá `FORBIDDEN`) | edita, comenta, anexa, exclui |
+| `projects.view_all` | todas (também a aba **Todas** da tela Demandas, com os números e a Carga das equipes; sem ela, `box=all` dá `FORBIDDEN`) | **atribui/reatribui** qualquer demanda (interna ou tarefa de projeto com responsável) à equipe do responsável, edita, comenta, anexa, exclui; começar, passar, concluir, validar e devolver continuam dos papéis |
 | Os demais | nada (`TASK_NOT_FOUND`) | — |
 
 Na **tarefa de projeto com responsável**, quem vê o projeto continua com as regras do projeto; quem participa do fluxo sem ser do projeto vê e trabalha **só nessa tarefa** (como o Responsável TI na tarefa dele: não exclui, não relaciona, não faz fork, não troca o responsável). Pôr, trocar ou tirar o responsável da tarefa de projeto exige poder atribuir no projeto (`tasks.assign` + colaborar). O projeto de sistema das demandas não é projeto de ninguém: nem `projects.view_all` o abre, edita, arquiva ou exclui.
+
+**Notificações e menções de quem vê todos** (20/11/2026): quem tem `projects.view_all` (ou é SUPER_ADMIN) pode ser mencionado em qualquer tarefa, demanda ou elemento da Gestão e recebe os avisos dirigidos a ele mesmo sem ser membro do projeto ou participante da demanda (`application/notifications.js#hasAccess`). Não há assinatura automática: só chegam os avisos que já eram para ele.
