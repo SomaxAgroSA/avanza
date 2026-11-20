@@ -176,6 +176,7 @@ Permissão global **e** regra do espaço (`domain/docs.js` → `spaceAccess`):
 ## Configurador geral
 - `platform.manage` cobre a **segurança e a identidade da plataforma** (bloqueio de login, política de senha, retenção do histórico, nome, logo e ícone) — separada de `settings.manage`, que cobre a configuração das tarefas (tipos, campos, status, tags) e pode ser delegada a quem cuida do processo.
 - Concedida por padrão só ao Admin (migration 1790000027, idempotente). As regras anti-escalonamento valem como em toda permissão: só concede quem a possui.
+- Também cobre o cadastro de **Empresas** (Configurações → Empresas, §46): criar, renomear, trocar a sigla, desativar e ativar. Ler as empresas ativas (formulários e filtros) basta estar logado; as inativas e as contagens de uso, só com `platform.manage`.
 - A identidade (`GET /platform` e as imagens) é pública; `GET /auth/password-policy` exige só estar logado.
 
 ## Integrações
