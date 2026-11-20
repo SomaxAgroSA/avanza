@@ -18,11 +18,6 @@ export interface DemandFormDialogProps {
   onOpenChange: (open: boolean) => void
   /** Demanda em edição; ausente = nova. */
   task?: TaskDetail | null
-  /** Acima do formulário (os botões "Tarefa de projeto · Demanda interna" da criação). */
-  header?: ReactNode
-  /** Título e descrição da janela (a criação usa os de "Nova tarefa"). */
-  title?: ReactNode
-  description?: ReactNode
   onSaved?: (task: TaskDetail) => void
 }
 
@@ -60,7 +55,7 @@ export function DemandFormDialog(props: DemandFormDialogProps) {
  * (qualquer pessoa ativa; quem recebe e distribui), Departamento que pede, Prioridade, Abertura (automática,
  * travada) e Prazo (quem define é o responsável ao atribuir). Na edição o responsável fica fixo.
  */
-function DemandForm({ open, onOpenChange, task, header, title, description, onSaved }: DemandFormDialogProps) {
+function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps) {
   const { t, i18n } = useTranslation()
   const errorMessage = useErrorMessage()
   const isEdit = !!task
@@ -148,8 +143,8 @@ function DemandForm({ open, onOpenChange, task, header, title, description, onSa
       onOpenChange={onOpenChange}
       size="2xl"
       closeOnOutsideClick={false}
-      title={title ?? (isEdit ? t('demands.form.editTitle', { code: task?.code }) : t('demands.form.createTitle'))}
-      description={description ?? (isEdit ? task?.title : t('demands.form.createDescription'))}
+      title={isEdit ? t('demands.form.editTitle', { code: task?.code }) : t('demands.form.createTitle')}
+      description={isEdit ? task?.title : t('demands.form.createDescription')}
       footer={
         <>
           <AppButton variant="secondary" onClick={() => onOpenChange(false)} disabled={pending}>
@@ -161,7 +156,6 @@ function DemandForm({ open, onOpenChange, task, header, title, description, onSa
         </>
       }
     >
-      {header}
       <form
         noValidate
         aria-label={t('demands.newDemand')}
