@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { AssignInput, DemandBox, DemandInput } from '@/domain/demands'
+import type { AssignInput, DemandBox, DemandInput, DemandListFilters } from '@/domain/demands'
 import type { TaskDetail } from '@/domain/tasks'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { useCan } from '@/features/auth/session'
@@ -11,15 +11,16 @@ import { taskKeys } from '@/features/tasks/queries'
  */
 export const demandKeys = {
   all: [...taskKeys.all, 'demands'] as const,
-  list: (box: DemandBox) => [...taskKeys.all, 'demands', 'list', box] as const,
+  list: (box: DemandBox, filters: DemandListFilters = {}) => [...taskKeys.all, 'demands', 'list', box, filters] as const,
   overview: [...taskKeys.all, 'demands', 'overview'] as const,
   owners: [...taskKeys.all, 'demands', 'owners'] as const,
   team: (id: string) => [...taskKeys.all, 'demands', 'team', id] as const,
 }
 
-export function useDemandList(box: DemandBox, enabled = true) {
+/** Uma caixa (com os filtros de pessoa da caixa Todas). */
+export function useDemandList(box: DemandBox, filters: DemandListFilters = {}, enabled = true) {
   const { demands } = useRepositories()
-  return useQuery({ queryKey: demandKeys.list(box), queryFn: () => demands.list(box), enabled })
+  return useQuery({ queryKey: demandKeys.list(box, filters), queryFn: () => demands.list(box, filters), enabled })
 }
 
 /** Números das caixas e a carga da equipe (também o selo do menu Tarefas). */

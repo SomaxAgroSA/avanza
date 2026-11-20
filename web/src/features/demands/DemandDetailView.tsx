@@ -20,12 +20,12 @@ import { useDemandEvents } from './demand-timeline'
 /** De onde a pessoa veio (o "← Voltar a …"): Tarefas ou uma das caixas da tela Demandas. */
 interface BackTarget {
   to: string
-  place: 'tasks' | 'received' | 'assigned' | 'requested'
+  place: 'tasks' | 'received' | 'assigned' | 'requested' | 'all'
 }
 
 function backTarget(state: unknown): BackTarget {
   const from = (state as { from?: Partial<BackTarget> } | null)?.from
-  const places: BackTarget['place'][] = ['tasks', 'received', 'assigned', 'requested']
+  const places: BackTarget['place'][] = ['tasks', 'received', 'assigned', 'requested', 'all']
   if (from && typeof from.to === 'string' && from.to.startsWith('/tasks') && from.place && places.includes(from.place)) return { to: from.to, place: from.place }
   return { to: '/tasks', place: 'tasks' }
 }

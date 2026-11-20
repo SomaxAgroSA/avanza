@@ -87,8 +87,12 @@ function demand(overrides: Omit<Partial<TaskDetail>, 'status'> & { step?: Demand
 
 const emptyCounts = () => ({ unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 })
 
-function overview(received: Partial<Record<DemandStatus, number>>, team: DemandOverview['team'] = []): DemandOverview {
-  return { counts: { received: { ...emptyCounts(), ...received }, assigned: emptyCounts(), requested: emptyCounts() }, team }
+function overview(received: Partial<Record<DemandStatus, number>>, team: DemandOverview['team'] = [], all?: { counts: Partial<Record<DemandStatus, number>>; team: DemandOverview['team'] }): DemandOverview {
+  return {
+    counts: { received: { ...emptyCounts(), ...received }, assigned: emptyCounts(), requested: emptyCounts(), all: { ...emptyCounts(), ...all?.counts } },
+    team,
+    allTeam: all?.team ?? [],
+  }
 }
 
 const page = (items: TaskSummary[]) => ({ items, page: 1, perPage: 100, total: items.length, totalPages: 1 })
@@ -120,23 +124,28 @@ async function chooseOption(label: RegExp | string, option: RegExp | string) {
 }
 
 describe('Tarefas — dois botões e a demanda interna (§45)', () => {
-  it('"＋ Tarefa de projeto" e "＋ Demanda interna"; no formulário, os dois botões trocam o formulário', async () => {
+  it('"＋ Demanda interna" abre só o formulário da demanda e "＋ Tarefa de projeto" só o de projeto (sem os botões de tipo dentro)', async () => {
     renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos(), initialPath: '/tasks' })
-    const header = await screen.findByRole('heading', { name: 'Tarefas' })
-    expect(header).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Tarefas' })).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Demanda interna' }))
     const dialog = await screen.findByRole('dialog')
-    const kinds = within(dialog).getByRole('group', { name: i18n.t('demands.kindGroup') })
-    expect(within(kinds).getByRole('button', { name: 'Demanda interna' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(dialog).queryByRole('button', { name: 'Tarefa de projeto' })).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: 'Demanda interna' })).toBeNull()
+    expect(within(dialog).getByRole('heading', { name: 'Nova demanda interna' })).toBeInTheDocument()
     expect(within(dialog).getByRole('combobox', { name: /^Responsável/ })).toBeInTheDocument()
     expect(within(dialog).getByText(i18n.t('demands.form.ownerHint'))).toBeInTheDocument()
     expect(within(dialog).getByRole('combobox', { name: /^Departamento que pede/ })).toBeInTheDocument()
     expect(within(dialog).getByText(i18n.t('demands.form.deadlineLocked'))).toBeInTheDocument()
     expect(within(dialog).getByText(/automática/)).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Criar demanda' })).toBeInTheDocument()
-    // Tarefa de projeto: o formulário de sempre (com Projeto)
-    await userEvent.click(within(kinds).getByRole('button', { name: 'Tarefa de projeto' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: /Cancelar/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // Tarefa de projeto: só o formulário de sempre (com Projeto), sem os botões de tipo
+    await userEvent.click(screen.getByRole('button', { name: 'Tarefa de projeto' }))
     const projectDialog = await screen.findByRole('dialog')
+    expect(within(projectDialog).queryByRole('button', { name: 'Demanda interna' })).toBeNull()
+    expect(within(projectDialog).queryByRole('button', { name: 'Tarefa de projeto' })).toBeNull()
+    expect(within(projectDialog).getByRole('heading', { name: 'Nova tarefa' })).toBeInTheDocument()
     expect(await within(projectDialog).findByRole('combobox', { name: /^Projeto/ })).toBeInTheDocument()
     expect(within(projectDialog).queryByRole('button', { name: 'Criar demanda' })).not.toBeInTheDocument()
   })
@@ -268,6 +277,81 @@ describe('Demandas — caixas (§45)', () => {
     await waitFor(() => expect(returnDemand).toHaveBeenCalledWith('d4', 'Falta o filtro por safra.'))
     await userEvent.click(within(row).getByRole('button', { name: 'Validar' }))
     await waitFor(() => expect(validate).toHaveBeenCalledWith('d4'))
+  })
+})
+
+describe('Demandas — Todas (§45, só com projects.view_all)', () => {
+  const internal = demand({ id: 'd1', code: 'DEM-1', step: 'in_progress', assignee: jorge, estimatedHours: 4 })
+  const fromProject = demand({ id: 'k9', code: 'FIN-3', title: 'Publicar o dashboard', step: 'assigned', assignee: carlos, project: { id: 'p9', key: 'FIN', name: 'Finanças' } })
+  fromProject.demand = { ...fromProject.demand!, owner: ana }
+  const allOverview = () =>
+    overview({}, [], {
+      counts: { unassigned: 2, assigned: 3, in_progress: 1, to_validate: 4 },
+      team: [
+        { user: jorge, openCount: 1, estimatedHours: 4 },
+        { user: carlos, openCount: 1, estimatedHours: 0 },
+      ],
+    })
+
+  it('sem projects.view_all: a aba Todas não aparece e ?box=all mostra Recebidas por mim', async () => {
+    const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page([])))
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({ me: cesar, demands: { list, overview: () => Promise.resolve(allOverview()) } }),
+      initialPath: '/tasks/demands?box=all',
+    })
+    const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
+    expect(within(tabs).getAllByRole('radio')).toHaveLength(3)
+    expect(within(tabs).queryByRole('radio', { name: /Todas/ })).toBeNull()
+    expect(within(tabs).getByRole('radio', { name: /Recebidas por mim/ })).toHaveAttribute('aria-checked', 'true')
+    await waitFor(() => expect(list).toHaveBeenCalled())
+    expect(list.mock.calls.every(([box]) => box !== 'all')).toBe(true)
+  })
+
+  it('com projects.view_all: números de todas, filtros por Responsável e Atribuída a, lista agrupada e a Carga das equipes', async () => {
+    const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page([internal, fromProject])))
+    renderRoutes(
+      [
+        { path: '/tasks/demands', element: <DemandsPage /> },
+        { path: '/tasks/:id', element: <p>Página da tarefa</p> },
+      ],
+      {
+        repositories: repos({
+          me: cesar,
+          permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.edit', 'tasks.assign', 'projects.view', 'projects.view_all'],
+          demands: { list, overview: () => Promise.resolve(allOverview()), owners: () => Promise.resolve([ana, carlos, cesar, jorge]) },
+        }),
+        initialPath: '/tasks/demands',
+      },
+    )
+    const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
+    await userEvent.click(await within(tabs).findByRole('radio', { name: /Todas/ }))
+    // números de todas as demandas (os quatro primeiros passos)
+    expect(await screen.findByTestId('kpi-unassigned')).toHaveTextContent('2')
+    expect(screen.getByTestId('kpi-assigned')).toHaveTextContent('3')
+    expect(screen.getByTestId('kpi-to_validate')).toHaveTextContent('4')
+    expect(within(tabs).getByRole('radio', { name: /Todas/ })).toHaveTextContent('10')
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', {}))
+    // grupos por passo; cada linha com o responsável, quem executa e o projeto (ou "Demanda interna")
+    const running = await screen.findByRole('region', { name: 'Em andamento' })
+    const internalRow = within(running).getByText(internal.title).closest('li')!
+    expect(within(internalRow).getByText('Responsável: César')).toBeInTheDocument()
+    expect(within(internalRow).getByText('Jorge')).toBeInTheDocument()
+    expect(within(internalRow).getByText('Demanda interna')).toBeInTheDocument()
+    const projectRow = within(screen.getByRole('region', { name: 'Atribuídas' })).getByText('Publicar o dashboard').closest('li')!
+    expect(within(projectRow).getByText('Responsável: Ana Souza')).toBeInTheDocument()
+    expect(within(projectRow).getByText('Finanças')).toBeInTheDocument()
+    // Carga das equipes: todas as pessoas com demandas abertas
+    const load = screen.getByRole('list', { name: 'Carga das equipes' })
+    expect(within(load).getByLabelText('Jorge: 1 demandas, 4 horas')).toBeInTheDocument()
+    expect(within(load).getAllByRole('listitem')).toHaveLength(2)
+    // filtros (selects): Responsável e Atribuída a
+    await chooseOption('Responsável', /César/)
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerId: 'u2' }))
+    await chooseOption('Atribuída a', /Jorge/)
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerId: 'u2', assigneeId: 'u3' }))
+    // a linha abre a tarefa em página inteira
+    await userEvent.click(screen.getByRole('link', { name: internal.title }))
+    expect(await screen.findByText('Página da tarefa')).toBeInTheDocument()
   })
 })
 

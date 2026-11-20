@@ -323,10 +323,9 @@ export function toDemandOverview(dto: DemandOverviewDto): DemandOverview {
       counts[box][status] = Number(raw[status] ?? 0)
     })
   })
-  return {
-    counts,
-    team: (dto.team ?? []).map((member) => ({ user: toUserSummary(member.user), openCount: member.open_count, estimatedHours: member.estimated_hours })),
-  }
+  const load = (list: DemandOverviewDto['team'] | undefined) =>
+    (list ?? []).map((member) => ({ user: toUserSummary(member.user), openCount: member.open_count, estimatedHours: member.estimated_hours }))
+  return { counts, team: load(dto.team), allTeam: load(dto.all_team) }
 }
 
 export function toTaskSummary(dto: TaskDto): TaskSummary {

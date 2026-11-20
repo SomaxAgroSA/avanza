@@ -4678,11 +4678,6 @@
   "demands": {
     "newProjectTask": "Tarefa de projeto",
     "newDemand": "Demanda interna",
-    "kindGroup": "Tipo de tarefa",
-    "kindHint": {
-      "project": "Faz parte de um projeto, como sempre.",
-      "demand": "Sem projeto: você pede a uma pessoa e ela atribui à equipe dela."
-    },
     "chip": "Demanda interna",
     "status": {
       "unassigned": "Sem atribuir",
@@ -4699,8 +4694,8 @@
       "done": "Concluídas"
     },
     "form": {
-      "createTitle": "Nova tarefa",
-      "createDescription": "Escolha se é uma tarefa de projeto ou uma demanda interna.",
+      "createTitle": "Nova demanda interna",
+      "createDescription": "Peça a uma pessoa: ela recebe e atribui à equipe dela.",
       "editTitle": "Editar {{code}}",
       "titlePlaceholder": "Ex.: Vista de carteira: adicionar o campo Ciclo",
       "descriptionPlaceholder": "O que você precisa, onde (vista, sistema, tela) e qual resultado espera. Se já existe um chamado de suporte, coloque o número.",
@@ -4719,27 +4714,32 @@
     "page": {
       "title": "Demandas",
       "tabsLabel": "Caixas de demandas",
-      "kpis": "Demandas por passo"
+      "kpis": "Demandas por passo",
+      "truncated": "Mostrando as {{shown}} mais recentes de {{total}}. Use os filtros para ver as outras."
     },
     "tabs": {
       "received": "Recebidas por mim",
       "assigned": "Atribuídas a mim",
-      "requested": "Pedidas por mim"
+      "requested": "Pedidas por mim",
+      "all": "Todas"
     },
     "hints": {
       "received": "O que pediram a você. Atribua à sua equipe e acompanhe tudo, mesmo depois de passar.",
       "assigned": "O que atribuíram a você. Comece, passe a um colega da equipe ou conclua.",
-      "requested": "O que você pediu. Quando chegar em \"Para validar\", valide a entrega ou devolva com um comentário."
+      "requested": "O que você pediu. Quando chegar em \"Para validar\", valide a entrega ou devolva com um comentário.",
+      "all": "Todas as demandas da empresa, internas e de projeto. Filtre por responsável ou por quem executa."
     },
     "empty": {
       "received": "Nenhuma demanda recebida por enquanto.",
       "assigned": "Você não tem demandas abertas.",
-      "requested": "Você ainda não pediu nenhuma demanda."
+      "requested": "Você ainda não pediu nenhuma demanda.",
+      "all": "Nenhuma demanda por aqui."
     },
     "row": {
       "due": "prazo {{date}}",
       "priority": "Prioridade {{name}}",
-      "noAssignee": "Sem atribuir"
+      "noAssignee": "Sem atribuir",
+      "owner": "Responsável: {{name}}"
     },
     "load": {
       "title": "Carga da minha equipe",
@@ -4748,6 +4748,18 @@
       "value": "{{count}} · {{hours}} h",
       "empty": "Sua equipe sai de Configurações → Dependências por área.",
       "aria": "{{name}}: {{count}} demandas, {{hours}} horas"
+    },
+    "allLoad": {
+      "title": "Carga das equipes",
+      "hint": "Por pessoa: demandas atribuídas e em andamento e as horas estimadas delas.",
+      "foot": "Conta o que cada pessoa tem aberto hoje, em todas as equipes.",
+      "empty": "Ninguém tem demandas atribuídas ou em andamento."
+    },
+    "filters": {
+      "label": "Filtros das demandas",
+      "owner": "Responsável",
+      "assignee": "Atribuída a",
+      "any": "Todos"
     },
     "badge_one": "{{count}} demanda recebida sem atribuir",
     "badge_other": "{{count}} demandas recebidas sem atribuir",
@@ -4804,7 +4816,8 @@
         "tasks": "Tarefas",
         "received": "Recebidas por mim",
         "assigned": "Atribuídas a mim",
-        "requested": "Pedidas por mim"
+        "requested": "Pedidas por mim",
+        "all": "Todas as demandas"
       },
       "priority": "Prioridade {{name}}",
       "description": "Descrição",

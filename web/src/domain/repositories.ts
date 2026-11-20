@@ -40,7 +40,7 @@ import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, Pla
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
 import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
 import type { Urgency } from './urgency'
-import type { AssignInput, DemandBox, DemandInput, DemandOverview, DemandStatus } from './demands'
+import type { AssignInput, DemandBox, DemandInput, DemandListFilters, DemandOverview } from './demands'
 import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectBrief, ProjectCharter } from './charter'
 import type {
   MemberRole,
@@ -406,10 +406,10 @@ export interface TaskRepository {
 
 /** Demandas internas (§45): tarefas sem projeto, pedidas a uma pessoa (o responsável). */
 export interface DemandRepository {
-  /** Caixas da tela Demandas; `statuses` restringe os passos. */
-  list(box: DemandBox, options?: { statuses?: DemandStatus[] }): Promise<Page<TaskSummary>>
+  /** Caixas da tela Demandas; `statuses` restringe os passos, `ownerId` e `assigneeId` filtram as pessoas. */
+  list(box: DemandBox, options?: DemandListFilters): Promise<Page<TaskSummary>>
   create(data: DemandInput): Promise<TaskDetail>
-  /** Números das caixas (o selo do menu Tarefas) e a carga da equipe. */
+  /** Números das caixas (o selo do menu Tarefas), a carga da equipe e, com `projects.view_all`, a de todas. */
   overview(): Promise<DemandOverview>
   /** Responsáveis possíveis (pessoas ativas). */
   owners(search?: string): Promise<UserSummary[]>

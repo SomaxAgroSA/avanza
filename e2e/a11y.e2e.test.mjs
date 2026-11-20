@@ -104,9 +104,10 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
       ['projeto — membros', `/projects/${p}/members`],
       ['projeto — histórico', `/projects/${p}/history`],
       ['tarefas', '/tasks'],
-      // demandas internas (§45): as três caixas
+      // demandas internas (§45): as caixas (Todas só para quem vê todas — o admin)
       ['demandas — recebidas', '/tasks/demands'],
       ['demandas — pedidas', '/tasks/demands?box=requested'],
+      ['demandas — todas', '/tasks/demands?box=all'],
       ['tarefa', `/tasks/${a.id}`],
       ['tarefa — comentários', `/tasks/${a.id}?tab=comments`],
       ['tarefa — relações', `/tasks/${a.id}?tab=relations`],
