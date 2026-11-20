@@ -212,7 +212,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
               id: 'project',
               header: t('tasks.fields.project'),
               size: 170,
-              cell: (task: TaskSummary) => (task.demand ? <DemandChip /> : <span className="truncate text-muted">{task.project?.name ?? '—'}</span>),
+              // demanda interna (sem projeto): o chip; tarefa de projeto, com ou sem quem distribui: o projeto
+              cell: (task: TaskSummary) => (task.demand && !task.project ? <DemandChip /> : <span className="truncate text-muted">{task.project?.name ?? '—'}</span>),
             } satisfies DataTableColumn<TaskSummary>,
           ]),
       {

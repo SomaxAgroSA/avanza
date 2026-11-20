@@ -120,7 +120,7 @@ function DemandRow({ task, box, actions }: { task: TaskSummary; box: DemandBox; 
         <Link
           to={`/tasks/${task.id}`}
           state={{ from: { to: box === 'received' ? '/tasks/demands' : `/tasks/demands?box=${box}`, place: box } }}
-          className="block truncate font-semibold text-fg hover:underline"
+          className="line-clamp-2 font-semibold text-fg hover:underline"
         >
           {task.title}
         </Link>

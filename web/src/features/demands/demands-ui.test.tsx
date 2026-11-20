@@ -159,10 +159,17 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
   })
 
   it('lista: Todas · Com projeto · Sem projeto; a demanda mostra "Demanda interna" no lugar do projeto', async () => {
-    const list = vi.fn<TaskRepository['list']>((query) => Promise.resolve({ ...page(query.perPage === 1 ? [] : [demand()]), total: 1 }))
+    // a tarefa de projeto com quem distribui continua mostrando o projeto
+    const withOwner = demand({ id: 'k7', code: 'FIN-7', title: 'Publicar o dashboard', project: { id: 'p9', key: 'FIN', name: 'Finanças' } })
+    const list = vi.fn<TaskRepository['list']>((query) => Promise.resolve({ ...page(query.perPage === 1 ? [] : [demand(), withOwner]), total: 2 }))
     renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos({ tasks: { list } }), initialPath: '/tasks' })
     expect(await screen.findByText('Vista DMR: agregar Fecha cuenta')).toBeInTheDocument()
-    expect(screen.getAllByText('Demanda interna').length).toBeGreaterThan(0)
+    const rows = screen.getAllByRole('row')
+    const internal = rows.find((row) => row.textContent?.includes('DEM-1'))!
+    const fromProject = rows.find((row) => row.textContent?.includes('FIN-7'))!
+    expect(within(internal).getByText('Demanda interna')).toBeInTheDocument()
+    expect(within(fromProject).getByText('Finanças')).toBeInTheDocument()
+    expect(within(fromProject).queryByText('Demanda interna')).not.toBeInTheDocument()
     expect(screen.getByText(i18n.t('taskList.mineHint'))).toBeInTheDocument()
     const kind = screen.getByRole('radiogroup', { name: i18n.t('taskList.kindLabel') })
     await userEvent.click(within(kind).getByRole('radio', { name: 'Sem projeto' }))
