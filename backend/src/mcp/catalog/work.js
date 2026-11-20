@@ -51,6 +51,9 @@ const TASK_FIELDS = {
   },
 }
 
+const DEMAND_OWNER =
+  'Owner who receives and distributes the task (any active user, even outside the project): turns on the request flow (unassigned → assigned → in progress → to validate → done); status, assignee, due date and estimate then change only through that flow, done in the app.'
+
 const PLAN_GROUP =
   'Project management stage (group or subgroup id from get_plan, same project): creates a new element in that stage named after the task, with its planned start (or today) and due date (or the start), owned by the assignee, and links the task to it. Copied only at that moment. Needs plan view permission (not plan edit).'
 
@@ -67,6 +70,7 @@ const TASK_CREATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   plan_group_id: id(PLAN_GROUP),
   urgency: urgency(),
   area_id: id(AREA),
+  demand_owner_id: id(DEMAND_OWNER),
 })
 
 const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
@@ -83,6 +87,7 @@ const TASK_UPDATE_FIELDS = Object.assign({}, TASK_FIELDS, {
   plan_group_id: id(`${PLAN_GROUP} Only for a task not linked to any element yet (otherwise VALIDATION_ERROR).`),
   urgency: nullableUrgency(),
   area_id: nullableId(AREA),
+  demand_owner_id: nullableId(`${DEMAND_OWNER} null turns the flow off (the task goes back to normal).`),
 })
 
 const REPORT_FILTERS = {
@@ -131,6 +136,8 @@ function compactTask(task) {
     blocked: !!task.blocked,
     parent_task_id: task.parent_task_id || null,
     updated_at: task.updated_at || null,
+    // demanda interna (§45): tarefa sem projeto, com o passo, o responsável e o prazo com hora
+    ...(task.demand ? { demand: { status: task.demand.status, owner: task.demand.owner ? { id: task.demand.owner.id, name: task.demand.owner.name } : null, due_at: task.demand.due_at || null } } : {}),
   }
 }
 
@@ -397,6 +404,7 @@ const TOOLS = [
           area_id: areaFilter(),
           in_report: bool('true = only tasks included in the project report; false = only the excluded ones.'),
           it_visible: bool('true = only tasks marked visible to the IT owner of the project; false = only the unmarked ones.'),
+          kind: { type: 'string', enum: ['project', 'demand'], description: 'project = only tasks that belong to a project; demand = only internal requests (tasks without a project, code DEM-n).' },
           sort: text(100, 'Comma-separated fields, "-" prefix for descending: code, title, created_at, updated_at, due_date, priority, status. Default: code.'),
         },
         PAGE,
@@ -404,7 +412,7 @@ const TOOLS = [
     ),
     annotations: READ,
     run: async (args, { services, ctx }) => {
-      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'sort']), pageQuery(args))
+      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'kind', 'sort']), pageQuery(args))
       if (args.categories && args.categories.length > 0) query.category = args.categories.join(',')
       if (args.in_report !== undefined) query.in_report = String(args.in_report)
       if (args.it_visible !== undefined) query.it_visible = String(args.it_visible)

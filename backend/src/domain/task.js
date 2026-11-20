@@ -7,6 +7,8 @@
  *   o papel "leitor" do projeto só consulta;
  * - excluir: `tasks.delete` + gestor do projeto (ou `projects.view_all`) ou o autor da tarefa.
  * Projeto arquivado fica somente leitura.
+ * - Demanda interna (§45): o acesso vem de domain/demand.js#demandAccess (quem pediu, responsável, quem
+ *   executa e a equipe do responsável), no mesmo formato; nunca atribui pela edição, relaciona nem faz fork.
  * - Responsável TI (§33/§36): só as tarefas atribuídas a ele ou marcadas "Visível para TI", como
  *   colaborador daquela tarefa (`scopedAccess`): vê, edita, muda o status, comenta e anexa; não exclui,
  *   não reatribui, não cria, não relaciona nem faz fork.
@@ -38,6 +40,11 @@ function isContributor(access) {
 
 /** Ações que o Responsável TI nunca faz, nem nas tarefas dele (§33). */
 const SCOPED_DENIED = ['delete', 'assign', 'create', 'link', 'fork']
+/**
+ * Ações de tarefa que a demanda interna nunca tem (§45): atribuir é pelo fluxo da demanda
+ * (application/demands.js); criar é por POST /demands; relacionar e fork ficam para as tarefas de projeto.
+ */
+const DEMAND_DENIED = ['assign', 'create', 'link', 'fork']
 
 /** O Responsável TI (`userId`) enxerga a tarefa: atribuída a ele ou marcada "Visível para TI" (§36). */
 function visibleToIt(task, userId) {
@@ -70,6 +77,7 @@ function assertTaskAccess(access, project, action, task) {
   if (!access.canView || !rbac.can(principal, 'tasks.view')) throw appError('TASK_NOT_FOUND')
   if (action === 'view') return
   if (access.scoped && SCOPED_DENIED.indexOf(action) >= 0) throw appError('FORBIDDEN')
+  if (access.demand && DEMAND_DENIED.indexOf(action) >= 0) throw appError('FORBIDDEN')
   const permission = ACTION_PERMISSION[action]
   if (!permission || !rbac.can(principal, permission) || !isContributor(access)) throw appError('FORBIDDEN')
   if (action === 'delete' && !(access.isManager || (task && principal && task.creatorId === principal.userId))) throw appError('FORBIDDEN')

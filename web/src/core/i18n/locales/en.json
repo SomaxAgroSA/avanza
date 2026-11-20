@@ -131,7 +131,10 @@
     "color_in_use": "Another project already uses this color",
     "not_a_member": "Choose the owner or a project member (manager or member).",
     "exclusive": "Choose only one: the stage or the Management item",
-    "already_linked": "The task is already in Management"
+    "already_linked": "The task is already in Management",
+    "not_in_team": "Choose someone on the owner's team",
+    "same_assignee": "Choose someone else",
+    "demand_flow": "On a request, this changes through the flow (Assign, Start, Complete…)"
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -237,7 +240,8 @@
     "ICON_IN_USE": "This icon is used by projects, task types or spaces and cannot be removed.",
     "ICON_NOT_FOUND": "This icon is not in the library.",
     "CHARTER_ITEM_NOT_FOUND": "Charter item not found.",
-    "PROJECT_HAS_DOCS": "This project has documentation: choose whether to move it, keep it as a general space or delete it."
+    "PROJECT_HAS_DOCS": "This project has documentation: choose whether to move it, keep it as a general space or delete it.",
+    "DEMAND_STATE_CONFLICT": "This action is not available at the current step of the request. Refresh the page."
   },
   "nav": {
     "main": "Main navigation",
@@ -825,7 +829,11 @@
       "spaces": "Spaces",
       "position": "Position",
       "lead": "Management lead",
-      "dev_lead": "Development lead"
+      "dev_lead": "Development lead",
+      "demand_owner": "Request owner",
+      "due_at": "Deadline",
+      "note": "Note",
+      "demand_status": "Request step"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -978,7 +986,14 @@
       "charter_item.reordered": "Charter items reordered",
       "charter_item.measured": "Measurement recorded",
       "task.doc_linked": "Documentation linked",
-      "task.doc_unlinked": "Documentation unlinked"
+      "task.doc_unlinked": "Documentation unlinked",
+      "task.demand_assigned": "Assigned the request",
+      "task.demand_reassigned": "Reassigned the request",
+      "task.demand_started": "Started the request",
+      "task.demand_passed": "Passed the request on",
+      "task.demand_concluded": "Completed the request",
+      "task.demand_validated": "Validated the request",
+      "task.demand_returned": "Returned the request"
     }
   },
   "projects": {
@@ -1822,13 +1837,21 @@
     }
   },
   "taskList": {
-    "subtitle": "Tasks from the projects you have access to.",
+    "subtitle": "Project tasks and internal requests.",
     "scopeLabel": "Which tasks to show",
     "mine": "My tasks",
     "all": "See all",
     "openOnly": "Open tasks only. To see done or cancelled ones, pick a Status.",
     "overdue": "overdue",
-    "moduleHint": "\"Tasks\" menu: opens on \"My tasks\"; \"See all\" shows the tasks of the projects the person can access. Needs \"Tasks\" on; when off, tasks stay inside each project."
+    "moduleHint": "\"Tasks\" menu: opens on \"My tasks\"; \"See all\" shows the tasks of the projects the person can access. Needs \"Tasks\" on; when off, tasks stay inside each project.",
+    "kindLabel": "With or without a project",
+    "kindAll": "All",
+    "kindProject": "With project",
+    "kindDemand": "Without project",
+    "mineHint": "\"My tasks\" includes the requests you made or received, even if someone else handles them.",
+    "viewLabel": "View",
+    "viewList": "List",
+    "viewDemands": "Requests"
   },
   "tags": {
     "title": "Tags",
@@ -1963,7 +1986,12 @@
       "due_soon": "{{code}} is due tomorrow",
       "overdue": "{{code}} is overdue",
       "plan_mention": "{{actor}} mentioned you in “{{name}}”",
-      "plan_reply": "{{actor}} replied to your update in “{{name}}”"
+      "plan_reply": "{{actor}} replied to your update in “{{name}}”",
+      "demand_received": "{{actor}} requested {{code}} from you",
+      "demand_passed": "{{actor}} passed {{code}} to {{assignee}}",
+      "demand_concluded": "{{actor}} completed {{code}}: awaiting validation",
+      "demand_validated": "{{actor}} validated {{code}}",
+      "demand_returned": "{{actor}} returned {{code}}"
     },
     "planItemIn": "{{project}} board"
   },
@@ -4645,6 +4673,178 @@
         "too_many": "At most 20 areas.",
         "too_many_people": "At most 50 people per area."
       }
+    }
+  },
+  "demands": {
+    "newProjectTask": "Project task",
+    "newDemand": "Internal request",
+    "kindGroup": "Task kind",
+    "kindHint": {
+      "project": "Part of a project, as usual.",
+      "demand": "No project: you ask one person and they assign it to their team."
+    },
+    "chip": "Internal request",
+    "status": {
+      "unassigned": "Unassigned",
+      "assigned": "Assigned",
+      "in_progress": "In progress",
+      "to_validate": "To validate",
+      "done": "Done"
+    },
+    "groups": {
+      "unassigned": "Unassigned",
+      "assigned": "Assigned",
+      "in_progress": "In progress",
+      "to_validate": "To validate",
+      "done": "Done"
+    },
+    "form": {
+      "createTitle": "New task",
+      "createDescription": "Choose whether it is a project task or an internal request.",
+      "editTitle": "Edit {{code}}",
+      "titlePlaceholder": "E.g.: Portfolio view: add the Cycle field",
+      "descriptionPlaceholder": "What you need, where (view, system, screen) and the result you expect. If there is already a support ticket, add its number.",
+      "owner": "Owner",
+      "ownerHint": "This person receives it and can assign it to someone on their team; they keep seeing it even after passing it on.",
+      "ownerFixed": "The owner does not change once the request is open.",
+      "department": "Requesting department",
+      "opening": "Opened",
+      "openingAuto": "{{date}} · automatic",
+      "deadline": "Deadline",
+      "deadlineLocked": "The owner sets it when assigning (date and time)",
+      "submit": "Create request"
+    },
+    "created": "{{code}} created and sent to {{owner}}",
+    "saved": "{{code}} saved",
+    "page": {
+      "title": "Requests",
+      "tabsLabel": "Request boxes",
+      "kpis": "Requests by step"
+    },
+    "tabs": {
+      "received": "Received by me",
+      "assigned": "Assigned to me",
+      "requested": "Requested by me"
+    },
+    "hints": {
+      "received": "What people asked of you. Assign it to your team and keep track of everything, even after passing it on.",
+      "assigned": "What was assigned to you. Start, pass it to a teammate or complete it.",
+      "requested": "What you asked for. When it reaches \"To validate\", validate the delivery or return it with a note."
+    },
+    "empty": {
+      "received": "No requests received yet.",
+      "assigned": "You have no open requests.",
+      "requested": "You have not requested anything yet."
+    },
+    "row": {
+      "due": "due {{date}}",
+      "priority": "{{name}} priority",
+      "noAssignee": "Unassigned"
+    },
+    "load": {
+      "title": "My team's load",
+      "hint": "Estimated hours of what each person has open (and how many requests).",
+      "foot": "Counts what each person has today: if someone passes a request on, it moves to the other bar.",
+      "value": "{{count}} · {{hours}} h",
+      "empty": "Your team comes from Settings → Dependencies by area.",
+      "aria": "{{name}}: {{count}} requests, {{hours}} hours"
+    },
+    "badge_one": "{{count}} received request unassigned",
+    "badge_other": "{{count}} received requests unassigned",
+    "actions": {
+      "assign": "Assign",
+      "reassign": "Reassign",
+      "start": "Start",
+      "pass": "Pass to…",
+      "conclude": "Complete",
+      "validate": "Validate",
+      "return": "Return"
+    },
+    "assign": {
+      "title": "Assign · {{code}}",
+      "reassignTitle": "Reassign · {{code}}",
+      "assignee": "Assign to (my team)",
+      "dueDate": "Deadline · date",
+      "dueTime": "Time",
+      "estimate": "Estimate (hours)",
+      "submit": "Assign",
+      "done": "{{code}} assigned to {{name}}"
+    },
+    "pass": {
+      "title": "Pass to a teammate · {{code}}",
+      "to": "Pass to",
+      "toHint": "People on {{owner}}'s team.",
+      "comment": "Note",
+      "placeholder": "Why you're passing it on and what's left",
+      "note": "The note is required; {{owner}} sees it in the timeline and in the team's load.",
+      "submit": "Pass",
+      "done": "{{code}} passed to {{name}}"
+    },
+    "conclude": {
+      "title": "Complete · {{code}}",
+      "delivered": "What was delivered",
+      "placeholder": "What you did and where it is",
+      "note": "Goes to \"To validate\" for {{requester}}; {{owner}} sees it in their box.",
+      "submit": "Complete",
+      "done": "{{code}} sent for validation"
+    },
+    "return": {
+      "title": "Return · {{code}}",
+      "comment": "What's missing",
+      "placeholder": "What's still missing to accept the delivery",
+      "note": "Goes back to In progress with {{name}}.",
+      "submit": "Return",
+      "done": "{{code}} returned to {{name}}"
+    },
+    "validated": "{{code}} done",
+    "started": "{{code}} in progress",
+    "detail": {
+      "backTo": "Back to {{place}}",
+      "places": {
+        "tasks": "Tasks",
+        "received": "Received by me",
+        "assigned": "Assigned to me",
+        "requested": "Requested by me"
+      },
+      "priority": "{{name}} priority",
+      "description": "Description",
+      "timeline": "Timeline and comments",
+      "properties": "Properties",
+      "requester": "Requested by",
+      "department": "Requesting department",
+      "owner": "Owner",
+      "assignee": "Assigned to",
+      "unassigned": "— unassigned",
+      "opened": "Opened",
+      "openedLocked": "Opened automatically (does not change)",
+      "deadline": "Deadline",
+      "estimate": "Estimate",
+      "hours": "{{hours}} h",
+      "attachments": "Attachments"
+    },
+    "events": {
+      "opened": "opened the request for {{owner}}",
+      "assigned": "assigned it to {{name}}",
+      "reassigned": "reassigned it to {{name}}",
+      "deadline": "due {{date}}",
+      "estimate": "{{hours}} h",
+      "passed": "passed it to {{name}}",
+      "started": "started working",
+      "concluded": "completed it and sent it for validation",
+      "validated": "validated the delivery",
+      "returned": "returned it for changes",
+      "edited": "edited: {{fields}}",
+      "attached": "attached {{name}}"
+    },
+    "projectFlow": {
+      "owner": "Owner (receives and distributes)",
+      "ownerHint": "Optional. This person receives the task and assigns it to someone on their team, even if they are not in the project; status, assignee, deadline and estimate then follow their flow.",
+      "none": "Nobody (as usual)",
+      "locked": "With an owner who distributes, this changes through the flow (Assign, Start, Complete…)",
+      "title": "Receives and distributes",
+      "step": "Step",
+      "assignee": "Assigned to",
+      "deadline": "Deadline"
     }
   }
 }

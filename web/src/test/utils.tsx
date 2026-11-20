@@ -9,6 +9,7 @@ import type { Repositories } from '@/domain/repositories'
 import type { ContentLocale, TypeTexts } from '@/domain/task-config'
 import { DEFAULT_PASSWORD_POLICY, DEFAULT_PLATFORM_INFO } from '@/domain/platform'
 import { DEFAULT_PROJECT_FILTER } from '@/domain/project-filter'
+import { EMPTY_DEMAND_COUNTS } from '@/domain/demands'
 import { RepositoriesContext } from '@/presentation/common/repositories-context'
 import { AppTooltipProvider } from '@/presentation/components'
 
@@ -64,6 +65,7 @@ export function fakeRepositories(overrides: {
   priorities?: Partial<Repositories['priorities']>
   areas?: Partial<Repositories['areas']>
   tasks?: Partial<Repositories['tasks']>
+  demands?: Partial<Repositories['demands']>
   tags?: Partial<Repositories['tags']>
   icons?: Partial<Repositories['icons']>
   comments?: Partial<Repositories['comments']>
@@ -206,6 +208,20 @@ export function fakeRepositories(overrides: {
       remove: notImplemented,
       history: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
       ...overrides.tasks,
+    },
+    demands: {
+      list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
+      create: notImplemented,
+      overview: () => Promise.resolve({ counts: EMPTY_DEMAND_COUNTS, team: [] }),
+      owners: () => Promise.resolve([]),
+      team: () => Promise.resolve([]),
+      assign: notImplemented,
+      start: notImplemented,
+      pass: notImplemented,
+      conclude: notImplemented,
+      validate: notImplemented,
+      returnDemand: notImplemented,
+      ...overrides.demands,
     },
     tags: {
       list: () => Promise.resolve([]),

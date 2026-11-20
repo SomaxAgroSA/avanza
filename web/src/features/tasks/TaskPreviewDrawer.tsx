@@ -6,6 +6,7 @@ import { AppButton, AppDrawer, AppErrorState, AppMarkdown, AppSkeleton } from '@
 import { useProjectMembers } from '@/features/projects/queries'
 import { useTask, useTaskAttachments } from './queries'
 import { TaskCustomValues, TaskProperties } from './TaskProperties'
+import { DemandFlowCard } from '@/features/demands/DemandFlowCard'
 import { TaskQuickFields } from './TaskQuickFields'
 import { TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { TagList } from '@/features/tags/tag-visuals'
@@ -85,6 +86,8 @@ export function TaskPreviewDrawer({
       ) : data ? (
         <div className="flex flex-col gap-6">
           {quickFields && <TaskQuickFields task={data} />}
+          {/* tarefa de projeto com quem recebe e distribui (§45) */}
+          <DemandFlowCard task={data} />
           <div className="flex flex-wrap items-center gap-2">
             {!quickFields && <TaskStatusBadge status={data.status} className="text-sm" />}
             {!quickFields && <TaskPriorityBadge priority={data.priority} className="text-sm" />}

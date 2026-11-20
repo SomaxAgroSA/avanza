@@ -22,6 +22,7 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { Sidebar } from '@/presentation/navigation/Sidebar'
 import { CommandPalette } from '@/presentation/navigation/CommandPalette'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
+import { useDemandBadge } from '@/features/demands/queries'
 import { useLiveNotifications, useRealtimeResync, useRealtimeStatus } from '@/presentation/common/use-live'
 import { findNavTrail, showsBreadcrumb, visibleNavItems } from '@/presentation/navigation/nav-items'
 import { rememberNavChild } from '@/presentation/navigation/nav-memory'
@@ -34,6 +35,9 @@ export function AppShell() {
   const mobileNavOpen = useUiStore((s) => s.mobileNavOpen)
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen)
   const items = visibleNavItems(current?.permissions ?? [])
+  // Tarefas: demandas recebidas por mim ainda sem atribuir (§45)
+  const unassignedDemands = useDemandBadge()
+  const badges = { tasks: { count: unassignedDemands, label: t('demands.badge', { count: unassignedDemands }) } }
   useLiveNotifications(current?.user.id)
   useRealtimeResync()
 
@@ -50,7 +54,7 @@ export function AppShell() {
           collapsed ? 'w-[60px]' : 'w-60',
         )}
       >
-        <Sidebar items={items} collapsed={collapsed} />
+        <Sidebar items={items} collapsed={collapsed} badges={badges} />
       </aside>
 
       <Dialog.Root open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -58,7 +62,7 @@ export function AppShell() {
           <Dialog.Overlay className="fixed inset-0 z-40 bg-overlay animate-fade-in md:hidden" />
           <Dialog.Content aria-describedby={undefined} className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface shadow-float focus:outline-none md:hidden">
             <Dialog.Title className="sr-only">{t('nav.main')}</Dialog.Title>
-            <Sidebar items={items} collapsed={false} showCollapseToggle={false} onNavigate={() => setMobileNavOpen(false)} />
+            <Sidebar items={items} collapsed={false} showCollapseToggle={false} onNavigate={() => setMobileNavOpen(false)} badges={badges} />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

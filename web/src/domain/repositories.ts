@@ -40,6 +40,7 @@ import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, Pla
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
 import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
 import type { Urgency } from './urgency'
+import type { AssignInput, DemandBox, DemandInput, DemandOverview, DemandStatus } from './demands'
 import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectBrief, ProjectCharter } from './charter'
 import type {
   MemberRole,
@@ -403,6 +404,25 @@ export interface TaskRepository {
   history(id: string): Promise<Page<AuditEntry>>
 }
 
+/** Demandas internas (§45): tarefas sem projeto, pedidas a uma pessoa (o responsável). */
+export interface DemandRepository {
+  /** Caixas da tela Demandas; `statuses` restringe os passos. */
+  list(box: DemandBox, options?: { statuses?: DemandStatus[] }): Promise<Page<TaskSummary>>
+  create(data: DemandInput): Promise<TaskDetail>
+  /** Números das caixas (o selo do menu Tarefas) e a carga da equipe. */
+  overview(): Promise<DemandOverview>
+  /** Responsáveis possíveis (pessoas ativas). */
+  owners(search?: string): Promise<UserSummary[]>
+  /** Quem pode receber a demanda (Atribuir e Passar a…). */
+  team(id: string): Promise<UserSummary[]>
+  assign(id: string, input: AssignInput): Promise<TaskDetail>
+  start(id: string): Promise<TaskDetail>
+  pass(id: string, input: { assigneeId: string; comment: string }): Promise<TaskDetail>
+  conclude(id: string, comment: string): Promise<TaskDetail>
+  validate(id: string): Promise<TaskDetail>
+  returnDemand(id: string, comment: string): Promise<TaskDetail>
+}
+
 export interface AttachmentRepository {
   list(taskId: string): Promise<Attachment[]>
   /** Um arquivo por vez; `field` = campo de imagem/arquivo; `commentId` = anexo do comentário. */
@@ -631,6 +651,7 @@ export interface Repositories {
   priorities: LookupRepository<TaskPriority>
   areas: LookupRepository<Area>
   tasks: TaskRepository
+  demands: DemandRepository
   tags: TagRepository
   icons: IconLibraryRepository
   comments: CommentRepository

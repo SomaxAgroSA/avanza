@@ -36,6 +36,8 @@ import { TaskDocsPanel } from './TaskDocsPanel'
 import { useCan } from '@/features/auth/session'
 import { useTaskDocs } from '@/features/docs/queries'
 import { TagList } from '@/features/tags/tag-visuals'
+import { DemandDetailView } from '@/features/demands/DemandDetailView'
+import { DemandFlowCard } from '@/features/demands/DemandFlowCard'
 
 export function TaskDetailPage() {
   const { taskId } = useParams()
@@ -69,6 +71,8 @@ export function TaskDetailPage() {
     }
     return <AppErrorState onRetry={() => void task.refetch()} />
   }
+  // demanda interna (§45): a página inteira da demanda (linha do tempo, papéis e propriedades)
+  if (task.data.demand && !task.data.project) return <DemandDetailView task={task.data} />
   return <TaskDetailView task={task.data} />
 }
 
@@ -179,6 +183,8 @@ export function TaskDetailView({ task, embedded = false, onDeleted }: { task: Ta
           </div>
         </div>
         <TaskQuickFields task={task} />
+        {/* tarefa de projeto com quem recebe e distribui (§45): passo, pessoas, prazo e os botões do papel */}
+        <DemandFlowCard task={task} />
       </section>
 
       {/* minmax(0,1fr): a coluna não cresce além da tela por causa das abas no celular */}

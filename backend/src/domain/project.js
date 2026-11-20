@@ -87,8 +87,16 @@ function datesIssue(start, due) {
   return null
 }
 
-/** Calcula o vínculo do principal com o projeto. `membership` = { role } ou null. */
+/**
+ * Calcula o vínculo do principal com o projeto. `membership` = { role } ou null.
+ * Projeto de sistema (`kind` preenchido — hoje a caixa das demandas internas, §45): não é projeto de
+ * ninguém, nem de quem vê todos; responde como inexistente em toda ação de projeto. As tarefas dele têm
+ * acesso próprio (domain/demand.js#demandAccess).
+ */
 function resolveAccess(principal, project, membership) {
+  if (project && project.kind) {
+    return { principal, viewAll: false, isOwner: false, role: null, isManager: false, limited: false, canView: false, canEdit: false, system: true }
+  }
   const viewAll = rbac.can(principal, 'projects.view_all')
   const isOwner = !!principal && project.ownerId === principal.userId
   const memberRole = membership ? membership.role : null

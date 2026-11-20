@@ -9,6 +9,7 @@ const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
 const taskDomain = require('../domain/task')
 const { iso } = require('./presenters')
+const { createTaskAccess } = require('./task-access')
 
 const LIST_SCHEMA = {
   entity_type: [rules.maxLength(50)],
@@ -55,8 +56,8 @@ const ENTITY_HISTORY = {
     const task = id ? await deps.taskRepository.findById(id) : null
     const project = task ? await deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError('TASK_NOT_FOUND')
-    const membership = await deps.projectMemberRepository.find(project.id, principal.userId)
-    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(principal, project, membership), task)
+    // inclusive demanda interna (§45) e Responsável TI (§33)
+    const access = await createTaskAccess(deps).forTask(principal, task, project)
     taskDomain.assertTaskAccess(access, project, 'view', task)
   },
 }

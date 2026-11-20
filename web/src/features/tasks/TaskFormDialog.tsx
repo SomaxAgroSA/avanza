@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CornerDownRight } from 'lucide-react'
+import { CornerDownRight, Plus } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { toDayInput } from '@/core/utils/format'
 import { isRequiredIn, type FieldValue, type OptionColor, type TaskTypeField } from '@/domain/task-config'
@@ -24,6 +24,8 @@ import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 import { usePlan } from '@/features/plan/queries'
+import { DemandFormDialog } from '@/features/demands/DemandFormDialog'
+import { useDemandOwners } from '@/features/demands/queries'
 
 export interface TaskFormDialogProps {
   open: boolean
@@ -35,7 +37,16 @@ export interface TaskFormDialogProps {
   /** Valores iniciais na criação (ex.: vindos da criação rápida do Kanban). */
   initial?: TaskFormInitial
   onSaved?: (task: TaskDetail) => void
+  /**
+   * Criação no módulo Tarefas (§45): os dois botões "＋ Tarefa de projeto · ＋ Demanda interna" no topo
+   * trocam o formulário (o de projeto continua igual). `initialKind` = qual abre primeiro.
+   */
+  kindSwitch?: boolean
+  initialKind?: TaskKindChoice
 }
+
+/** Tarefa de projeto (como sempre) ou demanda interna (sem projeto, §45). */
+export type TaskKindChoice = 'project' | 'demand'
 
 export type TaskFormInitial = Partial<Pick<Draft, 'typeId' | 'title' | 'statusId' | 'priorityId' | 'assigneeId' | 'sprintId' | 'parentTaskId' | 'planItemId'>>
 
@@ -72,6 +83,8 @@ interface Draft {
   planItemId: string
   /** Etapa da Gestão em que a tarefa entra como linha nova ('' = sem etapa). */
   planGroupId: string
+  /** Responsável que recebe e distribui (§45; '' = nenhum: a tarefa segue como sempre). */
+  demandOwnerId: string
 }
 
 function draftFrom(task: TaskDetail | null | undefined, projectId: string | undefined, initial?: TaskFormInitial): Draft {
@@ -95,17 +108,58 @@ function draftFrom(task: TaskDetail | null | undefined, projectId: string | unde
     parentTaskId: task?.parentTaskId ?? '',
     planItemId: task?.planItem?.id ?? '',
     planGroupId: '',
+    demandOwnerId: task?.demand?.owner?.id ?? '',
     ...(task ? {} : initial),
   }
 }
 
-/** Remonta o formulário a cada abertura (rascunho novo, sem efeitos). */
+/**
+ * Remonta o formulário a cada abertura (rascunho novo, sem efeitos). Demanda interna (§45) em edição
+ * abre o formulário curto da demanda; na criação com `kindSwitch`, os dois botões do topo escolhem.
+ */
 export function TaskFormDialog(props: TaskFormDialogProps) {
-  const key = props.open ? (props.task?.id ?? `new:${props.projectId ?? ''}`) : 'closed'
+  const key = props.open ? (props.task?.id ?? `new:${props.projectId ?? ''}:${props.initialKind ?? ''}`) : 'closed'
+  if (props.task?.demand && !props.task.project) return <DemandFormDialog open={props.open} onOpenChange={props.onOpenChange} task={props.task} onSaved={props.onSaved} />
+  if (props.kindSwitch && !props.task && !props.projectId) return <KindSwitchForm key={key} {...props} />
   return <TaskForm key={key} {...props} />
 }
 
-function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: TaskFormDialogProps) {
+/** Criação com a escolha no topo: o formulário de sempre ou o da demanda interna. */
+function KindSwitchForm(props: TaskFormDialogProps) {
+  const { t } = useTranslation()
+  const [kind, setKind] = useState<TaskKindChoice>(props.initialKind ?? 'project')
+  const header = <TaskKindButtons kind={kind} onChange={setKind} />
+  return kind === 'demand' ? (
+    <DemandFormDialog
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      header={header}
+      title={t('demands.form.createTitle')}
+      description={t('demands.form.createDescription')}
+      onSaved={props.onSaved}
+    />
+  ) : (
+    <TaskForm {...props} header={header} />
+  )
+}
+
+/** Os dois botões pequenos do topo da criação (mesmo estilo do "＋ Nova tarefa"). */
+export function TaskKindButtons({ kind, onChange }: { kind: TaskKindChoice; onChange: (kind: TaskKindChoice) => void }) {
+  const { t } = useTranslation()
+  return (
+    <div role="group" aria-label={t('demands.kindGroup')} className="mb-5 flex flex-wrap items-center gap-2">
+      <AppButton size="sm" variant={kind === 'project' ? 'primary' : 'secondary'} leftIcon={<Plus />} aria-pressed={kind === 'project'} onClick={() => onChange('project')}>
+        {t('demands.newProjectTask')}
+      </AppButton>
+      <AppButton size="sm" variant={kind === 'demand' ? 'primary' : 'secondary'} leftIcon={<Plus />} aria-pressed={kind === 'demand'} onClick={() => onChange('demand')}>
+        {t('demands.newDemand')}
+      </AppButton>
+      <span className="text-xs text-muted">{t(`demands.kindHint.${kind}`)}</span>
+    </div>
+  )
+}
+
+function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved, header }: TaskFormDialogProps & { header?: ReactNode }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const canAssign = useCan('tasks.assign')
@@ -135,6 +189,10 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const [sendingFiles, setSendingFiles] = useState(false)
   const createOption = useFieldOptionCreator()
   const tags = useTags(open)
+  // Responsável que recebe e distribui (§45): qualquer pessoa ativa; com ele, o fluxo da demanda vale na tarefa
+  const owners = useDemandOwners(open)
+  const withOwner = !!draft.demandOwnerId
+  const flowHint = withOwner ? t('demands.projectFlow.locked') : undefined
   const sprints = useSprints(open ? draft.projectId || undefined : undefined)
   // Etapa da gestão: só para quem vê a Gestão e quando o quadro do projeto tem etapas. Tarefa já ligada
   // a um elemento (na edição, ou criada pelo painel do elemento) mostra a etapa dele só para leitura.
@@ -260,18 +318,22 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       const value = draft.values[link.field.name]
       customValues[link.field.name] = value === undefined || value === '' ? null : value
     })
+    // com responsável (§45), status, executor, prazo e estimativa são do fluxo: não vão no corpo
+    const flow = withOwner
+    const ownerChanged = draft.demandOwnerId !== (task?.demand?.owner?.id ?? '')
     const data: TaskInput = {
       taskTypeId: draft.typeId,
       title: draft.title.trim(),
       description: draft.description,
-      statusId: draft.statusId || undefined,
+      statusId: flow ? undefined : draft.statusId || undefined,
       priorityId: draft.priorityId || undefined,
-      assigneeId: draft.assigneeId || null,
+      assigneeId: flow ? undefined : draft.assigneeId || null,
       // só quando mudou: a área inativa que a tarefa já tem continua valendo
       areaId: draft.areaId !== (task?.area?.id ?? '') ? draft.areaId || null : undefined,
       startDate: draft.startDate || null,
-      dueDate: draft.dueDate || null,
-      estimatedHours: estimated,
+      dueDate: flow ? undefined : draft.dueDate || null,
+      ...(ownerChanged ? { demandOwnerId: draft.demandOwnerId || null } : {}),
+      estimatedHours: flow ? undefined : estimated,
       actualHours: actual,
       customValues,
       tagIds: draft.tagIds,
@@ -352,6 +414,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
         </>
       }
     >
+      {header}
       <form
         noValidate
         className="grid items-start gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_20rem]"
@@ -472,9 +535,27 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
 
         <aside aria-label={t('tasks.properties')} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:border-l lg:border-border lg:pl-8">
           <AppSelect
+            label={t('demands.projectFlow.owner')}
+            searchable
+            value={draft.demandOwnerId || NONE}
+            error={errors.demand_owner_id}
+            disabled={!canChangeAssignee || !draft.projectId}
+            hint={t('demands.projectFlow.ownerHint')}
+            onValueChange={(value) => set('demandOwnerId', value === NONE ? '' : value)}
+            options={[
+              { value: NONE, label: t('demands.projectFlow.none') },
+              ...(owners.data ?? []).map((person) => ({ value: person.id, label: person.name })),
+              ...(task?.demand?.owner && !(owners.data ?? []).some((person) => person.id === task.demand?.owner?.id)
+                ? [{ value: task.demand.owner.id, label: task.demand.owner.name }]
+                : []),
+            ]}
+          />
+          <AppSelect
             label={t('tasks.fields.status')}
             value={draft.statusId || undefined}
             error={errors.status_id}
+            disabled={withOwner}
+            hint={flowHint}
             onValueChange={(value) => set('statusId', value)}
             // só as transições permitidas a partir do status salvo (sem transições configuradas, todos)
             options={lookupOptions(statusChoices(statuses.data ?? [], task?.status?.id), task?.status)}
@@ -490,8 +571,8 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             label={t('tasks.fields.assignee')}
             value={draft.assigneeId || NONE}
             error={errors.assignee_id}
-            disabled={!canChangeAssignee || !draft.projectId}
-            hint={!canChangeAssignee ? t('tasks.assignLocked') : undefined}
+            disabled={withOwner || !canChangeAssignee || !draft.projectId}
+            hint={withOwner ? flowHint : !canChangeAssignee ? t('tasks.assignLocked') : undefined}
             onValueChange={(value) => set('assigneeId', value === NONE ? '' : value)}
             options={[
               { value: NONE, label: t('tasks.unassigned') },
@@ -526,6 +607,8 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             value={draft.dueDate}
             min={draft.startDate || undefined}
             error={errors.due_date}
+            disabled={withOwner}
+            hint={flowHint}
             clearable
             onValueChange={(value) => set('dueDate', value)}
           />
@@ -534,6 +617,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             inputMode="decimal"
             value={draft.estimatedHours}
             error={errors.estimated_hours}
+            disabled={withOwner}
             onChange={(event) => set('estimatedHours', event.target.value.replace(/[^0-9,.]/g, ''))}
           />
           <AppTextField

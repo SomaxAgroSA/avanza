@@ -11,13 +11,13 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const projectDomain = require('../domain/project')
 const taskDomain = require('../domain/task')
 const docsDomain = require('../domain/docs')
 const { buildAuditEntry } = require('./audit')
 const { iso } = require('./presenters')
 const { createDocAccess } = require('./doc-access')
 const { createTaskService } = require('./tasks')
+const { createTaskAccess } = require('./task-access')
 
 const MAX_LINKS = 50
 const idPattern = /^[A-Za-z0-9_]{1,64}$/
@@ -34,23 +34,21 @@ function createDocLinkService(deps) {
   const links = deps.docPageTaskRepository
   const access = createDocAccess(deps)
   const taskService = createTaskService(deps)
+  const taskAccess = createTaskAccess(deps)
 
-  /** Visibilidade das tarefas, com o acesso ao projeto em cache durante a chamada. */
+  /** Visibilidade das tarefas (inclusive demandas internas, §45), com o projeto em cache durante a chamada. */
   function taskVisibility(ctx) {
     const projects = new Map()
-    async function projectAccess(projectId) {
-      if (!projects.has(projectId)) {
-        const project = await deps.projectRepository.findById(projectId)
-        projects.set(projectId, project ? { project, access: projectDomain.resolveAccess(ctx.principal, project, await deps.projectMemberRepository.find(project.id, ctx.principal.userId)) } : null)
-      }
+    async function projectOf(projectId) {
+      if (!projects.has(projectId)) projects.set(projectId, await deps.projectRepository.findById(projectId))
       return projects.get(projectId)
     }
     return async function sees(task) {
       if (!task) return false
-      const found = await projectAccess(task.projectId)
-      if (!found) return false
+      const project = await projectOf(task.projectId)
+      if (!project) return false
       try {
-        taskDomain.assertTaskAccess(taskDomain.scopedAccess(found.access, task), found.project, 'view', task)
+        taskDomain.assertTaskAccess(await taskAccess.forTask(ctx.principal, task, project), project, 'view', task)
         return true
       } catch (_) {
         return false

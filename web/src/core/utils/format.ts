@@ -7,6 +7,16 @@ export function formatDateTime(date: Date | null | undefined, locale: string): s
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
 
+/**
+ * Data e hora curtas no fuso de quem olha (prazos com hora, abertura): "21/11 17:00"; fora do ano de
+ * `now`, com o ano ("04/01/27 09:30").
+ */
+export function formatShortDateTime(date: Date | null | undefined, locale: string, now: Date = new Date()): string {
+  if (!date) return '—'
+  const sameYear = date.getFullYear() === now.getFullYear()
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', ...(sameYear ? {} : { year: '2-digit' }), hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+}
+
 export function formatDate(date: Date | null | undefined, locale: string): string {
   if (!date) return '—'
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date)

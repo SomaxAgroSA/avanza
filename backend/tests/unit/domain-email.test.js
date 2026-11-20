@@ -90,6 +90,19 @@ describe('domain/email — modelos', () => {
     const due = email.renderNotificationEmail({ type: 'due_soon', taskId: 't2', data: { code: 'CRM-3', title: 'Y' } }, { locale: 'pt-BR', actorName: null, platform: 'KAMBAN', appUrl: 'https://k.com' })
     assert.equal(due.subject, 'CRM-3 vence amanhã')
   })
+
+  it('demandas internas (§45): pedido, passagem, conclusão, validação e devolução nos três idiomas', () => {
+    const ctx = (locale) => ({ locale, actorName: 'Jorge', platform: 'KAMBAN', appUrl: 'https://k.com' })
+    const note = (type, data) => ({ type, taskId: 't5', data: Object.assign({ code: 'DEM-4', title: 'Vista DMR' }, data) })
+    assert.equal(email.renderNotificationEmail(note('demand_received'), ctx('pt-BR')).subject, 'Jorge pediu DEM-4 a você')
+    assert.equal(email.renderNotificationEmail(note('demand_passed', { assignee: 'Carlos' }), ctx('es')).subject, 'Jorge pasó DEM-4 a Carlos')
+    const concluded = email.renderNotificationEmail(note('demand_concluded', { comment: 'Publicado.' }), ctx('en'))
+    assert.equal(concluded.subject, 'Jorge completed DEM-4: awaiting validation')
+    assert.match(concluded.html, /Publicado\./)
+    assert.match(concluded.html, /href="https:\/\/k\.com\/tasks\/t5"/)
+    assert.equal(email.renderNotificationEmail(note('demand_validated'), ctx('pt-BR')).subject, 'Jorge validou DEM-4')
+    assert.equal(email.renderNotificationEmail(note('demand_returned'), ctx('es')).subject, 'Jorge devolvió DEM-4')
+  })
 })
 
 describe('domain/auth-token — links de redefinição e convite', () => {

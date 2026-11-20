@@ -315,6 +315,27 @@ const setTaskUrgency = taskAction((s, ctx, r) => s.setTaskUrgency(ctx, r.id, r.b
 const setTaskArea = taskAction((s, ctx, r) => s.setTaskArea(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
 
+// ---------------------------------------------------------------- demandas internas (§45)
+
+const demandAction = (fn, status) => configAction('demands', fn, status)
+
+function listDemands(e) {
+  return handle(e, async ({ ctx, services, query }) => {
+    const page = await services.demands.listDemands(ctx, query())
+    return { data: page.items, meta: page.meta }
+  })
+}
+const createDemand = demandAction((s, ctx, r) => s.createDemand(ctx, r.body()), 201)
+const demandsOverview = demandAction((s, ctx) => s.overview(ctx))
+const demandOwners = demandAction((s, ctx, r) => s.owners(ctx, r.query()))
+const demandTeam = demandAction((s, ctx, r) => s.team(ctx, r.id))
+const assignDemand = demandAction((s, ctx, r) => s.assign(ctx, r.id, r.body()))
+const startDemand = demandAction((s, ctx, r) => s.start(ctx, r.id))
+const passDemand = demandAction((s, ctx, r) => s.pass(ctx, r.id, r.body()))
+const concludeDemand = demandAction((s, ctx, r) => s.conclude(ctx, r.id, r.body()))
+const validateDemand = demandAction((s, ctx, r) => s.validate(ctx, r.id))
+const returnDemand = demandAction((s, ctx, r) => s.returnDemand(ctx, r.id, r.body()))
+
 function taskHistory(e) {
   return handle(e, async ({ ctx, services, param, query }) => {
     const page = await services.audit.listEntityHistory(ctx, 'task', param('id'), query())
@@ -754,6 +775,17 @@ module.exports = {
   setTaskUrgency,
   setTaskArea,
   deleteTask,
+  listDemands,
+  createDemand,
+  demandsOverview,
+  demandOwners,
+  demandTeam,
+  assignDemand,
+  startDemand,
+  passDemand,
+  concludeDemand,
+  validateDemand,
+  returnDemand,
   taskHistory,
   listTags,
   listIcons,

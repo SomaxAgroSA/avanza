@@ -9,12 +9,13 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const projectDomain = require('../domain/project')
 const taskDomain = require('../domain/task')
+const demandDomain = require('../domain/demand')
 const { buildAuditEntry, truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { presentAttachment } = require('./attachments')
 const { createNotifier } = require('./notifications')
+const { createTaskAccess } = require('./task-access')
 
 const MAX_CONTENT = 10000
 const MAX_MENTIONS = 20
@@ -27,15 +28,15 @@ function invalid(field, code) {
 function createCommentService(deps) {
   const comments = deps.commentRepository
   const notifier = createNotifier(deps)
+  const taskAccess = createTaskAccess(deps)
 
   async function loadTask(ctx, taskId) {
     rbac.assertAuthenticated(ctx.principal)
     const task = taskId ? await deps.taskRepository.findById(taskId) : null
     const project = task ? await deps.projectRepository.findById(task.projectId) : null
     if (!task || !project) throw appError('TASK_NOT_FOUND')
-    const membership = await deps.projectMemberRepository.find(project.id, ctx.principal.userId)
-    // Responsável TI: comenta nas tarefas visíveis a ele (§33)
-    const access = taskDomain.scopedAccess(projectDomain.resolveAccess(ctx.principal, project, membership), task)
+    // Responsável TI: comenta nas tarefas visíveis a ele (§33); demanda interna: quem a enxerga (§45)
+    const access = await taskAccess.forTask(ctx.principal, task, project)
     taskDomain.assertTaskAccess(access, project, 'view', task)
     return { task, project, access }
   }
@@ -47,12 +48,23 @@ function createCommentService(deps) {
    * comentou).
    */
   async function participants(project, task, access) {
+    // demanda interna (§45): quem pediu, o responsável, quem executa (agora ou antes) e a equipe do responsável
+    if (access && access.demand) {
+      const team = access.demand.team || { memberIds: [] }
+      const ids = [task.reporterId, task.demandOwnerId, task.assigneeId].concat(task.demandPastAssignees || [], team.memberIds).filter((id, i, all) => id && all.indexOf(id) === i)
+      return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active' && demandDomain.seesDemand(task, u.id, team))
+    }
     let ids = (await deps.projectMemberRepository.listByProject(project.id))
       .filter((m) => taskDomain.memberSeesTask(project, m, m.userId, task))
       .map((m) => m.userId)
     if (ids.indexOf(project.ownerId) < 0) ids.push(project.ownerId)
+    // tarefa de projeto com responsável (§45): quem participa do fluxo também, mesmo sem ser do projeto
+    const flow = demandDomain.isDemand(task) ? [task.reporterId, task.demandOwnerId, task.assigneeId].concat(task.demandPastAssignees || []) : []
+    flow.forEach((id) => {
+      if (id && ids.indexOf(id) < 0) ids.push(id)
+    })
     if (access && access.scoped) {
-      const involved = [project.ownerId, task.creatorId, task.assigneeId, task.reporterId].concat((await comments.listByTask(task.id)).map((c) => c.userId))
+      const involved = [project.ownerId, task.creatorId, task.assigneeId, task.reporterId].concat(flow, (await comments.listByTask(task.id)).map((c) => c.userId))
       ids = ids.filter((id) => involved.indexOf(id) >= 0)
     }
     return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
@@ -158,6 +170,8 @@ function createCommentService(deps) {
           .concat([
             { userId: task.assigneeId, type: 'comment' },
             { userId: task.creatorId, type: 'comment' },
+            // demanda interna (§45): o responsável acompanha a conversa
+            { userId: task.demandOwnerId, type: 'comment' },
           ]),
         data: { comment: truncate(taskDomain.plainText(content), 200) },
       })

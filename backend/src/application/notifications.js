@@ -12,18 +12,26 @@ const { parsePagination, buildPageMeta } = require('../core/pagination')
 const rbac = require('../domain/rbac')
 const workflow = require('../domain/workflow')
 const taskDomain = require('../domain/task')
+const demandDomain = require('../domain/demand')
 const notificationDomain = require('../domain/notification')
 const { iso, toUserSummary } = require('./presenters')
 const emailDomain = require('../domain/email')
 const { emailContext } = require('./email')
+const { createTaskAccess } = require('./task-access')
 
 /** Gera notificações; `repos` é o conjunto de repositórios da transação atual. */
 function createNotifier(deps) {
+  const taskAccess = createTaskAccess(deps)
+
   /**
    * O destinatário ainda enxerga o alvo: dono ou membro do projeto; o Responsável TI (§33) só as tarefas
    * visíveis a ele e nunca elementos da Gestão (o e-mail leva o mesmo conteúdo, então vale para ele também).
+   * Demanda interna (§45): quem pediu, o responsável, quem executa (agora ou antes) e a equipe do responsável.
    */
   async function hasAccess(project, userId, task) {
+    if (demandDomain.isDemandsProject(project)) return !!task && demandDomain.isDemand(task) && (await taskAccess.userSeesDemand(userId, task, project))
+    // tarefa de projeto com responsável: quem participa do fluxo recebe, mesmo sem ser do projeto
+    if (task && demandDomain.isDemand(task) && demandDomain.isFlowParticipant(task, userId)) return true
     if (project.ownerId === userId) return true
     const membership = await deps.projectMemberRepository.find(project.id, userId)
     if (!membership) return false

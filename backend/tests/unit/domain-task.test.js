@@ -244,3 +244,31 @@ describe('domain/task — regras', () => {
     assert.deepEqual(task.validateCustomValues(links, {}, { f2: 'o1' }).values, { f2: 'o1' })
   })
 })
+
+describe('domain/task — demandas internas (§45)', () => {
+  const demands = { id: 'sys', key: 'DEM', ownerId: null, kind: 'demands', archivedAt: null }
+  const demandTask = { id: 't', creatorId: 'ana', reporterId: 'ana', demandOwnerId: 'cesar', assigneeId: 'jorge', demandStatus: 'assigned', demandPastAssignees: [] }
+  const team = { ownerId: 'cesar', inArea: true, memberIds: ['jorge', 'carlos'] }
+  const { demandAccess } = require('../../src/domain/demand')
+
+  it('quem participa edita; relacionar, fork e atribuir pela edição nunca', () => {
+    const owner = demandAccess(principal('MEMBER', 'cesar'), demandTask, team)
+    assert.doesNotThrow(() => task.assertTaskAccess(owner, demands, 'edit', demandTask))
+    ;['link', 'fork', 'assign', 'create'].forEach((action) => assert.throws(() => task.assertTaskAccess(owner, demands, action, demandTask), { code: 'FORBIDDEN' }, action))
+    assert.deepEqual(task.taskCapabilities(owner, demands, demandTask), { edit: true, delete: false, assign: false, link: false, fork: false, comment: true })
+  })
+
+  it('a equipe do responsável vê e comenta, mas não edita; quem está fora não vê', () => {
+    const mate = demandAccess(principal('MEMBER', 'carlos'), demandTask, team)
+    assert.doesNotThrow(() => task.assertTaskAccess(mate, demands, 'view', demandTask))
+    assert.doesNotThrow(() => task.assertCommentAccess(mate, demands, 'create'))
+    assert.throws(() => task.assertTaskAccess(mate, demands, 'edit', demandTask), { code: 'FORBIDDEN' })
+    const stranger = demandAccess(principal('MEMBER', 'fabi'), demandTask, team)
+    assert.throws(() => task.assertTaskAccess(stranger, demands, 'view', demandTask), { code: 'TASK_NOT_FOUND' })
+  })
+
+  it('quem criou exclui (com tasks.delete)', () => {
+    const creator = demandAccess(principal('MANAGER', 'ana'), demandTask, team)
+    assert.doesNotThrow(() => task.assertTaskAccess(creator, demands, 'delete', demandTask))
+  })
+})

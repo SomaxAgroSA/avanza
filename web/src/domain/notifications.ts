@@ -1,7 +1,22 @@
 import type { UserSummary } from './projects'
 import { projectPath } from './project-routes'
 
-export const NOTIFICATION_TYPES = ['mention', 'assigned', 'comment', 'status_changed', 'due_soon', 'overdue', 'plan_mention', 'plan_reply'] as const
+export const NOTIFICATION_TYPES = [
+  'mention',
+  'assigned',
+  'comment',
+  'status_changed',
+  'due_soon',
+  'overdue',
+  'plan_mention',
+  'plan_reply',
+  // demandas internas (§45)
+  'demand_received',
+  'demand_passed',
+  'demand_concluded',
+  'demand_validated',
+  'demand_returned',
+] as const
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
 
 export interface AppNotification {
@@ -13,8 +28,8 @@ export interface AppNotification {
   planItem: { id: string; projectId: string; name: string; projectName: string } | null
   /** Quem fez a ação (null em lembretes automáticos). */
   actor: UserSummary | null
-  /** comment (trecho), status, due_date — conforme o tipo. */
-  data: { comment?: string; status?: string; due_date?: string }
+  /** comment (trecho), status, due_date, assignee (demanda passada) — conforme o tipo. */
+  data: { comment?: string; status?: string; due_date?: string; assignee?: string }
   read: boolean
   createdAt: Date | null
 }

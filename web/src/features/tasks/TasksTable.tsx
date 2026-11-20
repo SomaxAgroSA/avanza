@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ExternalLink, FileCheck2, FileX2, Laptop, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
-import { TASK_SCOPE_SORT, isClosed, scopeBarFilters, scopedTaskFilters, taskListFilters, type TaskScope, type TaskSummary } from '@/domain/tasks'
+import { TASK_SCOPE_SORT, isClosed, scopeBarFilters, scopedTaskFilters, taskListFilters, type TaskKind, type TaskScope, type TaskSummary } from '@/domain/tasks'
 import {
   AppBadge,
   AppButton,
@@ -28,6 +28,7 @@ import { useUrgencyFilterOptions } from './urgency-options'
 import { useMineFirst } from './use-mine-first'
 import { DueDate, PersonCell, TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { TagList } from '@/features/tags/tag-visuals'
+import { DemandChip, DemandDateTime, DemandStatusBadge } from '@/features/demands/demand-visuals'
 
 const EMPTY: TaskSummary[] = []
 
@@ -52,6 +53,8 @@ export interface TasksTableProps {
    * primeiro" (o escopo substitui); colunas Tarefa, Projeto, Status, Responsável, Prioridade, Urgência e Prazo.
    */
   scope?: TaskScope
+  /** Com projeto · Sem projeto (§45; só na Lista de tarefas do menu). */
+  kind?: TaskKind
 }
 
 /** Ordem das colunas na Lista de tarefas do menu (§44); as que não estão aqui ficam no fim. */
@@ -60,7 +63,7 @@ const SCOPE_COLUMN_ORDER = ['code', 'project', 'status', 'assignee', 'priority',
 const SCOPE_HIDDEN_COLUMNS = { area: false, type: false, plan_item: false, tags: false, category: false, updated_at: false }
 
 /** Listagem padrão de tarefas (página Tarefas e aba do projeto). */
-export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot, marks, scope }: TasksTableProps) {
+export function TasksTable({ tableId, projectId, search, onSearchApplied, actionsSlot, marks, scope, kind = 'all' }: TasksTableProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const navigate = useNavigate()
@@ -98,7 +101,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const [mineFirstChoice, setMineFirst] = useMineFirst()
   const mineFirst = !scope && mineFirstChoice
   const me = useSession().current?.user.id
-  const apiFilters = useMemo(() => (scope ? scopedTaskFilters(filters, scope) : filters), [filters, scope])
+  const apiFilters = useMemo(() => (scope ? scopedTaskFilters(filters, scope, kind) : filters), [filters, scope, kind])
+  // demanda interna (§45): abre a página inteira (não o painel lateral), lembrando de onde veio
+  const openPage = (task: TaskSummary) => void navigate(`/tasks/${task.id}`, { state: { from: { to: '/tasks', place: 'tasks' } } })
   const tasks = useTasksList({ ...table.query, filters: apiFilters }, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
   const statuses = useStatuses(true)
   const priorities = usePriorities(true)
@@ -156,7 +161,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.status'),
         sortable: true,
         size: 170,
-        cell: (task) => <TaskStatusBadge status={task.status} />,
+        // demanda interna: o passo da demanda; tarefa de projeto (com ou sem quem distribui): o status do fluxo, como sempre
+        cell: (task) => (task.demand && !task.project ? <DemandStatusBadge status={task.demand.status} /> : <TaskStatusBadge status={task.status} />),
         filter: { label: t('tasks.fields.status'), options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })) },
       },
       {
@@ -206,7 +212,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
               id: 'project',
               header: t('tasks.fields.project'),
               size: 170,
-              cell: (task: TaskSummary) => <span className="truncate text-muted">{task.project?.name ?? '—'}</span>,
+              // demanda interna (sem projeto): o chip; tarefa de projeto, com ou sem quem distribui: o projeto
+              cell: (task: TaskSummary) => (task.demand && !task.project ? <DemandChip /> : <span className="truncate text-muted">{task.project?.name ?? '—'}</span>),
             } satisfies DataTableColumn<TaskSummary>,
           ]),
       {
@@ -214,7 +221,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.dueDate'),
         sortable: true,
         size: 130,
-        cell: (task) => <DueDate task={task} showLabel={!!scope} />,
+        // demanda interna: prazo com data e hora
+        cell: (task) => (task.demand ? <DemandDateTime date={task.demand.dueAt} className="text-muted" /> : <DueDate task={task} showLabel={!!scope} />),
       },
       // elemento da Gestão que a tarefa executa (quem vê a Gestão); oculta por padrão
       ...(canViewPlan
@@ -358,8 +366,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
                   </>
                 )
               : undefined,
-          onView: (task) => setViewing(task.id),
-          onOpen: (task) => void navigate(`/tasks/${task.id}`),
+          // demanda interna: a página inteira; tarefa de projeto (com ou sem quem distribui): o painel, como sempre
+          onView: (task) => (task.demand && !task.project ? openPage(task) : setViewing(task.id)),
+          onOpen: (task) => (task.demand && !task.project ? openPage(task) : void navigate(`/tasks/${task.id}`)),
           onEdit: (task) => setEditing(task.id),
           canEdit: () => canEdit,
           onDelete: setDeleting,

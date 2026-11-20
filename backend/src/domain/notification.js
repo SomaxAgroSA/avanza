@@ -2,12 +2,28 @@
  * Notificações internas (diretriz §41).
  *
  * Tipos: menção, tarefa atribuída, comentário em tarefa sua, mudança de status, prazo amanhã e prazo vencido;
- * no quadro de gerenciamento, menção e resposta numa atualização de elemento (plan_mention, plan_reply).
+ * no quadro de gerenciamento, menção e resposta numa atualização de elemento (plan_mention, plan_reply);
+ * nas demandas internas (§45), demanda recebida, passada, concluída, validada e devolvida.
  * Regras: quem fez a ação nunca é notificado; cada pessoa recebe uma notificação por evento
  * (a primeira razão da lista vence — ex.: menção tem prioridade sobre "comentário").
  */
 
-const TYPES = Object.freeze(['mention', 'assigned', 'comment', 'status_changed', 'due_soon', 'overdue', 'plan_mention', 'plan_reply'])
+const TYPES = Object.freeze([
+  'mention',
+  'assigned',
+  'comment',
+  'status_changed',
+  'due_soon',
+  'overdue',
+  'plan_mention',
+  'plan_reply',
+  // demandas internas (§45): o responsável recebe; quem executa passa; conclusão, validação e devolução
+  'demand_received',
+  'demand_passed',
+  'demand_concluded',
+  'demand_validated',
+  'demand_returned',
+])
 
 /** [{ userId, type }] -> sem vazios, sem o autor da ação e sem repetir pessoa. */
 function recipients(entries, actorId) {
