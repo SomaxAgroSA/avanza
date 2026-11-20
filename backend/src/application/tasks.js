@@ -778,6 +778,8 @@ function createTaskService(deps) {
     // Responsável que recebe e distribui (§45): nasce Sem atribuir; executor, status, prazo e estimativa são do fluxo
     const owner = data.demand_owner_id ? await flowOwner(data.demand_owner_id) : null
     if (owner) {
+      // escolher quem recebe e distribui é como atribuir: precisa de tasks.assign no projeto
+      taskDomain.assertTaskAccess(access, project, 'assign')
       const flow = {}
       FLOW_FIELDS.forEach((key) => {
         if (data[key] !== undefined) flow[key] = 'demand_flow'
@@ -882,12 +884,12 @@ function createTaskService(deps) {
     const refs = await lookups()
 
     const patch = {}
-    // Responsável que recebe e distribui (§45): ligar, trocar ou desligar o fluxo — de quem colabora no
+    // Responsável que recebe e distribui (§45): ligar, trocar ou desligar o fluxo — de quem pode atribuir no
     // projeto (quem só participa do fluxo não troca o responsável)
     const ownerChange = cleared.indexOf('demand_owner_id') >= 0 ? null : data.demand_owner_id
     let newOwner = null
     if (ownerChange !== undefined && ownerChange !== (task.demandOwnerId || null)) {
-      if (access.scoped) throw appError('FORBIDDEN')
+      taskDomain.assertTaskAccess(access, project, 'assign', task)
       if (ownerChange) {
         newOwner = await flowOwner(ownerChange)
         patch.demandOwnerId = newOwner.id

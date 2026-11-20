@@ -1904,7 +1904,7 @@ function build() {
             demand_owner_id: {
               type: ['string', 'null'],
               description:
-                'Responsável que recebe e distribui (§45): qualquer pessoa ativa com tasks.view, mesmo de fora do projeto. Liga o fluxo da demanda na tarefa (Sem atribuir → Atribuída → Em andamento → Para validar → Concluída; ações em /demands/{id}/…); status_id, assignee_id, due_date e estimated_hours passam a mudar só pelo fluxo (fields = demand_flow). Numa tarefa que já existe, o passo vem do que ela tem (executor e status ficam); null desliga e a tarefa volta ao normal. Quem participa do fluxo sem ser do projeto vê e trabalha só nessa tarefa; quem só participa não troca o responsável (FORBIDDEN)',
+                'Responsável que recebe e distribui (§45): qualquer pessoa ativa com tasks.view, mesmo de fora do projeto. Liga o fluxo da demanda na tarefa (Sem atribuir → Atribuída → Em andamento → Para validar → Concluída; ações em /demands/{id}/…); status_id, assignee_id, due_date e estimated_hours passam a mudar só pelo fluxo (fields = demand_flow). Numa tarefa que já existe, o passo vem do que ela tem (executor e status ficam); null desliga e a tarefa volta ao normal. Quem participa do fluxo sem ser do projeto vê e trabalha só nessa tarefa. Pôr, trocar ou tirar o responsável exige poder atribuir no projeto (tasks.assign + colaborador; senão FORBIDDEN)',
             },
             task_type_id: { type: 'string', description: 'Trocar o tipo descarta valores de campos que o novo tipo não tem' },
             parent_task_id: { type: ['string', 'null'], description: 'Subtarefa: pai do mesmo projeto, sem ciclo; null solta' },
