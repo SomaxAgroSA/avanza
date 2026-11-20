@@ -141,6 +141,10 @@ const LOOKUP_INPUT = {
 }
 
 /** Área resumida que sai na tarefa e no projeto (null = sem área). */
+const COMPANY_REF = {
+  oneOf: [{ type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, short_code: { type: 'string', description: "sigla ('' = sem sigla)" } } }, { type: 'null' }],
+  description: 'empresa (§46); na tarefa, a do projeto ou, na demanda interna, a dela; null = sem empresa',
+}
 const AREA_REF = {
   oneOf: [{ type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, color: { type: 'string' } } }, { type: 'null' }],
   description: 'área responsável (lista de /areas); null = sem área',
@@ -504,6 +508,7 @@ function build() {
             { name: 'it_visible', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'marcada (true) ou não (false) como visível para o Responsável TI (§36)' },
             { name: 'urgency', in: 'query', schema: { type: 'string' }, description: 'urgência (semáforo): high, medium, low ou none (sem urgência); um ou vários separados por vírgula (§44)' },
             { name: 'area_id', in: 'query', schema: { type: 'string' }, description: 'área responsável; none = sem área' },
+            { name: 'company_id', in: 'query', schema: { type: 'string' }, description: 'empresa (§46): a do projeto ou, na demanda interna, a dela; none = sem empresa' },
             { name: 'kind', in: 'query', schema: { type: 'string', enum: ['project', 'demand'] }, description: 'Com projeto (project) ou Sem projeto = demandas internas (demand) (§45); sem o filtro, as duas' },
             { name: 'mine', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: '"Minhas tarefas": atribuídas a quem consulta e, nas demandas internas, também as que ela pediu ou recebeu como responsável (§45)' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
@@ -576,6 +581,7 @@ function build() {
               { name: 'status', in: 'query', schema: { type: 'string' } },
               { name: 'owner_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas desse responsável' },
               { name: 'assignee_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas atribuídas a essa pessoa' },
+              { name: 'company_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas dessa empresa (§46; a da demanda interna ou a do projeto); none = sem empresa' },
               { name: 'page', in: 'query', schema: { type: 'integer' } },
               { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
             ],
@@ -597,6 +603,7 @@ function build() {
                 demand_owner_id: { type: 'string', description: 'Responsável: qualquer pessoa ativa (GET /demands/owners); recebe e distribui à equipe dela' },
                 area_id: { type: 'string', description: 'Departamento que pede (área ativa de /areas)' },
                 priority_id: { type: 'string', description: 'sem ela, a prioridade padrão' },
+                company_id: { type: 'string', description: 'Empresa (§46): ativa de /companies; obrigatória quando existe alguma empresa ativa (required)' },
               },
             }),
           },
@@ -1393,6 +1400,24 @@ function build() {
         }),
         delete: op('Exclui a tag (sai das tarefas)', ['tags'], { 200: ok('Excluída', { type: 'object' }) }, { parameters: [idParam, csrfHeader] }),
       },
+      '/companies': {
+        get: op(
+          'Empresas do grupo (§46; qualquer pessoa autenticada): só as ativas, por nome. include_inactive=true traz também as inativas e as contagens de uso (project_count, demand_count, usage_count) — só com platform.manage; sem ela, o parâmetro é ignorado',
+          ['companies'],
+          { 200: ok('Empresas', { type: 'array', items: ref('Company') }) },
+          { parameters: [{ name: 'include_inactive', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } }] },
+        ),
+        post: op('Cria empresa (platform.manage); nome único sem diferenciar maiúsculas; sigla opcional (maiúsculas, até 10)', ['companies'], { 201: ok('Criada', ref('Company')), 400: errorResponse('VALIDATION_ERROR'), 409: errorResponse('COMPANY_NAME_IN_USE') }, {
+          parameters: [csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['name'], properties: { name: { type: 'string', maxLength: 120 }, short_code: { type: 'string', maxLength: 10 }, active: { type: 'boolean' } } }),
+        }),
+      },
+      '/companies/{id}': {
+        patch: op('Altera nome, sigla ou estado (platform.manage). Não há exclusão: desativar (active=false) tira a empresa das opções dos registros novos; os que já a usam continuam com ela', ['companies'], { 200: ok('Atualizada', ref('Company')), 404: errorResponse('COMPANY_NOT_FOUND'), 409: errorResponse('COMPANY_NAME_IN_USE') }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', properties: { name: { type: 'string', maxLength: 120 }, short_code: { type: 'string', maxLength: 10 }, active: { type: 'boolean' } } }),
+        }),
+      },
       '/users/{id}/status': {
         patch: op('Ativa/desativa usuário (users.disable)', ['users'], { 200: ok('Atualizado', ref('User')) }, {
           parameters: [idParam, csrfHeader],
@@ -1563,6 +1588,7 @@ function build() {
             it_visible: { type: 'boolean', description: 'visível para o Responsável TI do projeto (§36; padrão: false)' },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo): alta = vermelho, média = amarelo, baixa = verde; null = sem urgência' },
             area: AREA_REF,
+            company: COMPANY_REF,
             start_date: { type: ['string', 'null'], format: 'date-time', description: 'início planejado (timeline)' },
             due_date: { type: ['string', 'null'], format: 'date-time' },
             estimated_hours: { type: ['number', 'null'] },
@@ -1865,6 +1891,20 @@ function build() {
             created_at: { type: 'string', format: 'date-time' },
           },
         },
+        Company: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            short_code: { type: 'string' },
+            active: { type: 'boolean' },
+            project_count: { type: 'integer', description: 'só com include_inactive=true (platform.manage)' },
+            demand_count: { type: 'integer', description: 'demandas internas; só com include_inactive=true (platform.manage)' },
+            usage_count: { type: 'integer', description: 'projetos + demandas; só com include_inactive=true (platform.manage)' },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
         Tag: {
           type: 'object',
           properties: { id: { type: 'string' }, name: { type: 'string' }, color: { type: 'string' }, task_count: { type: 'integer' } },
@@ -1919,6 +1959,7 @@ function build() {
             },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null limpa. Para trocar sem exigir os obrigatórios do status, use PUT /tasks/{id}/urgency' },
             area_id: { type: ['string', 'null'], description: 'área responsável ativa de /areas; null limpa. Para trocar sem exigir os obrigatórios do status, use PUT /tasks/{id}/area' },
+            company_id: { type: ['string', 'null'], description: 'empresa ativa de /companies (§46): só na demanda interna (a tarefa de projeto herda a do projeto e ignora o campo); null limpa só quando não há nenhuma ativa' },
             title: { type: 'string', maxLength: 200 },
             description: { type: 'string', maxLength: 50000 },
             status_id: { type: 'string', description: 'padrão: status marcado como padrão' },
@@ -2248,6 +2289,7 @@ function build() {
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null = sem urgência' },
             area: AREA_REF,
+            company: COMPANY_REF,
             parent: {
               oneOf: [
                 { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, name: { type: 'string' }, icon: { type: 'string' }, cover: { type: 'string' } } },
@@ -2291,6 +2333,7 @@ function build() {
             priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo); null limpa' },
             area_id: { type: ['string', 'null'], description: 'área responsável ativa de /areas; null limpa' },
+            company_id: { type: ['string', 'null'], description: 'empresa ativa de /companies (§46); obrigatória ao criar quando existe alguma ativa (required); null limpa só quando não há nenhuma ativa' },
             parent_id: { type: ['string', 'null'], description: 'projeto pai (§34: um só nível, pai que a pessoa edita); null solta' },
             start_date: { type: ['string', 'null'], format: 'date', description: 'AAAA-MM-DD; null limpa' },
             due_date: { type: ['string', 'null'], format: 'date', description: 'AAAA-MM-DD; null limpa' },

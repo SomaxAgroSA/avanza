@@ -120,6 +120,8 @@ export const projectSchema = z
     urgency: z.enum(URGENCY_FILTER_VALUES),
     /** id da área ou '' (sem área) */
     areaId: z.string(),
+    /** id da empresa ou '' (sem empresa; §46) */
+    companyId: z.string(),
     /** id do projeto pai ou '' (sem pai) */
     parentId: z.string(),
     /** responsável pela gestão (dono ou membro) ou '' (sem responsável) */

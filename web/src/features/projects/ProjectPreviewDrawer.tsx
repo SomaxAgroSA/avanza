@@ -1,3 +1,4 @@
+import { CompanyChip } from '@/features/companies/company-visuals'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
@@ -119,6 +120,9 @@ export function ProjectPreviewDrawer({
             </Row>
             <Row label={t('tasks.fields.urgency')}>
               <UrgencyLabel urgency={project.urgency} />
+            </Row>
+            <Row label={t('companies.field')}>
+              <CompanyChip company={project.company} />
             </Row>
             <Row label={t('tasks.fields.area')}>
               <AreaBadge area={project.area} />

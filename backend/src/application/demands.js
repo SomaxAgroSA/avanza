@@ -3,7 +3,8 @@
  * pessoa (o responsável), que as distribui à equipe dela.
  *
  * - Abrir: quem tem `tasks.create` — tipo, título, responsável (qualquer pessoa ativa que vê tarefas),
- *   departamento que pede, descrição e prioridade. Nasce "Sem atribuir", sem executor e sem prazo (quem
+ *   departamento que pede, empresa (§46: obrigatória quando existe empresa ativa; só ativa), descrição e
+ *   prioridade. Nasce "Sem atribuir", sem executor e sem prazo (quem
  *   define é o responsável); a abertura (`created_at`) é automática. O responsável é avisado.
  * - Fluxo (domain/demand.js): o responsável atribui/reatribui com prazo (data e hora, obrigatório) e
  *   estimativa — quem tem `projects.view_all` também, em qualquer demanda (o histórico guarda quem fez); quem executa começa, passa a alguém da equipe (comentário obrigatório; o responsável é
@@ -28,6 +29,7 @@ const demandDomain = require('../domain/demand')
 const workflow = require('../domain/workflow')
 const { buildAuditEntry, truncate } = require('./audit')
 const { toUserSummary } = require('./presenters')
+const companyDomain = require('../domain/company')
 const { createTaskService } = require('./tasks')
 const { createTaskAccess } = require('./task-access')
 const { createNotifier } = require('./notifications')
@@ -52,6 +54,8 @@ const CREATE_SCHEMA = {
   demand_owner_id: [rules.required(), idRule],
   area_id: [rules.required(), idRule],
   priority_id: [idRule],
+  // empresa (§46): obrigatória quando existe alguma ativa (verificado no caso de uso)
+  company_id: [idRule],
 }
 
 const LIST_SCHEMA = {
@@ -63,6 +67,8 @@ const LIST_SCHEMA = {
   ],
   owner_id: [idRule],
   assignee_id: [idRule],
+  // empresa (§46): a da demanda interna ou a do projeto; `none` = sem empresa
+  company_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
 }
 
 function invalid(fields) {
@@ -190,6 +196,10 @@ function createDemandService(deps) {
     }
     const type = active(await deps.taskTypeRepository.findById(data.task_type_id), 'task_type_id')
     const area = active(await deps.areaRepository.findById(data.area_id), 'area_id')
+    const companies = await deps.companyRepository.list({ includeInactive: true })
+    const company = data.company_id ? companies.find((c) => c.id === data.company_id) : null
+    if (data.company_id && (!company || company.active === false)) throw invalid({ company_id: 'invalid_option' })
+    if (!company && companyDomain.companyRequired(companies)) throw invalid({ company_id: 'required' })
     const priorities = await deps.priorityRepository.list({ includeInactive: true })
     const priority = data.priority_id ? active(priorities.find((p) => p.id === data.priority_id), 'priority_id') : priorities.find((p) => p.isDefault && p.isActive !== false)
     if (!priority) throw invalid({ priority_id: 'required' })
@@ -223,6 +233,7 @@ function createDemandService(deps) {
         planItemId: null,
         urgency: null,
         areaId: area.id,
+        companyId: company ? company.id : null,
         startDate: null,
         dueDate: null,
         estimatedHours: null,
@@ -242,6 +253,7 @@ function createDemandService(deps) {
         task_type: type.name,
         task_priority: priority.name,
         area: area.name,
+        company: company ? company.name : null,
         reporter: requester ? requester.name : null,
         demand_owner: owner.name,
         demand_status: 'unassigned',
@@ -380,7 +392,7 @@ function createDemandService(deps) {
     rbac.assertCan(ctx.principal, 'tasks.view')
     const q = query || {}
     const pick = (key) => (q[key] === undefined || q[key] === '' ? undefined : q[key])
-    const filters = assertValid({ box: pick('box'), status: pick('status'), owner_id: pick('owner_id'), assignee_id: pick('assignee_id') }, LIST_SCHEMA)
+    const filters = assertValid({ box: pick('box'), status: pick('status'), owner_id: pick('owner_id'), assignee_id: pick('assignee_id'), company_id: pick('company_id') }, LIST_SCHEMA)
     const issue = demandDomain.boxIssue(ctx.principal, filters.box)
     if (issue) throw appError(issue)
     const pagination = parsePagination(q, { defaultPerPage: 100, maxPerPage: 100 })
@@ -390,6 +402,7 @@ function createDemandService(deps) {
       demandBox: { box: filters.box, userId: ctx.principal.userId },
       demandOwnerId: filters.owner_id,
       assigneeId: filters.assignee_id,
+      companyId: filters.company_id,
       demandStatuses: filters.status ? filters.status.split(',').map((s) => s.trim()) : undefined,
       sort: [{ column: 'created', direction: 'DESC' }],
       pagination,

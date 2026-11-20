@@ -168,7 +168,10 @@ export const routes: RouteObject[] = [
           { index: true, element: <SettingsIndexRedirect /> },
           {
             element: <PermissionGate permission="platform.manage" />,
-            children: [{ path: 'general', ...page(() => import('@/features/settings/GeneralSettingsPage').then((m) => ({ default: m.GeneralSettingsPage }))) }],
+            children: [
+              { path: 'general', ...page(() => import('@/features/settings/GeneralSettingsPage').then((m) => ({ default: m.GeneralSettingsPage }))) },
+              { path: 'companies', ...page(() => import('@/features/settings/CompaniesPage').then((m) => ({ default: m.CompaniesPage }))) },
+            ],
           },
           {
             element: <PermissionGate permission="integrations.manage" />,

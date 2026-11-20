@@ -16,6 +16,7 @@ import { useTaskHistory, useTaskMutations } from '@/features/tasks/queries'
 import { DemandActions } from './DemandActions'
 import { DemandStatusBadge } from './demand-visuals'
 import { useDemandEvents } from './demand-timeline'
+import { CompanyChip } from '@/features/companies/company-visuals'
 
 /** De onde a pessoa veio (o "← Voltar a …"): Tarefas ou uma das caixas da tela Demandas. */
 interface BackTarget {
@@ -115,6 +116,9 @@ export function DemandDetailView({ task }: { task: TaskDetail }) {
                 <Person person={task.reporter} empty="—" />
               </Property>
               <Property label={t('demands.detail.department')}>{task.area?.name ?? '—'}</Property>
+              <Property label={t('companies.field')}>
+                <CompanyChip company={task.company} />
+              </Property>
               <Property label={t('demands.detail.owner')}>
                 <Person person={demand.owner} empty="—" />
               </Property>

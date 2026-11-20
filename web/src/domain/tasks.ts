@@ -1,3 +1,4 @@
+import type { CompanyRef } from './companies'
 import type { SortState } from './pagination'
 import type { Attachment } from './attachments'
 import type { PlanItemRef } from './plan'
@@ -97,6 +98,8 @@ export interface TaskSummary {
   urgency: Urgency | null
   /** Área responsável; null = sem área. */
   area: AreaRef | null
+  /** Empresa (§46): a do projeto ou, na demanda interna, a dela; null/ausente = sem empresa. */
+  company?: CompanyRef | null
   /**
    * Demanda interna (§45): tarefa sem projeto (`project` = null), pedida a uma pessoa (o responsável).
    * null/ausente = tarefa de projeto.
@@ -167,6 +170,8 @@ export interface TaskInput {
   planGroupId?: string
   /** Área responsável ativa (null limpa). */
   areaId?: string | null
+  /** Empresa ativa (§46): só na demanda interna (a tarefa de projeto herda a do projeto). */
+  companyId?: string | null
   /**
    * Responsável que recebe e distribui (§45): qualquer pessoa ativa, mesmo de fora do projeto. Liga o fluxo
    * da demanda na tarefa (status, executor, prazo e estimativa passam a mudar só pelo fluxo); null desliga.
@@ -239,7 +244,7 @@ export const TASK_SORTS = ['code', 'title', 'created_at', 'updated_at', 'due_dat
  * Prioridade, Urgência e Responsável. Área, Situação, Tipo, Projeto, Etiquetas, Visível para TI e No informe
  * deixaram de ser filtros (as colunas continuam).
  */
-export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee'] as const
+export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee', 'company'] as const
 
 /**
  * Lista de tarefas do menu (§44): "Minhas tarefas" (atribuídas a quem olha; padrão a cada entrada) ou "Ver
@@ -247,7 +252,7 @@ export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee'] a
  * escopo decide.
  */
 export type TaskScope = 'mine' | 'all'
-export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency'] as const
+export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency', 'company'] as const
 
 /** Com projeto · Sem projeto (§45): tarefas de projeto, demandas internas ou as duas. */
 export type TaskKind = 'all' | 'project' | 'demand'

@@ -12,6 +12,8 @@ import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { useAreas, usePriorities } from '@/features/workflow/queries'
 import { useTaskMutations } from '@/features/tasks/queries'
 import { useDemandMutations, useDemandOwners } from './queries'
+import { useCompanies } from '@/features/companies/queries'
+import { companyRequired } from '@/domain/companies'
 
 export interface DemandFormDialogProps {
   open: boolean
@@ -28,10 +30,12 @@ interface Draft {
   ownerId: string
   areaId: string
   priorityId: string
+  /** Empresa (§46; '' = sem empresa). */
+  companyId: string
 }
 
 /** Valor fixo (abertura, prazo, responsável na edição): com cadeado, sem campo. */
-function LockedValue({ label, children }: { label: ReactNode; children: ReactNode }) {
+export function LockedValue({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <AppFormField label={label}>
       {() => (
@@ -68,6 +72,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     ownerId: task?.demand?.owner?.id ?? '',
     areaId: task?.area?.id ?? '',
     priorityId: task?.priority?.id ?? '',
+    companyId: task?.company?.id ?? '',
   }))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [openedAt] = useState(() => new Date())
@@ -75,6 +80,9 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
   const priorities = usePriorities(false)
   const areas = useAreas(false)
   const owners = useDemandOwners(open && !isEdit)
+  // Empresa (§46): obrigatória quando existe empresa ativa (a regra é do servidor; aqui só antecipa)
+  const companies = useCompanies(open)
+  const needsCompany = companyRequired(companies.data ?? [])
   const pending = create.isPending || update.isPending
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
@@ -93,6 +101,8 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
   }))
   const priorityOptions = (priorities.data ?? []).map((item) => ({ value: item.id, label: <LookupBadge item={item} /> }))
   const areaOptions = [...(areas.data ?? []), ...(task?.area && !(areas.data ?? []).some((a) => a.id === task.area?.id) ? [task.area] : [])].map((area) => ({ value: area.id, label: area.name }))
+  // a empresa inativa que a demanda já tem continua na lista
+  const companyOptions = [...(companies.data ?? []), ...(task?.company && !(companies.data ?? []).some((c) => c.id === task.company?.id) ? [task.company] : [])].map((c) => ({ value: c.id, label: c.name }))
   // lista com busca: rótulo em texto e a foto à esquerda
   const ownerOptions = (owners.data ?? []).map((person) => ({ value: person.id, label: person.name, prefix: <AppAvatar name={person.name} src={person.avatarUrl} size="xs" /> }))
 
@@ -102,6 +112,8 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     if (!draft.title.trim()) found.title = 'required'
     if (!isEdit && !draft.ownerId) found.demand_owner_id = 'required'
     if (!draft.areaId) found.area_id = 'required'
+    // obrigatória ao abrir; a demanda antiga (sem empresa) pode ser editada sem escolher
+    if (!isEdit && needsCompany && !draft.companyId) found.company_id = 'required'
     if (Object.keys(found).length > 0) return setErrors(found)
     const onError = (error: unknown) => {
       if (isAppError(error) && error.code === 'VALIDATION_ERROR') setErrors(error.fieldErrors())
@@ -111,7 +123,15 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
       update.mutate(
         {
           id: task.id,
-          data: { taskTypeId: draft.typeId, title: draft.title.trim(), description: draft.description, areaId: draft.areaId, ...(draft.priorityId ? { priorityId: draft.priorityId } : {}) },
+          data: {
+            taskTypeId: draft.typeId,
+            title: draft.title.trim(),
+            description: draft.description,
+            areaId: draft.areaId,
+            ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
+            // só quando mudou: a empresa inativa que a demanda já tem continua valendo
+            ...(draft.companyId && draft.companyId !== (task.company?.id ?? '') ? { companyId: draft.companyId } : {}),
+          },
         },
         {
           onSuccess: (saved) => {
@@ -125,7 +145,15 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
       return
     }
     create.mutate(
-      { taskTypeId: draft.typeId, title: draft.title.trim(), description: draft.description, ownerId: draft.ownerId, areaId: draft.areaId, ...(draft.priorityId ? { priorityId: draft.priorityId } : {}) },
+      {
+        taskTypeId: draft.typeId,
+        title: draft.title.trim(),
+        description: draft.description,
+        ownerId: draft.ownerId,
+        areaId: draft.areaId,
+        ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
+        ...(draft.companyId ? { companyId: draft.companyId } : {}),
+      },
       {
         onSuccess: (saved) => {
           notify.success(t('demands.created', { code: saved.code, owner: saved.demand?.owner?.name ?? '' }))
@@ -197,6 +225,15 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
           />
         </div>
         <aside aria-label={t('tasks.properties')} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:border-l lg:border-border lg:pl-8">
+          <AppSelect
+            label={t('companies.field')}
+            required={needsCompany && (!isEdit || !!task?.company)}
+            value={draft.companyId || undefined}
+            placeholder={t('companies.placeholder')}
+            error={errors.company_id}
+            onValueChange={(value) => set('companyId', value)}
+            options={companyOptions}
+          />
           {isEdit ? (
             <LockedValue label={t('demands.form.owner')}>
               <span title={t('demands.form.ownerFixed')}>{task?.demand?.owner?.name ?? '—'}</span>
@@ -245,5 +282,5 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
 
 /** Campo do rascunho → nome do campo na API (erros). */
 function fieldOf(key: keyof Draft): string {
-  return { typeId: 'task_type_id', title: 'title', description: 'description', ownerId: 'demand_owner_id', areaId: 'area_id', priorityId: 'priority_id' }[key]
+  return { typeId: 'task_type_id', title: 'title', description: 'description', ownerId: 'demand_owner_id', areaId: 'area_id', priorityId: 'priority_id', companyId: 'company_id' }[key]
 }

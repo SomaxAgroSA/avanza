@@ -67,6 +67,7 @@ export function fakeRepositories(overrides: {
   tasks?: Partial<Repositories['tasks']>
   demands?: Partial<Repositories['demands']>
   tags?: Partial<Repositories['tags']>
+  companies?: Partial<Repositories['companies']>
   icons?: Partial<Repositories['icons']>
   comments?: Partial<Repositories['comments']>
   attachments?: Partial<Repositories['attachments']>
@@ -229,6 +230,12 @@ export function fakeRepositories(overrides: {
       update: notImplemented,
       remove: notImplemented,
       ...overrides.tags,
+    },
+    companies: {
+      list: () => Promise.resolve([]),
+      create: notImplemented,
+      update: notImplemented,
+      ...overrides.companies,
     },
     icons: {
       list: () => Promise.resolve([]),

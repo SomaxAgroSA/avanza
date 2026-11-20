@@ -75,6 +75,7 @@ export const NAV_ITEMS: NavItem[] = [
       { id: 'priorities', labelKey: 'nav.priorities', to: '/settings/priorities', anyOf: ['settings.manage'] },
       { id: 'areas', labelKey: 'nav.areas', to: '/settings/areas', anyOf: ['settings.manage'] },
       { id: 'dependency-areas', labelKey: 'nav.dependencyAreas', to: '/settings/dependency-areas', anyOf: ['settings.manage'] },
+      { id: 'companies', labelKey: 'nav.companies', to: '/settings/companies', anyOf: ['platform.manage'] },
       { id: 'tags', labelKey: 'nav.tags', to: '/settings/tags', anyOf: ['settings.manage'] },
       { id: 'icons', labelKey: 'nav.icons', to: '/settings/icons', anyOf: ['settings.manage'] },
       // num só lugar, por pessoa: perfil, módulos e projetos

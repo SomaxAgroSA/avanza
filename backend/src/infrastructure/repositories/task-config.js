@@ -477,4 +477,62 @@ function createTagRepository(db) {
   }
 }
 
-module.exports = { createCustomFieldRepository, createTaskTypeRepository, createTaskTypeFieldRepository, createLookupRepository, createTagRepository }
+/** Empresas (§46): cadastro da plataforma; nome único pela chave em minúsculas (`name_key`). */
+function createCompanyRepository(db) {
+  const TABLE = 'companies'
+  const FIELDS = { name: ['name', 'text'], nameKey: ['name_key', 'text'], shortCode: ['short_code', 'text'], active: ['active', 'bool'] }
+  const UNIQUE = { idx_companies_name_key: 'COMPANY_NAME_IN_USE' }
+
+  function toEntity(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      nameKey: row.name_key,
+      shortCode: row.short_code || '',
+      active: row.active !== false,
+      createdAt: row.created,
+      updatedAt: row.updated,
+    }
+  }
+
+  return {
+    async findById(id) {
+      const row = await findRow(db, TABLE, id)
+      return row ? toEntity(row) : null
+    },
+    async findByNameKey(key) {
+      const row = await db.one('SELECT * FROM companies WHERE name_key = $1', [key])
+      return row ? toEntity(row) : null
+    },
+    async findManyByIds(ids) {
+      return (await findRows(db, TABLE, ids)).map(toEntity)
+    },
+    async list(query) {
+      const all = !!(query && query.includeInactive)
+      return (await db.query(`SELECT * FROM companies ${all ? '' : 'WHERE active '}ORDER BY lower(name) ASC, id ASC`)).map(toEntity)
+    },
+    async create(data) {
+      return toEntity(await mapViolations(UNIQUE, () => insertRow(db, TABLE, columns(FIELDS, data, true))))
+    },
+    async update(id, patch) {
+      const row = await mapViolations(UNIQUE, () => updateRow(db, TABLE, id, columns(FIELDS, patch, true)))
+      return row ? toEntity(row) : null
+    },
+    /** { companyId: { projects, demands } }: projetos comuns e demandas internas (tarefas com empresa própria). */
+    async countUsage(ids) {
+      const out = {}
+      ;(ids || []).forEach((id) => {
+        out[id] = { projects: 0, demands: 0 }
+      })
+      if (!ids || ids.length === 0) return out
+      const projects = await countBy(db, 'projects', 'company_id', ids)
+      const demands = await countBy(db, 'tasks', 'company_id', ids)
+      ids.forEach((id) => {
+        out[id] = { projects: Number(projects[id] || 0), demands: Number(demands[id] || 0) }
+      })
+      return out
+    },
+  }
+}
+
+module.exports = { createCustomFieldRepository, createTaskTypeRepository, createTaskTypeFieldRepository, createLookupRepository, createTagRepository, createCompanyRepository }

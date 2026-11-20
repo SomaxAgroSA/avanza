@@ -28,6 +28,8 @@ export interface DemandListFilters {
   ownerId?: string
   /** Só as demandas atribuídas a essa pessoa. */
   assigneeId?: string
+  /** Só as demandas dessa empresa (§46). */
+  companyId?: string
 }
 
 export const DEMAND_ACTIONS = ['assign', 'start', 'pass', 'conclude', 'validate', 'return'] as const
@@ -70,6 +72,8 @@ export interface DemandInput {
   ownerId: string
   areaId: string
   priorityId?: string
+  /** Empresa ativa (§46): obrigatória quando existe alguma ativa. */
+  companyId?: string
 }
 
 export interface AssignInput {

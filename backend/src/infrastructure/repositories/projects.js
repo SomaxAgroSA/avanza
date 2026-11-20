@@ -99,6 +99,8 @@ function createProjectRepository(db) {
     priority: ['priority', 'text'],
     urgency: ['urgency', 'text'],
     areaId: ['area_id', 'relation'],
+    // empresa do grupo (§46); a tarefa de projeto herda esta
+    companyId: ['company_id', 'relation'],
     parentId: ['parent_id', 'relation'],
     ownerId: ['owner_id', 'relation'],
     // responsável (quem leva o projeto adiante; não dá permissão)
@@ -128,6 +130,7 @@ function createProjectRepository(db) {
       priority: row.priority,
       urgency: row.urgency || null,
       areaId: row.area_id || null,
+      companyId: row.company_id || null,
       parentId: row.parent_id || null,
       ownerId: row.owner_id || null,
       kind: row.kind || '',

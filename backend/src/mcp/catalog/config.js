@@ -369,6 +369,17 @@ const TOOLS = [
   },
   historyTool('get_custom_field_history', 'Custom field history', 'custom_field', 'field_id', FIELD_ID, 'a custom field'),
 
+  // ---------------------------------------------------------------- empresas (§46)
+  {
+    name: 'list_companies',
+    title: 'List companies',
+    description:
+      'Lists the group companies (name and short code) that projects and internal requests belong to. Only active ones by default; include_inactive also returns inactive ones and how many projects and internal requests use each. Any signed-in user lists the active ones; include_inactive Requires platform.manage.',
+    inputSchema: schema({ include_inactive: bool('Also return inactive companies and their usage counts (requires platform.manage).') }),
+    annotations: READ,
+    run: (args, { services, ctx }) => services.companies.list(ctx, args.include_inactive ? { include_inactive: 'true' } : {}),
+  },
+
   // ---------------------------------------------------------------- tags
   {
     name: 'create_tag',

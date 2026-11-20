@@ -1,3 +1,4 @@
+import { CompanyChip } from '@/features/companies/company-visuals'
 import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate } from 'react-router'
@@ -115,6 +116,9 @@ function Overview({ project }: { project: Project }) {
           </Detail>
           <Detail label={t('tasks.fields.urgency')}>
             <UrgencyLabel urgency={project.urgency} />
+          </Detail>
+          <Detail label={t('companies.field')}>
+            <CompanyChip company={project.company} />
           </Detail>
           <Detail label={t('tasks.fields.area')}>
             <AreaBadge area={project.area} />

@@ -22,8 +22,10 @@ import { useCreateProject, useProjectCovers, useProjectMembers, useProjects, use
 import { useUrgencyFilterOptions } from '@/features/tasks/urgency-options'
 import { useAreas } from '@/features/workflow/queries'
 import { AreaBadge } from '@/features/workflow/area-visuals'
+import { useCompanies } from '@/features/companies/queries'
+import { companyRequired } from '@/domain/companies'
 
-const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', parent_id: 'parentId', platform_url: 'platformUrl', lead_id: 'leadId', dev_lead_id: 'devLeadId' }
+const SERVER_FIELDS: Record<string, keyof ProjectInput> = { start_date: 'startDate', due_date: 'dueDate', area_id: 'areaId', company_id: 'companyId', parent_id: 'parentId', platform_url: 'platformUrl', lead_id: 'leadId', dev_lead_id: 'devLeadId' }
 
 const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
@@ -47,6 +49,7 @@ function defaults(project?: Project | null, parentId?: string): ProjectInput {
     priority: project?.priority ?? 'medium',
     urgency: project?.urgency ?? NO_URGENCY,
     areaId: project?.area?.id ?? '',
+    companyId: project?.company?.id ?? '',
     parentId: project ? (project.parent?.id ?? '') : (parentId ?? ''),
     leadId: project?.lead?.id ?? '',
     devLeadId: project?.devLead?.id ?? '',
@@ -69,6 +72,15 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
   const navigate = useNavigate()
   const urgencyOptions = useUrgencyFilterOptions()
   const areas = useAreas(false)
+  const companies = useCompanies(open)
+  const activeCompanies = companies.data ?? []
+  // com empresa ativa, o projeto novo precisa de uma e o que já tem não volta a ficar sem (§46; o servidor confere)
+  const needsCompany = companyRequired(activeCompanies)
+  const companyOptions = [
+    ...(needsCompany && (!project || project.company) ? [] : [{ value: NO_AREA, label: t('companies.none') }]),
+    // a empresa inativa que o projeto já tem continua na lista
+    ...[...activeCompanies, ...(project?.company && !activeCompanies.some((c) => c.id === project.company?.id) ? [project.company] : [])].map((c) => ({ value: c.id, label: c.name })),
+  ]
   const errorMessage = useErrorMessage()
   const isEdit = !!project
   const create = useCreateProject()
@@ -114,6 +126,7 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
   }, [open, isEdit, suggested, coverDirty, setValue])
 
   const onSubmit = handleSubmit((values) => {
+    if (!project && needsCompany && !values.companyId) return setError('companyId', { message: 'required' })
     const data = {
       name: values.name.trim(),
       description: values.description,
@@ -125,6 +138,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
       urgency: values.urgency === NO_URGENCY ? null : values.urgency,
       // só quando mudou: a área inativa que o projeto já tem continua valendo
       areaId: values.areaId !== (project?.area?.id ?? '') ? values.areaId || null : undefined,
+      // só quando mudou: a empresa inativa que o projeto já tem continua valendo
+      companyId: values.companyId !== (project?.company?.id ?? '') ? values.companyId || null : undefined,
       // só quando mudou (null solta): o pai que ficou arquivado depois continua valendo
       parentId: values.parentId !== (project?.parent?.id ?? '') ? values.parentId || null : undefined,
       // só quando mudou ('' limpa); na criação, quem cria já é o responsável
@@ -282,6 +297,21 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={control}
+              name="companyId"
+              render={({ field }) => (
+                <AppSelect
+                  label={t('companies.field')}
+                  required={needsCompany && !project}
+                  placeholder={t('companies.placeholder')}
+                  value={field.value || (companyOptions.some((o) => o.value === NO_AREA) ? NO_AREA : '')}
+                  onValueChange={(value) => field.onChange(value === NO_AREA ? '' : value)}
+                  error={errors.companyId?.message}
+                  options={companyOptions}
+                />
+              )}
+            />
+            <Controller
+              control={control}
               name="areaId"
               render={({ field }) => (
                 <AppSelect
@@ -300,6 +330,8 @@ export function ProjectFormDialog({ open, onOpenChange, project, parentId }: Pro
                 />
               )}
             />
+          </div>
+          <div className="grid gap-4">
             <Controller
               control={control}
               name="parentId"

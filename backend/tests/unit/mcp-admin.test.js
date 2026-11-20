@@ -78,6 +78,13 @@ describe('mcp/catalog config e admin', () => {
     assert.deepEqual(remove.calls[0], { service: 'priorities', method: 'delete', args: ['p1'] })
   })
 
+  it('empresas (§46): list_companies só leitura; include_inactive vira a query da rota', async () => {
+    assert.equal(byName('list_companies').annotations.readOnlyHint, true)
+    assert.deepEqual((await run('list_companies', {})).calls[0], { service: 'companies', method: 'list', args: [{}] })
+    assert.deepEqual((await run('list_companies', { include_inactive: true })).calls[0], { service: 'companies', method: 'list', args: [{ include_inactive: 'true' }] })
+    assert.deepEqual(validateArguments({ name: 'x' }, byName('list_companies').inputSchema), { name: 'unknown_field' })
+  })
+
   it('áreas: sem padrão no esquema, o id sai do corpo e a reordenação leva a lista de ids', async () => {
     assert.deepEqual((await run('list_areas', { include_inactive: true })).calls[0], { service: 'areas', method: 'list', args: [{ include_inactive: '1' }] })
     assert.deepEqual(validateArguments({ key: 'TI', name: 'Dpto. TI', is_default: true }, byName('create_area').inputSchema), { is_default: 'unknown_field' })

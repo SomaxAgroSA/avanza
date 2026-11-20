@@ -85,6 +85,8 @@ export interface ProjectDto {
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */
   area?: AreaRefDto | null
+  /** Empresa (§46); null = sem empresa. */
+  company?: CompanyRefDto | null
   /** Projeto pai (regras §34); null = sem pai. */
   parent?: { id: string; key: string; name: string; icon: string; cover: string } | null
   /** Quantidade de subprojetos. */
@@ -186,6 +188,8 @@ export interface TaskDto {
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */
   area?: AreaRefDto | null
+  /** Empresa (§46): a do projeto ou, na demanda interna, a dela. */
+  company?: CompanyRefDto | null
   /** Demanda interna (§45); null/ausente = tarefa de projeto. */
   demand?: DemandDto | null
 }
@@ -591,6 +595,21 @@ export interface LibraryIconDto {
   created_at: string | null
   created_by: UserSummaryDto | null
   usage: { projects: number; task_types: number; doc_spaces: number }
+}
+
+export interface CompanyRefDto {
+  id: string
+  name: string
+  short_code?: string
+}
+
+export interface CompanyDto extends CompanyRefDto {
+  active: boolean
+  project_count?: number
+  demand_count?: number
+  usage_count?: number
+  created_at: string | null
+  updated_at: string | null
 }
 
 export interface TagDto {

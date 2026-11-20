@@ -103,6 +103,8 @@ function createTaskRepository(db) {
       sprintId: row.sprint_id || null,
       planItemId: row.plan_item_id || null,
       areaId: row.area_id || null,
+      // empresa própria: só a demanda interna (§46); a tarefa de projeto herda a do projeto
+      companyId: row.company_id || null,
       startDate: row.start_date,
       dueDate: row.due_date,
       startedAt: row.started_at,
@@ -126,7 +128,7 @@ function createTaskRepository(db) {
   /** Colunas do cartão (quadro e backlog): tudo menos a descrição. */
   const CARD_COLUMNS = [
     'id', 'project_id', 'number', 'code', 'title', 'task_type_id', 'status_id', 'priority_id', 'creator_id', 'assignee_id',
-    'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'area_id', 'start_date', 'due_date', 'started_at', 'completed_at',
+    'reporter_id', 'parent_task_id', 'forked_from_task_id', 'sprint_id', 'plan_item_id', 'area_id', 'company_id', 'start_date', 'due_date', 'started_at', 'completed_at',
     'estimated_hours', 'actual_hours', 'checklist', 'report_excluded', 'it_visible', 'urgency', 'demand_status', 'demand_owner_id', 'demand_past_assignees',
     'position', 'created', 'updated',
   ]
@@ -150,6 +152,7 @@ function createTaskRepository(db) {
     sprintId: 'sprint_id',
     planItemId: 'plan_item_id',
     areaId: 'area_id',
+    companyId: 'company_id',
     demandOwnerId: 'demand_owner_id',
   }
   const DATES = { startDate: 'start_date', dueDate: 'due_date', startedAt: 'started_at', completedAt: 'completed_at' }
@@ -238,6 +241,11 @@ function createTaskRepository(db) {
     if (query.itVisible !== undefined) where.push(`tasks.it_visible = ${param(!!query.itVisible)}`)
     if (query.urgency) where.push(`tasks.urgency = ANY(${param([].concat(query.urgency).map((u) => (u === 'none' ? '' : u)))}::text[])`)
     if (query.areaId) where.push(query.areaId === 'none' ? 'tasks.area_id IS NULL' : `tasks.area_id = ${param(query.areaId)}`)
+    // empresa (§46): a da demanda interna ou, na tarefa de projeto, a do projeto
+    if (query.companyId) {
+      const company = 'COALESCE(tasks.company_id, (SELECT p.company_id FROM projects p WHERE p.id = tasks.project_id))'
+      where.push(query.companyId === 'none' ? `${company} IS NULL` : `${company} = ${param(query.companyId)}`)
+    }
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
     if (query.search) {
       const q = param(likePattern(query.search.text))

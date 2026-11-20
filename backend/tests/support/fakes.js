@@ -58,6 +58,8 @@ function createFakeStore() {
     statuses: [],
     priorities: [],
     areas: [],
+    /** Empresas (§46). */
+    companies: [],
     tasks: [],
     taskValues: [],
     tags: [],
@@ -782,6 +784,10 @@ function createFakeRepositories(store) {
       if (query.itVisible !== undefined) items = items.filter((t) => !!t.itVisible === query.itVisible)
       if (query.urgency) items = items.filter((t) => [].concat(query.urgency).includes(t.urgency || 'none'))
       if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
+      if (query.companyId) {
+        const companyOf = (t) => t.companyId || ((store.projects.find((p) => p.id === t.projectId) || {}).companyId) || 'none'
+        items = items.filter((t) => companyOf(t) === query.companyId)
+      }
       if (query.search) {
         const q = query.search.text.toLowerCase()
         items = items.filter(
@@ -1314,6 +1320,34 @@ function createFakeRepositories(store) {
     },
   }
 
+  const companyRepository = {
+    findById: (id) => store.companies.find((c) => c.id === id) || null,
+    findByNameKey: (key) => store.companies.find((c) => c.nameKey === key) || null,
+    findManyByIds: (ids) => store.companies.filter((c) => ids.includes(c.id)),
+    list: (query) =>
+      store.companies
+        .filter((c) => (query && query.includeInactive) || c.active !== false)
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)),
+    create: (data) => {
+      const company = Object.assign({ id: nextId('company_'), createdAt: new Date(), updatedAt: new Date() }, data)
+      store.companies.push(company)
+      return company
+    },
+    update: (id, patch) => Object.assign(companyRepository.findById(id), patch, { updatedAt: new Date() }),
+    /** { companyId: { projects, demands } } — projetos comuns e demandas internas (tarefas com empresa própria). */
+    countUsage: (ids) => {
+      const out = {}
+      ids.forEach((id) => {
+        out[id] = {
+          projects: store.projects.filter((p) => !p.kind && p.companyId === id).length,
+          demands: store.tasks.filter((t) => t.companyId === id).length,
+        }
+      })
+      return out
+    },
+  }
+
   const tagRepository = {
     findById: (id) => store.tags.find((t) => t.id === id) || null,
     findByKey: (key) => store.tags.find((t) => t.nameKey === key) || null,
@@ -1655,6 +1689,7 @@ function createFakeRepositories(store) {
     docPageTaskRepository,
     taskValueRepository,
     tagRepository,
+    companyRepository,
     iconLibraryRepository,
     taskTagRepository,
     commentRepository,

@@ -39,9 +39,11 @@ async function seedDemo(api, options) {
   const carla = await person('Carla Mendes', 'carla.demo@avanza.local', 'MEMBER')
   const rafael = await person('Rafael Lima', 'rafael.demo@avanza.local', 'MEMBER')
 
-  // projeto
+  // projeto (com empresa ativa cadastrada, a empresa é obrigatória: usa a primeira, §46)
+  const company = (ok(await api.get('/companies'), 'empresas') || [])[0]
   const project = ok(
     await api.post('/projects', {
+      ...(company ? { company_id: company.id } : {}),
       name: 'Implantação do ERP (demonstração)',
       key: DEMO_KEY,
       description: 'Projeto de exemplo: tarefas do time no Kanban e a gestão do projeto (fases, cronograma, saúde) na Gestão de projetos.',

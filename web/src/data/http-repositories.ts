@@ -56,6 +56,9 @@ import type { PreferenceDto, ProjectFilterDto } from './dtos'
 import { fromProjectFilterSettings, toProjectFilterSettings } from './mappers'
 import { projectFilterKey } from '@/domain/project-filter'
 import type { PreferenceRepository } from '@/domain/repositories'
+import { toCompany } from './mappers'
+import type { CompanyDto } from './dtos'
+import type { CompanyInput } from '@/domain/companies'
 import { toArea, toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import { toDemandOverview } from './mappers'
 import type { DemandOverviewDto } from './dtos'
@@ -76,6 +79,7 @@ import type {
   DocsRepository,
   SprintRepository,
   TagRepository,
+  CompanyRepository,
   IconLibraryRepository,
   CustomFieldInput,
   CustomFieldRepository,
@@ -440,7 +444,7 @@ function issueBody(input: IssueInput): Record<string, unknown> {
 
 function projectBody(data: Partial<ProjectData> & { key?: string }): Record<string, unknown> {
   const body: Record<string, unknown> = {}
-  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', parentId: 'parent_id', platformUrl: 'platform_url', leadId: 'lead_id', devLeadId: 'dev_lead_id' }
+  const map: Record<string, string> = { startDate: 'start_date', dueDate: 'due_date', areaId: 'area_id', companyId: 'company_id', parentId: 'parent_id', platformUrl: 'platform_url', leadId: 'lead_id', devLeadId: 'dev_lead_id' }
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined) body[map[key] ?? key] = value
   })
@@ -617,6 +621,7 @@ export function createHttpRepositories(api: ApiClient): Repositories {
     tasks: createHttpTaskRepository(api),
     demands: createHttpDemandRepository(api),
     tags: createHttpTagRepository(api),
+    companies: createHttpCompanyRepository(api),
     icons: createHttpIconLibraryRepository(api),
     comments: createHttpCommentRepository(api),
     attachments: createHttpAttachmentRepository(api),
@@ -663,6 +668,7 @@ function taskBody(data: TaskInput) {
     plan_item_id: data.planItemId,
     plan_group_id: data.planGroupId,
     area_id: data.areaId,
+    company_id: data.companyId,
     checklist: data.checklist?.map((item) => ({ id: item.id, text: item.text, done: item.done })),
   }
 }
@@ -677,6 +683,21 @@ export function createHttpIconLibraryRepository(api: ApiClient): IconLibraryRepo
     },
     async remove(name) {
       await api.del(`/settings/icons/${encodeURIComponent(name)}`)
+    },
+  }
+}
+
+export function createHttpCompanyRepository(api: ApiClient): CompanyRepository {
+  const body = (data: Partial<CompanyInput>) => ({ name: data.name, short_code: data.shortCode, active: data.active })
+  return {
+    async list(options) {
+      return (await api.get<CompanyDto[]>('/companies', { query: { include_inactive: options?.includeInactive ? 'true' : undefined } })).data.map(toCompany)
+    },
+    async create(data) {
+      return toCompany((await api.post<CompanyDto>('/companies', body(data))).data)
+    },
+    async update(id, data) {
+      return toCompany((await api.patch<CompanyDto>(`/companies/${encodeURIComponent(id)}`, body(data))).data)
     },
   }
 }
@@ -1353,6 +1374,8 @@ const TASK_FILTERS: Record<string, string> = {
   in_report: 'in_report',
   it_visible: 'it_visible',
   urgency: 'urgency',
+  // empresa (§46): a do projeto ou, na demanda interna, a dela
+  company: 'company_id',
   // Lista de tarefas do menu (§45): "Minhas" (atribuídas + demandas pedidas ou recebidas) e Com/Sem projeto
   mine: 'mine',
   kind: 'kind',
@@ -1369,6 +1392,7 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
           status: options?.statuses?.length ? options.statuses.join(',') : undefined,
           owner_id: options?.ownerId || undefined,
           assignee_id: options?.assigneeId || undefined,
+          company_id: options?.companyId || undefined,
           perPage: 100,
         },
       })
@@ -1382,6 +1406,7 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
         demand_owner_id: data.ownerId,
         area_id: data.areaId,
         priority_id: data.priorityId,
+        company_id: data.companyId || undefined,
       }
       return toTaskDetail((await api.post<TaskDetailDto>('/demands', body)).data)
     },

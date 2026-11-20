@@ -20,6 +20,8 @@ const urgency = () => oneOf(URGENCY_LEVELS, URGENCY)
 const nullableUrgency = () => ({ type: ['string', 'null'], enum: URGENCY_LEVELS.slice(), description: `${URGENCY} null clears it.` })
 const urgencyFilter = () => oneOf(URGENCY_LEVELS.concat(['none']), 'Only items with this urgency; none = without urgency.')
 
+const COMPANY = 'Company id (an active company from list_companies). Required when creating a project if any active company exists.'
+const companyFilter = () => text(64, 'Only items of this company id (the project company, or the internal request own company), or "none" for items without a company.')
 const AREA = 'Responsible area id (an active area from get_task_settings or list_areas).'
 const PARENT = 'Parent project id (from list_projects): one level only — the parent cannot have a parent and a project with subprojects cannot get one. Requires being a manager of the parent.'
 const MEMBER_ROLE = 'Role in the project: manager = edits the project and its members; member = works on tasks; viewer = read and comment only; it = IT owner, sees only the project brief (get_project_brief) and the tasks assigned to them or marked visible to IT.'
@@ -128,6 +130,7 @@ function compactTask(task) {
     plan_item: task.plan_item ? { id: task.plan_item.id, name: task.plan_item.name } : null,
     urgency: task.urgency || null,
     area: task.area ? { id: task.area.id, name: task.area.name } : null,
+    company: task.company ? { id: task.company.id, name: task.company.name } : null,
     in_report: task.in_report !== false,
     it_visible: !!task.it_visible,
     start_date: task.start_date || null,
@@ -220,6 +223,7 @@ const TOOLS = [
           due_date: date('Due date'),
           urgency: urgency(),
           area_id: id(AREA),
+          company_id: id(COMPANY),
           parent_id: id(PARENT),
         },
         PROJECT_FIELDS,
@@ -235,7 +239,7 @@ const TOOLS = [
     description: 'Changes a project (only the fields sent). The key cannot change; archived projects are read-only. Requires being a project manager.',
     inputSchema: schema(
       Object.assign(
-        { project_id: PROJECT_ID, start_date: nullableDate('Start date'), due_date: nullableDate('Due date'), urgency: nullableUrgency(), area_id: nullableId(AREA), parent_id: nullableId(`${PARENT} null detaches it.`) },
+        { project_id: PROJECT_ID, start_date: nullableDate('Start date'), due_date: nullableDate('Due date'), urgency: nullableUrgency(), area_id: nullableId(AREA), company_id: nullableId(`${COMPANY} null clears it only when no active company exists.`), parent_id: nullableId(`${PARENT} null detaches it.`) },
         PROJECT_FIELDS,
       ),
       ['project_id'],
@@ -402,6 +406,7 @@ const TOOLS = [
           plan_item_id: id('Only tasks linked to this project management element (from get_plan).'),
           urgency: urgencyFilter(),
           area_id: areaFilter(),
+          company_id: companyFilter(),
           in_report: bool('true = only tasks included in the project report; false = only the excluded ones.'),
           it_visible: bool('true = only tasks marked visible to the IT owner of the project; false = only the unmarked ones.'),
           kind: { type: 'string', enum: ['project', 'demand'], description: 'project = only tasks that belong to a project; demand = only internal requests (tasks without a project, code DEM-n).' },
@@ -412,7 +417,7 @@ const TOOLS = [
     ),
     annotations: READ,
     run: async (args, { services, ctx }) => {
-      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'kind', 'sort']), pageQuery(args))
+      const query = Object.assign(pick(args, ['project_id', 'search', 'status_id', 'assignee_id', 'priority_id', 'task_type_id', 'tag_id', 'sprint_id', 'plan_item_id', 'urgency', 'area_id', 'company_id', 'kind', 'sort']), pageQuery(args))
       if (args.categories && args.categories.length > 0) query.category = args.categories.join(',')
       if (args.in_report !== undefined) query.in_report = String(args.in_report)
       if (args.it_visible !== undefined) query.it_visible = String(args.it_visible)
