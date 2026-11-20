@@ -76,6 +76,16 @@ describe('domain/demand — visibilidade e acesso', () => {
     assert.equal(admin.isManager, true)
     assert.equal(admin.role, 'member')
   })
+
+  it('caixa Todas: só quem tem projects.view_all; as caixas pessoais, qualquer um', () => {
+    const admin = principal('root', ['tasks.view', 'projects.view', 'projects.view_all'])
+    assert.deepEqual(demand.DEMAND_BOXES, ['received', 'assigned', 'requested', 'all'])
+    assert.equal(demand.boxIssue(admin, 'all'), null)
+    assert.equal(demand.boxIssue(principal('ana'), 'all'), 'FORBIDDEN')
+    demand.PERSONAL_BOXES.forEach((box) => assert.equal(demand.boxIssue(principal('ana'), box), null, box))
+    assert.equal(demand.seesAllDemands(admin), true)
+    assert.equal(demand.seesAllDemands(principal('ana')), false)
+  })
 })
 
 describe('domain/demand — ações e passos', () => {

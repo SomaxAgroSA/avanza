@@ -135,6 +135,28 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.deepEqual((await people.ana.client.get('/demands?box=requested&status=unassigned')).body.data.map((t) => t.code), ['DEM-1'])
   })
 
+  it('GET /demands?box=all (caixa Todas): só com projects.view_all, com filtros; overview traz all e all_team', async () => {
+    const res = await admin.get('/demands?box=all')
+    assert.equal(res.status, 200, JSON.stringify(res.body))
+    assert.deepEqual(res.body.data.map((t) => t.code), ['DEM-1'])
+    assert.deepEqual((await admin.get(`/demands?box=all&owner_id=${people.cesar.user.id}`)).body.data.map((t) => t.code), ['DEM-1'])
+    assert.deepEqual((await admin.get(`/demands?box=all&owner_id=${people.fabi.user.id}`)).body.data, [])
+    assert.deepEqual((await admin.get(`/demands?box=all&assignee_id=${people.jorge.user.id}`)).body.data, [])
+    assert.equal((await admin.get('/demands?box=all&owner_id=x%20y')).status, 400)
+    // sem projects.view_all: nem o responsável nem quem pediu abrem a caixa Todas
+    for (const key of ['cesar', 'ana']) {
+      const forbidden = await people[key].client.get('/demands?box=all')
+      assert.equal(forbidden.status, 403, key)
+      assert.equal(forbidden.body.error.code, 'FORBIDDEN')
+    }
+    const overview = (await admin.get('/demands/overview')).body.data
+    assert.deepEqual(overview.counts.all, { unassigned: 1, assigned: 0, in_progress: 0, to_validate: 0, done: 0 })
+    assert.deepEqual(overview.all_team, [])
+    const mine = (await people.cesar.client.get('/demands/overview')).body.data
+    assert.equal(mine.counts.all, undefined)
+    assert.equal(mine.all_team, undefined)
+  })
+
   it('fluxo completo pelas rotas, com prazo (data e hora), estimativa e comentários gravados', async () => {
     const id = demand.id
     assert.equal((await people.jorge.client.post(`/demands/${id}/assign`, { assignee_id: people.jorge.user.id, due_at: DUE })).status, 403)

@@ -363,6 +363,38 @@ describe('application/demands — caixas e carga da equipe', () => {
     assert.equal((await s.demands.overview(s.ctx.jorge)).counts.assigned.assigned, 1)
   })
 
+  it('Todas (só com projects.view_all): todas as demandas, filtros por responsável e quem executa, números e a carga de todos', async () => {
+    const s = await setup()
+    const a = await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'A' }))
+    const b = await s.demands.createDemand(s.ctx.fabi, newDemand(s, { title: 'B', demand_owner_id: s.users.otto.id }))
+    await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'C' }))
+    await s.demands.assign(s.ctx.cesar, a.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 4 })
+    // Otto fora de área: atribui a qualquer pessoa ativa
+    await s.demands.assign(s.ctx.otto, b.id, { assignee_id: s.users.fabi.id, due_at: FUTURE, estimated_hours: 2 })
+    await s.demands.start(s.ctx.fabi, b.id)
+
+    const titles = async (name, extra) => (await s.demands.listDemands(s.ctx[name], Object.assign({ box: 'all' }, extra))).items.map((t) => t.title).sort()
+    assert.deepEqual(await titles('admin'), ['A', 'B', 'C'])
+    assert.deepEqual(await titles('admin', { owner_id: s.users.otto.id }), ['B'])
+    assert.deepEqual(await titles('admin', { assignee_id: s.users.jorge.id }), ['A'])
+    assert.deepEqual(await titles('admin', { owner_id: s.users.cesar.id, status: 'unassigned' }), ['C'])
+    assert.equal(await codeOf(() => s.demands.listDemands(s.ctx.admin, { box: 'all', owner_id: 'x y' })), 'VALIDATION_ERROR:{"owner_id":"invalid_type"}')
+    // sem projects.view_all: a caixa Todas é proibida (nem o responsável nem quem pediu a usam)
+    assert.equal(await codeOf(() => s.demands.listDemands(s.ctx.cesar, { box: 'all' })), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.demands.listDemands(s.ctx.ana, { box: 'all' })), 'FORBIDDEN')
+
+    const overview = await s.demands.overview(s.ctx.admin)
+    assert.deepEqual(overview.counts.all, { unassigned: 1, assigned: 1, in_progress: 1, to_validate: 0, done: 0 })
+    assert.deepEqual(overview.all_team.map((m) => [m.user.name, m.open_count, m.estimated_hours]), [
+      ['Jorge', 1, 4],
+      ['Fabi', 1, 2],
+    ])
+    // quem não vê todas não recebe os números nem a carga de todos
+    const mine = await s.demands.overview(s.ctx.cesar)
+    assert.equal(mine.counts.all, undefined)
+    assert.equal(mine.all_team, undefined)
+  })
+
   it('equipe para atribuir/passar: a área do responsável (ele incluído); quem passa não aparece', async () => {
     const s = await setup()
     const created = await s.demands.createDemand(s.ctx.ana, newDemand(s))
@@ -451,6 +483,8 @@ describe('application/demands — tarefa de projeto com responsável (o mesmo fl
     await s.demands.assign(s.ctx.cesar, s.task.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 3 })
     const received = (await s.demands.listDemands(s.ctx.cesar, { box: 'received' })).items
     assert.deepEqual(received.map((t) => [t.code, t.project ? t.project.name : null]).sort(), [['DEM-1', null], ['FIN-1', 'Finanças']])
+    // Todas (admin): a demanda interna e a tarefa de projeto com responsável
+    assert.deepEqual((await s.demands.listDemands(s.ctx.admin, { box: 'all' })).items.map((t) => t.code).sort(), ['DEM-1', 'FIN-1'])
     assert.deepEqual((await s.demands.overview(s.ctx.cesar)).team.find((m) => m.user.name === 'Jorge'), { user: received.find((t) => t.code === 'FIN-1').assignee, open_count: 1, estimated_hours: 3 })
     // Com projeto · Sem projeto: a tarefa com responsável é "com projeto"
     const kinds = async (kind) => (await s.tasks.listTasks(s.ctx.admin, { kind })).items.map((t) => t.code).sort()

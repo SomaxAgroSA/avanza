@@ -140,6 +140,15 @@ describe('repositórios — demandas internas (Postgres)', () => {
     assert.deepEqual(await list(all, { demandBox: { box: 'received', userId: u.fabi.id } }), [p2.id])
     assert.deepEqual(await tasks.demandCounts(u.fabi.id), { received: { in_progress: 1 }, assigned: {}, requested: {} })
     assert.deepEqual(await tasks.demandLoad([u.jorge.id], ['assigned', 'in_progress']), { [u.jorge.id]: { open: 1, hours: 2 } })
+    // Todas (quem vê todas): as demandas internas e as tarefas de projeto com responsável; filtros por
+    // responsável e por quem executa; números e a carga de todas as pessoas
+    const box = { box: 'all', userId: u.ana.id }
+    assert.deepEqual(await list(all, { demandBox: box }), [d1.id, d2.id, p2.id])
+    assert.deepEqual(await list(all, { demandBox: box, demandOwnerId: u.fabi.id }), [p2.id])
+    assert.deepEqual(await list(all, { demandBox: box, assigneeId: u.carlos.id }), [d2.id])
+    assert.deepEqual(await list(all, { demandBox: box, demandOwnerId: u.cesar.id, demandStatuses: ['unassigned'] }), [d1.id])
+    assert.deepEqual(await tasks.demandCounts(u.fabi.id, { all: true }), { received: { in_progress: 1 }, assigned: {}, requested: {}, all: { unassigned: 1, in_progress: 2 } })
+    assert.deepEqual(await tasks.demandLoadAll(['assigned', 'in_progress']), { [u.carlos.id]: { open: 1, hours: 3 }, [u.jorge.id]: { open: 1, hours: 2 } })
     const withProject = await tasks.listForReport({ scope: { userId: u.cesar.id, viewAll: true }, includeArchived: true })
     assert.deepEqual(withProject.map((x) => x.id).sort(), [p1.id, p2.id].sort())
   })
