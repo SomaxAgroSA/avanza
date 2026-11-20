@@ -118,10 +118,10 @@ describe('Lista de tarefas do menu (§44)', () => {
     expect(screen.getByText(`· ${i18n.t('taskList.overdue')}`)).toBeInTheDocument()
   })
 
-  it('barra como a das listas de projetos: Status (seletor), Prioridade e Urgência em botões; sem Responsável', async () => {
+  it('barra como a das listas de projetos: Status (seletor), Prioridade e Urgência em botões, Empresa (§46); sem Responsável', async () => {
     const { tableCalls } = setup()
     await screen.findByText(mine.title)
-    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Por página'])
+    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Empresa', 'Por página'])
     const priority = screen.getByRole('group', { name: 'Prioridade' })
     await userEvent.click(within(priority).getByRole('button', { name: 'Alta' }))
     await userEvent.click(within(screen.getByRole('group', { name: 'Urgência' })).getByRole('button', { name: 'Sem urgência' }))

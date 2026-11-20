@@ -10,7 +10,7 @@ import { statusChoices, type StatusCategory } from '@/domain/workflow'
 import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppSkeleton, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
-import { useProjectMembers, useProjects } from '@/features/projects/queries'
+import { useProject, useProjectMembers, useProjects } from '@/features/projects/queries'
 import { CustomFieldInput } from '@/features/task-config/CustomFieldInput'
 import { ColorDot, TaskTypeIconBadge } from '@/features/task-config/config-visuals'
 import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
@@ -24,7 +24,7 @@ import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 import { usePlan } from '@/features/plan/queries'
-import { DemandFormDialog } from '@/features/demands/DemandFormDialog'
+import { DemandFormDialog, LockedValue } from '@/features/demands/DemandFormDialog'
 import { useDemandOwners } from '@/features/demands/queries'
 
 export interface TaskFormDialogProps {
@@ -144,6 +144,13 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const priorities = usePriorities(false)
   const areas = useAreas(false)
   const members = useProjectMembers(open ? draft.projectId || undefined : undefined)
+  // Empresa (§46): a tarefa de projeto herda a do projeto — só leitura, acompanha o projeto escolhido
+  const fixedProject = useProject(open && !isEdit && projectId ? projectId : undefined)
+  const company = isEdit
+    ? (task?.company ?? null)
+    : projectId
+      ? (fixedProject.data?.company ?? null)
+      : ((projects.data?.items ?? []).find((p) => p.id === draft.projectId)?.company ?? null)
   // campos de imagem/arquivo: na edição, escolhem entre os anexos da tarefa ou enviam pelo campo; na
   // criação (a tarefa ainda não existe), os arquivos escolhidos ficam aqui e vão logo depois de criar
   const taskAttachments = useTaskAttachments(open ? task?.id : undefined)
@@ -497,6 +504,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
         </div>
 
         <aside aria-label={t('tasks.properties')} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:border-l lg:border-border lg:pl-8">
+          <LockedValue label={t('companies.field')}>{company ? company.name : draft.projectId ? t('companies.none') : '—'}</LockedValue>
           <AppSelect
             label={t('demands.projectFlow.owner')}
             searchable

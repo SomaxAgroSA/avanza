@@ -19,6 +19,8 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan, useSession } from '@/features/auth/session'
 import { managementLink } from '@/features/plan/paths'
 import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
+import { useCompanies } from '@/features/companies/queries'
+import { CompanyChip } from '@/features/companies/company-visuals'
 import { useTaskMutations, useTasksList } from './queries'
 import { TaskEditDialog } from './TaskEditDialog'
 import { TaskPreviewDrawer } from './TaskPreviewDrawer'
@@ -113,6 +115,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const urgencyOptions = useUrgencyFilterOptions()
   // áreas ativas: opções do clique na célula (uma consulta só para a lista inteira)
   const areas = useAreas(false)
+  // empresas ativas (§46): opções do filtro Empresa
+  const companies = useCompanies()
 
   const [viewing, setViewing] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -200,6 +204,17 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         cell: (task) => <AreaCell task={task} areas={areas.data ?? []} canEdit={canEdit} />,
       },
       {
+        // empresa (§46): a do projeto ou, na demanda interna, a dela
+        id: 'company',
+        header: t('companies.field'),
+        size: 180,
+        cell: (task) => <CompanyChip company={task.company} />,
+        filter: {
+          label: t('companies.field'),
+          options: [{ value: 'none', label: t('companies.none') }, ...(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))],
+        },
+      },
+      {
         id: 'type',
         header: t('tasks.fields.type'),
         size: 160,
@@ -283,7 +298,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, mineFirst, me, scope],
+    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, companies.data, mineFirst, me, scope],
   )
   const ordered = useMemo(() => {
     if (!scope) return columns

@@ -1,6 +1,7 @@
 import type { HexColor } from './colors'
 import type { Urgency } from './urgency'
 import type { AreaRef } from './workflow'
+import type { CompanyRef } from './companies'
 /**
  * Projetos — tipos e regras de apresentação (espelham backend/src/domain/project.js).
  */
@@ -105,6 +106,8 @@ export interface Project {
   urgency: Urgency | null
   /** Área responsável; null = sem área. */
   area: AreaRef | null
+  /** Empresa do grupo (§46); null/ausente = sem empresa. */
+  company?: CompanyRef | null
   /** Projeto pai (regras §34); null = projeto sem pai. */
   parent: ProjectRef | null
   /** Quantidade de subprojetos. */

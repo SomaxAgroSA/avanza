@@ -37,6 +37,8 @@ import { toIcon } from '@/domain/icons'
 import type { AreaRefDto, AttachmentDto, CommentDto, CustomFieldDto, FieldOptionDto, LookupDto, ProjectFileDto, TagDto, TaskDetailDto, TaskDto, TaskTypeDetailDto, TaskTypeDto } from './dtos'
 import type { Tag, TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import { isUrgency } from '@/domain/urgency'
+import type { Company, CompanyRef } from '@/domain/companies'
+import type { CompanyDto, CompanyRefDto } from './dtos'
 import { DEMAND_ACTIONS, DEMAND_BOXES, DEMAND_STATUSES, isDemandStatus, type DemandActions, type DemandInfo, type DemandOverview } from '@/domain/demands'
 import type { DemandDto, DemandOverviewDto } from './dtos'
 import type { CharterDto, CharterItemDto, CharterMeasurementDto, ProjectBriefDto } from './dtos'
@@ -158,6 +160,7 @@ export function toProject(dto: ProjectDto): Project {
     priority: oneOf(PROJECT_PRIORITIES, dto.priority, 'medium'),
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
+    company: toCompanyRef(dto.company),
     parent: dto.parent
       ? { id: dto.parent.id, key: dto.parent.key, name: dto.parent.name, icon: toIcon(PROJECT_ICONS, dto.parent.icon, 'folder'), cover: toColor(PROJECT_COVERS, dto.parent.cover, 'violet') }
       : null,
@@ -366,6 +369,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     itVisible: !!dto.it_visible,
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
+    company: toCompanyRef(dto.company),
     demand: toDemandInfo(dto.demand),
   }
 }
@@ -730,6 +734,24 @@ export function toLibraryIcon(dto: LibraryIconDto): LibraryIcon {
     createdAt: toDate(dto.created_at),
     createdBy: dto.created_by ? toUserSummary(dto.created_by) : null,
     usage: { projects: dto.usage?.projects ?? 0, taskTypes: dto.usage?.task_types ?? 0, docSpaces: dto.usage?.doc_spaces ?? 0 },
+  }
+}
+
+export function toCompanyRef(dto: CompanyRefDto | null | undefined): CompanyRef | null {
+  return dto ? { id: dto.id, name: dto.name, shortCode: dto.short_code ?? '' } : null
+}
+
+export function toCompany(dto: CompanyDto): Company {
+  return {
+    id: dto.id,
+    name: dto.name,
+    shortCode: dto.short_code ?? '',
+    active: dto.active !== false,
+    projectCount: dto.project_count ?? 0,
+    demandCount: dto.demand_count ?? 0,
+    usageCount: dto.usage_count ?? 0,
+    createdAt: toDate(dto.created_at),
+    updatedAt: toDate(dto.updated_at),
   }
 }
 

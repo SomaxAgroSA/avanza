@@ -21,6 +21,7 @@ import { TasksHeader } from '@/features/tasks/TasksHeader'
 import { DemandActions } from './DemandActions'
 import { DemandChip, DemandStatusBadge, ProjectChip } from './demand-visuals'
 import { useDemandList, useDemandOverview, useDemandOwners } from './queries'
+import { useCompanies } from '@/features/companies/queries'
 
 const isBox = (value: string | null): value is DemandBox => !!value && (DEMAND_BOXES as readonly string[]).includes(value)
 /** Opção "Todos" dos filtros de pessoa. */
@@ -52,7 +53,7 @@ export function DemandsPage() {
     </>
   )
 
-  const setFilter = (key: 'owner' | 'assignee', value: string) => {
+  const setFilter = (key: 'owner' | 'assignee' | 'company', value: string) => {
     const next = new URLSearchParams(params)
     if (value === ANY) next.delete(key)
     else next.set(key, value)
@@ -95,8 +96,10 @@ function personFilters(params: URLSearchParams): DemandListFilters {
   const out: DemandListFilters = {}
   const owner = params.get('owner')
   const assignee = params.get('assignee')
+  const company = params.get('company')
   if (owner) out.ownerId = owner
   if (assignee) out.assigneeId = assignee
+  if (company) out.companyId = company
   return out
 }
 
@@ -121,8 +124,11 @@ function KpiCards({ counts }: { counts: DemandCounts[DemandBox] }) {
  * Filtros da caixa Todas: Responsável e Atribuída a. As pessoas vêm da lista de responsáveis possíveis
  * (pessoas ativas) somada a quem aparece na Carga das equipes.
  */
-function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters; team: TeamLoad[]; onChange: (key: 'owner' | 'assignee', value: string) => void }) {
+function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters; team: TeamLoad[]; onChange: (key: 'owner' | 'assignee' | 'company', value: string) => void }) {
   const { t } = useTranslation()
+  // Empresa (§46): as ativas
+  const companies = useCompanies()
+  const companyOptions = [{ value: ANY, label: t('companies.all') }, ...(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))]
   const owners = useDemandOwners(useCan('tasks.create'))
   const people = new Map<string, UserSummary>()
   ;[...(owners.data ?? []), ...team.map((member) => member.user)].forEach((person) => people.set(person.id, person))
@@ -150,6 +156,14 @@ function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters
         value={known(filters.assigneeId)}
         onValueChange={(value) => onChange('assignee', value)}
         options={options}
+        className="min-w-48"
+      />
+      <AppSelect
+        size="sm"
+        label={t('companies.field')}
+        value={filters.companyId && companyOptions.some((o) => o.value === filters.companyId) ? filters.companyId : ANY}
+        onValueChange={(value) => onChange('company', value)}
+        options={companyOptions}
         className="min-w-48"
       />
     </div>

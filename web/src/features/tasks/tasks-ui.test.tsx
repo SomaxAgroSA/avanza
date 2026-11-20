@@ -503,13 +503,13 @@ describe('TasksTable: área responsável', () => {
 })
 
 describe('TasksTable: barra de filtros (ajuste 18/11)', () => {
-  it('só Status, Prioridade, Urgência e Responsável; sem Área, Projeto, Situação nem "Mais filtros" (as colunas continuam)', async () => {
+  it('só Status, Prioridade, Urgência, Responsável e Empresa (§46); sem Área, Projeto, Situação nem "Mais filtros" (as colunas continuam)', async () => {
     window.localStorage.removeItem('kamban.table.bar-filters')
     const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [detail], page: 1, perPage: 20, total: 1, totalPages: 1 }))
     renderRoutes([{ path: '/', element: <TasksTable tableId="bar-filters" /> }], { repositories: repositories({ list }), initialPath: '/' })
     await screen.findByText(detail.title)
     // (o último seletor da tela é o "Por página" da paginação)
-    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Prioridade', 'Urgência', 'Responsável', 'Por página'])
+    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Prioridade', 'Urgência', 'Responsável', 'Empresa', 'Por página'])
     expect(screen.queryByRole('button', { name: /Mais filtros/ })).not.toBeInTheDocument()
     // sem filtro escondido: nem a antiga "Situação: Abertas" vai para a API
     list.mock.calls.forEach(([query]) => expect(query.filters).toEqual({}))

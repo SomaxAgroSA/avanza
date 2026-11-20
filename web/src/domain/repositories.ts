@@ -40,6 +40,7 @@ import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, Pla
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
 import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
 import type { Urgency } from './urgency'
+import type { Company, CompanyInput } from './companies'
 import type { AssignInput, DemandBox, DemandInput, DemandListFilters, DemandOverview } from './demands'
 import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectBrief, ProjectCharter } from './charter'
 import type {
@@ -250,6 +251,8 @@ export interface ProjectData {
   urgency: Urgency | null
   /** Área responsável ativa (null limpa; ausente = não muda). */
   areaId?: string | null
+  /** Empresa ativa (§46; obrigatória ao criar quando há empresa ativa; ausente = não muda). */
+  companyId?: string | null
   /** Projeto pai (regras §34; null solta; ausente = não muda). */
   parentId?: string | null
   startDate: string | null
@@ -459,6 +462,13 @@ export interface TagRepository {
   remove(id: string): Promise<void>
 }
 
+/** Empresas do grupo (§46). `includeInactive` (só quem gerencia a plataforma) traz as inativas e as contagens de uso. */
+export interface CompanyRepository {
+  list(options?: { includeInactive?: boolean }): Promise<Company[]>
+  create(data: CompanyInput): Promise<Company>
+  update(id: string, data: Partial<CompanyInput>): Promise<Company>
+}
+
 export interface CommentRepository {
   list(taskId: string): Promise<TaskComment[]>
   /** `content` no formato salvo (menções `@[Nome](id)`). */
@@ -653,6 +663,7 @@ export interface Repositories {
   tasks: TaskRepository
   demands: DemandRepository
   tags: TagRepository
+  companies: CompanyRepository
   icons: IconLibraryRepository
   comments: CommentRepository
   attachments: AttachmentRepository
