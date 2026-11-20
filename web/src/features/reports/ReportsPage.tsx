@@ -101,7 +101,7 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title={t('reports.title')} description={t('reports.description')} />
+      <PageHeader title={t('reports.title')} />
       <div className="flex flex-col gap-4">
         <AppFilterBar
           hasActiveFilters={activeFilters}
@@ -220,7 +220,6 @@ function BreakdownCard({ rows, dimension, onGroupBy }: { rows: BreakdownRow[]; d
   return (
     <AppCard
       title={t('reports.breakdownTitle')}
-      description={t('reports.breakdownHint')}
       actions={
         <AppSelect
           size="sm"
@@ -260,12 +259,12 @@ function OverdueCard({ tasks, onView }: { tasks: TaskSummary[]; onView: (id: str
   const columns: DataTableColumn<TaskSummary>[] = [
     { id: 'code', header: t('tasks.fields.task'), hideable: false, pinned: true, size: 130, cell: (task) => <TaskCode task={task} /> },
     { id: 'title', header: t('tasks.fields.title'), hideable: false, size: 320, cell: (task) => <span className="font-medium text-fg">{task.title}</span> },
-    { id: 'project', header: t('tasks.fields.project'), size: 180, cell: (task) => task.project?.name ?? '—' },
+    { id: 'project', header: t('tasks.fields.project'), size: 180, cell: (task) => task.project?.name ?? (task.demand ? t('demands.internalProject') : '—') },
     { id: 'due', header: t('tasks.fields.dueDate'), size: 150, cell: (task) => <DueDate task={task} /> },
     { id: 'assignee', header: t('tasks.fields.assignee'), size: 200, cell: (task) => <PersonCell person={task.assignee} /> },
   ]
   return (
-    <AppCard title={t('reports.overdueTitle', { count: tasks.length })} description={t('reports.overdueHint')}>
+    <AppCard title={t('reports.overdueTitle', { count: tasks.length })}>
       <AppDataTable
         caption={t('reports.overdueTitle', { count: tasks.length })}
         columns={columns}

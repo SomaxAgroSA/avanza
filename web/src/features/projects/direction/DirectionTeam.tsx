@@ -5,6 +5,7 @@ import { ArrowRight, Plus, Users } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatRelative } from '@/core/utils/format'
 import type { Project, ProjectTaskCount, TeamActivity, TeamActivityProject, TeamActivityState } from '@/domain/projects'
+import { projectDisplayName } from '@/domain/demands'
 import { AppAvatar, AppBadge, AppButton, AppDrawer, AppEmptyState, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { ProjectAvatar, ProjectStatusBadge } from '../project-visuals'
 import { teamMetric } from '../team-activity-data'
@@ -36,7 +37,6 @@ export function DirectionTeam({ team, projects, counts, pending, error, onRetry 
     <section aria-label={t('team.title')} className="mb-6">
       <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 px-0.5">
         <h2 className="text-base font-semibold tracking-tight text-fg">{t('team.title')}</h2>
-        <p className="text-xs text-muted">{t('team.description', { days: team?.windowDays ?? 7 })}</p>
       </div>
       {pending ? (
         <div className="grid gap-3 lg:grid-cols-3">
@@ -88,14 +88,14 @@ function PersonCard({ user, projects, onOpen }: { user: TeamActivity['people'][n
                     type="button"
                     onClick={() => onOpen(row.project.id)}
                     aria-haspopup="dialog"
-                    aria-label={t('direction.team.detail', { project: row.project.name, name: user.name })}
+                    aria-label={t('direction.team.detail', { project: projectDisplayName(t, row.project), name: user.name })}
                     className="flex size-[22px] items-center justify-center rounded-md border border-border-strong text-muted hover:border-fg hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     <Plus aria-hidden className="size-3" />
                   </button>
                   <ProjectAvatar icon={row.project.icon} cover={row.project.cover} size="sm" className="size-6 rounded-md [&_svg]:size-3.5" />
-                  <Link to={`/projects/${row.project.id}`} className="truncate text-fg hover:text-primary-text hover:underline">
-                    {row.project.name}
+                  <Link to={row.project.demands ? '/tasks/demands' : `/projects/${row.project.id}`} className="truncate text-fg hover:text-primary-text hover:underline">
+                    {projectDisplayName(t, row.project)}
                   </Link>
                   <span className={cn('whitespace-nowrap text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{teamMetric(t, row, i18n.language)}</span>
                 </li>
@@ -115,7 +115,9 @@ function ProjectDrawer({ projectId, projects, team, counts, onClose }: { project
   const tasks = useMemo(() => recentTasksOf(workers), [workers])
   const project = projects.find((p) => p.id === projectId)
   const ref = workers[0]?.row.project
-  const name = project?.name ?? ref?.name ?? ''
+  const name = project?.name ?? (ref ? projectDisplayName(t, ref) : '')
+  // a caixa das demandas internas (§45) abre a tela Demandas
+  const demands = !project && !!ref?.demands
   const count = counts?.find((c) => c.projectId === projectId)
   const total = count ? count.done + count.open : 0
   return (
@@ -127,7 +129,7 @@ function ProjectDrawer({ projectId, projects, team, counts, onClose }: { project
       footer={
         projectId ? (
           <AppButton asChild rightIcon={<ArrowRight />} className="w-full justify-center">
-            <Link to={`/projects/${projectId}`}>{t('direction.drawer.openProject')}</Link>
+            <Link to={demands ? '/tasks/demands' : `/projects/${projectId}`}>{t(demands ? 'demands.openDemands' : 'direction.drawer.openProject')}</Link>
           </AppButton>
         ) : undefined
       }

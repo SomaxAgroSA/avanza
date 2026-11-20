@@ -19,6 +19,14 @@ describe('domain/demands (§45)', () => {
     expect(demandActionsFor('cesar', { assignee: null, reporter: null, demand: null }).assign).toBe(false)
   })
 
+  it('quem vê todas (projects.view_all) também atribui e reatribui; o resto continua dos papéis', () => {
+    const viewAll = { viewAll: true }
+    expect(demandActionsFor('root', demand('unassigned'), viewAll)).toEqual({ assign: true, start: false, pass: false, conclude: false, validate: false, return: false })
+    expect(demandActionsFor('root', demand('in_progress', { assignee: 'jorge' }), viewAll).assign).toBe(true)
+    expect(demandActionsFor('root', demand('to_validate', { assignee: 'jorge' }), viewAll).assign).toBe(false)
+    expect(demandActionsFor('root', { assignee: null, reporter: null, demand: null }, viewAll).assign).toBe(false)
+  })
+
   it('agrupa por passo na ordem do fluxo, sem grupos vazios', () => {
     const list = [demand('in_progress'), demand('unassigned'), demand('in_progress')]
     expect(groupByStatus(list).map((g) => [g.status, g.items.length])).toEqual([

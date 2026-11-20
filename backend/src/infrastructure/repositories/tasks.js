@@ -377,7 +377,8 @@ function createTaskRepository(db) {
     async listActivity(projectIds, since) {
       if (!projectIds || projectIds.length === 0) return []
       const rows = await db.query(
-        `SELECT t.id, t.code, t.title, t.project_id, t.assignee_id, t.updated, s.id AS status_id, s.name AS status_name, s.color AS status_color, s.category AS status_category
+        `SELECT t.id, t.code, t.title, t.project_id, t.assignee_id, t.updated, t.reporter_id, t.demand_owner_id, t.demand_past_assignees, t.demand_status,
+                s.id AS status_id, s.name AS status_name, s.color AS status_color, s.category AS status_category
          FROM tasks t JOIN task_statuses s ON s.id = t.status_id
          WHERE t.project_id = ANY($1::text[]) AND t.assignee_id IS NOT NULL
            AND (s.category NOT IN ('done', 'cancelled') OR t.updated >= $2)
@@ -391,11 +392,21 @@ function createTaskRepository(db) {
         projectId: r.project_id,
         assigneeId: r.assignee_id,
         updatedAt: r.updated,
+        // fluxo do responsável (§45): para quem chama filtrar as demandas internas que a pessoa enxerga
+        reporterId: r.reporter_id || null,
+        demandOwnerId: r.demand_owner_id || null,
+        demandPastAssignees: r.demand_past_assignees || [],
+        demandStatus: r.demand_status || '',
         status: { id: r.status_id, name: r.status_name, color: r.status_color, category: r.status_category },
       }))
     },
 
-    /** Linhas enxutas para relatórios (só as colunas usadas nos cálculos). */
+    /**
+     * Linhas enxutas para relatórios (só as colunas usadas nos cálculos). Por padrão, só tarefas de projeto
+     * (a tarefa de projeto com responsável continua: é do projeto). `demandsOnly`: só as demandas internas
+     * (§45), com quem pediu, o responsável e quem já executou — quem chama filtra o que a pessoa enxerga
+     * (application/task-access.js#visibleDemands); `scope` não vale para elas.
+     */
     async listForReport(query) {
       const where = []
       const params = []
@@ -403,10 +414,12 @@ function createTaskRepository(db) {
         params.push(value)
         return `$${params.length}`
       }
-      if (query.scope && !query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), ''))
-      // relatórios, dependências e painel executivo são de projetos: demandas internas (§45) ficam de fora
-      // (a tarefa de projeto com responsável continua: é do projeto)
-      where.push(`project_id IN (SELECT id FROM projects WHERE "kind" = '')`)
+      if (query.demandsOnly) {
+        where.push(`demand_status <> '' AND project_id IN (SELECT id FROM projects WHERE "kind" <> '')`)
+      } else {
+        if (query.scope && !query.scope.viewAll) where.push(visibleTasksClause(param(query.scope.userId), ''))
+        where.push(`project_id IN (SELECT id FROM projects WHERE "kind" = '')`)
+      }
       if (!query.includeArchived) where.push('project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)')
       if (query.projectId) where.push(`project_id = ${param(query.projectId)}`)
       if (query.projectIds) where.push(`project_id = ANY(${param(query.projectIds)}::text[])`)
@@ -415,7 +428,9 @@ function createTaskRepository(db) {
       if (query.priorityId) where.push(`priority_id = ${param(query.priorityId)}`)
       if (query.statusId) where.push(`status_id = ${param(query.statusId)}`)
       const rows = await db.query(
-        `SELECT id, project_id, task_type_id, status_id, priority_id, assignee_id, created, started_at, completed_at, due_date${query.withTitles ? ', code, title' : ''} FROM tasks
+        `SELECT id, project_id, task_type_id, status_id, priority_id, assignee_id, created, started_at, completed_at, due_date${query.withTitles ? ', code, title' : ''}${
+          query.demandsOnly ? ', reporter_id, demand_owner_id, demand_past_assignees, demand_status' : ''
+        } FROM tasks
          ${where.length ? `WHERE ${where.join(' AND ')}` : ''}`,
         params,
       )
@@ -431,6 +446,9 @@ function createTaskRepository(db) {
         completedAt: r.completed_at,
         dueDate: r.due_date,
         ...(query.withTitles ? { code: r.code, title: r.title } : {}),
+        ...(query.demandsOnly
+          ? { reporterId: r.reporter_id || null, demandOwnerId: r.demand_owner_id || null, demandPastAssignees: r.demand_past_assignees || [], demandStatus: r.demand_status }
+          : {}),
       }))
     },
 

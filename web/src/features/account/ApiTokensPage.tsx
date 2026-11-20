@@ -67,7 +67,6 @@ export function ApiTokensPage() {
     <>
       <PageHeader
         title={t('apiTokens.title')}
-        description={t('apiTokens.description')}
         actions={
           <>
             <AppButton asChild variant="ghost" leftIcon={<ArrowLeft />}>

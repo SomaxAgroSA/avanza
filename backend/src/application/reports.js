@@ -7,6 +7,9 @@
  * - Período: `from`/`to` (ISO); padrão, os últimos 30 dias. Sempre devolvido na resposta.
  * - Definições devolvidas junto (transparência): tipos considerados bug (chave BUG) e a
  *   prioridade considerada crítica (a primeira da lista de prioridades).
+ * - Demandas internas (§45) entram também (as que a pessoa enxerga; todas com `projects.view_all`), sob o
+ *   rótulo "Demandas internas" no detalhamento por projeto (`kind: 'demands'`); filtrar por projeto as deixa
+ *   de fora. A tarefa de projeto com responsável já conta no projeto dela.
  * - Cálculos em domain/report.js.
  */
 
@@ -20,6 +23,7 @@ const report = require('../domain/report')
 const contentLocale = require('../domain/content-locale')
 const { toUserSummary } = require('./presenters')
 const { createTaskService } = require('./tasks')
+const { createTaskAccess } = require('./task-access')
 
 const DEFAULT_DAYS = 30
 const OVERDUE_LIMIT = 50
@@ -62,6 +66,7 @@ function byId(list) {
 function createReportService(deps) {
   const tasks = deps.taskRepository
   const taskService = createTaskService(deps)
+  const taskAccess = createTaskAccess(deps)
 
   function parse(query) {
     const q = query || {}
@@ -119,17 +124,21 @@ function createReportService(deps) {
     const priorities = await deps.priorityRepository.list({ includeInactive: false })
     const critical = priorities.slice().sort((a, b) => a.order - b.order)[0] || null
 
+    const filters = {
+      assigneeId: params.assignee_id === 'me' ? ctx.principal.userId : params.assignee_id,
+      typeId: params.task_type_id,
+      priorityId: params.priority_id,
+      statusId: params.status_id,
+    }
     const rows = rbac.can(ctx.principal, 'projects.view')
-      ? await tasks.listForReport({
-          scope: { userId: ctx.principal.userId, viewAll: rbac.can(ctx.principal, 'projects.view_all') },
-          includeArchived: !!params.project_id,
-          projectId: params.project_id,
-          assigneeId: params.assignee_id === 'me' ? ctx.principal.userId : params.assignee_id,
-          typeId: params.task_type_id,
-          priorityId: params.priority_id,
-          statusId: params.status_id,
-        })
+      ? await tasks.listForReport(
+          Object.assign({ scope: { userId: ctx.principal.userId, viewAll: rbac.can(ctx.principal, 'projects.view_all') }, includeArchived: !!params.project_id, projectId: params.project_id }, filters),
+        )
       : []
+    // demandas internas (§45): fora quando o filtro é um projeto
+    if (!params.project_id && rbac.can(ctx.principal, 'tasks.view')) {
+      rows.push(...(await taskAccess.visibleDemands(ctx.principal, await tasks.listForReport(Object.assign({ demandsOnly: true }, filters)))))
+    }
     await markBlocked(
       rows,
       rows.filter((r) => closedIds.indexOf(r.statusId) < 0).map((r) => r.id),
@@ -202,7 +211,8 @@ function createReportService(deps) {
         label = toUserSummary(users[g.key])
       } else if (dimension === 'project' && projects[g.key]) {
         const p = projects[g.key]
-        label = { id: p.id, key: p.key, name: p.name }
+        // a caixa das demandas internas (§45) aparece como "Demandas internas" (a interface traduz pelo `kind`)
+        label = Object.assign({ id: p.id, key: p.key, name: p.name }, p.kind ? { kind: p.kind } : {})
       }
       return Object.assign({ label }, g)
     })

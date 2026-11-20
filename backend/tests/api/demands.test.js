@@ -262,7 +262,31 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.equal((await people.cesar.client.get(`/tasks/${plain.id}`)).status, 404)
   })
 
-  it('a caixa de sistema e as demandas ficam fora de Kanban, relatórios, painéis e dependências', async () => {
+  it('quem vê todas (admin) atribui e reatribui qualquer demanda pela rota; o histórico guarda o admin', async () => {
+    const created = (await people.ana.client.post('/demands', { task_type_id: type.id, title: 'Acesso ao SAP para a equipe nova', demand_owner_id: people.cesar.user.id, area_id: area.id })).body.data
+    let detail = (await admin.get(`/tasks/${created.id}`)).body.data
+    assert.equal(detail.demand.actions.assign, true)
+    assert.equal(detail.demand.actions.start, false)
+    const team = await admin.get(`/demands/${created.id}/team`)
+    assert.equal(team.status, 200, JSON.stringify(team.body))
+    assert.deepEqual(team.body.data.map((u) => u.name), ['Carlos TI', 'César TI', 'Jorge TI'])
+    const outside = await admin.post(`/demands/${created.id}/assign`, { assignee_id: people.fabi.user.id, due_at: DUE })
+    assert.equal(outside.body.error.details.fields.assignee_id, 'not_in_team')
+    const assigned = await admin.post(`/demands/${created.id}/assign`, { assignee_id: people.jorge.user.id, due_at: DUE, estimated_hours: 2 })
+    assert.equal(assigned.status, 200, JSON.stringify(assigned.body))
+    const moved = await admin.post(`/demands/${created.id}/assign`, { assignee_id: people.carlos.user.id, due_at: DUE })
+    assert.equal(moved.status, 200, JSON.stringify(moved.body))
+    detail = (await people.carlos.client.get(`/tasks/${created.id}`)).body.data
+    assert.equal(detail.assignee.id, people.carlos.user.id)
+    const history = (await admin.get(`/tasks/${created.id}/history?perPage=50`)).body.data
+    const reassigned = history.find((h) => h.action === 'task.demand_reassigned')
+    assert.ok(reassigned)
+    assert.equal(reassigned.user.id, (await admin.get('/auth/me')).body.data.user.id)
+    // o resto do fluxo continua de quem executa
+    assert.equal((await admin.post(`/demands/${created.id}/start`)).status, 403)
+  })
+
+  it('a caixa de sistema fica fora de Kanban e painéis; as demandas entram em Relatórios e Em andamento', async () => {
     const inbox = (await pb.query(`SELECT id FROM projects WHERE "kind" = 'demands'`))[0].id
     assert.equal((await admin.get(`/projects/${inbox}`)).status, 404)
     assert.equal((await admin.patch(`/projects/${inbox}`, { name: 'X' })).status, 404)
@@ -278,11 +302,27 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
       assert.equal(text.includes('DEM-'), false, `${path} mostra demandas`)
     }
     await hides('/board')
-    await hides('/reports')
     await hides('/executive')
-    await hides('/dependencies')
-    await hides('/team-activity')
     await hides('/project-task-counts')
     await hides('/project-covers')
+
+    // Relatórios: as demandas internas sob "Demandas internas" (kind demands); quem não as enxerga, não
+    const report = (await admin.get('/reports?group_by=project')).body.data
+    const row = report.breakdown.rows.find((r) => r.label && r.label.kind === 'demands')
+    assert.ok(row, JSON.stringify(report.breakdown.rows))
+    assert.equal(row.label.id, inbox)
+    assert.ok(row.total >= 3)
+    const fabiReport = (await people.fabi.client.get('/reports?group_by=project')).body.data
+    assert.equal(fabiReport.breakdown.rows.some((r) => r.label && r.label.kind === 'demands'), false)
+    // Dependências por área: a demanda aberta atribuída ao Carlos (TI) é entrega, no bloco "Demandas internas"
+    const deps = (await admin.get('/dependencies')).body.data
+    const block = deps.projects.find((p) => p.project.kind === 'demands')
+    assert.ok(block, JSON.stringify(deps.projects.map((p) => p.project)))
+    assert.ok(block.deliveries.every((d) => d.area.key === 'ti' && d.code.startsWith('DEM-')))
+    // Equipo ahora: a demanda conta na atividade de quem executa
+    const team = (await admin.get('/team-activity')).body.data
+    const carlos = team.people.find((p) => p.user.id === people.carlos.user.id)
+    assert.ok(carlos && carlos.projects.some((p) => p.project.kind === 'demands' && p.project.id === inbox), JSON.stringify(team))
+    assert.equal((await people.fabi.client.get('/team-activity')).body.data.people.some((p) => p.projects.some((x) => x.project.kind === 'demands')), false)
   })
 })

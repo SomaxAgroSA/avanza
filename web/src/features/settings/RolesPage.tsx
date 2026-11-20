@@ -100,7 +100,6 @@ export function RolesPage() {
           </AppButton>
         }
       />
-      <p className="mb-3 text-sm text-muted">{t('roles.description')}</p>
       <AppDataTable
         caption={t('roles.title')}
         columns={columns}

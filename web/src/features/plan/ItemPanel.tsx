@@ -289,7 +289,6 @@ function UpdateEditor({
     <div className="flex flex-col gap-2">
       <AppMentionTextarea
         label={label}
-        hint={t('plan.panel.hint')}
         value={text}
         error={error}
         placeholder={t('plan.panel.placeholder')}

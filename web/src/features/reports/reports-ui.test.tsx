@@ -100,6 +100,32 @@ function setup(path: string, permissions: PermissionCode[] = ['reports.view', 'p
   return { ...utils, get, listTasks }
 }
 
+describe('ReportsPage — demandas internas (§45)', () => {
+  it('o detalhamento por projeto mostra a caixa como "Demandas internas" (sem a chave)', async () => {
+    const get = vi.fn<ReportRepository['get']>(() =>
+      Promise.resolve(
+        report({
+          breakdown: {
+            dimension: 'project',
+            rows: [{ key: 'sys', label: { kind: 'project', id: 'sys', key: 'DEM', name: 'Demandas internas', demands: true }, total: 1, open: 1, overdue: 0, blocked: 0, created: 1, completed: 0, leadTime: { hours: null, count: 0 } }],
+          },
+        }),
+      ),
+    )
+    renderRoutes([{ path: '/reports', element: <ReportsPage /> }], {
+      repositories: fakeRepositories({
+        auth: { me: async () => makeCurrentUser(['reports.view', 'projects.view', 'tasks.view']) },
+        reports: { get },
+        projects: { list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }) },
+      }),
+      initialPath: '/reports?group=project',
+    })
+    const table = await screen.findByRole('table', { name: 'Recorte' })
+    expect(within(table).getByText('Demandas internas')).toBeInTheDocument()
+    expect(within(table).queryByText(/DEM ·/)).toBeNull()
+  })
+})
+
 describe('ReportsPage', () => {
   it('mostra o período considerado, a situação atual, o período e as definições', async () => {
     const { get } = setup('/reports')

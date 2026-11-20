@@ -6,7 +6,7 @@
  *   departamento que pede, descrição e prioridade. Nasce "Sem atribuir", sem executor e sem prazo (quem
  *   define é o responsável); a abertura (`created_at`) é automática. O responsável é avisado.
  * - Fluxo (domain/demand.js): o responsável atribui/reatribui com prazo (data e hora, obrigatório) e
- *   estimativa; quem executa começa, passa a alguém da equipe (comentário obrigatório; o responsável é
+ *   estimativa — quem tem `projects.view_all` também, em qualquer demanda (o histórico guarda quem fez); quem executa começa, passa a alguém da equipe (comentário obrigatório; o responsável é
  *   avisado) e conclui (comentário obrigatório; vai para "Para validar" de quem pediu); quem pediu valida
  *   (Concluída) ou devolve (comentário obrigatório; volta para Em andamento).
  * - Tudo vai para o histórico da tarefa (`task.demand_*`, com quem, quando e a nota) e avisa pelas
@@ -102,7 +102,7 @@ function createDemandService(deps) {
   }
 
   function assertAction(ctx, task, action) {
-    const issue = demandDomain.actionIssue(ctx.principal.userId, task, action)
+    const issue = demandDomain.actionIssue(ctx.principal.userId, task, action, { viewAll: demandDomain.assignsAny(ctx.principal) })
     if (issue) throw appError(issue)
   }
 
@@ -258,7 +258,7 @@ function createDemandService(deps) {
 
   // ---------------------------------------------------------------- fluxo
 
-  /** Responsável atribui ou reatribui: { assignee_id, due_at (data e hora), estimated_hours? (null limpa) }. */
+  /** Responsável (ou quem tem `projects.view_all`) atribui ou reatribui: { assignee_id, due_at (data e hora), estimated_hours? (null limpa) }. */
   async function assign(ctx, id, input) {
     const loaded = await load(ctx, id)
     const task = loaded.task
@@ -435,13 +435,14 @@ function createDemandService(deps) {
   }
 
   /**
-   * Quem pode receber a demanda (diálogos Atribuir e Passar a…): o responsável vê a equipe inteira (ele
-   * incluído); quem executa vê a mesma lista sem ele mesmo. Fora de área: as pessoas ativas.
+   * Quem pode receber a demanda (diálogos Atribuir e Passar a…): o responsável e quem tem
+   * `projects.view_all` (que também atribui) veem a equipe inteira (o responsável incluído); quem executa vê
+   * a mesma lista sem ele mesmo. Fora de área: as pessoas ativas.
    */
   async function team(ctx, id) {
     const { task } = await load(ctx, id)
     const me = ctx.principal.userId
-    const isOwner = task.demandOwnerId === me
+    const isOwner = task.demandOwnerId === me || demandDomain.assignsAny(ctx.principal)
     if (!isOwner && task.assigneeId !== me) throw appError('FORBIDDEN')
     const squad = await taskAccess.teamOf(task.demandOwnerId)
     const people = squad.inArea

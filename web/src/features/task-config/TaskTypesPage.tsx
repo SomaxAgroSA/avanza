@@ -64,7 +64,6 @@ export function TaskTypesPage() {
     <>
       <PageHeader
         title={t('taskTypes.title')}
-        description={t('taskTypes.description')}
         actions={
           <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
             {t('taskTypes.create')}

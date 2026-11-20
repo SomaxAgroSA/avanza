@@ -308,7 +308,6 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
     <>
       <PageHeader
         title={t(TITLES[view])}
-        description={t(`projects.descriptions.${view}`)}
         actions={
           canChoose || (!direction && (showActivity || createHere)) ? (
             <div className="flex flex-wrap items-center gap-2">

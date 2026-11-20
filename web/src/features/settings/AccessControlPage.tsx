@@ -75,7 +75,7 @@ export function AccessControlPage() {
   const pathOf = (value: AccessTab) => (value === 'person' ? '/settings/access' : `/settings/access?tab=${value}`)
   return (
     <>
-      <PageHeader title={t('access.title')} description={t('access.description')} />
+      <PageHeader title={t('access.title')} />
       <AppNavTabs
         aria-label={t('access.title')}
         className="mb-4"

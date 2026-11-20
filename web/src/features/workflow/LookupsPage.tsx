@@ -75,7 +75,6 @@ export function LookupsPage({ kind }: { kind: LookupKind }) {
     <>
       <PageHeader
         title={t(`workflow.${kind}.title`)}
-        description={t(`workflow.${kind}.description`)}
         actions={
           <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
             {t(`workflow.${kind}.create`)}

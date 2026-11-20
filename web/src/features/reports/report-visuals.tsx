@@ -42,6 +42,8 @@ export function BreakdownLabelView({ label, emptyKey }: { label: BreakdownLabel 
         <span className="truncate">{label.user.name}</span>
       </span>
     )
+  // a caixa das demandas internas (§45): só "Demandas internas"
+  if (label.demands) return <span className="truncate">{t('demands.internalProject')}</span>
   return (
     <span className="truncate">
       {label.key} · {label.name}

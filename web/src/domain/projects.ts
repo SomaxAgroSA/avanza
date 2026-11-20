@@ -213,7 +213,8 @@ export interface TeamActivityTask {
 }
 
 export interface TeamActivityProject {
-  project: { id: string; key: string; name: string; icon: ProjectIcon; cover: ProjectCover }
+  /** `demands`: a caixa das demandas internas (§45) — mostra "Demandas internas", sem link de projeto. */
+  project: { id: string; key: string; name: string; icon: ProjectIcon; cover: ProjectCover; demands?: boolean }
   /** working = tarefas em andamento que mudaram na janela; active = mudou tarefas na janela; idle = só abertas ou paradas. */
   state: TeamActivityState
   inProgress: number

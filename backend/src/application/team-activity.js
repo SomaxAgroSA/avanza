@@ -7,12 +7,16 @@
  *   (7 dias), abertas e a última atividade. "Parada" = tem tarefa em andamento, mas nada mudou na janela.
  * - Cada projeto traz as tarefas por trás dos números (o "+" da tela): em andamento, as que mudaram e,
  *   sem nenhuma delas, as abertas — até 20, da mais recente para a mais antiga.
+ * - Demandas internas (§45): as que a pessoa enxerga (todas com `projects.view_all`) contam na atividade de
+ *   quem executa, no bloco "Demandas internas" (`project.kind = 'demands'`).
  * A última mudança da tarefa vale como atividade de quem é o responsável por ela.
  */
 
 const rbac = require('../domain/rbac')
 const projectDomain = require('../domain/project')
+const demandDomain = require('../domain/demand')
 const { iso, toUserSummary } = require('./presenters')
+const { createTaskAccess } = require('./task-access')
 
 const WINDOW_DAYS = 7
 const OPEN_STATUSES = ['planning', 'active', 'paused']
@@ -20,6 +24,8 @@ const CLOSED = ['done', 'cancelled']
 const MAX_TASKS = 20
 
 function createTeamActivityService(deps) {
+  const taskAccess = createTaskAccess(deps)
+
   async function getTeamActivity(ctx) {
     rbac.assertAuthenticated(ctx.principal)
     rbac.assertCan(ctx.principal, 'projects.view')
@@ -34,12 +40,19 @@ function createTeamActivityService(deps) {
       const access = projectDomain.resolveAccess(ctx.principal, p, roles[p.id] ? { role: roles[p.id] } : null)
       return access.canView && !access.limited
     })
-    if (visible.length === 0) return empty
     const projects = new Map(visible.map((p) => [p.id, p]))
+    // demandas internas (§45): a caixa de sistema conta como um bloco a mais
+    const inbox = await deps.projectRepository.findSystem(demandDomain.DEMANDS_KIND)
+    if (inbox) projects.set(inbox.id, inbox)
+    if (projects.size === 0) return empty
+
+    const activity = await deps.taskRepository.listActivity([...projects.keys()], since)
+    const demandRows = inbox ? await taskAccess.visibleDemands(ctx.principal, activity.filter((t) => t.projectId === inbox.id && t.demandStatus)) : []
+    const rows = activity.filter((t) => !inbox || t.projectId !== inbox.id).concat(demandRows)
 
     // pessoa → projeto → números e tarefas
     const byPerson = new Map()
-    for (const task of await deps.taskRepository.listActivity([...projects.keys()], since)) {
+    for (const task of rows) {
       const closed = CLOSED.indexOf(task.status.category) >= 0
       const moved = task.updatedAt && new Date(task.updatedAt) >= since
       if (closed && !moved) continue
@@ -72,7 +85,10 @@ function createTeamActivityService(deps) {
           .sort((a, b) => Number(b.running) - Number(a.running) || new Date(b.task.updatedAt) - new Date(a.task.updatedAt))
           .slice(0, MAX_TASKS)
         list.push({
-          project: { id: project.id, key: project.key, name: project.name, icon: project.icon || 'folder', cover: project.cover || 'violet' },
+          project: Object.assign(
+            { id: project.id, key: project.key, name: project.name, icon: project.icon || 'folder', cover: project.cover || 'violet' },
+            project.kind ? { kind: project.kind } : {},
+          ),
           state: e.in_progress > 0 && !stale ? 'working' : e.recent > 0 ? 'active' : 'idle',
           in_progress: e.in_progress,
           recent: e.recent,

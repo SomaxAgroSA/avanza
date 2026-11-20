@@ -93,7 +93,7 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHeader title={t('audit.title')} description={t('audit.description')} />
+      <PageHeader title={t('audit.title')} />
       <AppDataTable
         caption={t('audit.title')}
         columns={columns}

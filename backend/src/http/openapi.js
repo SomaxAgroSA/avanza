@@ -301,7 +301,7 @@ function build() {
         }),
       },
       '/team-activity': {
-        get: op('Equipo ahora: por pessoa, em quais projetos em andamento está trabalhando (tarefas atribuídas em andamento, que mudaram nos últimos 7 dias ou abertas), com as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; exige tasks.view (sem ele, lista vazia)', ['projects'], {
+        get: op('Equipo ahora: por pessoa, em quais projetos em andamento está trabalhando (tarefas atribuídas em andamento, que mudaram nos últimos 7 dias ou abertas), com as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; as demandas internas que ela enxerga (§45) entram num bloco com project.kind = demands. Exige tasks.view (sem ele, lista vazia)', ['projects'], {
           200: ok('Atividade', {
             type: 'object',
             properties: {
@@ -321,7 +321,7 @@ function build() {
         }),
       },
       '/dependencies': {
-        get: op('Dependências por área (§42): por projeto não arquivado que a pessoa vê por inteiro, as entregas abertas de outras áreas (tarefa aberta atribuída a alguém de uma área de Configurações → Dependências por área, ou ao Responsável TI do projeto, que conta na área TI), cada uma com a área { key, name } e o risco pelo prazo da própria tarefa (none_due, overdue, ok); as tarefas abertas bloqueadas por elas ("bloqueia"/"depende de", inclusive de outro projeto) e as só relacionadas (a validar, nunca bloqueio); e as áreas com quantas entregas têm. Exige tasks.view (sem ele, vazio). Alimenta o painel Direção e gerência de Em andamento', ['projects'], {
+        get: op('Dependências por área (§42): por projeto não arquivado que a pessoa vê por inteiro, as entregas abertas de outras áreas (tarefa aberta atribuída a alguém de uma área de Configurações → Dependências por área, ou ao Responsável TI do projeto, que conta na área TI), cada uma com a área { key, name } e o risco pelo prazo da própria tarefa (none_due, overdue, ok); as tarefas abertas bloqueadas por elas ("bloqueia"/"depende de", inclusive de outro projeto) e as só relacionadas (a validar, nunca bloqueio); e as áreas com quantas entregas têm. As demandas internas abertas que a pessoa enxerga (§45) entram como entregas num bloco com project.kind = demands. Exige tasks.view (sem ele, vazio). Alimenta o painel Direção e gerência de Em andamento', ['projects'], {
           200: ok('Dependências', DEPENDENCIES_SCHEMA),
           400: errorResponse('VALIDATION_ERROR'),
         }, { parameters: DEPENDENCIES_PARAMS }),
@@ -616,7 +616,7 @@ function build() {
       },
       '/demands/{id}/team': {
         get: op(
-          'Quem pode receber a demanda (diálogos Atribuir e Passar a…): o responsável vê a equipe dele (ele incluído); quem executa vê a mesma lista sem ele. Responsável fora de área: as pessoas ativas. Outros: FORBIDDEN',
+          'Quem pode receber a demanda (diálogos Atribuir e Passar a…): o responsável e quem tem projects.view_all veem a equipe do responsável (ele incluído); quem executa vê a mesma lista sem ele. Responsável fora de área: as pessoas ativas. Outros: FORBIDDEN',
           ['demands'],
           { 200: ok('Pessoas', { type: 'array', items: ref('UserSummary') }), 403: errorResponse('FORBIDDEN'), 404: errorResponse('TASK_NOT_FOUND') },
           { parameters: [idParam] },
@@ -624,7 +624,7 @@ function build() {
       },
       '/demands/{id}/assign': {
         post: op(
-          'O responsável atribui ou reatribui (Sem atribuir, Atribuída ou Em andamento): quem executa (equipe do responsável — fields.assignee_id = not_in_team fora dela), prazo com data e hora (due_at, obrigatório) e estimativa em horas (ausente mantém; null limpa). Trocar a pessoa volta para Atribuída; histórico task.demand_assigned/task.demand_reassigned; notificação assigned para quem recebe',
+          'O responsável (ou quem tem projects.view_all, em qualquer demanda) atribui ou reatribui (Sem atribuir, Atribuída ou Em andamento): quem executa (equipe do responsável — fields.assignee_id = not_in_team fora dela), prazo com data e hora (due_at, obrigatório) e estimativa em horas (ausente mantém; null limpa). Trocar a pessoa volta para Atribuída; histórico task.demand_assigned/task.demand_reassigned; notificação assigned para quem recebe',
           ['demands'],
           { 200: ok('Demanda', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') },
           {
@@ -869,7 +869,7 @@ function build() {
         }),
       },
       '/reports': {
-        get: op('Indicadores e relatórios (reports.view) no escopo visível; sem projetos arquivados, salvo se escolhido em project_id. Período padrão: últimos 30 dias', ['reports'], {
+        get: op('Indicadores e relatórios (reports.view) no escopo visível; sem projetos arquivados, salvo se escolhido em project_id. Inclui as demandas internas que a pessoa enxerga (§45; fora com project_id), sob o rótulo de projeto com kind = demands. Período padrão: últimos 30 dias', ['reports'], {
           200: ok('Relatório', ref('Report')),
           404: errorResponse('PROJECT_NOT_FOUND'),
         }, {

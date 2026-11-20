@@ -215,7 +215,6 @@ function CommentEditor({ taskId, people, comment, onDone }: { taskId: string; pe
     <div className="flex flex-col gap-2">
       <AppMentionTextarea
         label={comment ? t('comments.editLabel') : t('comments.newLabel')}
-        hint={t('comments.hint')}
         value={text}
         error={error}
         placeholder={t('comments.placeholder')}

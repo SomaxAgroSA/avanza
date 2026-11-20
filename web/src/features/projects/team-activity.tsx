@@ -5,6 +5,7 @@ import { Minus, Plus, Users } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatRelative } from '@/core/utils/format'
 import type { TeamActivityProject, TeamActivityState, UserSummary } from '@/domain/projects'
+import { projectDisplayName } from '@/domain/demands'
 import { AppAvatar, AppBadge, AppDrawer, AppEmptyState, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { ProjectAvatar } from './project-visuals'
 import { useTeamActivity } from './queries'
@@ -61,7 +62,7 @@ export function TeamActivityDrawer({ open, onOpenChange }: { open: boolean; onOp
   const { t } = useTranslation()
   const activity = useTeamActivity(open)
   return (
-    <AppDrawer open={open} onOpenChange={onOpenChange} title={t('team.title')} description={t('team.description', { days: activity.data?.windowDays ?? 7 })} size="lg">
+    <AppDrawer open={open} onOpenChange={onOpenChange} title={t('team.title')} size="lg">
       {activity.isPending ? (
         <div className="space-y-3">
           <AppSkeleton className="h-24" />
@@ -120,6 +121,8 @@ function ProjectRow({ row, userName }: { row: TeamActivityProject; userName: str
   const [open, setOpen] = useState(false)
   const metric = teamMetric(t, row, i18n.language)
   const panelId = `team-tasks-${row.project.id}-${userName.replace(/\W+/g, '')}`
+  // a caixa das demandas internas (§45) leva para a tela Demandas
+  const name = projectDisplayName(t, row.project)
   return (
     <li className="py-1">
       <div className="flex items-center gap-2 text-sm">
@@ -128,19 +131,19 @@ function ProjectRow({ row, userName }: { row: TeamActivityProject; userName: str
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls={panelId}
-          aria-label={t(open ? 'team.hideTasks' : 'team.showTasks', { project: row.project.name, name: userName })}
+          aria-label={t(open ? 'team.hideTasks' : 'team.showTasks', { project: name, name: userName })}
           className="flex size-5 shrink-0 items-center justify-center rounded border border-border text-muted hover:border-primary hover:text-primary-text"
         >
           {open ? <Minus aria-hidden className="size-3" /> : <Plus aria-hidden className="size-3" />}
         </button>
         <ProjectAvatar icon={row.project.icon} cover={row.project.cover} size="sm" className="size-5 rounded [&_svg]:size-3" />
-        <Link to={`/projects/${row.project.id}`} className="min-w-0 flex-1 truncate text-fg hover:text-primary-text hover:underline">
-          {row.project.name}
+        <Link to={row.project.demands ? '/tasks/demands' : `/projects/${row.project.id}`} className="min-w-0 flex-1 truncate text-fg hover:text-primary-text hover:underline">
+          {name}
         </Link>
         <span className={cn('shrink-0 text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{metric}</span>
       </div>
       {open && (
-        <ul id={panelId} className="ml-7 mt-1 flex flex-col gap-1 border-l border-border pl-3" aria-label={t('team.tasksOf', { project: row.project.name, name: userName })}>
+        <ul id={panelId} className="ml-7 mt-1 flex flex-col gap-1 border-l border-border pl-3" aria-label={t('team.tasksOf', { project: name, name: userName })}>
           {row.tasks.map((task) => (
             <li key={task.id} className="flex items-center gap-2 text-xs">
               <span className="shrink-0 font-mono text-muted">{task.code}</span>

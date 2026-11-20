@@ -38,7 +38,6 @@ export function IconLibraryPage() {
     <>
       <PageHeader
         title={t('icons.title')}
-        description={t('icons.description')}
         actions={
           <AppButton leftIcon={<Plus />} onClick={() => setGallery(true)}>
             {t('icons.import')}

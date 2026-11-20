@@ -48,7 +48,6 @@ export function DashboardPage() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
           {t(greetingKey(new Date().getHours()), { name: firstName })}
         </h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* duas colunas em telas largas: conteúdo à esquerda, acesso rápido à direita */}

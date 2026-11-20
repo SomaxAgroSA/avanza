@@ -2,7 +2,8 @@
  * Casos de uso de comentários de tarefas (diretriz §18).
  *
  * - Qualquer pessoa com acesso ao projeto comenta (inclusive leitor); o autor edita; autor ou gestor exclui.
- * - Menções: `@[Nome](idDoUsuario)` no texto; só pessoas com acesso ao projeto podem ser marcadas.
+ * - Menções: `@[Nome](idDoUsuario)` no texto; só pessoas com acesso ao projeto (ou que veem todos,
+ *   `projects.view_all`) podem ser marcadas.
  * - Histórico: comentário adicionado/editado/excluído e pessoas mencionadas vão para a auditoria da tarefa.
  */
 
@@ -48,11 +49,15 @@ function createCommentService(deps) {
    * comentou).
    */
   async function participants(project, task, access) {
+    // quem vê todos (`projects.view_all`) também pode ser mencionado — menos por quem só trabalha na tarefa
+    // (Responsável TI ou participante de fora do projeto), que menciona só quem já aparece nela
+    const everyone = access && access.scoped ? [] : await taskAccess.viewAllUsers()
+    const merge = (list) => list.concat(everyone.filter((u) => !list.some((x) => x.id === u.id)))
     // demanda interna (§45): quem pediu, o responsável, quem executa (agora ou antes) e a equipe do responsável
     if (access && access.demand) {
       const team = access.demand.team || { memberIds: [] }
       const ids = [task.reporterId, task.demandOwnerId, task.assigneeId].concat(task.demandPastAssignees || [], team.memberIds).filter((id, i, all) => id && all.indexOf(id) === i)
-      return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active' && demandDomain.seesDemand(task, u.id, team))
+      return merge((await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active' && demandDomain.seesDemand(task, u.id, team)))
     }
     let ids = (await deps.projectMemberRepository.listByProject(project.id))
       .filter((m) => taskDomain.memberSeesTask(project, m, m.userId, task))
@@ -67,7 +72,7 @@ function createCommentService(deps) {
       const involved = [project.ownerId, task.creatorId, task.assigneeId, task.reporterId].concat(flow, (await comments.listByTask(task.id)).map((c) => c.userId))
       ids = ids.filter((id) => involved.indexOf(id) >= 0)
     }
-    return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
+    return merge((await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active'))
   }
 
   function parseContent(input) {

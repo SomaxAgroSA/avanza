@@ -80,7 +80,7 @@ function IndicatorTasks({ query, report, metric, caption }: { query: ReportQuery
       { id: 'priority', header: t('tasks.fields.priority'), size: 130, cell: (task) => <TaskPriorityBadge priority={task.priority} /> },
       { id: 'assignee', header: t('tasks.fields.assignee'), size: 180, cell: (task) => <PersonCell person={task.assignee} /> },
       { id: 'due', header: t('tasks.fields.dueDate'), size: 130, cell: (task) => <DueDate task={task} /> },
-      { id: 'project', header: t('tasks.fields.project'), size: 160, cell: (task) => <span className="truncate text-muted">{task.project?.name ?? '—'}</span> },
+      { id: 'project', header: t('tasks.fields.project'), size: 160, cell: (task) => <span className="truncate text-muted">{task.project?.name ?? (task.demand ? t('demands.internalProject') : '—')}</span> },
     ],
     [t, metric],
   )

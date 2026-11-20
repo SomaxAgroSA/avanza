@@ -24,11 +24,15 @@ function createNotifier(deps) {
   const taskAccess = createTaskAccess(deps)
 
   /**
-   * O destinatário ainda enxerga o alvo: dono ou membro do projeto; o Responsável TI (§33) só as tarefas
-   * visíveis a ele e nunca elementos da Gestão (o e-mail leva o mesmo conteúdo, então vale para ele também).
-   * Demanda interna (§45): quem pediu, o responsável, quem executa (agora ou antes) e a equipe do responsável.
+   * O destinatário ainda enxerga o alvo: quem vê todos (`projects.view_all`, SUPER_ADMIN), dono ou membro do
+   * projeto; o Responsável TI (§33) só as tarefas visíveis a ele e nunca elementos da Gestão (o e-mail leva o
+   * mesmo conteúdo, então vale para ele também). Demanda interna (§45): quem pediu, o responsável, quem
+   * executa (agora ou antes) e a equipe do responsável. Só filtra quem já é destinatário: ninguém passa a
+   * receber avisos por ver tudo.
    */
-  async function hasAccess(project, userId, task) {
+  async function hasAccess(project, user, task) {
+    if (await taskAccess.seesAll(user)) return true
+    const userId = user.id
     if (demandDomain.isDemandsProject(project)) return !!task && demandDomain.isDemand(task) && (await taskAccess.userSeesDemand(userId, task, project))
     // tarefa de projeto com responsável: quem participa do fluxo recebe, mesmo sem ser do projeto
     if (task && demandDomain.isDemand(task) && demandDomain.isFlowParticipant(task, userId)) return true
@@ -55,7 +59,7 @@ function createNotifier(deps) {
     let created = 0
     for (const recipient of list) {
       const user = users[recipient.userId]
-      if (!user || user.status !== 'active' || !(await hasAccess(event.project, user.id, event.task || null))) continue
+      if (!user || user.status !== 'active' || !(await hasAccess(event.project, user, event.task || null))) continue
       const dedupeKey = event.dedupeKey ? event.dedupeKey(recipient.type) : ''
       if (dedupeKey && (await repos.notificationRepository.existsKey(user.id, dedupeKey))) continue
       const notification = Object.assign({ userId: user.id, type: recipient.type, actorId: event.actorId || null, data: Object.assign({}, baseData, event.data || {}), dedupeKey }, target)

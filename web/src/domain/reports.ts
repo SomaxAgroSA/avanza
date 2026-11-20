@@ -78,7 +78,7 @@ export type BreakdownLabel =
   | { kind: 'priority'; id: string; name: string; color: OptionColor }
   | { kind: 'type'; id: string; name: string; icon: TaskTypeIcon; color: OptionColor }
   | { kind: 'assignee'; user: UserSummary }
-  | { kind: 'project'; id: string; key: string; name: string }
+  | { kind: 'project'; id: string; key: string; name: string; demands?: boolean }
 
 export interface BreakdownRow {
   key: string

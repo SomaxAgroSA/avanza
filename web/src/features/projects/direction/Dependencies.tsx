@@ -4,6 +4,7 @@ import { ChevronRight, TriangleAlert } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import type { Project } from '@/domain/projects'
 import type { DepAreaRef, Dependencies, DepProject, DepTaskRef } from '@/domain/dependencies'
+import { projectDisplayName } from '@/domain/demands'
 import { AppButton, AppDrawer, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
@@ -111,7 +112,6 @@ export function DepDrawer({ data, panel, only, open, onClose, onShowAll }: DepDr
   // a área escolhida some do recorte (outro projeto, entrega concluída): volta para todas
   const selected = area && chips.areas.some((a) => a.key === area) ? area : null
   const shown = useMemo(() => (selected ? depInScope(data, panel, only, selected) : all), [data, panel, only, selected, all])
-  const single = only ? all.projects[0] : undefined
   const today = data?.today ?? ''
 
   return (
@@ -124,7 +124,6 @@ export function DepDrawer({ data, panel, only, open, onClose, onShowAll }: DepDr
           onClose()
         }}
         title={t('dependencies.title')}
-        description={t('dependencies.subtitle', { scope: single ? single.project.name : t('dependencies.allProjects') })}
         size="lg"
       >
         <div className="flex flex-col gap-3.5 text-sm" data-testid="dep-drawer">
@@ -184,11 +183,12 @@ const Chip = ({ children }: { children: ReactNode }) => (
 
 function ProjectBlock({ row, today, onOpenTask }: { row: DepProject; today: string; onOpenTask: (id: string) => void }) {
   const { t } = useTranslation()
-  const other = (ref: DepTaskRef) => (ref.project.id !== row.project.id ? <Chip>{t('dependencies.fromProject', { name: ref.project.name })}</Chip> : null)
+  const other = (ref: DepTaskRef) => (ref.project.id !== row.project.id ? <Chip>{t('dependencies.fromProject', { name: projectDisplayName(t, ref.project) })}</Chip> : null)
+  const name = projectDisplayName(t, row.project)
   return (
-    <section aria-label={row.project.name} className="rounded-xl border border-border px-3.5 pb-1.5 pt-3">
+    <section aria-label={name} className="rounded-xl border border-border px-3.5 pb-1.5 pt-3">
       <header className="mb-1 flex items-baseline justify-between gap-2.5 border-b border-border pb-2">
-        <h3 className="min-w-0 text-[15px] font-semibold text-fg">{row.project.name}</h3>
+        <h3 className="min-w-0 text-[15px] font-semibold text-fg">{name}</h3>
         <span
           aria-label={t('dependencies.pendingCount', { count: row.deliveries.length })}
           className="min-w-7 shrink-0 rounded-full bg-surface-2 px-2.5 py-px text-center text-[15px] font-extrabold tabular-nums text-fg"

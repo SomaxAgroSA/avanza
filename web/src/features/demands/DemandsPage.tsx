@@ -187,7 +187,7 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
           <ul>
             {group.items.map((task) => (
               <li key={task.id} className="border-t border-border first:border-t-0">
-                <DemandRow task={task} box={box} back={back} actions={demandActionsFor(me, task)} />
+                <DemandRow task={task} box={box} back={back} actions={demandActionsFor(me, task, { viewAll: box === 'all' })} />
               </li>
             ))}
           </ul>

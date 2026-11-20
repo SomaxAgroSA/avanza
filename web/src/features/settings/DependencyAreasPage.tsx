@@ -57,7 +57,6 @@ export function DependencyAreasPage() {
     <>
       <PageHeader
         title={t('dependencies.settings.title')}
-        description={t('dependencies.settings.description')}
         actions={
           current.data && (
             <AppButton leftIcon={<Save />} disabled={!dirty || invalid} loading={save.isPending} onClick={() => save.mutate(areas)}>

@@ -679,7 +679,7 @@ function toBreakdownLabel(dimension: ReportDimension, label: Record<string, unkn
   if (dimension === 'priority') return { kind: 'priority', id: str('id'), name: str('name'), color: toColor(OPTION_COLORS, str('color'), 'gray') }
   if (dimension === 'type') return { kind: 'type', id: str('id'), name: str('name'), icon: toIcon(TASK_TYPE_ICONS, str('icon'), 'check-square'), color: toColor(OPTION_COLORS, str('color'), 'blue') }
   if (dimension === 'assignee') return { kind: 'assignee', user: toUserSummary(label as unknown as UserSummaryDto) }
-  return { kind: 'project', id: str('id'), key: str('key'), name: str('name') }
+  return { kind: 'project', id: str('id'), key: str('key'), name: str('name'), ...(label.kind === 'demands' ? { demands: true } : {}) }
 }
 
 export function toReport(dto: ReportDto): Report {
@@ -1362,7 +1362,14 @@ export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
     people: dto.people.map((person) => ({
       user: toUserSummary(person.user),
       projects: person.projects.map((row) => ({
-        project: { id: row.project.id, key: row.project.key, name: row.project.name, icon: toIcon(PROJECT_ICONS, row.project.icon, 'folder'), cover: toColor(PROJECT_COVERS, row.project.cover, 'violet') },
+        project: {
+          id: row.project.id,
+          key: row.project.key,
+          name: row.project.name,
+          icon: toIcon(PROJECT_ICONS, row.project.icon, 'folder'),
+          cover: toColor(PROJECT_COVERS, row.project.cover, 'violet'),
+          ...(row.project.kind === 'demands' ? { demands: true } : {}),
+        },
         state: oneOf(TEAM_STATES, row.state, 'idle'),
         inProgress: row.in_progress,
         recent: row.recent,
@@ -1378,7 +1385,7 @@ export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
 /* ------------------------------------------------------------------ Dependências por área (§42) */
 
 const DEP_RISKS: readonly DepRisk[] = ['none_due', 'overdue', 'ok']
-const toDepProjectRef = (dto: DepProjectRefDto): DepProjectRef => ({ id: dto.id, key: dto.key, name: dto.name })
+const toDepProjectRef = (dto: DepProjectRefDto): DepProjectRef => ({ id: dto.id, key: dto.key, name: dto.name, ...(dto.kind === 'demands' ? { demands: true } : {}) })
 const toDepTaskRef = (dto: DepTaskRefDto): DepTaskRef => ({ id: dto.id, code: dto.code, title: dto.title, project: toDepProjectRef(dto.project), dueDate: dto.due_date ? dto.due_date.slice(0, 10) : null })
 const toDepDeliveryRef = (dto: DepDeliveryRefDto): DepDeliveryRef => ({ ...toDepTaskRef(dto), area: { key: dto.area.key, name: dto.area.name } })
 const toDepCounts = (dto: DepCountsDto): DepCounts => ({ deliveries: dto.deliveries, blocked: dto.blocked, pending: dto.pending, noneDue: dto.none_due, overdue: dto.overdue })

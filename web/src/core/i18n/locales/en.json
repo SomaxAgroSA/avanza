@@ -394,7 +394,6 @@
     "revokeCurrentTitle": "Sign out of this device?",
     "revokeCurrentDescription": "You'll need to sign in again.",
     "title": "My account",
-    "description": "Your details, password and sessions.",
     "profile": "Profile",
     "profileSaved": "Profile updated.",
     "emailHint": "To change your email or access role, contact an administrator.",
@@ -423,7 +422,6 @@
     "goodMorning": "Good morning, {{name}}",
     "goodAfternoon": "Good afternoon, {{name}}",
     "goodEvening": "Good evening, {{name}}",
-    "subtitle": "Follow your projects, plan sprints and move tasks across the Kanban board.",
     "indicators": "Indicators",
     "quickAccess": "Quick access",
     "shortcuts": {
@@ -458,7 +456,6 @@
   },
   "users": {
     "title": "Users",
-    "description": "Accounts, access roles and status.",
     "create": "New user",
     "createTitle": "New user",
     "createDescription": "The user can sign in right away with the password you set.",
@@ -520,7 +517,6 @@
   },
   "roles": {
     "title": "Roles",
-    "description": "Access roles assigned to users.",
     "create": "New role",
     "createTitle": "New role",
     "createDescription": "After creating it, set its permissions in the permission matrix.",
@@ -628,7 +624,6 @@
   },
   "audit": {
     "title": "Audit",
-    "description": "Immutable history of actions performed on the platform.",
     "detailsDescription": "Audit record (read-only).",
     "noHistory": "No history records.",
     "system": "System",
@@ -1070,13 +1065,6 @@
       "lead": "Management",
       "devLead": "Development"
     },
-    "descriptions": {
-      "all": "Projects you can access.",
-      "mine": "Projects you take part in.",
-      "ongoing": "Projects in planning, in progress or paused.",
-      "finished": "Projects completed or cancelled. Archive them once you no longer need them.",
-      "archived": "Archived projects are read-only and can be restored."
-    },
     "create": "New project",
     "createTitle": "New project",
     "createDescription": "You'll be the project's owner and manager.",
@@ -1172,7 +1160,6 @@
       "button": "Configure project filter",
       "buttonActive": "Configure project filter (active on this screen)",
       "title": "Project filter for this screen",
-      "hint": "Sets which projects appear in the filter. Saved just for you.",
       "optionsOnly": "Here it applies to the filter list; “All” still shows every project.",
       "statuses": "Project status",
       "allStatuses": "All",
@@ -1388,7 +1375,6 @@
   },
   "fields": {
     "title": "Custom fields",
-    "description": "Library of fields that task types can use.",
     "create": "New field",
     "createTitle": "New field",
     "createDescription": "Define it once and reuse it across task types.",
@@ -1534,7 +1520,6 @@
   },
   "taskTypes": {
     "title": "Task types",
-    "description": "Each type defines which fields a task asks for and how they appear.",
     "create": "New type",
     "createTitle": "New task type",
     "editTitle": "Edit task type",
@@ -1667,7 +1652,6 @@
     "defaultLockedHint": "To change it, mark another item as default.",
     "status": {
       "title": "Statuses",
-      "description": "Steps tasks go through. The category tells the system what each step means (e.g. done).",
       "create": "New status",
       "createTitle": "New status",
       "editTitle": "Edit status",
@@ -1682,7 +1666,6 @@
     },
     "priority": {
       "title": "Priorities",
-      "description": "Task priority levels, from most to least urgent.",
       "create": "New priority",
       "createTitle": "New priority",
       "editTitle": "Edit priority",
@@ -1697,7 +1680,6 @@
     },
     "area": {
       "title": "Departments",
-      "description": "Departments of tasks and projects (e.g. IT, Marketing, Credit). On a project, it is the department that requested it.",
       "create": "New department",
       "createTitle": "New department",
       "editTitle": "Edit department",
@@ -1855,7 +1837,6 @@
   },
   "tags": {
     "title": "Tags",
-    "description": "Labels to group and filter tasks from any project.",
     "create": "New tag",
     "createTitle": "New tag",
     "editTitle": "Edit tag",
@@ -1891,7 +1872,6 @@
     "newLabel": "New comment",
     "editLabel": "Edit comment",
     "placeholder": "Write a comment… use @ to mention someone",
-    "hint": "Type @ to tag a project member. Paste (Ctrl+V) or drag images. Ctrl+Enter sends.",
     "submit": "Comment",
     "edit": "Edit comment",
     "delete": "Delete comment",
@@ -1936,7 +1916,6 @@
     "deleted": "File \"{{name}}\" deleted."
   },
   "attachments": {
-    "hint": "Images (PNG, JPG, GIF, WebP), PDF, Office, ZIP and text — up to {{max}} per file. Large photos are reduced before upload.",
     "uploading": "uploading…",
     "uploaded_one": "{{count}} file attached.",
     "uploaded_other": "{{count}} files attached.",
@@ -1960,7 +1939,6 @@
   },
   "notifications": {
     "title": "Notifications",
-    "description": "Mentions, tasks assigned to you, comments and due dates.",
     "bell": "Notifications",
     "bellWithCount_one": "Notifications: {{count}} unread",
     "bellWithCount_other": "Notifications: {{count}} unread",
@@ -2106,7 +2084,6 @@
   },
   "backlog": {
     "title": "Planning",
-    "description": "Prioritize everything not yet closed — ideas, analyzed and in-progress tasks — and organize it into sprints.",
     "pickTitle": "Choose a project to see its planning",
     "pickHint": "You can see the planning of projects you are a member of.",
     "notFound": "Planning not found or you do not have access to this project.",
@@ -2237,7 +2214,6 @@
   },
   "reports": {
     "title": "Reports",
-    "description": "Indicators computed from real tasks, always showing the period considered.",
     "periodLabel": "Period",
     "presets": {
       "7d": "Last 7 days",
@@ -2283,7 +2259,6 @@
     "trendDaily": "Created × completed per day",
     "trendWeekly": "Created × completed per week",
     "breakdownTitle": "Breakdown",
-    "breakdownHint": "Open and overdue: now. Created, completed and average time: in the period.",
     "groupBy": "Group by",
     "dimensions": {
       "status": "Status",
@@ -2307,7 +2282,6 @@
     },
     "overdueTitle_one": "{{count}} overdue task",
     "overdueTitle_other": "{{count}} overdue tasks",
-    "overdueHint": "Open tasks with a due date before today, oldest first (up to 50).",
     "noOverdue": "No overdue tasks. 🎉",
     "metricHelp": {
       "open": "Tasks not yet completed or cancelled: backlog, to do and in progress.",
@@ -2336,7 +2310,6 @@
   },
   "executive": {
     "title": "Executive dashboard",
-    "description": "Portfolio health, deliveries and risks.",
     "updatedAt": "Updated at {{time}}",
     "print": "Print or save as PDF",
     "loadError": "Could not load the executive dashboard.",
@@ -2487,7 +2460,6 @@
   },
   "timeline": {
     "title": "Timeline",
-    "description": "Project schedule: drag the bars to change the dates.",
     "label": "{{name}} timeline",
     "pickTitle": "Choose a project to see its timeline",
     "pickHint": "The timeline shows tasks from planned start to due date, with dependencies, sprints and milestones.",
@@ -2685,7 +2657,6 @@
   },
   "docs": {
     "title": "Documentation",
-    "description": "Company and project knowledge bases: guides, processes, manuals and FAQs.",
     "spaces": "Spaces",
     "recent": "Recently updated",
     "recentEmpty": "No pages published yet.",
@@ -3325,7 +3296,6 @@
       "replyLabel": "Reply to {{name}}",
       "post": "Update",
       "reply": "Reply",
-      "hint": "Supports **bold**, *italic*, lists and links. Use @ to mention (the person is notified). Paste (Ctrl+V) or drag images and files. Ctrl+Enter posts.",
       "placeholder": "Write an update…",
       "readOnly": "Archived project: updates are read-only.",
       "empty": "No updates yet",
@@ -3666,7 +3636,6 @@
   },
   "management": {
     "title": "Project management",
-    "description": "Phases, management activities, schedule and health of each project — apart from the day-to-day tasks.",
     "pickTitle": "Choose a project",
     "pickHint": "Project management works per project: choose which one to open.",
     "notFound": "Project not found",
@@ -3683,7 +3652,6 @@
   },
   "platform": {
     "title": "General settings",
-    "description": "Branding, passwords, login lockout and history retention. They apply to the whole platform.",
     "save": "Save changes",
     "saved": "Settings saved.",
     "nothingChanged": "Nothing changed.",
@@ -3752,7 +3720,6 @@
   },
   "integrations": {
     "title": "Integrations",
-    "description": "Platform email, webhooks for other systems and API tokens.",
     "tabs": {
       "email": "Email",
       "tokens": "API tokens",
@@ -3825,7 +3792,6 @@
   },
   "apiTokens": {
     "title": "API tokens",
-    "description": "API access without the browser (scripts, BI, integrations). The token acts with your permissions.",
     "cardDescription": "For scripts and integrations to access the API on your behalf.",
     "manage": "Manage tokens",
     "backToAccount": "My account",
@@ -3950,7 +3916,6 @@
   },
   "icons": {
     "title": "Icons",
-    "description": "Platform icon library: besides the default ones, icons imported here are offered for projects, task types and Documentation spaces.",
     "import": "Import from gallery",
     "importMore": "Import more icons from the gallery",
     "empty": "No icons imported",
@@ -4180,7 +4145,6 @@
   },
   "access": {
     "title": "Access control",
-    "description": "Pick a person and set in one place which modules they see, what they see inside each project, what they can do and which projects they join. Roles are created, and their permissions edited, under Roles.",
     "noUsers": "No users.",
     "user": "User",
     "role": "Role",
@@ -4377,7 +4341,6 @@
     },
     "health": {
       "title": "Portfolio health",
-      "hint": "Projects by situation · pick one to filter the table.",
       "all": "See all",
       "center_one": "project",
       "center_other": "projects",
@@ -4385,8 +4348,6 @@
     },
     "execution": {
       "title": "Execution vs. plan",
-      "hint_one": "Actual and planned progress · only the project with a plan.",
-      "hint_other": "Actual and planned progress · only the {{count}} projects with a plan.",
       "real": "Actual",
       "planned": "Planned",
       "gap": "Gap",
@@ -4451,7 +4412,6 @@
     },
     "milestones": {
       "title": "Upcoming key milestones",
-      "hint": "Management milestones: overdue ones and those in the next 30 days.",
       "none": "No overdue milestones and none in the next 30 days.",
       "owner": "Project owner: {{name}}",
       "noOwner": "No owner",
@@ -4490,7 +4450,6 @@
     "open": "Team now",
     "column": "Working",
     "title": "Team now",
-    "description": "Which project each person is working on, based on their tasks from the last {{days}} days.",
     "emptyTitle": "No one has open tasks",
     "emptyHint": "Once tasks are assigned in ongoing projects, they show up here.",
     "noActivity": "No activity this week",
@@ -4559,8 +4518,6 @@
     },
     "departments": {
       "title": "Projects by department",
-      "hint_one": "Projects in the filter ({{count}}). Tap a department to filter everything.",
-      "hint_other": "Projects in the filter ({{count}}). Tap a department to filter everything.",
       "none": "No department",
       "chart": "Chart of projects by department",
       "slice_one": "{{name}}: {{count}} project ({{percent}} %)",
@@ -4618,8 +4575,6 @@
     "projects_other": "{{count}} projects",
     "flag": "Dependencies in this project",
     "flagAria": "Dependencies in this project: {{name}}",
-    "allProjects": "Ongoing projects",
-    "subtitle": "{{scope}} · pending deliveries from other areas",
     "areaFilter": "Area",
     "allAreas": "All areas",
     "pendingCount_one": "{{count}} pending delivery",
@@ -4654,7 +4609,6 @@
     },
     "settings": {
       "title": "Dependencies by area",
-      "description": "The areas that deliver things to projects (IT, Finance…). Open tasks assigned to the people of each area show up as “pending deliveries” in the Management dashboard of Ongoing projects.",
       "name": "Area name",
       "people": "People",
       "placeholder": "Choose the people",
@@ -4679,6 +4633,8 @@
     "newProjectTask": "Project task",
     "newDemand": "Internal request",
     "chip": "Internal request",
+    "internalProject": "Internal requests",
+    "openDemands": "Open requests",
     "status": {
       "unassigned": "Unassigned",
       "assigned": "Assigned",

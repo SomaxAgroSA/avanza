@@ -51,7 +51,42 @@ function createTaskAccess(deps) {
     return demandDomain.seesDemand(task, userId, await teamOf(task.demandOwnerId))
   }
 
-  return { areas, teamOf, forTask, userSeesDemand }
+  /** Principal de uma pessoa (perfil e permissões), para as regras que só têm o usuário (notificações, menções). */
+  async function principalOf(user) {
+    const role = user ? await deps.roleRepository.findById(user.roleId) : null
+    if (!role) return null
+    return rbac.createPrincipal({ userId: user.id, roleId: role.id, roleCode: role.code, permissions: await deps.roleRepository.getPermissionCodes(role.id) })
+  }
+
+  /** A pessoa vê todos os projetos e demandas (`projects.view_all` ou SUPER_ADMIN)? */
+  async function seesAll(user) {
+    return rbac.can(await principalOf(user), 'projects.view_all')
+  }
+
+  /** Pessoas ativas que veem tudo (podem ser mencionadas em qualquer tarefa). */
+  async function viewAllUsers() {
+    const roles = await deps.roleRepository.list()
+    const codes = await Promise.all(roles.map((role) => deps.roleRepository.getPermissionCodes(role.id)))
+    const ids = roles
+      .filter((role, i) => rbac.can(rbac.createPrincipal({ userId: '', roleId: role.id, roleCode: role.code, permissions: codes[i] }), 'projects.view_all'))
+      .map((role) => role.id)
+    if (ids.length === 0) return []
+    return (await deps.userRepository.searchActive({ search: '', excludeIds: [] })).filter((u) => ids.indexOf(u.roleId) >= 0)
+  }
+
+  /**
+   * Demandas internas (linhas com reporterId, demandOwnerId, assigneeId e demandPastAssignees) que o
+   * principal enxerga: todas com `projects.view_all`; senão quem pediu, o responsável, quem executa (agora ou
+   * antes) e a equipe do responsável (Relatórios e Em andamento).
+   */
+  async function visibleDemands(principal, rows) {
+    if (rbac.can(principal, 'projects.view_all')) return rows
+    if (!rows.length) return rows
+    const list = await areas()
+    return rows.filter((row) => demandDomain.seesDemand(row, principal.userId, demandDomain.teamOf(list, row.demandOwnerId)))
+  }
+
+  return { areas, teamOf, forTask, userSeesDemand, principalOf, seesAll, viewAllUsers, visibleDemands }
 }
 
 module.exports = { createTaskAccess }

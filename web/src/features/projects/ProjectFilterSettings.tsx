@@ -51,7 +51,6 @@ export function ProjectFilterSettingsButton({ screen, size = 'md', className }: 
           <h2 className="text-sm font-semibold text-fg">
             {t('projects.filterSettings.title')}
           </h2>
-          <p className="mt-0.5 text-xs text-muted">{t('projects.filterSettings.hint')}</p>
           {OPTIONS_ONLY_SCREENS.includes(screen) && <p className="mt-1 text-xs text-subtle">{t('projects.filterSettings.optionsOnly')}</p>}
         </div>
 
