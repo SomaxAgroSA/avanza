@@ -197,7 +197,7 @@ Sem permissão nova: abrir uma demanda exige `tasks.create`; ver, `tasks.view`; 
 | Quem executa (agora) | a demanda | **começa**, **passa** a alguém da equipe (comentário obrigatório), **conclui** (o que foi entregue), edita, comenta, anexa |
 | Quem já executou | a demanda | comenta |
 | Pessoas da área do responsável (só demanda interna) | a demanda | comenta |
-| `projects.view_all` | todas | edita, comenta, anexa, exclui |
+| `projects.view_all` | todas (também a aba **Todas** da tela Demandas, com os números e a Carga das equipes; sem ela, `box=all` dá `FORBIDDEN`) | edita, comenta, anexa, exclui |
 | Os demais | nada (`TASK_NOT_FOUND`) | — |
 
 Na **tarefa de projeto com responsável**, quem vê o projeto continua com as regras do projeto; quem participa do fluxo sem ser do projeto vê e trabalha **só nessa tarefa** (como o Responsável TI na tarefa dele: não exclui, não relaciona, não faz fork, não troca o responsável). Pôr, trocar ou tirar o responsável da tarefa de projeto exige poder atribuir no projeto (`tasks.assign` + colaborar). O projeto de sistema das demandas não é projeto de ninguém: nem `projects.view_all` o abre, edita, arquiva ou exclui.
