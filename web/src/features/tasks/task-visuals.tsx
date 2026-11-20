@@ -18,6 +18,16 @@ export function TaskCode({ task, className, compact = false }: { task: Pick<Task
   )
 }
 
+/** Só o ícone do tipo (linhas sem o código; o nome do tipo na dica). */
+export function TaskTypeMark({ task, className }: { task: Pick<TaskSummary, 'type'>; className?: string }) {
+  if (!task.type) return null
+  return (
+    <span className={cn('inline-flex shrink-0', className)} title={task.type.name}>
+      <TaskTypeIconBadge icon={task.type.icon} color={task.type.color} size="sm" />
+    </span>
+  )
+}
+
 export function TaskStatusBadge({ status, className }: { status: TaskSummary['status']; className?: string }) {
   return status ? <LookupBadge item={status} className={className} /> : <span className="text-subtle">—</span>
 }
@@ -38,18 +48,25 @@ export function PersonCell({ person, emptyLabel }: { person: UserSummary | null;
   )
 }
 
-/** Indicadores compactos: bloqueio, subtarefas, checklist, anexos e comentários (some quando não há nada). */
+/**
+ * Indicadores compactos: bloqueio, subtarefas, checklist, anexos e comentários (some quando não há nada).
+ * `lean` (linhas da Lista de tarefas e cabeçalho do painel): sem comentários e o checklist só enquanto falta algo.
+ */
 export function TaskIndicators({
   task,
   className,
+  lean = false,
 }: {
   task: Pick<TaskSummary, 'checklistProgress' | 'commentCount' | 'attachmentCount'> & Partial<Pick<TaskSummary, 'subtaskProgress' | 'blocked'>>
   className?: string
+  lean?: boolean
 }) {
   const { t } = useTranslation()
-  const { done, total } = task.checklistProgress
+  const { done } = task.checklistProgress
+  const total = lean && done >= task.checklistProgress.total ? 0 : task.checklistProgress.total
+  const commentCount = lean ? 0 : task.commentCount
   const subtasks = task.subtaskProgress ?? { done: 0, total: 0 }
-  if (total === 0 && task.commentCount === 0 && task.attachmentCount === 0 && subtasks.total === 0 && !task.blocked) return null
+  if (total === 0 && commentCount === 0 && task.attachmentCount === 0 && subtasks.total === 0 && !task.blocked) return null
   return (
     <span className={cn('mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted', className)}>
       {task.blocked && (
@@ -86,11 +103,11 @@ export function TaskIndicators({
           <span aria-hidden>{task.attachmentCount}</span>
         </span>
       )}
-      {task.commentCount > 0 && (
-        <span className="inline-flex items-center gap-1" title={t('comments.count', { count: task.commentCount })}>
+      {commentCount > 0 && (
+        <span className="inline-flex items-center gap-1" title={t('comments.count', { count: commentCount })}>
           <MessageSquare className="size-3.5" aria-hidden />
-          <span className="sr-only">{t('comments.count', { count: task.commentCount })}</span>
-          <span aria-hidden>{task.commentCount}</span>
+          <span className="sr-only">{t('comments.count', { count: commentCount })}</span>
+          <span aria-hidden>{commentCount}</span>
         </span>
       )}
     </span>

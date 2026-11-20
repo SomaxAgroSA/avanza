@@ -133,7 +133,9 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
     expect(within(dialog).queryByRole('button', { name: 'Demanda interna' })).toBeNull()
     expect(within(dialog).getByRole('heading', { name: 'Nova demanda interna' })).toBeInTheDocument()
     expect(within(dialog).getByRole('combobox', { name: /^Responsável/ })).toBeInTheDocument()
-    expect(within(dialog).getByText(i18n.t('demands.form.ownerHint'))).toBeInTheDocument()
+    // sem textos de ajuda (ajuste 20/11): nem a descrição da janela nem a dica do Responsável
+    expect(within(dialog).queryByText(/Essa pessoa recebe/)).not.toBeInTheDocument()
+    expect(within(dialog).queryByText(/Peça a uma pessoa/)).not.toBeInTheDocument()
     expect(within(dialog).getByRole('combobox', { name: /^Departamento que pede/ })).toBeInTheDocument()
     expect(within(dialog).getByText(i18n.t('demands.form.deadlineLocked'))).toBeInTheDocument()
     expect(within(dialog).getByText(/automática/)).toBeInTheDocument()
@@ -174,12 +176,14 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
     renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos({ tasks: { list } }), initialPath: '/tasks' })
     expect(await screen.findByText('Vista DMR: agregar Fecha cuenta')).toBeInTheDocument()
     const rows = screen.getAllByRole('row')
-    const internal = rows.find((row) => row.textContent?.includes('DEM-1'))!
-    const fromProject = rows.find((row) => row.textContent?.includes('FIN-7'))!
+    // sem o código nas linhas (ajuste 20/11)
+    expect(screen.queryByText('DEM-1')).not.toBeInTheDocument()
+    const internal = rows.find((row) => row.textContent?.includes('Vista DMR'))!
+    const fromProject = rows.find((row) => row.textContent?.includes('Publicar o dashboard'))!
     expect(within(internal).getByText('Demanda interna')).toBeInTheDocument()
     expect(within(fromProject).getByText('Finanças')).toBeInTheDocument()
     expect(within(fromProject).queryByText('Demanda interna')).not.toBeInTheDocument()
-    expect(screen.getByText(i18n.t('taskList.mineHint'))).toBeInTheDocument()
+    expect(screen.queryByText(/inclui as demandas que você pediu/)).not.toBeInTheDocument()
     const kind = screen.getByRole('radiogroup', { name: i18n.t('taskList.kindLabel') })
     await userEvent.click(within(kind).getByRole('radio', { name: 'Sem projeto' }))
     await waitFor(() => expect(list.mock.calls.filter(([query]) => query.perPage !== 1).at(-1)![0].filters).toMatchObject({ kind: 'demand', mine: 'true' }))
@@ -222,6 +226,14 @@ describe('Demandas — caixas (§45)', () => {
     const load = screen.getByRole('list', { name: 'Carga da minha equipe' })
     expect(within(load).getByLabelText('Jorge: 1 demandas, 4 horas')).toHaveTextContent('1 · 4 h')
     expect(within(load).getAllByRole('listitem')).toHaveLength(2)
+    // tela limpa (ajuste 20/11): sem descrição no cabeçalho nem notas na carga; as caixas na linha das visões;
+    // sem o código nas linhas (fica na página da tarefa)
+    expect(screen.queryByText(/O que pediram a você/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Horas estimadas do que cada um/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Conta o que cada um tem hoje/)).not.toBeInTheDocument()
+    const navRow = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') }).parentElement!
+    expect(within(navRow).getByRole('radiogroup', { name: i18n.t('demands.page.tabsLabel') })).toBeInTheDocument()
+    expect(screen.queryByText(/DEM-1/)).not.toBeInTheDocument()
 
     await userEvent.click(within(screen.getByRole('region', { name: 'Sem atribuir' })).getByRole('button', { name: 'Atribuir' }))
     const dialog = await screen.findByRole('dialog', { name: 'Atribuir · DEM-1' })
@@ -432,7 +444,7 @@ describe('Tarefa de projeto com quem recebe e distribui (§45)', () => {
       initialPath: '/',
     })
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(i18n.t('demands.projectFlow.ownerHint'))).toBeInTheDocument()
+    expect(within(dialog).queryByText(/Opcional. Essa pessoa recebe/)).not.toBeInTheDocument()
     expect(within(dialog).getByRole('combobox', { name: 'Status' })).toBeEnabled()
     await chooseOption(/^Responsável \(recebe e distribui\)/, 'César')
     expect(within(dialog).getByRole('combobox', { name: 'Status' })).toBeDisabled()

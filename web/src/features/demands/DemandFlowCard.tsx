@@ -27,10 +27,20 @@ function Person({ person, empty }: { person: TaskDetail['assignee']; empty: stri
   )
 }
 
+/** Botões do fluxo do papel de quem olha (Atribuir, Começar, Passar a…, Concluir, Validar, Devolver); nada sem o fluxo. */
+export function DemandFlowActions({ task }: { task: TaskDetail }) {
+  const me = useSession().current?.user.id
+  if (!task.demand) return null
+  const actions = task.demand.actions ?? demandActionsFor(me, task)
+  if (!Object.values(actions).some(Boolean)) return null
+  return <DemandActions task={task} actions={actions} />
+}
+
 /**
- * Tarefa de projeto com quem recebe e distribui (§45): o passo, o responsável, a quem está atribuída, o
- * prazo com hora, a estimativa e os botões do papel da pessoa (Atribuir, Começar, Passar a…, Concluir,
- * Validar, Devolver). Some na tarefa sem responsável.
+ * Painel da tarefa (Visualizar) de uma tarefa de projeto com quem recebe e distribui (§45): o passo, o
+ * responsável, a quem está atribuída, o prazo com hora, a estimativa e os botões do papel da pessoa (Atribuir,
+ * Começar, Passar a…, Concluir, Validar, Devolver). Some na tarefa sem responsável. Na página da tarefa
+ * (ajuste 20/11) esses dados ficam no topo e nas Propriedades, e os botões vêm de DemandFlowActions.
  */
 export function DemandFlowCard({ task }: { task: TaskDetail }) {
   const { t, i18n } = useTranslation()

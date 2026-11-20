@@ -51,7 +51,10 @@
     "clearFilters": "Limpiar filtros",
     "noMoreActions": "No hay otras acciones",
     "resetColumns": "Restaurar columnas",
-    "openHint": "Clic para ver · doble clic para abrir"
+    "openHint": "Clic para ver · doble clic para abrir",
+    "columnsAndActions": "Columnas y acciones",
+    "rowActions": "Acciones en cada fila",
+    "moreActions": "Más (···)"
   },
   "validation": {
     "required": "Campo obligatorio",
@@ -1713,10 +1716,8 @@
   },
   "tasks": {
     "title": "Tareas",
-    "description": "Todas las tareas de los proyectos que sigue.",
     "create": "Nueva tarea",
     "createTitle": "Nueva tarea",
-    "createDescription": "Elija el tipo: el formulario muestra sus campos.",
     "editTitle": "Editar {{code}}",
     "created": "Tarea {{code}} creada.",
     "filesNotSent_one": "{{code}} se creó, pero {{count}} archivo no se envió: {{names}}. Envíelo de nuevo en el campo o en la pestaña Adjuntos.",
@@ -1734,7 +1735,6 @@
     "properties": "Propiedades",
     "unassigned": "Sin responsable",
     "unknownPerson": "Persona eliminada",
-    "assignedToMe": "Asignadas a mí",
     "assignLocked": "No tiene permiso para asignar tareas.",
     "overdue": "Plazo vencido",
     "open": "Abiertas",
@@ -1775,10 +1775,10 @@
       "inReport": "En el informe",
       "urgency": "Urgencia",
       "area": "Departamento",
-      "itVisible": "Visible para TI"
+      "itVisible": "Visible para TI",
+      "assignedTo": "Asignada a"
     },
     "tagsPlaceholder": "Elegir etiquetas…",
-    "markdownHint": "Acepta **negrita**, *cursiva*, `código`, listas con \"-\" y enlaces.",
     "requiredFor": {
       "title": "Complete para mover a \"{{status}}\"",
       "description": "{{code}} necesita estos campos en el estado \"{{status}}\".",
@@ -1796,7 +1796,6 @@
     "stage": {
       "label": "Etapa de la gestión",
       "none": "Sin etapa",
-      "hint": "Al crear, la tarea aparece sola en esa etapa de la Gestión, como una fila nueva con su título y sus fechas.",
       "linkedHint": "En la Gestión: {{path}}. Para cambiarla o desvincularla, use el panel del elemento en la Gestión."
     },
     "report": {
@@ -1823,24 +1822,24 @@
       "badge": "Tuya",
       "toggle": "Mis tareas primero",
       "hint": "Muestra arriba las tareas en las que eres responsable; las demás siguen debajo."
-    }
+    },
+    "noAssignee": "Sin asignar",
+    "responsibleMe": "Yo"
   },
   "taskList": {
-    "subtitle": "Las tareas de los proyectos y las demandas internas.",
     "scopeLabel": "Qué tareas ver",
     "mine": "Mis tareas",
     "all": "Ver todas",
-    "openOnly": "Solo las abiertas. Para ver terminadas o canceladas, elige el Estado.",
     "overdue": "vencida",
-    "moduleHint": "Menú «Tareas»: abre en «Mis tareas»; con «Ver todas», las de los proyectos a los que la persona tiene acceso. Necesita «Tareas» prendido; apagado, las tareas siguen dentro de cada proyecto.",
+    "moduleHint": "Menú «Tareas»: abre en «Mis tareas» (quien ve todos los proyectos, en «Ver todas») y después recuerda la última elección; con «Ver todas», las de los proyectos a los que la persona tiene acceso. Necesita «Tareas» prendido; apagado, las tareas siguen dentro de cada proyecto.",
     "kindLabel": "Con o sin proyecto",
     "kindAll": "Todas",
     "kindProject": "Con proyecto",
     "kindDemand": "Sin proyecto",
-    "mineHint": "«Mis tareas» incluye las demandas que pediste o recibiste, aunque las resuelva otra persona.",
     "viewLabel": "Vista",
     "viewList": "Lista",
-    "viewDemands": "Demandas"
+    "viewDemands": "Demandas",
+    "openStatuses": "Abiertas"
   },
   "tags": {
     "title": "Etiquetas",
@@ -4690,12 +4689,10 @@
     },
     "form": {
       "createTitle": "Nueva demanda interna",
-      "createDescription": "Pídela a una persona: ella la recibe y la asigna a su equipo.",
       "editTitle": "Editar {{code}}",
       "titlePlaceholder": "Ej.: Vista de cartera: agregar el campo Ciclo",
       "descriptionPlaceholder": "Qué necesitas, dónde (vista, sistema, pantalla) y qué resultado esperas. Si ya hay un ticket de soporte, pon su número.",
       "owner": "Responsable",
-      "ownerHint": "Esa persona la recibe y la puede asignar a alguien de su equipo; la sigue viendo aunque la pase.",
       "ownerFixed": "El responsable no cambia después de abierta.",
       "department": "Departamento que pide",
       "opening": "Apertura",
@@ -4718,12 +4715,6 @@
       "requested": "Pedidas por mí",
       "all": "Todas"
     },
-    "hints": {
-      "received": "Lo que te pidieron a ti. Asígnalo a tu equipo y síguelo todo, aunque lo pases.",
-      "assigned": "Lo que te asignaron. Empieza, pásala a un compañero del equipo o concluye.",
-      "requested": "Lo que pediste. Cuando llegue a «Para validar», valida la entrega o devuélvela con un comentario.",
-      "all": "Todas las demandas de la empresa, internas y de proyecto. Filtra por responsable o por quien ejecuta."
-    },
     "empty": {
       "received": "Todavía no recibiste demandas.",
       "assigned": "No tienes demandas abiertas.",
@@ -4738,16 +4729,12 @@
     },
     "load": {
       "title": "Carga de mi equipo",
-      "hint": "Horas estimadas de lo que cada uno tiene abierto (y cantidad de demandas).",
-      "foot": "Cuenta lo que cada uno tiene hoy: si alguien pasa una demanda, se mueve de una barra a la otra.",
       "value": "{{count}} · {{hours}} h",
-      "empty": "Tu equipo sale de Configuración → Dependencias por área.",
+      "empty": "Nadie con demandas abiertas.",
       "aria": "{{name}}: {{count}} demandas, {{hours}} horas"
     },
     "allLoad": {
       "title": "Carga de los equipos",
-      "hint": "Por persona: demandas asignadas y en curso y sus horas estimadas.",
-      "foot": "Cuenta lo que cada persona tiene abierto hoy, en todos los equipos.",
       "empty": "Nadie tiene demandas asignadas o en curso."
     },
     "filters": {
@@ -4780,10 +4767,8 @@
     "pass": {
       "title": "Pasar a un compañero · {{code}}",
       "to": "Pasar a",
-      "toHint": "Personas del equipo de {{owner}}.",
       "comment": "Comentario",
       "placeholder": "Por qué la pasas y qué falta",
-      "note": "El comentario es obligatorio; {{owner}} lo ve en la línea de tiempo y en la carga del equipo.",
       "submit": "Pasar",
       "done": "{{code}} pasada a {{name}}"
     },
@@ -4791,7 +4776,6 @@
       "title": "Concluir · {{code}}",
       "delivered": "Qué se entregó",
       "placeholder": "Qué hiciste y dónde quedó",
-      "note": "Pasa a «Para validar» de {{requester}}; {{owner}} la ve en su bandeja.",
       "submit": "Concluir",
       "done": "{{code}} enviada a validar"
     },
@@ -4799,7 +4783,6 @@
       "title": "Devolver · {{code}}",
       "comment": "Qué falta",
       "placeholder": "Qué falta para aceptar la entrega",
-      "note": "Vuelve a En curso con {{name}}.",
       "submit": "Devolver",
       "done": "{{code}} devuelta a {{name}}"
     },
@@ -4846,7 +4829,6 @@
     },
     "projectFlow": {
       "owner": "Responsable (recibe y distribuye)",
-      "ownerHint": "Opcional. Esa persona recibe la tarea y la asigna a alguien de su equipo, aunque no sea del proyecto; estado, responsable, plazo y estimación pasan a seguir su flujo.",
       "none": "Nadie (como siempre)",
       "locked": "Con quien recibe y distribuye, cambia por el flujo (Asignar, Empezar, Concluir…)",
       "title": "Recibe y distribuye",

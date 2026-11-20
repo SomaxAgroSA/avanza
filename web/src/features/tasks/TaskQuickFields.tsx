@@ -28,8 +28,11 @@ const withCurrent = <T extends { id: string }>(list: readonly T[], current: T | 
 /**
  * Troca rápida de status, prioridade e responsável (página da tarefa e painel do Kanban),
  * com mensagem e "desfazer". O status lista só as transições permitidas a partir do atual.
+ * `split` (página da tarefa, ajuste 20/11): com quem recebe e distribui (§45), quatro campos — Status,
+ * Prioridade, Responsável (quem recebe e distribui; só leitura, muda no formulário) e Atribuída a (quem
+ * executa; muda pelo fluxo). Na tarefa comum continua um só Responsável.
  */
-export function TaskQuickFields({ task, className }: { task: TaskDetail; className?: string }) {
+export function TaskQuickFields({ task, className, split = false }: { task: TaskDetail; className?: string; split?: boolean }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const { update } = useTaskMutations()
@@ -69,8 +72,9 @@ export function TaskQuickFields({ task, className }: { task: TaskDetail; classNa
     )
   }
 
+  const owner = split ? (task.demand?.owner ?? null) : null
   return (
-    <div className={cn('grid gap-3 sm:grid-cols-3', className)}>
+    <div className={cn('grid gap-3', owner ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3', className)}>
       <AppSelect
         size="sm"
         label={t('tasks.fields.status')}
@@ -88,14 +92,24 @@ export function TaskQuickFields({ task, className }: { task: TaskDetail; classNa
         onValueChange={(priorityId) => quickChange({ priorityId }, { priorityId: task.priority?.id })}
         options={withCurrent<LookupOption>(priorities.data ?? [], task.priority).map((p) => ({ value: p.id, label: <LookupBadge item={p} /> }))}
       />
+      {owner && (
+        <AppSelect
+          size="sm"
+          label={t('tasks.fields.assignee')}
+          value={owner.id}
+          disabled
+          onValueChange={() => undefined}
+          options={[{ value: owner.id, label: owner.name }]}
+        />
+      )}
       <AppSelect
         size="sm"
-        label={t('tasks.fields.assignee')}
+        label={owner ? t('tasks.fields.assignedTo') : t('tasks.fields.assignee')}
         value={task.assignee?.id ?? NONE}
         disabled={!task.capabilities.assign || !!task.demand || update.isPending}
         onValueChange={(value) => quickChange({ assigneeId: value === NONE ? null : value }, { assigneeId: task.assignee?.id ?? null })}
         options={[
-          { value: NONE, label: t('tasks.unassigned') },
+          { value: NONE, label: owner ? t('tasks.noAssignee') : t('tasks.unassigned') },
           ...withCurrent(
             assignable.map((m) => m.user),
             task.assignee,

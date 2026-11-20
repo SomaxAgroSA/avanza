@@ -37,7 +37,8 @@ import { useCan } from '@/features/auth/session'
 import { useTaskDocs } from '@/features/docs/queries'
 import { TagList } from '@/features/tags/tag-visuals'
 import { DemandDetailView } from '@/features/demands/DemandDetailView'
-import { DemandFlowCard } from '@/features/demands/DemandFlowCard'
+import { DemandFlowActions } from '@/features/demands/DemandFlowCard'
+import { DemandStatusBadge } from '@/features/demands/demand-visuals'
 
 export function TaskDetailPage() {
   const { taskId } = useParams()
@@ -130,6 +131,8 @@ export function TaskDetailView({ task, embedded = false, onDeleted }: { task: Ta
               </>
             )}
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              {/* com quem recebe e distribui (§45): o passo do fluxo */}
+              {task.demand && <DemandStatusBadge status={task.demand.status} />}
               {task.blocked && (
                 <AppBadge tone="danger" title={t('relations.blockedHint')}>
                   <Lock aria-hidden /> {t('relations.blocked')}
@@ -164,7 +167,9 @@ export function TaskDetailView({ task, embedded = false, onDeleted }: { task: Ta
               </p>
             )}
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {/* com quem recebe e distribui (§45): os botões do papel da pessoa (Atribuir, Começar, Concluir…) */}
+            <DemandFlowActions task={task} />
             {task.capabilities.edit && (
               <AppButton variant="secondary" leftIcon={<Pencil />} onClick={() => setEditing(true)}>
                 {t('common.edit')}
@@ -182,9 +187,9 @@ export function TaskDetailView({ task, embedded = false, onDeleted }: { task: Ta
             )}
           </div>
         </div>
-        <TaskQuickFields task={task} />
-        {/* tarefa de projeto com quem recebe e distribui (§45): passo, pessoas, prazo e os botões do papel */}
-        <DemandFlowCard task={task} />
+        {/* Status, Prioridade e Responsável; com quem recebe e distribui (§45), também Atribuída a — sem a caixa
+            "Recebe e distribui" (ajuste 20/11): prazo e estimativa ficam nas Propriedades */}
+        <TaskQuickFields task={task} split />
       </section>
 
       {/* minmax(0,1fr): a coluna não cresce além da tela por causa das abas no celular */}

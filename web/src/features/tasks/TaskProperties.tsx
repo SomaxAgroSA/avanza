@@ -7,6 +7,7 @@ import { useCan } from '@/features/auth/session'
 import { managementLink } from '@/features/plan/paths'
 import { CustomFieldValue } from '@/features/task-config/CustomFieldValue'
 import type { CustomFieldReferences } from '@/features/task-config/CustomFieldInput'
+import { DemandDateTime } from '@/features/demands/demand-visuals'
 import { DueDate, PersonCell } from './task-visuals'
 import { CompanyChip } from '@/features/companies/company-visuals'
 
@@ -19,7 +20,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-/** Propriedades da tarefa (pessoas, datas, horas). */
+/**
+ * Propriedades da tarefa (pessoas, datas, horas). Com quem recebe e distribui (§45): Responsável (quem
+ * recebe), Atribuída a (quem executa) e o prazo com hora do fluxo.
+ */
 export function TaskProperties({ task }: { task: TaskDetail }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
@@ -32,9 +36,20 @@ export function TaskProperties({ task }: { task: TaskDetail }) {
       <Row label={t('companies.field')}>
         <CompanyChip company={task.company} />
       </Row>
-      <Row label={t('tasks.fields.assignee')}>
-        <PersonCell person={task.assignee} />
-      </Row>
+      {task.demand ? (
+        <>
+          <Row label={t('tasks.fields.assignee')}>
+            <PersonCell person={task.demand.owner} emptyLabel="—" />
+          </Row>
+          <Row label={t('tasks.fields.assignedTo')}>
+            <PersonCell person={task.assignee} emptyLabel={t('tasks.noAssignee')} />
+          </Row>
+        </>
+      ) : (
+        <Row label={t('tasks.fields.assignee')}>
+          <PersonCell person={task.assignee} />
+        </Row>
+      )}
       <Row label={t('tasks.fields.reporter')}>
         <PersonCell person={task.reporter} emptyLabel="—" />
       </Row>
@@ -64,9 +79,7 @@ export function TaskProperties({ task }: { task: TaskDetail }) {
         </Row>
       )}
       <Row label={t('tasks.fields.startDate')}>{task.startDate ? formatDay(task.startDate, i18n.language) : '—'}</Row>
-      <Row label={t('tasks.fields.dueDate')}>
-        <DueDate task={task} />
-      </Row>
+      <Row label={t('tasks.fields.dueDate')}>{task.demand ? <DemandDateTime date={task.demand.dueAt} /> : <DueDate task={task} />}</Row>
       <Row label={t('tasks.fields.estimatedHours')}>{hours(task.estimatedHours)}</Row>
       <Row label={t('tasks.fields.actualHours')}>{hours(task.actualHours)}</Row>
       <Row label={t('tasks.fields.startedAt')}>{date(task.startedAt)}</Row>

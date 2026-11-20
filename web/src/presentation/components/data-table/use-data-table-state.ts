@@ -15,6 +15,8 @@ export interface DataTableState {
   filters: Record<string, string>
   columnVisibility: Record<string, boolean>
   columnSizing: Record<string, number>
+  /** Ações de cada linha à vista ("Colunas e ações"): `view`, `edit`, `delete`, `more`; ausente = ligada. */
+  rowActions: Record<string, boolean>
 }
 
 type Persisted = Omit<DataTableState, 'page'>
@@ -26,6 +28,8 @@ export interface DataTableStateDefaults {
   filters?: Record<string, string>
   /** Colunas ocultas por padrão (`{ coluna: false }`). */
   columnVisibility?: Record<string, boolean>
+  /** Ações da linha desligadas por padrão (`{ delete: false }`), nas tabelas com `configurableActions`. */
+  rowActions?: Record<string, boolean>
 }
 
 export interface DataTableStateApi {
@@ -44,6 +48,7 @@ export interface DataTableStateApi {
   resetFilters: () => void
   setColumnVisibility: (visibility: Record<string, boolean>) => void
   setColumnSizing: (sizing: Record<string, number>) => void
+  setRowActions: (actions: Record<string, boolean>) => void
 }
 
 const storageKey = (id: string) => `kamban.table.${id}`
@@ -71,6 +76,7 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
     filters: defaults.filters ?? {},
     columnVisibility: defaults.columnVisibility ?? {},
     columnSizing: {},
+    rowActions: defaults.rowActions ?? {},
   }
   const saved = readJson<Partial<Persisted>>(storageKey(id), {})
   return {
@@ -82,6 +88,7 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
     // coluna nova oculta por padrão continua oculta para quem já tinha colunas salvas
     columnVisibility: { ...base.columnVisibility, ...saved.columnVisibility },
     columnSizing: saved.columnSizing ?? base.columnSizing,
+    rowActions: { ...base.rowActions, ...saved.rowActions },
   }
 }
 
@@ -136,5 +143,6 @@ export function useDataTableState(id: string, defaults: DataTableStateDefaults =
     resetFilters: useCallback(() => update({ search: '', filters: defaultFilters, page: 1 }), [update, defaultFilters]),
     setColumnVisibility: useCallback((columnVisibility) => update({ columnVisibility }), [update]),
     setColumnSizing: useCallback((columnSizing) => update({ columnSizing }), [update]),
+    setRowActions: useCallback((rowActions) => update({ rowActions }), [update]),
   }
 }

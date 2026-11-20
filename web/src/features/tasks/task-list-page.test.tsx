@@ -14,6 +14,7 @@ beforeAll(async () => {
 beforeEach(() => {
   window.localStorage.removeItem('kamban.table.task-list')
   window.localStorage.removeItem('avanza.tasks.mineFirst')
+  window.localStorage.removeItem('avanza.taskList.scope.u1')
 })
 
 function lookup<T extends TaskStatus | TaskPriority>(overrides: Partial<T>): T {
@@ -56,12 +57,12 @@ const mine = task({})
 const other = task({ id: 'k2', code: 'ADP-1', title: 'Unir la base de clientes', assignee: null, dueDate: null })
 
 /** As contagens pedem uma linha só (perPage 1); a tabela, a página. */
-function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'projects.view'] as Parameters<typeof makeCurrentUser>[0]) {
+function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.edit', 'tasks.delete', 'projects.view'] as Parameters<typeof makeCurrentUser>[0], initialPath = '/tasks', items?: TaskSummary[]) {
   const list = vi.fn<TaskRepository['list']>((query) => {
     const total = query.filters.mine === 'true' ? 3 : 12
     if (query.perPage === 1) return Promise.resolve({ items: [], page: 1, perPage: 1, total, totalPages: total })
-    const items = query.filters.mine === 'true' ? [mine] : [mine, other]
-    return Promise.resolve({ items, page: 1, perPage: 20, total: items.length, totalPages: 1 })
+    const rows = items ?? (query.filters.mine === 'true' ? [mine] : [mine, other])
+    return Promise.resolve({ items: rows, page: 1, perPage: 20, total: rows.length, totalPages: 1 })
   })
   renderRoutes([{ path: '/tasks', element: <TasksPage /> }], {
     repositories: fakeRepositories({
@@ -71,7 +72,7 @@ function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'proje
       areas: { list: () => Promise.resolve([]) },
       tasks: { list },
     }),
-    initialPath: '/tasks',
+    initialPath,
   })
   const tableCalls = () => list.mock.calls.filter(([query]) => query.perPage !== 1)
   return { list, tableCalls }
@@ -81,7 +82,6 @@ describe('Lista de tarefas do menu (§44)', () => {
   it('abre em "Minhas tarefas": pede mine=true (atribuídas e demandas pedidas ou recebidas, §45), só as abertas, pelo prazo; mostra quantas abertas há em cada escopo', async () => {
     const { tableCalls } = setup()
     expect(await screen.findByRole('heading', { name: 'Tarefas' })).toBeInTheDocument()
-    expect(screen.getByText(i18n.t('taskList.subtitle'))).toBeInTheDocument()
     const scope = screen.getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })
     const mineOption = within(scope).getByRole('radio', { name: /Minhas tarefas/ })
     expect(mineOption).toHaveAttribute('aria-checked', 'true')
@@ -96,7 +96,7 @@ describe('Lista de tarefas do menu (§44)', () => {
     expect(screen.queryByRole('button', { name: i18n.t('tasks.mine.toggle') })).not.toBeInTheDocument()
   })
 
-  it('"Ver todas" tira o responsável (todas as dos projetos que vê), ordena pelas mais recentes e volta a "Minhas" a cada entrada', async () => {
+  it('"Ver todas" tira o responsável (todas as dos projetos que vê), ordena pelas mais recentes e fica guardado para a próxima entrada', async () => {
     const { tableCalls } = setup()
     await screen.findByText(mine.title)
     await userEvent.click(screen.getByRole('radio', { name: /Ver todas/ }))
@@ -106,14 +106,16 @@ describe('Lista de tarefas do menu (§44)', () => {
     expect(query.sort).toEqual({ id: 'updated_at', direction: 'desc' })
     // sem responsável
     expect(screen.getByText(i18n.t('tasks.unassigned'))).toBeInTheDocument()
+    expect(window.localStorage.getItem('avanza.taskList.scope.u1')).toBe('"all"')
   })
 
-  it('colunas Tarefa (título e código), Projeto, Status, Responsável, Prioridade, Urgência e Prazo; prazo vencido em vermelho com "vencida"', async () => {
+  it('colunas Tarefa (só o título, sem o código), Projeto, Status, Responsável, Atribuída a, Prioridade, Urgência e Prazo; prazo vencido em vermelho com "vencida"', async () => {
     setup()
     await screen.findByText(mine.title)
     const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim() ?? '')
-    expect(headers.slice(0, 7).map((h) => h.replace(/[↑↓↕]/g, '').trim())).toEqual(['Tarefa', 'Projeto', 'Status', 'Responsável', 'Prioridade', 'Urgência', 'Prazo'])
-    expect(screen.getByText(mine.code)).toBeInTheDocument()
+    expect(headers.slice(0, 8).map((h) => h.replace(/[↑↓↕]/g, '').trim())).toEqual(['Tarefa', 'Projeto', 'Status', 'Responsável', 'Atribuída a', 'Prioridade', 'Urgência', 'Prazo'])
+    // o código fica na página da tarefa (e continua na busca)
+    expect(screen.queryByText(mine.code)).not.toBeInTheDocument()
     expect(screen.getByText(mine.project!.name)).toBeInTheDocument()
     expect(screen.getByText(`· ${i18n.t('taskList.overdue')}`)).toBeInTheDocument()
   })
@@ -142,5 +144,74 @@ describe('Lista de tarefas do menu (§44)', () => {
     await screen.findByText(mine.title)
     tableCalls().forEach(([query]) => expect(query.filters).toEqual({ urgency: 'high', mine: 'true', category: OPEN_TASK_CATEGORIES }))
     await waitFor(() => expect(JSON.parse(window.localStorage.getItem('kamban.table.task-list') ?? '{}').filters).toEqual({ urgency: 'high' }))
+  })
+})
+
+describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
+  it('sem textos de ajuda: o Status parado mostra "Abertas"; visões, escopo e "Colunas e ações" numa linha só', async () => {
+    setup()
+    await screen.findByText(mine.title)
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Status: Abertas')
+    expect(screen.queryByText(/Só as abertas/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/inclui as demandas que você pediu/)).not.toBeInTheDocument()
+    const row = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') }).parentElement!
+    expect(within(row).getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).toBeInTheDocument()
+    expect(within(row).getByRole('radiogroup', { name: i18n.t('taskList.kindLabel') })).toBeInTheDocument()
+    expect(await within(row).findByRole('button', { name: 'Colunas e ações' })).toBeInTheDocument()
+  })
+
+  it('cada linha: Visualizar, Editar e ··· (Excluir fica no ···); checklist só enquanto incompleto; sem contador de comentários', async () => {
+    const pending = task({ checklistProgress: { done: 0, total: 8 }, commentCount: 5 })
+    const complete = task({ id: 'k3', code: 'OYMA-3', title: 'Checklist pronto', checklistProgress: { done: 8, total: 8 }, commentCount: 2 })
+    setup(undefined, '/tasks', [pending, complete])
+    await screen.findByText(pending.title)
+    expect(screen.getAllByRole('button', { name: 'Visualizar' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Editar' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('0/8')).toHaveLength(1)
+    expect(screen.queryByText('8/8')).not.toBeInTheDocument()
+    expect(screen.queryByText('5')).not.toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('button', { name: 'Mais ações' })[0]!)
+    expect(await screen.findByRole('menuitem', { name: 'Excluir' })).toBeInTheDocument()
+  })
+
+  it('Responsável = quem recebe e distribui (ou a pessoa atribuída); Atribuída a = quem executa, "Sem atribuir" enquanto ninguém pegou', async () => {
+    const cesar = { id: 'u7', name: 'César TI', email: 'cesar@kamban.test', avatarUrl: null }
+    const waiting = task({
+      id: 'k4',
+      title: 'Ajustar a vista de cartera',
+      assignee: null,
+      demand: { status: 'unassigned', owner: cesar, dueAt: null, openedAt: null },
+    })
+    setup(undefined, '/tasks', [mine, waiting])
+    await screen.findByText(waiting.title)
+    const row = screen.getByText(waiting.title).closest('tr')!
+    const cells = within(row).getAllByRole('cell').map((c) => c.textContent?.trim())
+    expect(cells[3]).toMatch(/César TI$/)
+    expect(cells[4]).toBe('Sem atribuir')
+    const normal = screen.getByText(mine.title).closest('tr')!
+    const normalCells = within(normal).getAllByRole('cell').map((c) => c.textContent?.trim())
+    expect(normalCells[3]).toMatch(/Ana Souza$/)
+    expect(normalCells[4]).toMatch(/Ana Souza$/)
+  })
+
+  it('quem vê todos os projetos abre em "Ver todas"; a última escolha fica guardada por pessoa', async () => {
+    const { tableCalls } = setup(['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'])
+    await screen.findByText(other.title)
+    expect(screen.getByRole('radio', { name: /Ver todas/ })).toHaveAttribute('aria-checked', 'true')
+    expect(tableCalls().at(-1)![0].filters).toEqual({ category: OPEN_TASK_CATEGORIES })
+  })
+
+  it('a escolha guardada vale na próxima entrada (mesmo para quem vê tudo)', async () => {
+    window.localStorage.setItem('avanza.taskList.scope.u1', JSON.stringify('mine'))
+    setup(['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'])
+    await screen.findByText(mine.title)
+    expect(screen.getByRole('radio', { name: /Minhas tarefas/ })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('/tasks?scope=all (Ctrl K → Buscar tarefa) busca em todas', async () => {
+    const { tableCalls } = setup(undefined, '/tasks?scope=all&search=Unir')
+    await waitFor(() => expect(tableCalls().at(-1)![0]).toMatchObject({ search: 'Unir', filters: { category: OPEN_TASK_CATEGORIES } }))
+    expect(screen.getByRole('radio', { name: /Ver todas/ })).toHaveAttribute('aria-checked', 'true')
   })
 })

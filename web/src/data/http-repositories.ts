@@ -1368,6 +1368,8 @@ const TASK_FILTERS: Record<string, string> = {
   status: 'status_id',
   priority: 'priority_id',
   assignee: 'assignee_id',
+  // coluna Responsável: quem recebe e distribui ou, sem ele, a pessoa atribuída
+  responsible: 'responsible_id',
   category: 'category',
   tags: 'tag_id',
   sprint: 'sprint_id',

@@ -373,7 +373,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       size="2xl"
       closeOnOutsideClick={false}
       title={isEdit ? t('tasks.editTitle', { code: task?.code }) : t('tasks.createTitle')}
-      description={isEdit ? task?.title : t('tasks.createDescription')}
+      description={isEdit ? task?.title : undefined}
       footer={
         <>
           <AppButton variant="secondary" onClick={() => onOpenChange(false)} disabled={pending}>
@@ -435,7 +435,6 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             maxLength={50000}
             value={draft.description}
             error={errors.description}
-            hint={t('tasks.markdownHint')}
             onChange={(event) => set('description', event.target.value)}
           />
           <AppMultiSelect
@@ -461,7 +460,6 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                 label={t('tasks.stage.label')}
                 value={draft.planGroupId || NONE}
                 error={errors.plan_group_id}
-                hint={t('tasks.stage.hint')}
                 onValueChange={(value) => set('planGroupId', value === NONE ? '' : value)}
                 options={[
                   { value: NONE, label: t('tasks.stage.none') },
@@ -511,7 +509,6 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             value={draft.demandOwnerId || NONE}
             error={errors.demand_owner_id}
             disabled={!canChangeAssignee || !draft.projectId}
-            hint={t('demands.projectFlow.ownerHint')}
             onValueChange={(value) => set('demandOwnerId', value === NONE ? '' : value)}
             options={[
               { value: NONE, label: t('demands.projectFlow.none') },
