@@ -93,7 +93,8 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     await page.getByRole('navigation', { name: /navegación/i }).getByRole('link', { name: 'Tareas' }).waitFor()
     // cadastros traduzidos: os tipos de tarefa padrão aparecem em espanhol na hora
     await page.getByRole('navigation', { name: /navegación/i }).getByRole('link', { name: 'Tareas' }).click()
-    await page.getByRole('button', { name: /Nueva tarea/ }).first().click()
+    // §45: "Nueva tarea" virou "Tarea de proyecto" e "Demanda interna"
+    await page.getByRole('button', { name: /Tarea de proyecto/ }).first().click()
     await page.getByRole('dialog').getByRole('combobox', { name: /^Tipo/ }).click()
     await page.getByRole('option', { name: 'Documentación' }).waitFor()
     await page.keyboard.press('Escape')
