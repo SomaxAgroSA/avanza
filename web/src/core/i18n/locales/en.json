@@ -4679,6 +4679,8 @@
     "newProjectTask": "Project task",
     "newDemand": "Internal request",
     "chip": "Internal request",
+    "internalProject": "Internal requests",
+    "openDemands": "Open requests",
     "status": {
       "unassigned": "Unassigned",
       "assigned": "Assigned",

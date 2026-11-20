@@ -4679,6 +4679,8 @@
     "newProjectTask": "Tarefa de projeto",
     "newDemand": "Demanda interna",
     "chip": "Demanda interna",
+    "internalProject": "Demandas internas",
+    "openDemands": "Abrir as demandas",
     "status": {
       "unassigned": "Sem atribuir",
       "assigned": "Atribuída",

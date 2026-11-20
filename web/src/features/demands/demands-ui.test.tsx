@@ -353,6 +353,28 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
     await userEvent.click(screen.getByRole('link', { name: internal.title }))
     expect(await screen.findByText('Página da tarefa')).toBeInTheDocument()
   })
+
+  it('com projects.view_all: Reatribuir em qualquer linha da caixa Todas, com a equipe do responsável', async () => {
+    const root = person('u9', 'Root')
+    const team = vi.fn<DemandRepository['team']>(() => Promise.resolve([carlos, cesar, jorge]))
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({
+        me: root,
+        permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'projects.view', 'projects.view_all'],
+        demands: { list: () => Promise.resolve(page([internal, fromProject])), overview: () => Promise.resolve(allOverview()), team },
+      }),
+      initialPath: '/tasks/demands?box=all',
+    })
+    const internalRow = (await screen.findByText(internal.title)).closest('li')!
+    const projectRow = screen.getByText('Publicar o dashboard').closest('li')!
+    expect(within(projectRow).getByRole('button', { name: 'Reatribuir' })).toBeInTheDocument()
+    // só atribuir: começar, passar e concluir continuam de quem executa
+    expect(within(internalRow).queryByRole('button', { name: 'Concluir' })).toBeNull()
+    await userEvent.click(within(internalRow).getByRole('button', { name: 'Reatribuir' }))
+    const dialog = await screen.findByRole('dialog')
+    await waitFor(() => expect(team).toHaveBeenCalledWith('d1'))
+    expect(within(dialog).getByRole('heading', { name: /DEM-1/ })).toBeInTheDocument()
+  })
 })
 
 describe('Demanda — página inteira (§45)', () => {

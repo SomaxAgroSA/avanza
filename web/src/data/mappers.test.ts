@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toArea, toBoard, toCurrentUser, toProject, toProjectBrief, toProjectTaskCounts, toRole, toTaskSummary, toUser } from './mappers'
-import type { BoardDto, ProjectDto, TaskDto, UserDto } from './dtos'
+import { toArea, toBoard, toCurrentUser, toDependencies, toProject, toProjectBrief, toProjectTaskCounts, toReport, toRole, toTaskSummary, toTeamActivity, toUser } from './mappers'
+import type { BoardDto, DependenciesDto, ProjectDto, ReportDto, TaskDto, TeamActivityDto, UserDto } from './dtos'
 
 const userDto: UserDto = {
   id: 'u1',
@@ -137,6 +137,47 @@ describe('data/mappers', () => {
         { id: 'i2', kind: 'feature', title: 'Tela', description: '', unit: '', target: null, dueDate: null },
       ])
       expect(toProjectBrief({}).items).toEqual([])
+    })
+  })
+
+  describe('a caixa das demandas internas nos painéis (§45)', () => {
+    it('kind demands vira demands: true no Equipo ahora, nas Dependências e no rótulo do relatório', () => {
+      const team = toTeamActivity({
+        window_days: 7,
+        generated_at: null,
+        people: [
+          {
+            user: { id: 'u1', name: 'Jorge', email: 'j@x', avatar_url: null },
+            projects: [
+              { project: { id: 'sys', key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', kind: 'demands' }, state: 'working', in_progress: 1, recent: 1, open: 1, stale: false, last_activity: null, tasks: [] },
+              { project: { id: 'p1', key: 'CRM', name: 'CRM', icon: 'folder', cover: 'blue' }, state: 'idle', in_progress: 0, recent: 0, open: 1, stale: false, last_activity: null, tasks: [] },
+            ],
+          },
+        ],
+      } as TeamActivityDto)
+      expect(team.people[0]?.projects.map((p) => p.project.demands ?? false)).toEqual([true, false])
+      const deps = toDependencies({
+        generated_at: null,
+        today: '2026-11-20',
+        people: [],
+        areas: [],
+        totals: { deliveries: 0, blocked: 0, pending: 0, none_due: 0, overdue: 0, projects: 1 },
+        projects: [
+          { project: { id: 'sys', key: 'DEM', name: 'Demandas internas', kind: 'demands', due_date: null }, counts: { deliveries: 0, blocked: 0, pending: 0, none_due: 0, overdue: 0 }, deliveries: [], blocked: [], pending: [] },
+        ],
+      } as unknown as DependenciesDto)
+      expect(deps.projects[0]?.project.demands).toBe(true)
+      const report = toReport({
+        period: { from: '2026-11-01T00:00:00.000Z', to: '2026-11-20T00:00:00.000Z', tz_offset: 0 },
+        generated_at: '2026-11-20T00:00:00.000Z',
+        indicators: {},
+        series: { bucket: 'day', points: [] },
+        breakdown: {
+          dimension: 'project',
+          rows: [{ key: 'sys', label: { id: 'sys', key: 'DEM', name: 'Demandas internas', kind: 'demands' }, total: 1, open: 1, overdue: 0, blocked: 0, created: 1, completed: 0, lead_time: { hours: null, count: 0 } }],
+        },
+      } as unknown as ReportDto)
+      expect(report.breakdown.rows[0]?.label).toEqual({ kind: 'project', id: 'sys', key: 'DEM', name: 'Demandas internas', demands: true })
     })
   })
 })

@@ -18,6 +18,8 @@ export interface DepProjectRef {
   id: string
   key: string
   name: string
+  /** A caixa das demandas internas (§45): mostra "Demandas internas", sem link de projeto. */
+  demands?: boolean
 }
 
 export interface DepTaskRef {

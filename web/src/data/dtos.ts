@@ -980,7 +980,7 @@ export interface TeamActivityDto {
   people: Array<{
     user: UserSummaryDto
     projects: Array<{
-      project: { id: string; key: string; name: string; icon: string; cover: string }
+      project: { id: string; key: string; name: string; icon: string; cover: string; kind?: string }
       state: string
       in_progress: number
       recent: number
@@ -998,6 +998,8 @@ export interface DepProjectRefDto {
   id: string
   key: string
   name: string
+  /** `demands` = a caixa das demandas internas (§45). */
+  kind?: string
 }
 
 export interface DepAreaRefDto {

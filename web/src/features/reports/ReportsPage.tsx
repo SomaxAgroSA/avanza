@@ -260,7 +260,7 @@ function OverdueCard({ tasks, onView }: { tasks: TaskSummary[]; onView: (id: str
   const columns: DataTableColumn<TaskSummary>[] = [
     { id: 'code', header: t('tasks.fields.task'), hideable: false, pinned: true, size: 130, cell: (task) => <TaskCode task={task} /> },
     { id: 'title', header: t('tasks.fields.title'), hideable: false, size: 320, cell: (task) => <span className="font-medium text-fg">{task.title}</span> },
-    { id: 'project', header: t('tasks.fields.project'), size: 180, cell: (task) => task.project?.name ?? '—' },
+    { id: 'project', header: t('tasks.fields.project'), size: 180, cell: (task) => task.project?.name ?? (task.demand ? t('demands.internalProject') : '—') },
     { id: 'due', header: t('tasks.fields.dueDate'), size: 150, cell: (task) => <DueDate task={task} /> },
     { id: 'assignee', header: t('tasks.fields.assignee'), size: 200, cell: (task) => <PersonCell person={task.assignee} /> },
   ]

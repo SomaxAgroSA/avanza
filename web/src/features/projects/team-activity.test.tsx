@@ -100,6 +100,24 @@ describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
     expect(within(panel).getByRole('region', { name: 'Angelica Davalos' })).toHaveTextContent('Activo esta semana')
   })
 
+  it('"Equipo ahora": las demandas internas aparecen como "Demandas internas" y llevan a la pantalla Demandas', async () => {
+    const withDemands: TeamActivity = {
+      windowDays: 7,
+      people: [
+        {
+          user: edson,
+          projects: [
+            { project: { id: 'sys', key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', demands: true }, state: 'working', inProgress: 1, recent: 1, open: 1, stale: false, lastActivity: today, tasks: [task('d1', 'DEM-1', 'Acceso al SAP', 'Desarrollo', true, today)] },
+          ],
+        },
+      ],
+    }
+    setup(undefined, vi.fn<ProjectRepository['teamActivity']>(() => Promise.resolve(withDemands)))
+    await userEvent.click(await screen.findByRole('button', { name: 'Equipo ahora' }))
+    const block = within(await screen.findByTestId('team-activity')).getByRole('region', { name: 'Edson Queiroz' })
+    expect(within(block).getByRole('link', { name: 'Demandas internas' })).toHaveAttribute('href', '/tasks/demands')
+  })
+
   it('sin tasks.view no aparece la columna ni el botón (y no se consulta)', async () => {
     const { teamActivity } = setup(['projects.view'])
     await screen.findByRole('table')

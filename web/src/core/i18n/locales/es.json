@@ -4679,6 +4679,8 @@
     "newProjectTask": "Tarea de proyecto",
     "newDemand": "Demanda interna",
     "chip": "Demanda interna",
+    "internalProject": "Demandas internas",
+    "openDemands": "Abrir las demandas",
     "status": {
       "unassigned": "Sin asignar",
       "assigned": "Asignada",

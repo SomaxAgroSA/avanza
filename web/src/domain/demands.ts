@@ -102,9 +102,10 @@ const ACTION_RULES: Record<DemandAction, { role: 'owner' | 'assignee' | 'request
 
 /**
  * Botões de cada linha das caixas (espelha a regra do servidor, que sempre confere): o responsável
- * atribui; quem executa começa, passa e conclui; quem pediu valida e devolve.
+ * atribui; quem executa começa, passa e conclui; quem pediu valida e devolve. `options.viewAll` (quem tem
+ * `projects.view_all`, na caixa Todas): também atribui e reatribui qualquer demanda.
  */
-export function demandActionsFor(userId: string | undefined, task: Pick<TaskSummary, 'assignee' | 'reporter' | 'demand'>): DemandActions {
+export function demandActionsFor(userId: string | undefined, task: Pick<TaskSummary, 'assignee' | 'reporter' | 'demand'>, options: { viewAll?: boolean } = {}): DemandActions {
   const demand = task.demand
   const roles = {
     owner: !!userId && demand?.owner?.id === userId,
@@ -114,9 +115,18 @@ export function demandActionsFor(userId: string | undefined, task: Pick<TaskSumm
   const out = {} as DemandActions
   DEMAND_ACTIONS.forEach((action) => {
     const rule = ACTION_RULES[action]
-    out[action] = !!demand && roles[rule.role] && rule.from.includes(demand.status)
+    const allowed = roles[rule.role] || (action === 'assign' && !!options.viewAll)
+    out[action] = !!demand && allowed && rule.from.includes(demand.status)
   })
   return out
+}
+
+/**
+ * Nome de um projeto nos painéis (Relatórios, Em andamento): a caixa das demandas internas (`demands`) aparece
+ * como "Demandas internas", no idioma de quem vê.
+ */
+export function projectDisplayName(t: (key: string) => string, project: { name: string; demands?: boolean }): string {
+  return project.demands ? t('demands.internalProject') : project.name
 }
 
 /** Demandas agrupadas por passo, na ordem do fluxo (grupos vazios ficam de fora). */
