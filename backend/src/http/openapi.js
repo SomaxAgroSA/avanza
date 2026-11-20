@@ -589,7 +589,7 @@ function build() {
           },
         ),
         post: op(
-          'Abre uma demanda interna, tarefa sem projeto (§45; tasks.create): nasce "Sem atribuir", numerada DEM-n, sem executor e sem prazo (o responsável define ao atribuir); a abertura é automática. O responsável recebe a notificação demand_received. Campos de fluxo (assignee_id, due_date, status_id…) enviados aqui são ignorados. Erros em fields: required, invalid_option (tipo, departamento ou prioridade inativos; responsável inexistente, inativo ou sem tasks.view)',
+          'Abre uma demanda interna, tarefa sem projeto (§45; tasks.create): nasce "Sem atribuir", numerada DEM-n, sem executor e sem prazo (o responsável define ao atribuir); a abertura é automática. O responsável recebe a notificação demand_received. Campos de fluxo (assignee_id, due_date, status_id…) enviados aqui são ignorados. custom_values = campos do tipo, com as regras de POST /tasks (padrões dos visíveis; obrigatórios sempre e do status em que nasce). Erros em fields: required, invalid_option (tipo, departamento ou prioridade inativos; responsável inexistente, inativo ou sem tasks.view) e custom_values.<nome> (required, unknown_field, invalid_option…; details.status = status considerado)',
           ['demands'],
           { 201: ok('Criada', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN') },
           {
@@ -605,6 +605,7 @@ function build() {
                 area_id: { type: 'string', description: 'Departamento que pede (área ativa de /areas)' },
                 priority_id: { type: 'string', description: 'sem ela, a prioridade padrão' },
                 company_id: { type: 'string', description: 'Empresa (§46): ativa de /companies; obrigatória quando existe alguma empresa ativa (required)' },
+                custom_values: { type: 'object', description: 'campos do tipo por nome técnico (os mesmos da tarefa de projeto)', additionalProperties: true },
               },
             }),
           },

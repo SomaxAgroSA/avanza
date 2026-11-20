@@ -330,4 +330,41 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.ok(carlos && carlos.projects.some((p) => p.project.kind === 'demands' && p.project.id === inbox), JSON.stringify(team))
     assert.equal((await people.fabi.client.get('/team-activity')).body.data.people.some((p) => p.projects.some((x) => x.project.kind === 'demands')), false)
   })
+
+  it('campos do tipo (POST /demands e PATCH /tasks/{id}): obrigatórios do tipo, gravados, no histórico e editáveis', async () => {
+    const ambiente = (await admin.post('/custom-fields', { label: 'Ambiente', type: 'select', options: [{ label: 'Produção', color: 'red' }, { label: 'Homologação', color: 'amber' }] })).body.data
+    const passos = (await admin.post('/custom-fields', { label: 'Passos para reprodução', type: 'textarea' })).body.data
+    const erro = (await admin.post('/task-types', { key: 'ERRO_DEMANDA', name: 'Erro' })).body.data
+    const linked = await admin.put(`/task-types/${erro.id}/fields`, { fields: [{ field_id: ambiente.id, required: true }, { field_id: passos.id, required: true }] })
+    assert.equal(linked.status, 200, JSON.stringify(linked.body))
+    const production = ambiente.options.find((o) => o.label === 'Produção').id
+    const body = { task_type_id: erro.id, title: 'Erro ao exportar o DRE', demand_owner_id: people.cesar.user.id, area_id: area.id }
+
+    const missing = await people.ana.client.post('/demands', Object.assign({ custom_values: { [ambiente.name]: production } }, body))
+    assert.equal(missing.status, 400)
+    assert.deepEqual(missing.body.error.details.fields, { [`custom_values.${passos.name}`]: 'required' })
+    const unknown = await people.ana.client.post('/demands', Object.assign({ custom_values: { [ambiente.name]: production, [passos.name]: 'a', nada: '1' } }, body))
+    assert.deepEqual(unknown.body.error.details.fields, { 'custom_values.nada': 'unknown_field' })
+
+    const values = { [ambiente.name]: production, [passos.name]: '1. Abrir o DRE\n2. Exportar' }
+    const created = await people.ana.client.post('/demands', Object.assign({ custom_values: values }, body))
+    assert.equal(created.status, 201, JSON.stringify(created.body))
+    assert.deepEqual(created.body.data.custom_values, values)
+    const path = `/tasks/${created.body.data.id}`
+    let saved = (await people.cesar.client.get(path)).body.data
+    assert.deepEqual(saved.custom_values, values)
+    assert.deepEqual(saved.fields.map((link) => link.field.name), [ambiente.name, passos.name])
+    const opened = (await people.ana.client.get(`${path}/history`)).body.data.find((e) => e.action === 'task.created')
+    assert.equal(opened.new_value['cf:Ambiente'], 'Produção')
+
+    // edição (o formulário manda os campos): grava; obrigatório vazio é recusado
+    const edited = await people.ana.client.patch(path, { title: 'Erro ao exportar', custom_values: { [ambiente.name]: production, [passos.name]: 'Passos revistos' } })
+    assert.equal(edited.status, 200, JSON.stringify(edited.body))
+    saved = (await people.ana.client.get(path)).body.data
+    assert.equal(saved.title, 'Erro ao exportar')
+    assert.equal(saved.custom_values[passos.name], 'Passos revistos')
+    const emptied = await people.ana.client.patch(path, { custom_values: { [passos.name]: '' } })
+    assert.equal(emptied.status, 400)
+    assert.deepEqual(emptied.body.error.details.fields, { [`custom_values.${passos.name}`]: 'required' })
+  })
 })

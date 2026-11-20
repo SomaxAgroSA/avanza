@@ -68,7 +68,7 @@ async function setup() {
   await priorities.create(admin, { key: 'MEDIA', name: 'Média', color: 'amber', is_default: true })
   const areas = createLookupService(deps, 'area')
   const strategy = await areas.create(admin, { key: 'EST', name: 'Estratégia', color: 'blue' })
-  // tipo com campo obrigatório: a demanda não pede campos personalizados
+  // tipo com campo obrigatório: a demanda pede os campos do tipo, como a tarefa de projeto (§45)
   const fields = createCustomFieldService(deps)
   const versao = await fields.createField(admin, { label: 'Versão', type: 'text' })
   const types = createTaskTypeService(deps)
@@ -100,7 +100,14 @@ async function setup() {
 
 function newDemand(s, extra) {
   return Object.assign(
-    { task_type_id: s.types.dev.id, title: 'Vista DMR: agregar Fecha cuenta', description: 'Coluna para o DRE.', demand_owner_id: s.users.cesar.id, area_id: s.areas.strategy.id },
+    {
+      task_type_id: s.types.dev.id,
+      title: 'Vista DMR: agregar Fecha cuenta',
+      description: 'Coluna para o DRE.',
+      demand_owner_id: s.users.cesar.id,
+      area_id: s.areas.strategy.id,
+      custom_values: { versao: '2.1' },
+    },
     extra,
   )
 }
@@ -122,8 +129,8 @@ describe('application/demands — abrir', () => {
     assert.equal(created.assignee, null)
     assert.equal(created.demand.due_at, null)
     assert.equal(created.status.key, 'BACKLOG')
-    assert.deepEqual(created.custom_values, {})
-    assert.deepEqual(created.fields, [])
+    assert.deepEqual(created.custom_values, { versao: '2.1' })
+    assert.deepEqual(created.fields.map((link) => link.field.name), ['versao'])
     assert.ok(created.demand.opened_at)
     const second = await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'Outra' }))
     assert.equal(second.code, 'DEM-2')
@@ -162,6 +169,139 @@ describe('application/demands — abrir', () => {
     assert.equal(await codeOf(() => s.projects.updateProject(s.ctx.admin, inbox.id, { name: 'X' })), 'PROJECT_NOT_FOUND')
     // criar tarefa comum dentro da caixa também não
     assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.admin, { project_id: inbox.id, task_type_id: s.types.dev.id, title: 'x', custom_values: { versao: '1' } })), 'PROJECT_NOT_FOUND')
+  })
+})
+
+describe('application/demands — campos do tipo (§45, como na tarefa de projeto)', () => {
+  /**
+   * Tipo "Erro": Ambiente (seleção, obrigatório, padrão Produção), Passos para reprodução (obrigatório),
+   * Testador (pessoa, opcional), Causa (exigida só em Desenvolvimento) e Interno (obrigatório, mas oculto:
+   * nunca é pedido).
+   */
+  async function withErrorType() {
+    const s = await setup()
+    const admin = s.ctx.admin
+    const fields = createCustomFieldService(s.deps)
+    const ambiente = await fields.createField(admin, {
+      label: 'Ambiente',
+      type: 'select',
+      options: [{ label: 'Produção', color: 'red', is_default: true }, { label: 'Homologação', color: 'amber' }],
+    })
+    const passos = await fields.createField(admin, { label: 'Passos para reprodução', type: 'textarea' })
+    const testador = await fields.createField(admin, { label: 'Testador', type: 'user' })
+    const causa = await fields.createField(admin, { label: 'Causa', type: 'text' })
+    const interno = await fields.createField(admin, { label: 'Interno', type: 'text' })
+    const types = createTaskTypeService(s.deps)
+    const erro = await types.createType(admin, { key: 'ERRO', name: 'Erro', icon: 'bug', color: 'red' })
+    await types.setTypeFields(admin, erro.id, [
+      { field_id: ambiente.id, required: true },
+      { field_id: passos.id, required: true },
+      { field_id: testador.id },
+      { field_id: causa.id, required_status_ids: [s.statuses.dev.id] },
+      { field_id: interno.id, required: true, visible: false },
+    ])
+    const production = ambiente.options.find((o) => o.label === 'Produção').id
+    const erroDemand = (extra) => newDemand(s, Object.assign({ task_type_id: erro.id, title: 'Erro ao exportar o DRE', custom_values: undefined }, extra))
+    return Object.assign(s, { f: { ambiente, passos, testador, causa, interno }, erro, production, erroDemand })
+  }
+
+  const fieldError = (name, code) => `VALIDATION_ERROR:${JSON.stringify({ [`custom_values.${name}`]: code })}`
+
+  async function errorOf(fn) {
+    try {
+      await fn()
+    } catch (err) {
+      return err
+    }
+    return null
+  }
+
+  it('abrir: exige os obrigatórios visíveis do tipo no status em que nasce; erros em custom_values.<campo>', async () => {
+    const s = await withErrorType()
+    const missing = await errorOf(() => s.demands.createDemand(s.ctx.ana, s.erroDemand()))
+    // Ambiente vem do padrão; Causa só em Desenvolvimento; Interno é oculto
+    assert.deepEqual(missing.details.fields, { [`custom_values.${s.f.passos.name}`]: 'required' })
+    assert.deepEqual(missing.details.status, { id: s.statuses.backlog.id, name: 'Backlog' })
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: 'x' }))), 'VALIDATION_ERROR:{"custom_values":"invalid_type"}')
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: null }))), 'VALIDATION_ERROR:{"custom_values":"invalid_type"}')
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: 'a', nada: '1' } }))), fieldError('nada', 'unknown_field'))
+    assert.equal(
+      await codeOf(() => s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: 'a', [s.f.ambiente.name]: '' } }))),
+      fieldError(s.f.ambiente.name, 'required'),
+    )
+    // pessoa inexistente no campo de pessoa: referência inválida, como na tarefa
+    assert.equal(
+      await codeOf(() => s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: 'a', [s.f.testador.name]: 'nao_existe' } }))),
+      fieldError(s.f.testador.name, 'invalid_option'),
+    )
+    // nada foi gravado nem avisado
+    assert.equal(s.deps.store.notifications.length, 0)
+    assert.equal((await s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: 'a' } }))).code, 'DEM-1')
+  })
+
+  it('abrir: grava os valores, devolve no detalhe e registra no histórico de criação', async () => {
+    const s = await withErrorType()
+    const steps = '1. Abrir o DRE\n2. Exportar'
+    const created = await s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: steps, [s.f.testador.name]: s.users.jorge.id } }))
+    const expected = { [s.f.ambiente.name]: s.production, [s.f.passos.name]: steps, [s.f.testador.name]: s.users.jorge.id }
+    assert.deepEqual(created.custom_values, expected)
+    assert.deepEqual(created.fields.map((link) => link.field.name), [s.f.ambiente.name, s.f.passos.name, s.f.testador.name, s.f.causa.name, s.f.interno.name])
+    assert.deepEqual((await s.tasks.getTask(s.ctx.cesar, created.id)).custom_values, expected)
+    const entry = s.deps.store.audit.find((e) => e.entityId === created.id && e.action === 'task.created')
+    assert.equal(entry.newValue['cf:Ambiente'], 'Produção')
+    assert.equal(entry.newValue['cf:Passos para reprodução'], steps)
+    assert.equal(entry.newValue['cf:Testador'], 'Jorge')
+    assert.equal('cf:Causa' in entry.newValue, false)
+    assert.equal(entry.newValue.demand_owner, 'César')
+  })
+
+  it('editar: carrega e grava os campos; pede só os obrigatórios do status atual; trocar o tipo pede os do novo', async () => {
+    const s = await withErrorType()
+    const created = await s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: 'Passo 1' } }))
+    const id = created.id
+    // o formulário manda todos os campos: grava e registra a mudança
+    const edited = await s.tasks.updateTask(s.ctx.ana, id, {
+      title: 'Erro ao exportar',
+      custom_values: { [s.f.ambiente.name]: s.production, [s.f.passos.name]: 'Passo 1 e 2', [s.f.testador.name]: null },
+    })
+    assert.equal(edited.title, 'Erro ao exportar')
+    assert.equal(edited.custom_values[s.f.passos.name], 'Passo 1 e 2')
+    const entry = s.deps.store.audit.filter((e) => e.entityId === id).at(-1)
+    assert.equal(entry.action, 'task.updated')
+    assert.deepEqual(entry.oldValue, { title: 'Erro ao exportar o DRE', 'cf:Passos para reprodução': 'Passo 1' })
+    assert.deepEqual(entry.newValue, { title: 'Erro ao exportar', 'cf:Passos para reprodução': 'Passo 1 e 2' })
+    // sem custom_values, os valores ficam; Causa (só em Desenvolvimento) não é pedida em Backlog
+    assert.equal((await s.tasks.updateTask(s.ctx.cesar, id, { description: 'Mais detalhes' })).custom_values[s.f.passos.name], 'Passo 1 e 2')
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ana, id, { custom_values: { [s.f.passos.name]: '' } })), fieldError(s.f.passos.name, 'required'))
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ana, id, { custom_values: { nada: '1' } })), fieldError('nada', 'unknown_field'))
+
+    // em Desenvolvimento (pelo fluxo), a Causa passa a ser pedida na edição — com o status no erro
+    await s.demands.assign(s.ctx.cesar, id, { assignee_id: s.users.jorge.id, due_at: FUTURE })
+    await s.demands.start(s.ctx.jorge, id)
+    const needsCause = await errorOf(() => s.tasks.updateTask(s.ctx.jorge, id, { title: 'Erro ao exportar o DRE' }))
+    assert.deepEqual(needsCause.details.fields, { [`custom_values.${s.f.causa.name}`]: 'required' })
+    assert.deepEqual(needsCause.details.status, { id: s.statuses.dev.id, name: 'Desenvolvimento' })
+    assert.equal((await s.tasks.updateTask(s.ctx.jorge, id, { custom_values: { [s.f.causa.name]: 'Timeout na view' } })).custom_values[s.f.causa.name], 'Timeout na view')
+
+    // trocar o tipo: pede os obrigatórios do novo e descarta os que ele não tem
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ana, id, { task_type_id: s.types.dev.id })), fieldError('versao', 'required'))
+    const retyped = await s.tasks.updateTask(s.ctx.ana, id, { task_type_id: s.types.dev.id, custom_values: { versao: '3' } })
+    assert.deepEqual(retyped.custom_values, { versao: '3' })
+    // status, executor e prazo continuam só pelo fluxo
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.ana, id, { status_id: s.statuses.done.id })), 'VALIDATION_ERROR:{"status_id":"demand_flow"}')
+  })
+
+  it('demanda aberta antes dos campos: a edição pede os obrigatórios (como a tarefa cujo tipo ganhou um) e grava', async () => {
+    const s = await withErrorType()
+    const created = await s.demands.createDemand(s.ctx.ana, s.erroDemand({ custom_values: { [s.f.passos.name]: 'Passo 1' } }))
+    s.deps.store.taskValues = s.deps.store.taskValues.filter((v) => v.taskId !== created.id)
+    assert.deepEqual((await s.tasks.getTask(s.ctx.ana, created.id)).custom_values, {})
+    assert.equal(
+      await codeOf(() => s.tasks.updateTask(s.ctx.ana, created.id, { title: 'x', custom_values: { [s.f.ambiente.name]: s.production } })),
+      fieldError(s.f.passos.name, 'required'),
+    )
+    const filled = await s.tasks.updateTask(s.ctx.ana, created.id, { custom_values: { [s.f.ambiente.name]: s.production, [s.f.passos.name]: 'Passo 1' } })
+    assert.deepEqual(filled.custom_values, { [s.f.ambiente.name]: s.production, [s.f.passos.name]: 'Passo 1' })
   })
 })
 

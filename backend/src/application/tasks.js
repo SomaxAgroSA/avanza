@@ -13,7 +13,7 @@
  *   obrigatórios do status (um clique na lista).
  * - Demanda interna (§45, application/demands.js): sai sem projeto (`project: null`) e com `demand` (passo,
  *   responsável, prazo com hora, ações); a edição comum só muda título, descrição, tipo, prioridade,
- *   departamento e urgência — status, executor, prazo e estimativa são do fluxo da demanda.
+ *   departamento, urgência e os campos do tipo — status, executor, prazo e estimativa são do fluxo da demanda.
  * - Tarefa de projeto com responsável (§45, `demand_owner_id`): o mesmo fluxo, ligada ao projeto. Criar ou
  *   editar com o responsável liga o fluxo (status, executor, prazo e estimativa passam a ser dele); `null`
  *   desliga e a tarefa volta a ser como sempre. Quem participa do fluxo sem ser do projeto vê só essa tarefa.
@@ -141,14 +141,21 @@ const LIST_SCHEMA = {
 }
 
 /** Na demanda interna (§45), a edição comum só mexe nestes; o resto é do fluxo da demanda (ou não se aplica). */
-const DEMAND_EDITABLE = ['title', 'description', 'task_type_id', 'priority_id', 'area_id', 'urgency', 'company_id']
+const DEMAND_EDITABLE = ['title', 'description', 'task_type_id', 'priority_id', 'area_id', 'urgency', 'company_id', 'custom_values']
 const DEMAND_FLOW = [
   'status_id', 'assignee_id', 'reporter_id', 'start_date', 'due_date', 'estimated_hours', 'actual_hours', 'sprint_id', 'parent_task_id',
-  'plan_item_id', 'plan_group_id', 'custom_values', 'tag_ids', 'checklist',
+  'plan_item_id', 'plan_group_id', 'tag_ids', 'checklist',
 ]
 
 function invalid(fields) {
   return appError('VALIDATION_ERROR', undefined, { fields })
+}
+
+/** `custom_values` do corpo: objeto por nome técnico (ausente = null); outro formato → `invalid_type`. */
+function customValuesInput(raw) {
+  if (raw === undefined) return null
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw invalid({ custom_values: 'invalid_type' })
+  return raw
 }
 
 function round2(n) {
@@ -358,9 +365,7 @@ function createTaskService(deps) {
     if (data.estimated_hours !== undefined) data.estimated_hours = round2(data.estimated_hours)
     if (data.actual_hours !== undefined) data.actual_hours = round2(data.actual_hours)
     const cleared = NULLABLE.filter((key) => source[key] === null)
-    if (source.custom_values !== undefined && (source.custom_values === null || typeof source.custom_values !== 'object' || Array.isArray(source.custom_values))) {
-      throw invalid({ custom_values: 'invalid_type' })
-    }
+    const customValues = customValuesInput(source.custom_values)
     let tagIds
     if (source.tag_ids !== undefined) {
       tagIds = assertValid({ tag_ids: source.tag_ids }, { tag_ids: [rules.stringArray(MAX_TAGS)] }).tag_ids
@@ -373,7 +378,34 @@ function createTaskService(deps) {
       if (result.error) throw invalid({ checklist: result.error })
       checklist = result.value
     }
-    return { data, cleared, customValues: source.custom_values || null, tagIds, checklist }
+    return { data, cleared, customValues, tagIds, checklist }
+  }
+
+  /**
+   * Campos personalizados do tipo (tarefa de projeto e demanda interna, §45): valida os enviados por nome
+   * técnico (`raw`; null = nenhum) para o status em que a tarefa fica — obrigatórios sempre + exigidos nele;
+   * ocultos nunca — e confere as referências. `options.creating`: aplica os padrões dos visíveis que não
+   * vieram (e arquivo/imagem vão depois de criar); `options.saved`/`options.taskId`: valores gravados e a
+   * tarefa (edição). Erros em `custom_values.<nome>`, com o status. Devolve { values } (por ID do campo).
+   */
+  async function checkCustomValues(ctx, links, raw, status, options) {
+    const opts = options || {}
+    const saved = opts.saved || {}
+    const input = Object.assign({}, raw || {})
+    if (opts.creating) {
+      links.forEach((link) => {
+        const def = link.field.default_value
+        if (link.visible && input[link.field.name] === undefined && def !== null && def !== undefined) input[link.field.name] = def
+      })
+    }
+    const kept = {}
+    links.forEach((link) => {
+      if (saved[link.field.id] !== undefined) kept[link.field.id] = saved[link.field.id]
+    })
+    const checked = taskDomain.validateCustomValues(links, input, kept, status ? status.id : null, { creating: !!opts.creating })
+    if (Object.keys(checked.errors).length > 0) throw invalidCustom(checked.errors, status)
+    await assertReferences(ctx, links, checked.values, saved, opts.taskId || null)
+    return { values: checked.values }
   }
 
   // ---------------------------------------------------------------- apresentação
@@ -505,26 +537,26 @@ function createTaskService(deps) {
 
   async function presentDetail(ctx, task, project, access) {
     const refs = Object.assign(await refsFor([task]), access.scoped ? { scoped: { [task.projectId]: true } } : {})
-    if (demandDomain.isDemand(task) && demandDomain.isSystemProject(project)) {
-      // demanda interna (§45): sem campos personalizados; com o que a pessoa pode fazer no fluxo
-      const summary = presentSummary(task, refs)
-      return Object.assign(summary, {
-        description: task.description || '',
-        custom_values: {},
-        checklist: task.checklist || [],
-        parent: null,
-        forked_from: null,
-        fields: [],
-        capabilities: taskDomain.taskCapabilities(access, project, task),
-        demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task, { viewAll: demandDomain.assignsAny(ctx.principal) }) }),
-      })
-    }
     const links = await typeLinks(task.typeId)
     const saved = (await values.listByTasks([task.id]))[task.id] || {}
     const customValues = {}
     links.forEach((link) => {
       if (saved[link.field.id] !== undefined) customValues[link.field.name] = saved[link.field.id]
     })
+    if (demandDomain.isDemand(task) && demandDomain.isSystemProject(project)) {
+      // demanda interna (§45): os campos do tipo, como na tarefa; com o que a pessoa pode fazer no fluxo
+      const summary = presentSummary(task, refs)
+      return Object.assign(summary, {
+        description: task.description || '',
+        custom_values: customValues,
+        checklist: task.checklist || [],
+        parent: null,
+        forked_from: null,
+        fields: links,
+        capabilities: taskDomain.taskCapabilities(access, project, task),
+        demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task, { viewAll: demandDomain.assignsAny(ctx.principal) }) }),
+      })
+    }
     const summary = presentSummary(task, refs)
     return Object.assign(summary, {
       description: task.description || '',
@@ -602,8 +634,16 @@ function createTaskService(deps) {
       checklist: task.checklist && task.checklist.length ? taskDomain.checklistSummary(task.checklist) : null,
       urgency: task.urgency || null,
     }
+    return Object.assign(value, await customDisplay(links, taskValues, refs.users))
+  }
+
+  /** Campos personalizados legíveis no histórico (`cf:<rótulo>`; vazio = null). Sem `users`, busca as pessoas dos valores. */
+  async function customDisplay(links, taskValues, users) {
+    const ids = users ? [] : userIdsInValues(links, taskValues)
+    const people = users || byId(ids.length > 0 ? await deps.userRepository.findManyByIds(ids) : [])
+    const value = {}
     for (const link of links) {
-      value[`cf:${link.field.label}`] = await displayCustom(link.field, taskValues[link.field.id], refs.users)
+      value[`cf:${link.field.label}`] = await displayCustom(link.field, taskValues[link.field.id], people)
     }
     return value
   }
@@ -821,16 +861,9 @@ function createTaskService(deps) {
         })
       : null
 
-    // valores padrão dos campos visíveis que não vieram no corpo
+    // campos do tipo (com os padrões dos visíveis que não vieram no corpo)
     const links = await typeLinks(type.id)
-    const rawValues = Object.assign({}, parsed.customValues || {})
-    links.forEach((link) => {
-      const def = link.field.default_value
-      if (link.visible && rawValues[link.field.name] === undefined && def !== null && def !== undefined) rawValues[link.field.name] = def
-    })
-    const checked = taskDomain.validateCustomValues(links, rawValues, {}, status.id, { creating: true })
-    if (Object.keys(checked.errors).length > 0) throw invalidCustom(checked.errors, status)
-    await assertReferences(ctx, links, checked.values, {}, null)
+    const checked = await checkCustomValues(ctx, links, parsed.customValues, status, { creating: true })
     const createDatesIssue = timelineDomain.datesIssue(data.start_date || null, data.due_date || null)
     if (createDatesIssue) throw invalid({ start_date: createDatesIssue })
 
@@ -1011,15 +1044,9 @@ function createTaskService(deps) {
     const links = await typeLinks(typeId)
     const previousLinks = patch.typeId ? await typeLinks(task.typeId) : links
     const saved = (await values.listByTasks([task.id]))[task.id] || {}
-    const kept = {}
-    links.forEach((link) => {
-      if (saved[link.field.id] !== undefined) kept[link.field.id] = saved[link.field.id]
-    })
     // obrigatórios do status em que a tarefa vai ficar (diretriz §9)
     const finalStatus = refs.statuses[patch.statusId || task.statusId] || null
-    const checked = taskDomain.validateCustomValues(links, parsed.customValues || {}, kept, finalStatus ? finalStatus.id : null)
-    if (Object.keys(checked.errors).length > 0) throw invalidCustom(checked.errors, finalStatus)
-    await assertReferences(ctx, links, checked.values, saved, task.id)
+    const checked = await checkCustomValues(ctx, links, parsed.customValues, finalStatus, { saved, taskId: task.id })
     const valuesChanged = JSON.stringify(checked.values) !== JSON.stringify(saved)
 
     const currentTags = (await deps.taskTagRepository.listByTasks([task.id]))[task.id] || []
@@ -1064,9 +1091,10 @@ function createTaskService(deps) {
   }
 
   /**
-   * Edição comum da demanda interna (§45): título, descrição, tipo, prioridade, departamento (obrigatório)
-   * e urgência — quem pediu, o responsável, quem executa e `projects.view_all`. Status, executor, prazo e
-   * estimativa mudam pelo fluxo (application/demands.js); o resto não se aplica (`demand_flow`).
+   * Edição comum da demanda interna (§45): título, descrição, tipo, prioridade, departamento (obrigatório),
+   * urgência e os campos do tipo (como na tarefa: obrigatórios do status atual) — quem pediu, o responsável,
+   * quem executa e `projects.view_all`. Status, executor, prazo e estimativa mudam pelo fluxo
+   * (application/demands.js); o resto não se aplica (`demand_flow`).
    */
   async function updateDemand(ctx, loaded, raw) {
     const { task, project, access } = loaded
@@ -1102,20 +1130,31 @@ function createTaskService(deps) {
     }
     const urgency = parsed.cleared.indexOf('urgency') >= 0 ? null : data.urgency
     if (urgency !== undefined && urgency !== (task.urgency || null)) patch.urgency = urgency
+    // campos do tipo final (os de fora dele são descartados), exigidos no status atual — o passo é do fluxo
+    const links = await typeLinks(patch.typeId || task.typeId)
+    const previousLinks = patch.typeId ? await typeLinks(task.typeId) : links
+    const saved = (await values.listByTasks([task.id]))[task.id] || {}
+    const checked = await checkCustomValues(ctx, links, parsed.customValues, refs.statuses[task.statusId] || null, { saved, taskId: task.id })
+    const valuesChanged = JSON.stringify(checked.values) !== JSON.stringify(saved)
     const name = (map, key) => (key && map[key] ? map[key].name : null)
-    const view = (t) => ({
-      title: t.title,
-      description: truncate(t.description || '', 1000),
-      task_type: name(refs.types, t.typeId),
-      task_priority: name(refs.priorities, t.priorityId),
-      area: name(refs.areas, t.areaId),
-      company: name(refs.companies, t.companyId),
-      urgency: t.urgency || null,
-    })
-    const change = changes(view(task), view(Object.assign({}, task, patch)))
+    const view = async (t, taskValues, fieldLinks) =>
+      Object.assign(
+        {
+          title: t.title,
+          description: truncate(t.description || '', 1000),
+          task_type: name(refs.types, t.typeId),
+          task_priority: name(refs.priorities, t.priorityId),
+          area: name(refs.areas, t.areaId),
+          company: name(refs.companies, t.companyId),
+          urgency: t.urgency || null,
+        },
+        await customDisplay(fieldLinks, taskValues),
+      )
+    const change = changes(await view(task, saved, previousLinks), await view(Object.assign({}, task, patch), checked.values, links))
     if (!change) return presentDetail(ctx, task, project, access)
     const updated = await deps.unitOfWork.run(async (repos) => {
       const result = await repos.taskRepository.update(task.id, patch)
+      if (valuesChanged) await repos.taskValueRepository.replace(task.id, checked.values, typesOf(links))
       await audit(repos, ctx, task, 'task.updated', change.oldValue, change.newValue)
       return result
     })
@@ -1265,7 +1304,8 @@ function createTaskService(deps) {
     return list.map((t) => presentSummary(t, refs))
   }
 
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize }
+  // typeLinks, checkCustomValues e customDisplay: os campos do tipo na demanda interna (application/demands.js, §45)
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize, typeLinks, checkCustomValues, customDisplay }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */
@@ -1287,4 +1327,4 @@ function compact(value) {
   return out
 }
 
-module.exports = { createTaskService }
+module.exports = { createTaskService, customValuesInput, typesOf }
