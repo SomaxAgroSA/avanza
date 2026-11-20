@@ -1,16 +1,22 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatShortDateTime } from '@/core/utils/format'
-import type { TaskDetail } from '@/domain/tasks'
+import type { FieldValue, TaskTypeField } from '@/domain/task-config'
+import { customValueIssues, type TaskDetail } from '@/domain/tasks'
 import { AppAvatar, AppButton, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
-import { useTaskTypes } from '@/features/task-config/queries'
+import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
+import { useFieldOptionCreator } from '@/features/task-config/use-field-option-creator'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
-import { useAreas, usePriorities } from '@/features/workflow/queries'
-import { useTaskMutations } from '@/features/tasks/queries'
+import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
+import { useProjects } from '@/features/projects/queries'
+import { useTaskAttachments, useTaskMutations } from '@/features/tasks/queries'
+import { PROJECT_OPTIONS_QUERY } from '@/features/tasks/required-fields'
+import { TaskTypeFieldsSection } from '@/features/tasks/TaskTypeFieldsSection'
+import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from '@/features/tasks/use-attachment-uploader'
 import { useDemandMutations, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
 import { companyRequired } from '@/domain/companies'
@@ -79,11 +85,60 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
   const areas = useAreas(false)
-  const owners = useDemandOwners(open && !isEdit)
   // Empresa (§46): obrigatória quando existe empresa ativa (a regra é do servidor; aqui só antecipa)
   const companies = useCompanies(open)
   const needsCompany = companyRequired(companies.data ?? [])
-  const pending = create.isPending || update.isPending
+
+  // Campos do tipo (§45): os mesmos da tarefa de projeto, exigidos no status em que a demanda está (ou nasce: o padrão)
+  const [values, setValues] = useState<Record<string, FieldValue>>(() => ({ ...(task?.customValues ?? {}) }))
+  const [valueErrors, setValueErrors] = useState<Record<string, string>>({})
+  const typeDetail = useTaskType(open ? draft.typeId || undefined : undefined)
+  const fields: TaskTypeField[] = useMemo(() => (typeDetail.data?.fields ?? []).filter((f) => f.visible), [typeDetail.data])
+  const uses = (...kinds: string[]) => fields.some((link) => kinds.includes(link.field.type))
+  const statuses = useStatuses(false)
+  const statusId = isEdit ? task?.status?.id : statuses.data?.find((s) => s.isDefault)?.id
+  // pessoas: o responsável (na criação) e os campos de pessoa; qualquer pessoa ativa, como no servidor
+  const owners = useDemandOwners(open && (!isEdit || uses('user', 'users')))
+  const projects = useProjects(PROJECT_OPTIONS_QUERY, open && uses('project'))
+  // imagem/arquivo: na edição, anexos da demanda ou envio pelo campo; na criação, ficam aqui e vão logo depois de criar
+  const taskAttachments = useTaskAttachments(open && uses('image', 'file') ? task?.id : undefined)
+  const uploadToField = useFieldAttachmentUpload(task?.id ?? '')
+  const heldFiles = useHeldFieldFiles()
+  const sendFieldFiles = useFieldFilesSender()
+  const [sendingFiles, setSendingFiles] = useState(false)
+  const createOption = useFieldOptionCreator()
+  const heldForm = useMemo(
+    () => ({
+      ...heldFiles,
+      add: (name: string, files: File[], imagesOnly: boolean) => {
+        heldFiles.add(name, files, imagesOnly)
+        setValueErrors(({ [name]: _removed, ...rest }) => rest)
+      },
+    }),
+    [heldFiles],
+  )
+  const references = useMemo(
+    () => ({
+      people: (owners.data ?? []).map((p) => ({ id: p.id, name: p.name })),
+      projects: (projects.data?.items ?? []).map((p) => ({ id: p.id, key: p.key, name: p.name })),
+      attachments: task ? (taskAttachments.data ?? []).map((a) => ({ id: a.id, name: a.name, kind: a.kind, url: a.url })) : undefined,
+      uploadFiles: task ? uploadToField : undefined,
+      heldFiles: task ? undefined : heldForm,
+      createOption,
+    }),
+    [owners.data, projects.data, task, taskAttachments.data, uploadToField, heldForm, createOption],
+  )
+  // padrões do tipo (criação): aplicados quando os campos do tipo chegam
+  const [defaultsFor, setDefaultsFor] = useState<string | null>(isEdit ? (task?.type?.id ?? null) : null)
+  if (!isEdit && typeDetail.data && defaultsFor !== typeDetail.data.id && typeDetail.data.id === draft.typeId) {
+    setDefaultsFor(typeDetail.data.id)
+    const next = { ...values }
+    typeDetail.data.fields.forEach((link) => {
+      if (link.visible && next[link.field.name] === undefined && link.field.defaultValue !== null) next[link.field.name] = link.field.defaultValue
+    })
+    setValues(next)
+  }
+  const pending = create.isPending || update.isPending || sendingFiles
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -114,10 +169,28 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     if (!draft.areaId) found.area_id = 'required'
     // obrigatória ao abrir; a demanda antiga (sem empresa) pode ser editada sem escolher
     if (!isEdit && needsCompany && !draft.companyId) found.company_id = 'required'
-    if (Object.keys(found).length > 0) return setErrors(found)
+    // na criação, o campo de arquivo/imagem exigido conta os arquivos escolhidos (vão logo depois de criar)
+    const held = isEdit ? undefined : Object.fromEntries(Object.entries(heldFiles.files).map(([name, list]) => [name, list.length]))
+    const issues = customValueIssues(fields, values, statusId, held)
+    setValueErrors(issues)
+    if (Object.keys(found).length > 0 || Object.keys(issues).length > 0) return setErrors(found)
+    const customValues: Record<string, FieldValue> = {}
+    fields.forEach((link) => {
+      if ((link.field.type === 'image' || link.field.type === 'file') && !isEdit) return
+      const value = values[link.field.name]
+      customValues[link.field.name] = value === undefined || value === '' ? null : value
+    })
     const onError = (error: unknown) => {
-      if (isAppError(error) && error.code === 'VALIDATION_ERROR') setErrors(error.fieldErrors())
-      else notify.error(errorMessage(error))
+      if (isAppError(error) && error.code === 'VALIDATION_ERROR') {
+        const base: Record<string, string> = {}
+        const custom: Record<string, string> = {}
+        Object.entries(error.fieldErrors()).forEach(([key, code]) => {
+          if (key.startsWith('custom_values.')) custom[key.slice('custom_values.'.length)] = code
+          else base[key] = code
+        })
+        setErrors(base)
+        setValueErrors(custom)
+      } else notify.error(errorMessage(error))
     }
     if (isEdit && task) {
       update.mutate(
@@ -131,6 +204,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
             // só quando mudou: a empresa inativa que a demanda já tem continua valendo
             ...(draft.companyId && draft.companyId !== (task.company?.id ?? '') ? { companyId: draft.companyId } : {}),
+            customValues,
           },
         },
         {
@@ -144,6 +218,25 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
       )
       return
     }
+    /** Depois de criar: envia os arquivos escolhidos nos campos. A demanda já existe — falha não a desfaz. */
+    const onCreated = async (saved: TaskDetail) => {
+      const failed: string[] = []
+      setSendingFiles(true)
+      try {
+        for (const link of fields) {
+          const chosen = heldFiles.files[link.field.name] ?? []
+          if ((link.field.type !== 'image' && link.field.type !== 'file') || chosen.length === 0) continue
+          const result = await sendFieldFiles(saved.id, chosen, link.field.name, link.field.type === 'image')
+          result.failed.forEach((item) => failed.push(`${item.name} (${item.reason})`))
+        }
+      } finally {
+        setSendingFiles(false)
+      }
+      notify.success(t('demands.created', { code: saved.code, owner: saved.demand?.owner?.name ?? '' }))
+      onOpenChange(false)
+      onSaved?.(saved)
+      if (failed.length > 0) notify.warning(t('tasks.filesNotSent', { count: failed.length, code: saved.code, names: failed.join(', ') }))
+    }
     create.mutate(
       {
         taskTypeId: draft.typeId,
@@ -153,22 +246,17 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
         areaId: draft.areaId,
         ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
         ...(draft.companyId ? { companyId: draft.companyId } : {}),
+        customValues,
       },
-      {
-        onSuccess: (saved) => {
-          notify.success(t('demands.created', { code: saved.code, owner: saved.demand?.owner?.name ?? '' }))
-          onOpenChange(false)
-          onSaved?.(saved)
-        },
-        onError,
-      },
+      { onSuccess: (saved) => void onCreated(saved), onError },
     )
   }
 
   return (
     <AppDialog
       open={open}
-      onOpenChange={onOpenChange}
+      // enviando os arquivos da demanda recém-criada: espera terminar
+      onOpenChange={(next) => !sendingFiles && onOpenChange(next)}
       size="2xl"
       closeOnOutsideClick={false}
       title={isEdit ? t('demands.form.editTitle', { code: task?.code }) : t('demands.form.createTitle')}
@@ -200,7 +288,10 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             value={draft.typeId || undefined}
             placeholder={t('fields.selectPlaceholder')}
             error={errors.task_type_id}
-            onValueChange={(value) => set('typeId', value)}
+            onValueChange={(value) => {
+              set('typeId', value)
+              setValueErrors({})
+            }}
             options={typeOptions}
           />
           <AppTextField
@@ -222,6 +313,21 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             placeholder={t('demands.form.descriptionPlaceholder')}
             onChange={(event) => set('description', event.target.value)}
           />
+          {draft.typeId && (
+            <TaskTypeFieldsSection
+              type={types.data?.find((x) => x.id === draft.typeId) ?? task?.type ?? null}
+              loading={typeDetail.isPending}
+              fields={fields}
+              values={values}
+              errors={valueErrors}
+              statusId={statusId}
+              references={references}
+              onChange={(name, value) => {
+                setValues((v) => ({ ...v, [name]: value }))
+                setValueErrors(({ [name]: _removed, ...rest }) => rest)
+              }}
+            />
+          )}
         </div>
         <aside aria-label={t('tasks.properties')} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 lg:border-l lg:border-border lg:pl-8">
           <AppSelect
