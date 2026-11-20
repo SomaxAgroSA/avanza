@@ -266,7 +266,7 @@ function TeamLoadCard({ team, loading, variant = 'team' }: { team: TeamLoad[]; l
       {loading ? (
         <AppSkeleton className="h-24" />
       ) : team.length === 0 ? (
-        <p className="text-sm text-muted">{t(variant === 'all' ? 'demands.allLoad.empty' : 'demands.load.empty')}</p>
+        <p className="text-sm text-muted">{t(`${keys}.empty`)}</p>
       ) : (
         <ul className="flex flex-col gap-3" aria-label={t(`${keys}.title`)}>
           {team.map((member) => {
