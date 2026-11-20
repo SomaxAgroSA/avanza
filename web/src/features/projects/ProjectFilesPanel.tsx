@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FolderOpen } from 'lucide-react'
-import { acceptAttribute, formatBytes, MAX_FILE_SIZE, type ProjectFile } from '@/domain/attachments'
+import { acceptAttribute, type ProjectFile } from '@/domain/attachments'
 import type { Project } from '@/domain/projects'
 import { AppEmptyState, AppErrorState, AppFileDrop, AppSkeleton, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
@@ -15,7 +15,7 @@ import { useProjectFileMutations, useProjectFiles } from './queries'
  * vê e baixa; enviar depende de `capabilities.uploadFiles`; excluir, do arquivo (quem enviou ou o gestor).
  */
 export function ProjectFilesPanel({ project }: { project: Project }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const files = useProjectFiles(project.id)
   const { upload, remove } = useProjectFileMutations(project.id)
@@ -33,7 +33,7 @@ export function ProjectFilesPanel({ project }: { project: Project }) {
     <div className="flex flex-col gap-5">
       <p className="text-sm text-muted">{t('projectFiles.description')}</p>
       {canUpload && (
-        <AppFileDrop onFiles={(chosen) => void send(chosen)} accept={acceptAttribute()} hint={t('attachments.hint', { max: formatBytes(MAX_FILE_SIZE, i18n.language) })} />
+        <AppFileDrop onFiles={(chosen) => void send(chosen)} accept={acceptAttribute()} />
       )}
       <PendingUploads items={uploader.pending} onDismiss={uploader.dismiss} />
 

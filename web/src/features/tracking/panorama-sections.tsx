@@ -279,7 +279,6 @@ export function HealthCard({ kpis, filter, onFilter }: { kpis: PanoramaKpis; fil
           {t('tracking.health.all')}
         </button>
       </div>
-      <p className="mb-3 text-xs text-muted">{t('tracking.health.hint')}</p>
       <div className="flex flex-wrap items-center gap-5">
         <AppDonut className="size-36" label={t('tracking.health.title')} segments={segments} thickness={14} activeKey={active} onSegmentClick={(key) => toggle(key as TrackingSituation)}>
           <span className="font-display text-3xl font-semibold leading-none tabular-nums text-fg">{kpis.supervised.total}</span>
@@ -340,7 +339,6 @@ export function ExecutionCard({ kpis, data }: { kpis: PanoramaKpis; data: Execut
         <p className="mb-2 text-sm text-muted">{t('tracking.execution.noPlan')}</p>
       ) : (
         <>
-          <p className="mb-2 text-xs text-muted">{t('tracking.execution.hint', { count: progress.withPlan })}</p>
           <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)_3.5rem] items-center gap-x-3 gap-y-2 text-sm">
             <dt className="text-muted">{t('tracking.execution.real')}</dt>
             <dd className="flex items-center">
@@ -545,7 +543,6 @@ export function MilestonesList({ data, rows, today }: { data: ExecutiveDashboard
         <h2 id="panorama-milestones" className="font-display text-lg font-semibold text-fg">
           {t('tracking.milestones.title')}
         </h2>
-        <p className="text-xs text-muted">{t('tracking.milestones.hint')}</p>
       </div>
       {list.length === 0 ? (
         <p className="rounded-2xl border border-border bg-surface px-4 py-4 text-sm text-muted">{t('tracking.milestones.none')}</p>

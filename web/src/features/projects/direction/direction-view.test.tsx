@@ -449,7 +449,8 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     setup({ deps: DEPS })
     await userEvent.click(await screen.findByTestId('dep-strip'))
     const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
-    expect(drawer).toHaveTextContent('Proyectos en marcha · entregas pendientes de otras áreas')
+    // sin la línea de ayuda debajo del título
+    expect(drawer).not.toHaveTextContent('entregas pendientes de otras áreas')
     expect(drawer).not.toHaveTextContent('a cargo de')
     expect(drawer).not.toHaveTextContent('Cómo se calcula')
     expect(drawer).not.toHaveTextContent('Entregas pendientes de TI')
@@ -537,7 +538,6 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     const timeline = await screen.findByRole('region', { name: 'Línea de tiempo de los proyectos' })
     await userEvent.click(await within(timeline).findByRole('button', { name: 'Dependencias en este proyecto: Alfa' }))
     const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
-    expect(drawer).toHaveTextContent('Alfa · entregas pendientes de otras áreas')
     expect(within(drawer).getAllByRole('region').map((b) => b.getAttribute('aria-label'))).toEqual(['Alfa'])
     await userEvent.click(within(drawer).getByRole('button', { name: 'Confirmar bloqueo' }))
     await waitFor(() => expect(remove).toHaveBeenCalledWith('r2'))

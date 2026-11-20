@@ -101,7 +101,7 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title={t('reports.title')} description={t('reports.description')} />
+      <PageHeader title={t('reports.title')} />
       <div className="flex flex-col gap-4">
         <AppFilterBar
           hasActiveFilters={activeFilters}
@@ -220,7 +220,6 @@ function BreakdownCard({ rows, dimension, onGroupBy }: { rows: BreakdownRow[]; d
   return (
     <AppCard
       title={t('reports.breakdownTitle')}
-      description={t('reports.breakdownHint')}
       actions={
         <AppSelect
           size="sm"
@@ -265,7 +264,7 @@ function OverdueCard({ tasks, onView }: { tasks: TaskSummary[]; onView: (id: str
     { id: 'assignee', header: t('tasks.fields.assignee'), size: 200, cell: (task) => <PersonCell person={task.assignee} /> },
   ]
   return (
-    <AppCard title={t('reports.overdueTitle', { count: tasks.length })} description={t('reports.overdueHint')}>
+    <AppCard title={t('reports.overdueTitle', { count: tasks.length })}>
       <AppDataTable
         caption={t('reports.overdueTitle', { count: tasks.length })}
         columns={columns}

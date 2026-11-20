@@ -54,7 +54,7 @@ export function IntegrationsPage() {
   const [tab, setTab] = useState('email')
   return (
     <>
-      <PageHeader title={t('integrations.title')} description={t('integrations.description')} />
+      <PageHeader title={t('integrations.title')} />
       <AppTabs
         aria-label={t('integrations.title')}
         value={tab}

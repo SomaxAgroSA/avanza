@@ -139,7 +139,6 @@ export function CustomFieldsPage() {
     <>
       <PageHeader
         title={t('fields.title')}
-        description={t('fields.description')}
         actions={
           <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
             {t('fields.create')}

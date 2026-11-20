@@ -394,7 +394,6 @@
     "revokeCurrentTitle": "¿Cerrar sesión en este dispositivo?",
     "revokeCurrentDescription": "Tendrá que iniciar sesión de nuevo.",
     "title": "Mi cuenta",
-    "description": "Sus datos, contraseña y sesiones.",
     "profile": "Perfil",
     "profileSaved": "Perfil actualizado.",
     "emailHint": "Para cambiar el correo o el perfil de acceso, hable con un administrador.",
@@ -423,7 +422,6 @@
     "goodMorning": "Buenos días, {{name}}",
     "goodAfternoon": "Buenas tardes, {{name}}",
     "goodEvening": "Buenas noches, {{name}}",
-    "subtitle": "Siga sus proyectos, planifique los sprints y mueva las tareas por el Kanban.",
     "indicators": "Indicadores",
     "quickAccess": "Acceso rápido",
     "shortcuts": {
@@ -458,7 +456,6 @@
   },
   "users": {
     "title": "Usuarios",
-    "description": "Cuentas, perfiles de acceso y estado.",
     "create": "Nuevo usuario",
     "createTitle": "Nuevo usuario",
     "createDescription": "El usuario podrá entrar de inmediato con la contraseña definida.",
@@ -520,7 +517,6 @@
   },
   "roles": {
     "title": "Perfiles",
-    "description": "Perfiles de acceso asignados a los usuarios.",
     "create": "Nuevo perfil",
     "createTitle": "Nuevo perfil",
     "createDescription": "Después de crearlo, defina sus permisos en la matriz de permisos.",
@@ -628,7 +624,6 @@
   },
   "audit": {
     "title": "Auditoría",
-    "description": "Historial inmutable de las acciones realizadas en la plataforma.",
     "detailsDescription": "Registro de auditoría (solo lectura).",
     "noHistory": "No hay registros en el historial.",
     "system": "Sistema",
@@ -1070,13 +1065,6 @@
       "lead": "Gestión",
       "devLead": "Desarrollo"
     },
-    "descriptions": {
-      "all": "Proyectos a los que tiene acceso.",
-      "mine": "Proyectos en los que participa.",
-      "ongoing": "Proyectos en planificación, en curso o pausados.",
-      "finished": "Proyectos completados o cancelados. Archívelos cuando ya no necesite consultarlos.",
-      "archived": "Los proyectos archivados son de solo lectura y se pueden restaurar."
-    },
     "create": "Nuevo proyecto",
     "createTitle": "Nuevo proyecto",
     "createDescription": "Usted será el dueño y gestor del proyecto.",
@@ -1172,7 +1160,6 @@
       "button": "Configurar filtro de proyectos",
       "buttonActive": "Configurar filtro de proyectos (activo en esta pantalla)",
       "title": "Filtro de proyectos de esta pantalla",
-      "hint": "Define qué proyectos aparecen en el filtro. Se guarda solo para ti.",
       "optionsOnly": "Aquí se aplica a la lista del filtro; “Todos” sigue mostrando todos los proyectos.",
       "statuses": "Estado del proyecto",
       "allStatuses": "Todos",
@@ -1388,7 +1375,6 @@
   },
   "fields": {
     "title": "Campos personalizados",
-    "description": "Biblioteca de campos que pueden usar los tipos de tarea.",
     "create": "Nuevo campo",
     "createTitle": "Nuevo campo",
     "createDescription": "Defínalo una vez y reutilícelo en varios tipos de tarea.",
@@ -1534,7 +1520,6 @@
   },
   "taskTypes": {
     "title": "Tipos de tarea",
-    "description": "Cada tipo define qué campos pide la tarea y cómo aparecen.",
     "create": "Nuevo tipo",
     "createTitle": "Nuevo tipo de tarea",
     "editTitle": "Editar tipo de tarea",
@@ -1667,7 +1652,6 @@
     "defaultLockedHint": "Para cambiarlo, marque otro elemento como predeterminado.",
     "status": {
       "title": "Estados",
-      "description": "Etapas por las que pasan las tareas. La categoría indica al sistema qué significa cada etapa (ej.: finalizada).",
       "create": "Nuevo estado",
       "createTitle": "Nuevo estado",
       "editTitle": "Editar estado",
@@ -1682,7 +1666,6 @@
     },
     "priority": {
       "title": "Prioridades",
-      "description": "Niveles de prioridad de las tareas, de la más a la menos urgente.",
       "create": "Nueva prioridad",
       "createTitle": "Nueva prioridad",
       "editTitle": "Editar prioridad",
@@ -1697,7 +1680,6 @@
     },
     "area": {
       "title": "Departamentos",
-      "description": "Departamentos de tareas y proyectos (ej.: Dpto. TI, Marketing, Créditos). En un proyecto, es el departamento que pidió la demanda.",
       "create": "Nuevo departamento",
       "createTitle": "Nuevo departamento",
       "editTitle": "Editar departamento",
@@ -1855,7 +1837,6 @@
   },
   "tags": {
     "title": "Etiquetas",
-    "description": "Etiquetas para agrupar y filtrar tareas de cualquier proyecto.",
     "create": "Nueva etiqueta",
     "createTitle": "Nueva etiqueta",
     "editTitle": "Editar etiqueta",
@@ -1891,7 +1872,6 @@
     "newLabel": "Nuevo comentario",
     "editLabel": "Editar comentario",
     "placeholder": "Escriba un comentario… use @ para mencionar a alguien",
-    "hint": "Escribe @ para etiquetar a alguien del proyecto. Pega (Ctrl+V) o arrastra imágenes. Ctrl+Enter envía.",
     "submit": "Comentar",
     "edit": "Editar comentario",
     "delete": "Eliminar comentario",
@@ -1936,7 +1916,6 @@
     "deleted": "Archivo \"{{name}}\" eliminado."
   },
   "attachments": {
-    "hint": "Imágenes (PNG, JPG, GIF, WebP), PDF, Office, ZIP y texto — hasta {{max}} por archivo. Las fotos grandes se reducen antes del envío.",
     "uploading": "enviando…",
     "uploaded_one": "{{count}} archivo adjuntado.",
     "uploaded_other": "{{count}} archivos adjuntados.",
@@ -1960,7 +1939,6 @@
   },
   "notifications": {
     "title": "Notificaciones",
-    "description": "Menciones, tareas asignadas a usted, comentarios y plazos.",
     "bell": "Notificaciones",
     "bellWithCount_one": "Notificaciones: {{count}} sin leer",
     "bellWithCount_other": "Notificaciones: {{count}} sin leer",
@@ -2106,7 +2084,6 @@
   },
   "backlog": {
     "title": "Planificación",
-    "description": "Priorice todo lo que aún no se cerró — ideas, tareas analizadas y en curso — y organícelo en sprints.",
     "pickTitle": "Elija un proyecto para ver la planificación",
     "pickHint": "Ve la planificación de los proyectos en los que participa.",
     "notFound": "Planificación no encontrada o no tiene acceso a este proyecto.",
@@ -2237,7 +2214,6 @@
   },
   "reports": {
     "title": "Informes",
-    "description": "Indicadores calculados a partir de las tareas reales, siempre con el período considerado a la vista.",
     "periodLabel": "Período",
     "presets": {
       "7d": "Últimos 7 días",
@@ -2283,7 +2259,6 @@
     "trendDaily": "Creadas × terminadas por día",
     "trendWeekly": "Creadas × terminadas por semana",
     "breakdownTitle": "Desglose",
-    "breakdownHint": "Abiertas y atrasadas: ahora. Creadas, terminadas y tiempo promedio: en el período.",
     "groupBy": "Agrupar por",
     "dimensions": {
       "status": "Estado",
@@ -2307,7 +2282,6 @@
     },
     "overdueTitle_one": "{{count}} tarea atrasada",
     "overdueTitle_other": "{{count}} tareas atrasadas",
-    "overdueHint": "Abiertas con plazo anterior a hoy, de la más antigua a la más reciente (hasta 50).",
     "noOverdue": "Ninguna tarea atrasada. 🎉",
     "metricHelp": {
       "open": "Tareas aún no completadas ni canceladas: backlog, por hacer y en curso.",
@@ -2336,7 +2310,6 @@
   },
   "executive": {
     "title": "Panel ejecutivo",
-    "description": "Salud, entregas y riesgos del portafolio.",
     "updatedAt": "Actualizado a las {{time}}",
     "print": "Imprimir o guardar en PDF",
     "loadError": "No se pudo cargar el panel ejecutivo.",
@@ -2487,7 +2460,6 @@
   },
   "timeline": {
     "title": "Cronograma",
-    "description": "Cronograma del proyecto: arrastre las barras para cambiar las fechas.",
     "label": "Cronograma de {{name}}",
     "pickTitle": "Elija un proyecto para ver su cronograma",
     "pickHint": "El cronograma muestra las tareas del inicio planificado a la fecha límite, con dependencias, sprints e hitos.",
@@ -2685,7 +2657,6 @@
   },
   "docs": {
     "title": "Documentación",
-    "description": "Bases de conocimiento de la empresa y de los proyectos: guías, procesos, manuales y preguntas frecuentes.",
     "spaces": "Espacios",
     "recent": "Actualizadas recientemente",
     "recentEmpty": "Todavía no hay páginas publicadas.",
@@ -3325,7 +3296,6 @@
       "replyLabel": "Responder a {{name}}",
       "post": "Actualizar",
       "reply": "Responder",
-      "hint": "Acepta **negrita**, *cursiva*, listas y enlaces. Usa @ para mencionar (la persona recibe una notificación). Pega (Ctrl+V) o arrastra imágenes y archivos. Ctrl+Enter publica.",
       "placeholder": "Escribe una actualización…",
       "readOnly": "Proyecto archivado: las actualizaciones son de solo lectura.",
       "empty": "Todavía no hay actualizaciones",
@@ -3666,7 +3636,6 @@
   },
   "management": {
     "title": "Gestión de proyectos",
-    "description": "Fases, actividades de gestión, cronograma y salud de cada proyecto — aparte de las tareas del día a día.",
     "pickTitle": "Elige un proyecto",
     "pickHint": "La gestión de proyectos es por proyecto: elige cuál abrir.",
     "notFound": "Proyecto no encontrado",
@@ -3683,7 +3652,6 @@
   },
   "platform": {
     "title": "Configuración general",
-    "description": "Identidad, contraseñas, bloqueo de inicio de sesión y retención del historial. Valen para toda la plataforma.",
     "save": "Guardar cambios",
     "saved": "Configuración guardada.",
     "nothingChanged": "No se cambió nada.",
@@ -3752,7 +3720,6 @@
   },
   "integrations": {
     "title": "Integraciones",
-    "description": "Correo de la plataforma, webhooks para otros sistemas y tokens de API.",
     "tabs": {
       "email": "Correo",
       "tokens": "Tokens de API",
@@ -3825,7 +3792,6 @@
   },
   "apiTokens": {
     "title": "Tokens de API",
-    "description": "Acceso a la API sin el navegador (scripts, BI, integraciones). El token actúa con tus permisos.",
     "cardDescription": "Para que scripts e integraciones accedan a la API en tu nombre.",
     "manage": "Gestionar tokens",
     "backToAccount": "Mi cuenta",
@@ -3950,7 +3916,6 @@
   },
   "icons": {
     "title": "Íconos",
-    "description": "Biblioteca de íconos de la plataforma: además de los predeterminados, los importados aquí aparecen en los íconos de proyectos, tipos de tarea y espacios de la Documentación.",
     "import": "Importar de la galería",
     "importMore": "Importar más íconos de la galería",
     "empty": "Ningún ícono importado",
@@ -4180,7 +4145,6 @@
   },
   "access": {
     "title": "Control de acceso",
-    "description": "Elige una persona y define en un solo lugar qué módulos ve, qué ve dentro de cada proyecto, qué puede hacer y en qué proyectos entra. En Perfiles se crean los perfiles y se editan sus permisos.",
     "noUsers": "No hay usuarios.",
     "user": "Usuario",
     "role": "Perfil",
@@ -4377,7 +4341,6 @@
     },
     "health": {
       "title": "Salud del portafolio",
-      "hint": "Proyectos por situación · elegí una para filtrar la tabla.",
       "all": "Ver todos",
       "center_one": "proyecto",
       "center_other": "proyectos",
@@ -4385,8 +4348,6 @@
     },
     "execution": {
       "title": "Ejecución vs. planificación",
-      "hint_one": "Avance real y planificado · solo el proyecto con plan.",
-      "hint_other": "Avance real y planificado · solo los {{count}} proyectos con plan.",
       "real": "Real",
       "planned": "Planificado",
       "gap": "Desvío",
@@ -4451,7 +4412,6 @@
     },
     "milestones": {
       "title": "Próximos hitos relevantes",
-      "hint": "Hitos de la Gestión: los vencidos y los de los próximos 30 días.",
       "none": "Ningún hito vencido ni en los próximos 30 días.",
       "owner": "Resp. del proyecto: {{name}}",
       "noOwner": "Sin responsable",
@@ -4490,7 +4450,6 @@
     "open": "Equipo ahora",
     "column": "Trabajando",
     "title": "Equipo ahora",
-    "description": "En qué proyecto está trabajando cada persona, según sus tareas de los últimos {{days}} días.",
     "emptyTitle": "Nadie tiene tareas abiertas",
     "emptyHint": "Cuando haya tareas asignadas en proyectos en marcha, aparecen aquí.",
     "noActivity": "Sin actividad esta semana",
@@ -4559,8 +4518,6 @@
     },
     "departments": {
       "title": "Proyectos por departamento",
-      "hint_one": "Proyectos del filtro ({{count}}). Toca un departamento para filtrar todo.",
-      "hint_other": "Proyectos del filtro ({{count}}). Toca un departamento para filtrar todo.",
       "none": "Sin departamento",
       "chart": "Gráfico de proyectos por departamento",
       "slice_one": "{{name}}: {{count}} proyecto ({{percent}} %)",
@@ -4618,8 +4575,6 @@
     "projects_other": "{{count}} proyectos",
     "flag": "Dependencias en este proyecto",
     "flagAria": "Dependencias en este proyecto: {{name}}",
-    "allProjects": "Proyectos en marcha",
-    "subtitle": "{{scope}} · entregas pendientes de otras áreas",
     "areaFilter": "Área",
     "allAreas": "Todas las áreas",
     "pendingCount_one": "{{count}} entrega pendiente",
@@ -4654,7 +4609,6 @@
     },
     "settings": {
       "title": "Dependencias por área",
-      "description": "Las áreas que entregan cosas a los proyectos (TI, Finanzas…). Las tareas abiertas asignadas a las personas de cada área aparecen como «entregas pendientes» en el panel Dirección y gerencia de En marcha.",
       "name": "Nombre del área",
       "people": "Personas",
       "placeholder": "Elige las personas",

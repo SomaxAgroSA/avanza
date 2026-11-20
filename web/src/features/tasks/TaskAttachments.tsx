@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Paperclip } from 'lucide-react'
-import { acceptAttribute, formatBytes, MAX_FILE_SIZE, type Attachment, type FileItem } from '@/domain/attachments'
+import { acceptAttribute, type Attachment, type FileItem } from '@/domain/attachments'
 import type { TaskDetail } from '@/domain/tasks'
 import { AppConfirmDialog, AppEmptyState, AppFileDrop, AppSkeleton, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
@@ -11,7 +11,7 @@ import { useAttachmentUploader } from './use-attachment-uploader'
 
 /** Anexos e imagens da tarefa: envio (arrastar/soltar), galeria com visualizador e documentos. */
 export function TaskAttachments({ task }: { task: TaskDetail }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const attachments = useTaskAttachments(task.id)
   const { remove } = useAttachmentMutations(task.id)
@@ -28,7 +28,7 @@ export function TaskAttachments({ task }: { task: TaskDetail }) {
   return (
     <div className="flex flex-col gap-5">
       {canUpload && (
-        <AppFileDrop onFiles={(files) => void send(files)} accept={acceptAttribute()} hint={t('attachments.hint', { max: formatBytes(MAX_FILE_SIZE, i18n.language) })} />
+        <AppFileDrop onFiles={(files) => void send(files)} accept={acceptAttribute()} />
       )}
       <PendingUploads items={uploader.pending} onDismiss={uploader.dismiss} />
 

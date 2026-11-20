@@ -52,7 +52,6 @@ export function GeneralSettingsPage() {
     <>
       <PageHeader
         title={t('platform.title')}
-        description={t('platform.description')}
         actions={
           settings.data && (
             <AppButton type="submit" form={FORM_ID} leftIcon={<Save />}>

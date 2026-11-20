@@ -34,7 +34,7 @@ export function AccountPage() {
   if (!current) return null
   return (
     <>
-      <PageHeader title={t('account.title')} description={t('account.description')} />
+      <PageHeader title={t('account.title')} />
       <div className="grid gap-4 lg:grid-cols-2">
         <ProfileCard current={current} />
         <PasswordCard />

@@ -62,7 +62,7 @@ export function TeamActivityDrawer({ open, onOpenChange }: { open: boolean; onOp
   const { t } = useTranslation()
   const activity = useTeamActivity(open)
   return (
-    <AppDrawer open={open} onOpenChange={onOpenChange} title={t('team.title')} description={t('team.description', { days: activity.data?.windowDays ?? 7 })} size="lg">
+    <AppDrawer open={open} onOpenChange={onOpenChange} title={t('team.title')} size="lg">
       {activity.isPending ? (
         <div className="space-y-3">
           <AppSkeleton className="h-24" />

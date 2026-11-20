@@ -37,7 +37,6 @@ export function DirectionTeam({ team, projects, counts, pending, error, onRetry 
     <section aria-label={t('team.title')} className="mb-6">
       <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-3 px-0.5">
         <h2 className="text-base font-semibold tracking-tight text-fg">{t('team.title')}</h2>
-        <p className="text-xs text-muted">{t('team.description', { days: team?.windowDays ?? 7 })}</p>
       </div>
       {pending ? (
         <div className="grid gap-3 lg:grid-cols-3">

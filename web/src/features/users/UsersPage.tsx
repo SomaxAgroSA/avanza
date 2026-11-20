@@ -158,7 +158,6 @@ export function UsersPage() {
     <>
       <PageHeader
         title={t('users.title')}
-        description={t('users.description')}
         actions={
           canCreate && (
             <AppButton leftIcon={<UserPlus />} onClick={() => setCreating(true)} disabled={!roles.data}>

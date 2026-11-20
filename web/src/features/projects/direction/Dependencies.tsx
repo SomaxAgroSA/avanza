@@ -112,7 +112,6 @@ export function DepDrawer({ data, panel, only, open, onClose, onShowAll }: DepDr
   // a área escolhida some do recorte (outro projeto, entrega concluída): volta para todas
   const selected = area && chips.areas.some((a) => a.key === area) ? area : null
   const shown = useMemo(() => (selected ? depInScope(data, panel, only, selected) : all), [data, panel, only, selected, all])
-  const single = only ? all.projects[0] : undefined
   const today = data?.today ?? ''
 
   return (
@@ -125,7 +124,6 @@ export function DepDrawer({ data, panel, only, open, onClose, onShowAll }: DepDr
           onClose()
         }}
         title={t('dependencies.title')}
-        description={t('dependencies.subtitle', { scope: single ? single.project.name : t('dependencies.allProjects') })}
         size="lg"
       >
         <div className="flex flex-col gap-3.5 text-sm" data-testid="dep-drawer">

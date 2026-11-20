@@ -36,7 +36,6 @@ export function TagsPage() {
     <>
       <PageHeader
         title={t('tags.title')}
-        description={t('tags.description')}
         actions={
           <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>
             {t('tags.create')}

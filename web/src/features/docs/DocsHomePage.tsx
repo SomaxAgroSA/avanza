@@ -34,7 +34,6 @@ export function DocsHomePage() {
     <>
       <PageHeader
         title={t('docs.title')}
-        description={t('docs.description')}
         actions={
           canManage && (
             <AppButton leftIcon={<Plus />} onClick={() => setCreating(true)}>

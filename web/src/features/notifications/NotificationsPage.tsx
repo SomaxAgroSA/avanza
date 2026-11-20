@@ -18,7 +18,6 @@ export function NotificationsPage() {
     <>
       <PageHeader
         title={t('notifications.title')}
-        description={t('notifications.description')}
         actions={
           <AppButton variant="secondary" leftIcon={<CheckCheck />} disabled={(unread.data ?? 0) === 0} loading={markAllRead.isPending} onClick={() => markAllRead.mutate()}>
             {t('notifications.markAllRead')}

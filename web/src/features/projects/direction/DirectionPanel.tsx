@@ -254,7 +254,6 @@ function Departments({ projects, area, onSelect }: { projects: Project[]; area: 
   const nameOf = (name: string, key: string) => (key === NO_AREA ? t('direction.departments.none') : name)
   return (
     <Card title={t('direction.departments.title')} className="mb-0">
-      <p className="mb-2 text-xs text-muted">{t('direction.departments.hint', { count: projects.length })}</p>
       {slices.length === 0 ? (
         <p className="py-2 text-sm text-muted">{t('direction.departments.empty')}</p>
       ) : (

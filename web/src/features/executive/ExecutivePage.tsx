@@ -119,7 +119,6 @@ export function ExecutivePage() {
       <header className="mb-6 flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-fg sm:text-2xl">{t('executive.title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('executive.description')}</p>
           {data && <p className="mt-0.5 text-xs text-subtle print:hidden">{t('executive.updatedAt', { time: time.format(data.generatedAt) })}</p>}
           {data && <ScopeLine data={data} projectIds={projectIds} period={period} />}
         </div>
