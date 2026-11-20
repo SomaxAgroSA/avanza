@@ -57,6 +57,8 @@ export interface DataTableColumn<T> {
     addon?: ReactNode
     /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
     variant?: 'select' | 'buttons'
+    /** O que vale sem nada escolhido (ex.: "Abertas"): o seletor parado mostra "Status: Abertas". Padrão: "Todos". */
+    allLabel?: string
   }
 }
 
@@ -121,7 +123,18 @@ export interface AppDataTableProps<T extends RowData> {
    * linha continuam com o próprio clique; no teclado, use o link da linha.
    */
   onRowClick?: (row: T) => void
+  /**
+   * "Colunas e ações": o menu de colunas ganha "Ações em cada linha" (Visualizar, Editar, Excluir, Mais),
+   * guardadas com as colunas (`rowActions` do estado). Excluir desligado vai para o "⋯"; nenhuma ligada
+   * (e sem ação própria da tela) = sem a coluna Ações.
+   */
+  configurableActions?: boolean
 }
+
+/** Ações da linha que "Colunas e ações" liga e desliga. */
+const ROW_ACTION_KEYS = ['view', 'edit', 'delete', 'more'] as const
+type RowActionKey = (typeof ROW_ACTION_KEYS)[number]
+const ROW_ACTION_LABELS: Record<RowActionKey, string> = { view: 'common.view', edit: 'common.edit', delete: 'common.delete', more: 'table.moreActions' }
 
 /* ------------------------------------------------------------------ implementação */
 
@@ -182,11 +195,27 @@ export function AppDataTable<T extends RowData>({
   paginated = true,
   bordered = true,
   onRowClick,
+  configurableActions = false,
 }: AppDataTableProps<T>) {
   const { t } = useTranslation()
   const { state } = tableState
   const clickTimer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(clickTimer.current), [])
+
+  // "Colunas e ações": quais ações a linha mostra (só as que a tela oferece); nenhuma = sem a coluna Ações
+  const rowActionPrefs = state.rowActions
+  const visibleActions = useMemo<Record<RowActionKey, boolean> | null>(() => {
+    if (!actions) return null
+    const on = (key: RowActionKey) => !configurableActions || rowActionPrefs[key] !== false
+    return {
+      view: !!actions.onView && on('view'),
+      edit: !!actions.onEdit && on('edit'),
+      delete: !!actions.onDelete && on('delete'),
+      more: !actions.hideMore && on('more'),
+    }
+  }, [actions, configurableActions, rowActionPrefs])
+  const actionButtons = visibleActions ? ROW_ACTION_KEYS.filter((key) => visibleActions[key]).length : 0
+  const hasActionsColumn = !!actions && !!visibleActions && (actionButtons > 0 || !!actions.leading)
 
   const columnDefs = useMemo(() => {
     const helper = createColumnHelper<typeof features, T>()
@@ -204,23 +233,24 @@ export function AppDataTable<T extends RowData>({
         minSize: col.minSize ?? 80,
       }),
     )
-    if (actions) {
+    if (actions && visibleActions && hasActionsColumn) {
+      // largura pelos botões à vista (a ação própria da tela, `leading`, cabe até dois botões)
+      const width = Math.max(72, 40 + (actionButtons + (actions.leading ? 2 : 0)) * 28)
       defs.push(
         helper.accessor((row) => row as unknown, {
           id: ACTIONS_ID,
           header: t('table.actions'),
-          cell: (ctx) => <RowActions row={ctx.row.original} actions={actions} />,
+          cell: (ctx) => <RowActions row={ctx.row.original} actions={actions} visible={visibleActions} />,
           enableSorting: false,
           enableHiding: false,
           enableResizing: false,
-          // com a ação própria da tela (`leading`), cabe mais um botão
-          size: actions.leading ? 180 : 148,
-          minSize: actions.leading ? 180 : 148,
+          size: width,
+          minSize: width,
         }),
       )
     }
     return defs
-  }, [columns, actions, t])
+  }, [columns, actions, visibleActions, hasActionsColumn, actionButtons, t])
 
   const sorting: SortingState = state.sort ? [{ id: state.sort.id, desc: state.sort.direction === 'desc' }] : []
   // Em telas estreitas nada fica fixo: as colunas fixas ocupariam toda a largura e esconderiam as demais.
@@ -239,7 +269,7 @@ export function AppDataTable<T extends RowData>({
       sorting,
       columnVisibility: state.columnVisibility as ColumnVisibilityState,
       columnSizing: state.columnSizing as ColumnSizingState,
-      columnPinning: { start: pinnedStart, end: actions && canPin ? [ACTIONS_ID] : EMPTY_PINNING },
+      columnPinning: { start: pinnedStart, end: hasActionsColumn && canPin ? [ACTIONS_ID] : EMPTY_PINNING },
     },
     onSortingChange: (updater) => {
       const next = resolve(updater, sorting)[0]
@@ -266,20 +296,37 @@ export function AppDataTable<T extends RowData>({
       label: String(column.columnDef.header ?? column.id),
       checked: column.getIsVisible(),
       // mantém ao menos uma coluna de dados visível
-      disabled: column.getIsVisible() && visibleColumnCount <= (actions ? 2 : 1),
+      disabled: column.getIsVisible() && visibleColumnCount <= (hasActionsColumn ? 2 : 1),
       onCheckedChange: (checked) => column.toggleVisibility(checked),
     })),
+    // "Ações em cada linha": guardadas com as colunas (por pessoa, neste navegador)
+    ...(configurableActions && actions
+      ? [
+          { type: 'separator' as const, key: 'actions-separator' },
+          { type: 'label' as const, key: 'actions-label', label: t('table.rowActions') },
+          ...ROW_ACTION_KEYS.filter((key) => (key === 'view' ? !!actions.onView : key === 'edit' ? !!actions.onEdit : key === 'delete' ? !!actions.onDelete : !actions.hideMore)).map<AppDropdownItem>(
+            (key) => ({
+              type: 'checkbox',
+              key: `action-${key}`,
+              label: t(ROW_ACTION_LABELS[key]),
+              checked: rowActionPrefs[key] !== false,
+              onCheckedChange: (checked) => tableState.setRowActions({ ...Object.fromEntries(ROW_ACTION_KEYS.map((k) => [k, rowActionPrefs[k] !== false])), [key]: checked }),
+            }),
+          ),
+        ]
+      : []),
   ]
+  const columnsLabel = configurableActions && actions ? t('table.columnsAndActions') : t('table.columns')
 
   // "Colunas" e a ação principal: na barra ou no lugar indicado pela tela (actionsSlot)
   const toolbarButtons = (
     <>
-      {hideableColumns.length > 0 && (
+      {(hideableColumns.length > 0 || (configurableActions && !!actions)) && (
         <AppDropdown
           items={columnMenu}
           trigger={
-            <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={t('table.columns')}>
-              <span className="hidden sm:inline">{t('table.columns')}</span>
+            <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={columnsLabel}>
+              <span className="hidden sm:inline">{columnsLabel}</span>
             </AppButton>
           }
         />
@@ -499,22 +546,31 @@ export function AppDataTable<T extends RowData>({
   )
 }
 
-function RowActions<T extends RowData>({ row, actions }: { row: T; actions: DataTableRowActions<T> }) {
+function RowActions<T extends RowData>({ row, actions, visible }: { row: T; actions: DataTableRowActions<T>; visible: Record<RowActionKey, boolean> }) {
   const { t } = useTranslation()
   const canView = actions.onView && (actions.canView ? actions.canView(row) : true)
   const canEdit = actions.onEdit && (actions.canEdit ? actions.canEdit(row) : true)
   const canDelete = actions.onDelete && (actions.canDelete ? actions.canDelete(row) : true)
-  const moreItems = actions.more?.(row) ?? []
   const deleteLabel = actions.deleteLabel?.(row) ?? t('common.delete')
+  // Excluir fora da linha ("Colunas e ações"): continua no "⋯", para quem pode
+  const moreItems = [
+    ...(actions.more?.(row) ?? []),
+    ...(actions.onDelete && !visible.delete && canDelete
+      ? [
+          { type: 'separator' as const, key: 'delete-separator' },
+          { key: 'delete', label: deleteLabel, icon: actions.deleteIcon?.(row) ?? <Trash2 />, tone: 'danger' as const, onSelect: () => actions.onDelete?.(row) },
+        ]
+      : []),
+  ]
 
   return (
     <div className="flex items-center justify-end gap-0.5">
       {actions.leading?.(row)}
-      {actions.onView && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} disabled={!canView} onClick={() => actions.onView?.(row)} />}
-      {actions.onEdit && (
+      {visible.view && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} disabled={!canView} onClick={() => actions.onView?.(row)} />}
+      {visible.edit && (
         <AppIconButton size="sm" label={t('common.edit')} icon={<Pencil />} disabled={!canEdit} onClick={() => actions.onEdit?.(row)} />
       )}
-      {actions.onDelete && (
+      {visible.delete && (
         <AppIconButton
           size="sm"
           variant={actions.deleteTone?.(row) ?? 'danger'}
@@ -524,7 +580,7 @@ function RowActions<T extends RowData>({ row, actions }: { row: T; actions: Data
           onClick={() => actions.onDelete?.(row)}
         />
       )}
-      {!actions.hideMore && (
+      {visible.more && (
         <AppDropdown
           items={moreItems.length > 0 ? moreItems : [{ type: 'label', key: 'none', label: t('table.noMoreActions') }]}
           trigger={

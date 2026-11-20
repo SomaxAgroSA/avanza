@@ -172,7 +172,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
       size="2xl"
       closeOnOutsideClick={false}
       title={isEdit ? t('demands.form.editTitle', { code: task?.code }) : t('demands.form.createTitle')}
-      description={isEdit ? task?.title : t('demands.form.createDescription')}
+      description={isEdit ? task?.title : undefined}
       footer={
         <>
           <AppButton variant="secondary" onClick={() => onOpenChange(false)} disabled={pending}>
@@ -220,7 +220,6 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             value={draft.description}
             error={errors.description}
             placeholder={t('demands.form.descriptionPlaceholder')}
-            hint={t('tasks.markdownHint')}
             onChange={(event) => set('description', event.target.value)}
           />
         </div>
@@ -246,7 +245,6 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
               value={draft.ownerId || undefined}
               placeholder={t('fields.selectPlaceholder')}
               error={errors.demand_owner_id}
-              hint={t('demands.form.ownerHint')}
               onValueChange={(value) => set('ownerId', value)}
               options={ownerOptions}
             />

@@ -8,10 +8,10 @@ import { useTask, useTaskAttachments } from './queries'
 import { TaskCustomValues, TaskProperties } from './TaskProperties'
 import { DemandFlowCard } from '@/features/demands/DemandFlowCard'
 import { TaskQuickFields } from './TaskQuickFields'
-import { TaskCode, TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
+import { TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { TagList } from '@/features/tags/tag-visuals'
 
-/** "Visualizar": resumo completo da tarefa sem sair da listagem. */
+/** "Visualizar": resumo completo da tarefa sem sair da listagem (sem o código no topo: fica na página da tarefa). */
 export function TaskPreviewDrawer({
   taskId,
   onOpenChange,
@@ -49,7 +49,6 @@ export function TaskPreviewDrawer({
       onOpenChange={onOpenChange}
       size="lg"
       title={data?.title ?? t('common.loading')}
-      description={data ? <TaskCode task={data} /> : undefined}
       footer={
         data && (
           <>
@@ -93,7 +92,8 @@ export function TaskPreviewDrawer({
             {!quickFields && <TaskPriorityBadge priority={data.priority} className="text-sm" />}
             {data.type && <span className="text-sm text-muted">{data.type.name}</span>}
             <TagList tags={data.tags} max={6} />
-            <TaskIndicators task={data} />
+            {/* sem comentários; o checklist só enquanto falta algo (ajuste 20/11) */}
+            <TaskIndicators task={data} lean />
           </div>
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-subtle">{t('tasks.fields.description')}</h3>

@@ -366,6 +366,37 @@ describe('TaskDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
   })
 
+  it('tarefa comum: no topo Status, Prioridade e um só Responsável (sem "Atribuída a" repetido)', async () => {
+    setup({ ...detail, assignee: members[0]!.user })
+    await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
+    expect(screen.getByRole('combobox', { name: /^Responsável/ })).toBeEnabled()
+    expect(screen.queryByRole('combobox', { name: /^Atribuída a/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Recebe e distribui' })).not.toBeInTheDocument()
+  })
+
+  it('com quem recebe e distribui: no topo Status, Prioridade, Responsável e Atribuída a; sem a caixa "Recebe e distribui"; Propriedades com Responsável, Atribuída a, Prazo e Estimativa', async () => {
+    const cesar = { id: 'u7', name: 'César TI', email: 'c@x.com', avatarUrl: null }
+    setup({
+      ...detail,
+      assignee: null,
+      estimatedHours: 6,
+      demand: { status: 'unassigned', owner: cesar, dueAt: new Date(2026, 10, 21, 17, 0), openedAt: null, actions: { assign: true, start: false, pass: false, conclude: false, validate: false, return: false } },
+    })
+    await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
+    const owner = screen.getByRole('combobox', { name: /^Responsável/ })
+    expect(owner).toHaveTextContent('César TI')
+    expect(owner).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: /^Atribuída a/ })).toHaveTextContent('Sem atribuir')
+    expect(screen.queryByRole('region', { name: 'Recebe e distribui' })).not.toBeInTheDocument()
+    // o passo e os botões do fluxo continuam no cabeçalho
+    expect(screen.getByRole('button', { name: 'Atribuir' })).toBeInTheDocument()
+    const properties = screen.getByRole('heading', { name: 'Propriedades' }).closest('section')!
+    expect(within(properties).getByText('Atribuída a')).toBeInTheDocument()
+    expect(within(properties).getAllByText(/César TI/).length).toBeGreaterThan(0)
+    expect(within(properties).getByText('6 h')).toBeInTheDocument()
+    expect(within(properties).getByText(new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(2026, 10, 21, 17, 0)))).toBeInTheDocument()
+  })
+
   it('histórico mostra campos personalizados pelo rótulo', async () => {
     setup()
     await userEvent.click(await screen.findByRole('tab', { name: 'Histórico' }))

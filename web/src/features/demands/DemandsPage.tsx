@@ -62,14 +62,14 @@ export function DemandsPage() {
 
   return (
     <>
-      <TasksHeader description={t(`demands.hints.${box}`)} />
-      <AppSegmentedControl<DemandBox>
-        label={t('demands.page.tabsLabel')}
-        className="mb-4"
-        value={box}
-        onValueChange={(value) => setParams(value === 'received' ? {} : { box: value }, { replace: true })}
-        options={boxes.map((b) => ({ value: b, label: label(t(`demands.tabs.${b}`), open(b)) }))}
-      />
+      <TasksHeader>
+        <AppSegmentedControl<DemandBox>
+          label={t('demands.page.tabsLabel')}
+          value={box}
+          onValueChange={(value) => setParams(value === 'received' ? {} : { box: value }, { replace: true })}
+          options={boxes.map((b) => ({ value: b, label: label(t(`demands.tabs.${b}`), open(b)) }))}
+        />
+      </TasksHeader>
       {(box === 'received' || box === 'all') && counts && <KpiCards counts={counts[box]} />}
       {box === 'received' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
@@ -213,7 +213,7 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
 }
 
 /**
- * Linha: código · tipo · departamento, título (abre a página inteira), passo, quem executa e prazo (ou
+ * Linha: tipo · departamento, título (abre a página inteira), passo, quem executa e prazo (ou
  * prioridade) e os botões. Na caixa Todas, também o responsável.
  */
 function DemandRow({ task, box, back, actions }: { task: TaskSummary; box: DemandBox; back: string; actions: ReturnType<typeof demandActionsFor> }) {
@@ -225,7 +225,8 @@ function DemandRow({ task, box, back, actions }: { task: TaskSummary; box: Deman
         <p className="flex min-w-0 items-center gap-2 text-xs text-muted">
           {/* demanda interna ou tarefa de projeto com quem recebe e distribui (o nome do projeto) */}
           {task.project ? <ProjectChip name={task.project.name} className="shrink-0" /> : <DemandChip className="shrink-0" />}
-          <span className="truncate">{[task.code, task.type?.name, task.area?.name].filter(Boolean).join(' · ')}</span>
+          {/* sem o código (fica na página da tarefa e na busca) */}
+          <span className="truncate">{[task.type?.name, task.area?.name].filter(Boolean).join(' · ')}</span>
         </p>
         <Link to={`/tasks/${task.id}`} state={{ from: { to: back, place: box } }} className="line-clamp-2 font-semibold text-fg hover:underline">
           {task.title}
@@ -261,7 +262,7 @@ function TeamLoadCard({ team, loading, variant = 'team' }: { team: TeamLoad[]; l
   const { t, i18n } = useTranslation()
   const keys = variant === 'all' ? 'demands.allLoad' : 'demands.load'
   return (
-    <AppCard title={t(`${keys}.title`)} description={t(`${keys}.hint`)}>
+    <AppCard title={t(`${keys}.title`)}>
       {loading ? (
         <AppSkeleton className="h-24" />
       ) : team.length === 0 ? (
@@ -285,7 +286,6 @@ function TeamLoadCard({ team, loading, variant = 'team' }: { team: TeamLoad[]; l
           })}
         </ul>
       )}
-      <p className="mt-3 text-xs text-muted">{t(`${keys}.foot`)}</p>
     </AppCard>
   )
 }

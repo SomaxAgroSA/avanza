@@ -51,7 +51,10 @@
     "clearFilters": "Limpar filtros",
     "noMoreActions": "Nenhuma outra ação",
     "resetColumns": "Restaurar colunas",
-    "openHint": "Clique para visualizar · duplo clique para abrir"
+    "openHint": "Clique para visualizar · duplo clique para abrir",
+    "columnsAndActions": "Colunas e ações",
+    "rowActions": "Ações em cada linha",
+    "moreActions": "Mais (···)"
   },
   "validation": {
     "required": "Campo obrigatório",
@@ -1713,10 +1716,8 @@
   },
   "tasks": {
     "title": "Tarefas",
-    "description": "Todas as tarefas dos projetos que você acompanha.",
     "create": "Nova tarefa",
     "createTitle": "Nova tarefa",
-    "createDescription": "Escolha o tipo: o formulário mostra os campos dele.",
     "editTitle": "Editar {{code}}",
     "created": "Tarefa {{code}} criada.",
     "filesNotSent_one": "{{code}} foi criada, mas {{count}} arquivo não foi enviado: {{names}}. Envie de novo no campo ou na aba Anexos.",
@@ -1734,7 +1735,6 @@
     "properties": "Propriedades",
     "unassigned": "Sem responsável",
     "unknownPerson": "Pessoa removida",
-    "assignedToMe": "Atribuídas a mim",
     "assignLocked": "Você não tem permissão para atribuir tarefas.",
     "overdue": "Prazo vencido",
     "open": "Abertas",
@@ -1775,10 +1775,10 @@
       "inReport": "No informe",
       "urgency": "Urgência",
       "area": "Área",
-      "itVisible": "Visível para TI"
+      "itVisible": "Visível para TI",
+      "assignedTo": "Atribuída a"
     },
     "tagsPlaceholder": "Escolher tags…",
-    "markdownHint": "Aceita **negrito**, *itálico*, `código`, listas com \"-\" e links.",
     "requiredFor": {
       "title": "Preencha para mover para \"{{status}}\"",
       "description": "{{code}} precisa destes campos no status \"{{status}}\".",
@@ -1796,7 +1796,6 @@
     "stage": {
       "label": "Etapa da gestão",
       "none": "Sem etapa",
-      "hint": "Ao criar, a tarefa aparece sozinha nessa etapa da Gestão, como uma linha nova com o título e as datas dela.",
       "linkedHint": "Na Gestão: {{path}}. Para trocar ou desligar, use o painel do elemento na Gestão."
     },
     "report": {
@@ -1823,24 +1822,24 @@
       "badge": "Sua",
       "toggle": "Minhas tarefas primeiro",
       "hint": "Mostra no topo as tarefas em que você é o responsável; as demais continuam abaixo."
-    }
+    },
+    "noAssignee": "Sem atribuir",
+    "responsibleMe": "Eu"
   },
   "taskList": {
-    "subtitle": "As tarefas dos projetos e as demandas internas.",
     "scopeLabel": "Quais tarefas ver",
     "mine": "Minhas tarefas",
     "all": "Ver todas",
-    "openOnly": "Só as abertas. Para ver concluídas ou canceladas, escolha o Status.",
     "overdue": "vencida",
-    "moduleHint": "Menu \"Tarefas\": abre em \"Minhas tarefas\"; com \"Ver todas\", as dos projetos a que a pessoa tem acesso. Precisa de \"Tarefas\" ligado; desligado, as tarefas continuam dentro de cada projeto.",
+    "moduleHint": "Menu \"Tarefas\": abre em \"Minhas tarefas\" (quem vê todos os projetos, em \"Ver todas\") e depois lembra a última escolha; com \"Ver todas\", as dos projetos a que a pessoa tem acesso. Precisa de \"Tarefas\" ligado; desligado, as tarefas continuam dentro de cada projeto.",
     "kindLabel": "Com ou sem projeto",
     "kindAll": "Todas",
     "kindProject": "Com projeto",
     "kindDemand": "Sem projeto",
-    "mineHint": "\"Minhas tarefas\" inclui as demandas que você pediu ou recebeu, mesmo que outra pessoa as resolva.",
     "viewLabel": "Visão",
     "viewList": "Lista",
-    "viewDemands": "Demandas"
+    "viewDemands": "Demandas",
+    "openStatuses": "Abertas"
   },
   "tags": {
     "title": "Tags",
@@ -4690,12 +4689,10 @@
     },
     "form": {
       "createTitle": "Nova demanda interna",
-      "createDescription": "Peça a uma pessoa: ela recebe e atribui à equipe dela.",
       "editTitle": "Editar {{code}}",
       "titlePlaceholder": "Ex.: Vista de carteira: adicionar o campo Ciclo",
       "descriptionPlaceholder": "O que você precisa, onde (vista, sistema, tela) e qual resultado espera. Se já existe um chamado de suporte, coloque o número.",
       "owner": "Responsável",
-      "ownerHint": "Essa pessoa recebe e pode atribuir a alguém da equipe; continua vendo mesmo se passar.",
       "ownerFixed": "O responsável não muda depois de aberta.",
       "department": "Departamento que pede",
       "opening": "Abertura",
@@ -4718,12 +4715,6 @@
       "requested": "Pedidas por mim",
       "all": "Todas"
     },
-    "hints": {
-      "received": "O que pediram a você. Atribua à sua equipe e acompanhe tudo, mesmo depois de passar.",
-      "assigned": "O que atribuíram a você. Comece, passe a um colega da equipe ou conclua.",
-      "requested": "O que você pediu. Quando chegar em \"Para validar\", valide a entrega ou devolva com um comentário.",
-      "all": "Todas as demandas da empresa, internas e de projeto. Filtre por responsável ou por quem executa."
-    },
     "empty": {
       "received": "Nenhuma demanda recebida por enquanto.",
       "assigned": "Você não tem demandas abertas.",
@@ -4738,16 +4729,12 @@
     },
     "load": {
       "title": "Carga da minha equipe",
-      "hint": "Horas estimadas do que cada um tem aberto (e quantas demandas).",
-      "foot": "Conta o que cada um tem hoje: se alguém passa uma demanda, ela muda de barra.",
       "value": "{{count}} · {{hours}} h",
-      "empty": "Sua equipe sai de Configurações → Dependências por área.",
+      "empty": "Ninguém com demandas abertas.",
       "aria": "{{name}}: {{count}} demandas, {{hours}} horas"
     },
     "allLoad": {
       "title": "Carga das equipes",
-      "hint": "Por pessoa: demandas atribuídas e em andamento e as horas estimadas delas.",
-      "foot": "Conta o que cada pessoa tem aberto hoje, em todas as equipes.",
       "empty": "Ninguém tem demandas atribuídas ou em andamento."
     },
     "filters": {
@@ -4780,10 +4767,8 @@
     "pass": {
       "title": "Passar a um colega · {{code}}",
       "to": "Passar a",
-      "toHint": "Pessoas da equipe de {{owner}}.",
       "comment": "Comentário",
       "placeholder": "Por que você passa e o que falta",
-      "note": "O comentário é obrigatório; {{owner}} vê na linha do tempo e na carga da equipe.",
       "submit": "Passar",
       "done": "{{code}} passada a {{name}}"
     },
@@ -4791,7 +4776,6 @@
       "title": "Concluir · {{code}}",
       "delivered": "O que foi entregue",
       "placeholder": "O que você fez e onde ficou",
-      "note": "Vai para \"Para validar\" de {{requester}}; {{owner}} vê na caixa dele.",
       "submit": "Concluir",
       "done": "{{code}} enviada para validar"
     },
@@ -4799,7 +4783,6 @@
       "title": "Devolver · {{code}}",
       "comment": "O que falta",
       "placeholder": "O que ainda falta para aceitar a entrega",
-      "note": "Volta para Em andamento com {{name}}.",
       "submit": "Devolver",
       "done": "{{code}} devolvida a {{name}}"
     },
@@ -4846,7 +4829,6 @@
     },
     "projectFlow": {
       "owner": "Responsável (recebe e distribui)",
-      "ownerHint": "Opcional. Essa pessoa recebe a tarefa e atribui a alguém da equipe dela, mesmo sem ser do projeto; status, responsável, prazo e estimativa passam a seguir o fluxo dela.",
       "none": "Ninguém (como sempre)",
       "locked": "Com quem recebe e distribui, muda pelo fluxo (Atribuir, Começar, Concluir…)",
       "title": "Recebe e distribui",

@@ -209,7 +209,6 @@ function PassDialog({ task, onClose }: { task: TaskSummary; onClose: () => void 
   const [assigneeId, setAssigneeId] = useState('')
   const [comment, setComment] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const owner = task.demand?.owner?.name ?? ''
 
   function submit() {
     const found: Record<string, string> = {}
@@ -253,7 +252,6 @@ function PassDialog({ task, onClose }: { task: TaskSummary; onClose: () => void 
           searchable
           value={assigneeId || undefined}
           placeholder={t('fields.selectPlaceholder')}
-          hint={t('demands.pass.toHint', { owner })}
           error={errors.assignee_id}
           onValueChange={(value) => {
             setAssigneeId(value)
@@ -269,7 +267,6 @@ function PassDialog({ task, onClose }: { task: TaskSummary; onClose: () => void 
           value={comment}
           error={errors.comment}
           placeholder={t('demands.pass.placeholder')}
-          hint={t('demands.pass.note', { owner })}
           onChange={(event) => {
             setComment(event.target.value)
             setErrors((e) => ({ ...e, comment: '' }))
@@ -288,7 +285,6 @@ function NoteDialog({ task, kind, onClose }: { task: TaskSummary; kind: 'conclud
   const mutation = kind === 'conclude' ? conclude : returnDemand
   const [comment, setComment] = useState('')
   const [error, setError] = useState<string | undefined>()
-  const names = { requester: task.reporter?.name ?? '', owner: task.demand?.owner?.name ?? '', name: task.assignee?.name ?? '' }
 
   function submit() {
     if (!comment.trim()) return setError('required')
@@ -330,7 +326,6 @@ function NoteDialog({ task, kind, onClose }: { task: TaskSummary; kind: 'conclud
         value={comment}
         error={error}
         placeholder={t(`demands.${kind}.placeholder`)}
-        hint={t(`demands.${kind}.note`, names)}
         onChange={(event) => {
           setComment(event.target.value)
           setError(undefined)

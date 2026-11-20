@@ -300,3 +300,73 @@ describe('AppDataTable — barra de filtros', () => {
     expect(handle.api!.state.filters).toEqual({ status: 'a' })
   })
 })
+
+describe('AppDataTable — Colunas e ações', () => {
+  function ActionsHarness({ onDelete = () => {} }: { onDelete?: (r: Row) => void }) {
+    const api = useDataTableState('actions-table', { rowActions: { delete: false } })
+    useEffect(() => {
+      handle.api = api
+    })
+    return (
+      <AppDataTable
+        caption="Tabela com ações"
+        columns={columns}
+        data={rows}
+        total={rows.length}
+        getRowId={(r) => r.id}
+        table={api}
+        configurableActions
+        actions={{ onView: () => {}, onEdit: () => {}, onDelete, more: () => [{ key: 'open', label: 'Abrir página', onSelect: () => {} }] }}
+      />
+    )
+  }
+
+  it('"Colunas e ações" escolhe as ações de cada linha (padrão: sem Excluir, que fica no ···); a escolha é guardada', async () => {
+    const onDelete = vi.fn()
+    renderWithProviders(<ActionsHarness onDelete={onDelete} />)
+    expect(screen.getAllByRole('button', { name: 'Visualizar' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Editar' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument()
+    // Excluir oculto: continua no menu ···
+    await userEvent.click(screen.getAllByRole('button', { name: 'Mais ações' })[0]!)
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Excluir' }))
+    expect(onDelete).toHaveBeenCalledWith(rows[0])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Colunas e ações' }))
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getByText('Ações em cada linha')).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitemcheckbox', { name: 'Excluir' })).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Visualizar' }))
+    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Excluir' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('button', { name: 'Visualizar' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Excluir' })).toHaveLength(2)
+    expect(JSON.parse(window.localStorage.getItem('kamban.table.actions-table') ?? '{}').rowActions).toEqual({ view: false, edit: true, delete: true, more: true })
+  })
+
+  it('sem nenhuma ação marcada, a coluna Ações some', async () => {
+    window.localStorage.setItem('kamban.table.actions-table', JSON.stringify({ rowActions: { view: false, edit: false, delete: false, more: false } }))
+    renderWithProviders(<ActionsHarness />)
+    expect(screen.queryByRole('columnheader', { name: 'Ações' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument()
+    expect(screen.getByText('Alfa')).toBeInTheDocument()
+  })
+
+  it('filtro com rótulo do padrão: parado mostra "Status: Abertas"', () => {
+    function Harness2() {
+      const api = useDataTableState('all-label')
+      return (
+        <AppDataTable
+          caption="Rótulo padrão"
+          columns={[{ id: 'status', header: 'Status', cell: (r: Row) => r.status, filter: { label: 'Status', allLabel: 'Abertas', options: [{ value: 'x', label: 'Concluído' }] } }]}
+          data={rows}
+          total={rows.length}
+          getRowId={(r) => r.id}
+          table={api}
+        />
+      )
+    }
+    renderWithProviders(<Harness2 />)
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Status: Abertas')
+  })
+})

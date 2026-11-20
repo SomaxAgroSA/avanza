@@ -121,6 +121,11 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.deepEqual(await codes(people.ana.client, 'mine=true'), ['DEM-1'])
     assert.deepEqual(await codes(people.jorge.client, 'mine=true'), [])
     assert.equal((await people.cesar.client.get('/tasks?kind=outra')).status, 400)
+    // Responsável = quem recebe e distribui ou, sem ele, a quem está atribuída (Lista de tarefas)
+    assert.deepEqual(await codes(people.cesar.client, 'responsible_id=me'), ['CRM-1', 'DEM-1'])
+    assert.deepEqual(await codes(people.cesar.client, 'assignee_id=me'), ['CRM-1'])
+    assert.deepEqual(await codes(people.ana.client, 'responsible_id=me'), [])
+    assert.equal((await people.cesar.client.get('/tasks?responsible_id=x%20y')).status, 400)
   })
 
   it('selo, responsáveis possíveis e equipe para atribuir', async () => {

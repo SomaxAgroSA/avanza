@@ -109,6 +109,8 @@ const LIST_SCHEMA = {
   // vários separados por vírgula (botões da Lista de tarefas, §44)
   priority_id: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type'))],
   assignee_id: [rules.custom((value) => (value === 'me' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  // Responsável da Lista de tarefas: quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída
+  responsible_id: [rules.custom((value) => (value === 'me' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   search: [rules.maxLength(100)],
   tag_id: [idRule],
   // `none` = sem sprint
@@ -675,6 +677,7 @@ function createTaskService(deps) {
         status_id: pick('status_id'),
         priority_id: pick('priority_id'),
         assignee_id: pick('assignee_id'),
+        responsible_id: pick('responsible_id'),
         search: pick('search'),
         category: pick('category'),
         tag_id: pick('tag_id'),
@@ -722,6 +725,7 @@ function createTaskService(deps) {
       statusIds,
       priorityId: toList(filters.priority_id),
       assigneeId: filters.assignee_id === 'me' ? ctx.principal.userId : filters.assignee_id,
+      responsibleId: filters.responsible_id === 'me' ? ctx.principal.userId : filters.responsible_id,
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
       planItemId: filters.plan_item_id,

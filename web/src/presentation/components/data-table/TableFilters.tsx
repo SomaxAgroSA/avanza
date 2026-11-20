@@ -13,6 +13,8 @@ export interface TableFilterDef {
   addon?: ReactNode
   /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
   variant?: 'select' | 'buttons'
+  /** O que vale sem nada escolhido (ex.: "Abertas"): parado mostra "Status: Abertas" e é o rótulo da opção sem filtro. */
+  allLabel?: string
 }
 
 interface FilterProps {
@@ -24,7 +26,7 @@ interface FilterProps {
 const optionLabel = (filter: TableFilterDef, value: string | undefined) => filter.options.find((o) => o.value === value)?.label
 
 /**
- * Filtro da barra: parado mostra só o nome ("Status"); ativo mostra "Status: Alta" em verde suave,
+ * Filtro da barra: parado mostra só o nome ("Status"; com `allLabel`, "Status: Abertas"); ativo mostra "Status: Alta" em verde suave,
  * para dar para ver de longe o que está filtrando a lista.
  */
 export function FilterSelect({ filter, value, onChange }: FilterProps) {
@@ -36,11 +38,15 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
       aria-label={filter.label}
       value={active ? value : SELECT_ALL}
       onValueChange={(next) => onChange(next === SELECT_ALL ? undefined : next)}
-      options={[{ value: SELECT_ALL, label: t('common.all') }, ...filter.options]}
+      options={[{ value: SELECT_ALL, label: filter.allLabel ?? t('common.all') }, ...filter.options]}
       renderValue={
         active ? (
           <>
             {filter.label}: <strong className="font-semibold">{selected ?? value}</strong>
+          </>
+        ) : filter.allLabel ? (
+          <>
+            {filter.label}: {filter.allLabel}
           </>
         ) : (
           filter.label

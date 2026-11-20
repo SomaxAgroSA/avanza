@@ -200,6 +200,12 @@ describe('application/demands — visibilidade', () => {
     assert.deepEqual(await codes('ana', { mine: 'true' }), ['DEM-1'])
     assert.deepEqual(await codes('jorge', { mine: 'true' }), [])
     assert.equal(await codeOf(() => s.tasks.listTasks(s.ctx.cesar, { kind: 'x' })), 'VALIDATION_ERROR:{"kind":"invalid_option"}')
+    // Responsável (Lista de tarefas): quem recebe e distribui ou, sem ele, a quem está atribuída
+    assert.deepEqual(await codes('cesar', { responsible_id: 'me' }), ['CRM-1', 'DEM-1'])
+    assert.deepEqual(await codes('cesar', { assignee_id: 'me' }), ['CRM-1'])
+    assert.deepEqual(await codes('ana', { responsible_id: 'me' }), [])
+    assert.deepEqual(await codes('jorge', { responsible_id: s.users.cesar.id }), ['DEM-1'])
+    assert.equal(await codeOf(() => s.tasks.listTasks(s.ctx.cesar, { responsible_id: 'x y' })), 'VALIDATION_ERROR:{"responsible_id":"invalid_type"}')
     const row = (await s.tasks.listTasks(s.ctx.cesar, { kind: 'demand' })).items[0]
     assert.equal(row.project, null)
     assert.equal(row.demand.status, 'unassigned')

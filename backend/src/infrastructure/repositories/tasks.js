@@ -234,6 +234,8 @@ function createTaskRepository(db) {
     // prioridade e urgência: um valor ou vários (lista = "ou")
     if (query.priorityId) where.push(`tasks.priority_id = ANY(${param([].concat(query.priorityId))}::text[])`)
     if (query.assigneeId) where.push(`tasks.assignee_id = ${param(query.assigneeId)}`)
+    // Responsável (Lista de tarefas): quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída
+    if (query.responsibleId) where.push(`COALESCE(tasks.demand_owner_id, tasks.assignee_id) = ${param(query.responsibleId)}`)
     if (query.tagId) where.push(`tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = ${param(query.tagId)})`)
     if (query.sprintId) where.push(query.sprintId === 'none' ? 'tasks.sprint_id IS NULL' : `tasks.sprint_id = ${param(query.sprintId)}`)
     if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)

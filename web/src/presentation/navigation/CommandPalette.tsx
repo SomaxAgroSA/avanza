@@ -75,7 +75,8 @@ export function CommandPalette() {
                   label: query ? t('commandPalette.searchTaskFor', { query }) : t('commandPalette.searchTask'),
                   icon: <Search />,
                   keywords: ['tarefa', 'task', 'buscar', query],
-                  onSelect: () => navigate(query ? `/tasks?search=${encodeURIComponent(query)}` : '/tasks'),
+                  // sempre em "Ver todas": a busca cobre todas as tarefas que a pessoa vê, não só as dela
+                  onSelect: () => navigate(query ? `/tasks?scope=all&search=${encodeURIComponent(query)}` : '/tasks?scope=all'),
                 },
               ]
             : []),

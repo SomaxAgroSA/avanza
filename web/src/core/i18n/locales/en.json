@@ -51,7 +51,10 @@
     "clearFilters": "Clear filters",
     "noMoreActions": "No other actions",
     "resetColumns": "Reset columns",
-    "openHint": "Click to preview · double-click to open"
+    "openHint": "Click to preview · double-click to open",
+    "columnsAndActions": "Columns and actions",
+    "rowActions": "Actions on each row",
+    "moreActions": "More (···)"
   },
   "validation": {
     "required": "Required field",
@@ -1713,10 +1716,8 @@
   },
   "tasks": {
     "title": "Tasks",
-    "description": "All tasks from the projects you follow.",
     "create": "New task",
     "createTitle": "New task",
-    "createDescription": "Pick the type: the form shows its fields.",
     "editTitle": "Edit {{code}}",
     "created": "Task {{code}} created.",
     "filesNotSent_one": "{{code}} was created, but {{count}} file was not uploaded: {{names}}. Upload it again in the field or in the Attachments tab.",
@@ -1734,7 +1735,6 @@
     "properties": "Properties",
     "unassigned": "Unassigned",
     "unknownPerson": "Removed person",
-    "assignedToMe": "Assigned to me",
     "assignLocked": "You don't have permission to assign tasks.",
     "overdue": "Overdue",
     "open": "Open",
@@ -1775,10 +1775,10 @@
       "inReport": "In report",
       "urgency": "Urgency",
       "area": "Department",
-      "itVisible": "Visible to IT"
+      "itVisible": "Visible to IT",
+      "assignedTo": "Assigned to"
     },
     "tagsPlaceholder": "Choose tags…",
-    "markdownHint": "Supports **bold**, *italic*, `code`, \"-\" lists and links.",
     "requiredFor": {
       "title": "Fill in to move to \"{{status}}\"",
       "description": "{{code}} needs these fields in the \"{{status}}\" status.",
@@ -1796,7 +1796,6 @@
     "stage": {
       "label": "Management stage",
       "none": "No stage",
-      "hint": "On create, the task shows up in that Management stage on its own, as a new row with its title and dates.",
       "linkedHint": "In Management: {{path}}. To change or unlink it, use the item panel in Management."
     },
     "report": {
@@ -1823,24 +1822,24 @@
       "badge": "Yours",
       "toggle": "My tasks first",
       "hint": "Shows the tasks you are assigned to at the top; the rest stay below."
-    }
+    },
+    "noAssignee": "Unassigned",
+    "responsibleMe": "Me"
   },
   "taskList": {
-    "subtitle": "Project tasks and internal requests.",
     "scopeLabel": "Which tasks to show",
     "mine": "My tasks",
     "all": "See all",
-    "openOnly": "Open tasks only. To see done or cancelled ones, pick a Status.",
     "overdue": "overdue",
-    "moduleHint": "\"Tasks\" menu: opens on \"My tasks\"; \"See all\" shows the tasks of the projects the person can access. Needs \"Tasks\" on; when off, tasks stay inside each project.",
+    "moduleHint": "\"Tasks\" menu: opens on \"My tasks\" (people who see every project, on \"See all\") and then remembers the last choice; with \"See all\", the tasks of the projects the person can access. Needs \"Tasks\" on; when off, tasks stay inside each project.",
     "kindLabel": "With or without a project",
     "kindAll": "All",
     "kindProject": "With project",
     "kindDemand": "Without project",
-    "mineHint": "\"My tasks\" includes the requests you made or received, even if someone else handles them.",
     "viewLabel": "View",
     "viewList": "List",
-    "viewDemands": "Requests"
+    "viewDemands": "Requests",
+    "openStatuses": "Open"
   },
   "tags": {
     "title": "Tags",
@@ -4690,12 +4689,10 @@
     },
     "form": {
       "createTitle": "New internal request",
-      "createDescription": "Ask a person: they receive it and assign it to their team.",
       "editTitle": "Edit {{code}}",
       "titlePlaceholder": "E.g.: Portfolio view: add the Cycle field",
       "descriptionPlaceholder": "What you need, where (view, system, screen) and the result you expect. If there is already a support ticket, add its number.",
       "owner": "Owner",
-      "ownerHint": "This person receives it and can assign it to someone on their team; they keep seeing it even after passing it on.",
       "ownerFixed": "The owner does not change once the request is open.",
       "department": "Requesting department",
       "opening": "Opened",
@@ -4718,12 +4715,6 @@
       "requested": "Requested by me",
       "all": "All"
     },
-    "hints": {
-      "received": "What people asked of you. Assign it to your team and keep track of everything, even after passing it on.",
-      "assigned": "What was assigned to you. Start, pass it to a teammate or complete it.",
-      "requested": "What you asked for. When it reaches \"To validate\", validate the delivery or return it with a note.",
-      "all": "Every request in the company, internal and project ones. Filter by owner or by assignee."
-    },
     "empty": {
       "received": "No requests received yet.",
       "assigned": "You have no open requests.",
@@ -4738,16 +4729,12 @@
     },
     "load": {
       "title": "My team's load",
-      "hint": "Estimated hours of what each person has open (and how many requests).",
-      "foot": "Counts what each person has today: if someone passes a request on, it moves to the other bar.",
       "value": "{{count}} · {{hours}} h",
-      "empty": "Your team comes from Settings → Dependencies by area.",
+      "empty": "No one with open demands.",
       "aria": "{{name}}: {{count}} requests, {{hours}} hours"
     },
     "allLoad": {
       "title": "Teams' load",
-      "hint": "Per person: assigned and in-progress requests and their estimated hours.",
-      "foot": "Counts what each person has open today, across all teams.",
       "empty": "Nobody has assigned or in-progress requests."
     },
     "filters": {
@@ -4780,10 +4767,8 @@
     "pass": {
       "title": "Pass to a teammate · {{code}}",
       "to": "Pass to",
-      "toHint": "People on {{owner}}'s team.",
       "comment": "Note",
       "placeholder": "Why you're passing it on and what's left",
-      "note": "The note is required; {{owner}} sees it in the timeline and in the team's load.",
       "submit": "Pass",
       "done": "{{code}} passed to {{name}}"
     },
@@ -4791,7 +4776,6 @@
       "title": "Complete · {{code}}",
       "delivered": "What was delivered",
       "placeholder": "What you did and where it is",
-      "note": "Goes to \"To validate\" for {{requester}}; {{owner}} sees it in their box.",
       "submit": "Complete",
       "done": "{{code}} sent for validation"
     },
@@ -4799,7 +4783,6 @@
       "title": "Return · {{code}}",
       "comment": "What's missing",
       "placeholder": "What's still missing to accept the delivery",
-      "note": "Goes back to In progress with {{name}}.",
       "submit": "Return",
       "done": "{{code}} returned to {{name}}"
     },
@@ -4846,7 +4829,6 @@
     },
     "projectFlow": {
       "owner": "Owner (receives and distributes)",
-      "ownerHint": "Optional. This person receives the task and assigns it to someone on their team, even if they are not in the project; status, assignee, deadline and estimate then follow their flow.",
       "none": "Nobody (as usual)",
       "locked": "With an owner who distributes, this changes through the flow (Assign, Start, Complete…)",
       "title": "Receives and distributes",

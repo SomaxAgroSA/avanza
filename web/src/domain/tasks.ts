@@ -241,17 +241,37 @@ export const TASK_SORTS = ['code', 'title', 'created_at', 'updated_at', 'due_dat
 /** Tarefa encerrada (concluída ou cancelada). */
 /**
  * Filtros da barra das listas de tarefas (página Tarefas e aba Tarefas do projeto; ajuste 18/11): Status,
- * Prioridade, Urgência e Responsável. Área, Situação, Tipo, Projeto, Etiquetas, Visível para TI e No informe
- * deixaram de ser filtros (as colunas continuam).
+ * Prioridade, Urgência e Responsável (o da coluna Responsável: `responsible_id`, ver `responsibleOf`). Área,
+ * Situação, Tipo, Projeto, Etiquetas, Visível para TI e No informe deixaram de ser filtros (as colunas continuam).
  */
-export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'assignee', 'company'] as const
+export const TASK_LIST_FILTERS = ['status', 'priority', 'urgency', 'responsible', 'company'] as const
 
 /**
- * Lista de tarefas do menu (§44): "Minhas tarefas" (atribuídas a quem olha; padrão a cada entrada) ou "Ver
- * todas" (as dos projetos que a pessoa vê). A barra tem Status, Prioridade e Urgência — o Responsável sai, o
- * escopo decide.
+ * Responsável da tarefa nas listas (ajuste 20/11): quem recebe e distribui (§45) ou, sem ele, a pessoa
+ * atribuída. Na tarefa comum é a mesma pessoa da coluna "Atribuída a".
+ */
+export function responsibleOf(task: Pick<TaskSummary, 'assignee' | 'demand'>): UserSummary | null {
+  return task.demand?.owner ?? task.assignee
+}
+
+/** Com quem recebe e distribui, mas ainda sem ninguém atribuído ("Sem atribuir"). */
+export function awaitingAssignment(task: Pick<TaskSummary, 'assignee' | 'demand'>): boolean {
+  return !!task.demand?.owner && !task.assignee
+}
+
+/**
+ * Lista de tarefas do menu (§44): "Minhas tarefas" (atribuídas a quem olha) ou "Ver todas" (as dos projetos
+ * que a pessoa vê). Abre em "Ver todas" para quem vê todos os projetos (`projects.view_all`) e em "Minhas"
+ * para os demais; depois, a última escolha da pessoa. A barra tem Status, Prioridade e Urgência — o
+ * Responsável sai, o escopo decide.
  */
 export type TaskScope = 'mine' | 'all'
+
+/** Escopo com que a Lista abre: a última escolha guardada ou, sem ela, "Ver todas" para quem vê tudo. */
+export function initialTaskScope(stored: unknown, seesAll: boolean): TaskScope {
+  if (stored === 'mine' || stored === 'all') return stored
+  return seesAll ? 'all' : 'mine'
+}
 export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency', 'company'] as const
 
 /** Com projeto · Sem projeto (§45): tarefas de projeto, demandas internas ou as duas. */

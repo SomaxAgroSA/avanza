@@ -52,6 +52,15 @@ describe('Command palette — tarefas', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/tasks/k3'))
   })
 
+  it('"Buscar tarefas com…" abre a Lista em "Ver todas" (scope=all), para buscar em todas as tarefas que a pessoa vê', async () => {
+    const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [], page: 1, perPage: 6, total: 0, totalPages: 0 }))
+    const { router } = setup(list)
+    await userEvent.type(await screen.findByRole('combobox'), 'filtro')
+    await userEvent.click(await screen.findByRole('option', { name: 'Buscar tarefas com “filtro”' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/tasks'))
+    expect(router.state.location.search).toBe('?scope=all&search=filtro')
+  })
+
   it('sem a Lista de tarefas (§44): nada leva a /tasks (nem o menu, nem criar, nem buscar), mas as tarefas encontradas continuam', async () => {
     const task = { id: 'k3', code: 'SB-3', title: 'Filtro por período no relatório de vendas' } as TaskSummary
     const list = vi.fn<TaskRepository['list']>(() => Promise.resolve({ items: [task], page: 1, perPage: 6, total: 1, totalPages: 1 }))
