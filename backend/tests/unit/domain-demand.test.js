@@ -95,6 +95,20 @@ describe('domain/demand — ações e passos', () => {
     assert.equal(demand.actionIssue('cesar', task({ demandStatus: 'to_validate', assigneeId: 'jorge' }), 'assign'), 'DEMAND_STATE_CONFLICT')
   })
 
+  it('quem vê todas (projects.view_all) também atribui e reatribui; o resto do fluxo continua dos papéis', () => {
+    const viewAll = { viewAll: true }
+    assert.equal(demand.actionIssue('root', task(), 'assign', viewAll), null)
+    assert.equal(demand.actionIssue('root', task({ demandStatus: 'in_progress', assigneeId: 'jorge' }), 'assign', viewAll), null)
+    assert.equal(demand.actionIssue('root', task({ demandStatus: 'to_validate', assigneeId: 'jorge' }), 'assign', viewAll), 'DEMAND_STATE_CONFLICT')
+    for (const action of ['start', 'pass', 'conclude', 'validate', 'return']) {
+      assert.equal(demand.actionIssue('root', task({ demandStatus: 'assigned', assigneeId: 'jorge' }), action, viewAll), 'FORBIDDEN', action)
+    }
+    assert.equal(demand.actionIssue('root', { demandStatus: '', demandOwnerId: 'cesar' }, 'assign', viewAll), 'FORBIDDEN')
+    assert.deepEqual(demand.demandActions('root', task({ demandStatus: 'assigned', assigneeId: 'jorge' }), viewAll), { assign: true, start: false, pass: false, conclude: false, validate: false, return: false })
+    assert.equal(demand.assignsAny(principal('root', ['projects.view_all'])), true)
+    assert.equal(demand.assignsAny(principal('ana')), false)
+  })
+
   it('quem executa começa, passa e conclui; quem pediu valida e devolve', () => {
     const assigned = task({ demandStatus: 'assigned', assigneeId: 'jorge' })
     assert.deepEqual(demand.demandActions('jorge', assigned), { assign: false, start: true, pass: true, conclude: true, validate: false, return: false })

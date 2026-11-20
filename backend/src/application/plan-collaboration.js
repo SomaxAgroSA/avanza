@@ -20,6 +20,7 @@ const { truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createPlanSupport, invalid, indexBy } = require('./plan-support')
 const { createNotifier } = require('./notifications')
+const { createTaskAccess } = require('./task-access')
 
 const EXCERPT = 500
 const NOTIFY_EXCERPT = 200
@@ -30,6 +31,7 @@ function createPlanCollaborationService(deps) {
   const support = createPlanSupport(deps)
   const { loadItem, loadOwned, audit } = support
   const notifier = createNotifier(deps)
+  const taskAccess = createTaskAccess(deps)
 
   /** Pode publicar: vê o quadro e o projeto não está arquivado. */
   const canComment = (can, project) => can.view && !project.archivedAt
@@ -40,7 +42,9 @@ function createPlanCollaborationService(deps) {
   async function participants(project) {
     const ids = (await deps.projectMemberRepository.listByProject(project.id)).filter((m) => m.role !== 'it').map((m) => m.userId)
     if (ids.indexOf(project.ownerId) < 0) ids.push(project.ownerId)
-    return (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
+    const list = (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
+    // quem vê todos (`projects.view_all`) também pode ser mencionado
+    return list.concat((await taskAccess.viewAllUsers()).filter((u) => !list.some((x) => x.id === u.id)))
   }
 
   async function resolveMentions(project, content) {

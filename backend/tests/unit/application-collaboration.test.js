@@ -133,9 +133,9 @@ describe('application/comments', () => {
     assert.deepEqual(deps.store.audit.at(-1).newValue, { comment: '@Gabi pode revisar?', mentions: 'Gabi' })
   })
 
-  it('lista de quem pode ser mencionado: pessoas ativas com acesso ao projeto', async () => {
+  it('lista de quem pode ser mencionado: pessoas ativas com acesso ao projeto (e quem vê todos)', async () => {
     const { comments, ctx, task } = await setup()
-    assert.deepEqual((await comments.mentionCandidates(ctx.lia, task.id)).map((u) => u.name).sort(), ['Gabi', 'Lia', 'Mário'])
+    assert.deepEqual((await comments.mentionCandidates(ctx.lia, task.id)).map((u) => u.name).sort(), ['Admin', 'Gabi', 'Lia', 'Mário'])
   })
 
   it('só o autor edita; autor ou gestor exclui (exclusão lógica)', async () => {

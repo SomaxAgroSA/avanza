@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { createFakeDeps, seedUser } = require('../support/fakes')
 const { createTaskService } = require('../../src/application/tasks')
 const { createCommentService } = require('../../src/application/comments')
+const { createDemandService } = require('../../src/application/demands')
 const { createNotificationService } = require('../../src/application/notifications')
 const { createTaskTypeService } = require('../../src/application/task-types')
 const { createLookupService } = require('../../src/application/lookups')
@@ -53,11 +54,12 @@ async function setup() {
   const dev = await statuses.create(admin, { key: 'DEV', name: 'Desenvolvimento', category: 'in_progress' })
   const done = await statuses.create(admin, { key: 'DONE', name: 'Concluído', category: 'done' })
   await createLookupService(deps, 'priority').create(admin, { key: 'MEDIA', name: 'Média' })
-  const ctx = { gabi: await ctxOf(deps, u.gabi), mario: await ctxOf(deps, u.mario), ana: await ctxOf(deps, u.ana), lia: await ctxOf(deps, u.lia) }
+  const ctx = { gabi: await ctxOf(deps, u.gabi), mario: await ctxOf(deps, u.mario), ana: await ctxOf(deps, u.ana), lia: await ctxOf(deps, u.lia), admin }
   const tasks = createTaskService(deps)
   return {
     deps,
     u,
+    adminUser,
     ctx,
     project,
     type,
@@ -127,6 +129,37 @@ describe('application/notifications — eventos', () => {
     await s.deps.projectMemberRepository.remove(s.project.id, s.u.mario.id)
     await s.tasks.updateTask(s.ctx.ana, task.id, { status_id: s.statuses.dev.id })
     assert.deepEqual(await inbox(s, s.ctx.mario), [])
+  })
+})
+
+describe('application/notifications — quem vê todos (projects.view_all)', () => {
+  it('pode ser mencionado e recebe a menção mesmo sem ser membro do projeto', async () => {
+    const s = await setup()
+    const task = await s.newTask(s.ctx.mario, { assignee_id: s.u.ana.id })
+    assert.ok((await s.comments.mentionCandidates(s.ctx.gabi, task.id)).some((u) => u.id === s.adminUser.id))
+    await s.comments.createComment(s.ctx.gabi, task.id, { content: `@[Admin](${s.adminUser.id}) pode aprovar?` })
+    assert.deepEqual(await inbox(s, s.ctx.admin), [['mention', 'CRM-1']])
+  })
+
+  it('o aviso direto não se perde (autor da tarefa sem ser membro); sem fan-out: não recebe o que não é para ele', async () => {
+    const s = await setup()
+    const task = await s.newTask(s.ctx.mario, { assignee_id: s.u.ana.id })
+    await s.comments.createComment(s.ctx.gabi, task.id, { content: 'Sem menção.' })
+    await s.tasks.updateTask(s.ctx.ana, task.id, { status_id: s.statuses.dev.id })
+    assert.deepEqual(await inbox(s, s.ctx.admin), [])
+    // o Admin passa a ser o autor (como se tivesse criado a tarefa): o aviso de comentário chega
+    await s.deps.taskRepository.update(task.id, { creatorId: s.adminUser.id })
+    await s.comments.createComment(s.ctx.gabi, task.id, { content: 'Agora sim.' })
+    assert.deepEqual(await inbox(s, s.ctx.admin), [['comment', 'CRM-1']])
+  })
+
+  it('demanda interna de outras pessoas: a menção chega a quem vê todas', async () => {
+    const s = await setup()
+    const area = await createLookupService(s.deps, 'area').create(s.ctx.admin, { key: 'EST', name: 'Estratégia', color: 'blue' })
+    const demand = await createDemandService(s.deps).createDemand(s.ctx.ana, { task_type_id: s.type.id, title: 'Acesso ao SAP', demand_owner_id: s.u.gabi.id, area_id: area.id })
+    assert.ok((await s.comments.mentionCandidates(s.ctx.gabi, demand.id)).some((u) => u.id === s.adminUser.id))
+    await s.comments.createComment(s.ctx.gabi, demand.id, { content: `@[Admin](${s.adminUser.id}) aprova o acesso?` })
+    assert.deepEqual(await inbox(s, s.ctx.admin), [['mention', 'DEM-1']])
   })
 })
 

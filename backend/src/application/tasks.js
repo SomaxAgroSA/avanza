@@ -504,7 +504,7 @@ function createTaskService(deps) {
         forked_from: null,
         fields: [],
         capabilities: taskDomain.taskCapabilities(access, project, task),
-        demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task) }),
+        demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task, { viewAll: demandDomain.assignsAny(ctx.principal) }) }),
       })
     }
     const links = await typeLinks(task.typeId)
@@ -523,7 +523,7 @@ function createTaskService(deps) {
       fields: links,
       capabilities: taskDomain.taskCapabilities(access, project, task),
       // tarefa de projeto com responsável (§45): os botões do fluxo para quem consulta
-      ...(summary.demand ? { demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task) }) } : {}),
+      ...(summary.demand ? { demand: Object.assign({}, summary.demand, { actions: demandDomain.demandActions(ctx.principal.userId, task, { viewAll: demandDomain.assignsAny(ctx.principal) }) }) } : {}),
     })
   }
 

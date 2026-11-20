@@ -10,7 +10,8 @@
  *   área só). Responsável fora de qualquer área: qualquer pessoa ativa pode receber a demanda.
  * - Fluxo (`demandStatus`): unassigned (Sem atribuir) → assigned (Atribuída) → in_progress (Em andamento)
  *   → to_validate (Para validar) → done (Concluída); quem pediu pode devolver (to_validate → in_progress).
- *   Só o responsável atribui; só quem executa começa, passa e conclui; só quem pediu valida e devolve.
+ *   O responsável atribui (e também quem tem `projects.view_all`, que vê todas); só quem executa começa,
+ *   passa e conclui; só quem pediu valida e devolve.
  * - O status do fluxo de trabalho da tarefa (`statusId`) acompanha o passo (`workflowStatusFor`): assim a
  *   demanda concluída sai das "abertas", ganha as datas de início e conclusão e os lembretes de prazo valem.
  * - Tarefa de projeto com responsável (extensão aprovada em 20/11/2026): o mesmo fluxo, mas a tarefa
@@ -158,18 +159,32 @@ function demandAccess(principal, task, team) {
   }
 }
 
-/** null = pode; senão o código do erro: FORBIDDEN (papel) ou DEMAND_STATE_CONFLICT (passo). */
-function actionIssue(userId, task, action) {
+/**
+ * Atribui e reatribui qualquer demanda, além do responsável (aprovado em 20/11/2026): quem tem
+ * `projects.view_all` (e o SUPER_ADMIN). Começar, passar, concluir, validar e devolver continuam dos papéis.
+ */
+function assignsAny(principal) {
+  return rbac.can(principal, 'projects.view_all')
+}
+
+/**
+ * null = pode; senão o código do erro: FORBIDDEN (papel) ou DEMAND_STATE_CONFLICT (passo).
+ * `options.viewAll` (assignsAny): também atribui/reatribui sem ser o responsável.
+ */
+function actionIssue(userId, task, action, options) {
   const rule = ACTION_RULES[action]
-  if (!rule || !isDemand(task) || !rolesIn(task, userId)[rule.role]) return 'FORBIDDEN'
+  if (!rule || !isDemand(task)) return 'FORBIDDEN'
+  const byRole = !!rolesIn(task, userId)[rule.role]
+  const byViewAll = action === 'assign' && !!(options && options.viewAll)
+  if (!byRole && !byViewAll) return 'FORBIDDEN'
   return rule.from.indexOf(task.demandStatus) >= 0 ? null : 'DEMAND_STATE_CONFLICT'
 }
 
-/** O que a pessoa pode fazer agora na demanda (a tela mostra os botões). */
-function demandActions(userId, task) {
+/** O que a pessoa pode fazer agora na demanda (a tela mostra os botões); `options` como em actionIssue. */
+function demandActions(userId, task, options) {
   const out = {}
   DEMAND_ACTIONS.forEach((action) => {
-    out[action] = actionIssue(userId, task, action) === null
+    out[action] = actionIssue(userId, task, action, options) === null
   })
   return out
 }
@@ -259,6 +274,7 @@ module.exports = {
   participantAccess,
   statusFromTask,
   demandAccess,
+  assignsAny,
   actionIssue,
   demandActions,
   canReceive,
