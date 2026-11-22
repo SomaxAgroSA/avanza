@@ -624,6 +624,12 @@ describe('Tarefas — aba Caixa de entrada (antes "Demandas")', () => {
     expect(inbox).toHaveAttribute('aria-current', 'page')
     expect(within(inbox).getByText('4')).toHaveAttribute('title', '4 pendentes para você')
     expect(within(tabs).queryByRole('link', { name: /^Demandas/ })).not.toBeInTheDocument()
+    // mesma linha (que não quebra): as caixas e, no fim, os dois botões de criar
+    const row = tabs.parentElement!
+    expect(row).toHaveClass('flex-nowrap')
+    expect(within(row).getByRole('radiogroup', { name: i18n.t('demands.page.tabsLabel') })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Tarefa de projeto' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Demanda interna' })).toBeInTheDocument()
   })
 
   it('sem nada pendente, a aba fica sem número', async () => {

@@ -123,7 +123,9 @@ describe('Lista de tarefas do menu (§44)', () => {
   it('barra como a das listas de projetos: Status (seletor), Prioridade e Urgência em botões, Empresa (§46); sem Responsável', async () => {
     const { tableCalls } = setup()
     await screen.findByText(mine.title)
-    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Empresa', 'Por página'])
+    // Prioridade e Urgência também têm o seletor compacto, que só aparece com a barra apertada (AppToolbar)
+    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Prioridade', 'Urgência', 'Empresa', 'Por página'])
+    expect(screen.getByRole('combobox', { name: 'Prioridade' }).parentElement).toHaveClass('hidden')
     const priority = screen.getByRole('group', { name: 'Prioridade' })
     await userEvent.click(within(priority).getByRole('button', { name: 'Alta' }))
     await userEvent.click(within(screen.getByRole('group', { name: 'Urgência' })).getByRole('button', { name: 'Sem urgência' }))
@@ -148,16 +150,40 @@ describe('Lista de tarefas do menu (§44)', () => {
 })
 
 describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
-  it('sem textos de ajuda: o Status parado mostra "Abertas"; visões, escopo e "Colunas e ações" numa linha só', async () => {
+  it('sem textos de ajuda; linha 1: visões, escopo, Com/Sem projeto e os botões de criar; linha 2: busca, filtros e "Colunas e ações"', async () => {
     setup()
     await screen.findByText(mine.title)
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Status: Abertas')
     expect(screen.queryByText(/Só as abertas/)).not.toBeInTheDocument()
     expect(screen.queryByText(/inclui as demandas que você pediu/)).not.toBeInTheDocument()
+    // o cabeçalho fica só com o título
+    const heading = screen.getByRole('heading', { name: 'Tarefas' })
+    expect(heading.parentElement!.parentElement!.querySelectorAll('button')).toHaveLength(0)
     const row = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') }).parentElement!
+    expect(row).toHaveClass('flex-nowrap')
     expect(within(row).getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).toBeInTheDocument()
     expect(within(row).getByRole('radiogroup', { name: i18n.t('taskList.kindLabel') })).toBeInTheDocument()
-    expect(await within(row).findByRole('button', { name: 'Colunas e ações' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Tarefa de projeto' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Demanda interna' })).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Colunas e ações' })).not.toBeInTheDocument()
+    const filters = screen.getByRole('searchbox').closest('[data-toolbar]')!
+    expect(filters).toHaveClass('flex-nowrap')
+    expect(await within(filters).findByRole('button', { name: 'Colunas e ações' })).toBeInTheDocument()
+    expect(within(filters).getByRole('combobox', { name: 'Status' })).toBeInTheDocument()
+  })
+
+  it('linha apertada: os botões de criar têm o texto curto (o CSS escolhe) e o nome inteiro no aria-label; os números do escopo somem', async () => {
+    setup()
+    await screen.findByText(mine.title)
+    const project = screen.getByRole('button', { name: 'Tarefa de projeto' })
+    expect(within(project).getByText('Tarefa de projeto')).toHaveClass('@max-[1060px]:hidden')
+    expect(within(project).getByText('Tarefa')).toHaveClass('hidden', '@max-[1060px]:inline')
+    expect(within(screen.getByRole('button', { name: 'Demanda interna' })).getByText('Demanda')).toHaveClass('hidden')
+    const mineOption = within(screen.getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).getByRole('radio', { name: /Minhas/ })
+    expect(await within(mineOption).findByText('3')).toHaveClass('@max-[960px]:hidden')
+    const columns = await screen.findByRole('button', { name: 'Colunas e ações' })
+    expect(columns).toHaveAttribute('title', 'Colunas e ações')
+    expect(within(columns).getByText('Colunas e ações')).toHaveClass('@max-[1150px]:hidden')
   })
 
   it('cada linha: Visualizar, Editar e ··· (Excluir fica no ···); checklist só enquanto incompleto; sem contador de comentários', async () => {

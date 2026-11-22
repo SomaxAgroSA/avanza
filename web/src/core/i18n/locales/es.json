@@ -58,7 +58,8 @@
     "showColumn": "Mostrar {{name}}",
     "columnName": "Nombre de la columna {{name}}",
     "namesForAll": "Usar estos nombres para todos",
-    "resetNames": "Restablecer nombres"
+    "resetNames": "Restablecer nombres",
+    "compactAll": "todas"
   },
   "validation": {
     "required": "Campo obligatorio",
@@ -4681,7 +4682,9 @@
   },
   "demands": {
     "newProjectTask": "Tarea de proyecto",
+    "newProjectTaskShort": "Tarea",
     "newDemand": "Demanda interna",
+    "newDemandShort": "Demanda",
     "chip": "Demanda interna",
     "internalProject": "Demandas internas",
     "openDemands": "Abrir las demandas",

@@ -266,11 +266,15 @@ describe('AppDataTable — barra de filtros', () => {
     const alta = within(group).getByRole('button', { name: 'Alta' })
     expect(alta).toHaveAttribute('aria-pressed', 'false')
     expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Alta', 'Crítica'])
-    // nada de combobox para o filtro em botões
-    expect(screen.queryByRole('combobox', { name: 'Prioridade' })).not.toBeInTheDocument()
+    // o seletor compacto do mesmo filtro fica escondido até a barra apertar (AppToolbar < 1250px); os botões somem nessa hora
+    const compact = screen.getByRole('combobox', { name: 'Prioridade' })
+    expect(compact.parentElement).toHaveClass('hidden', '@max-[1250px]:flex')
+    expect(compact).toHaveTextContent(/^Prioridade: todas$/)
+    expect(group).toHaveClass('@max-[1250px]:hidden')
     await userEvent.click(alta)
     await userEvent.click(within(group).getByRole('button', { name: 'Crítica' }))
     expect(handle.api!.state.filters).toEqual({ priority: 'high,critical' })
+    expect(compact).toHaveTextContent(/^Prioridade: Alta \+1$/)
     expect(within(group).getByRole('button', { name: 'Alta' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(group).getByRole('button', { name: 'Alta' }))
     expect(handle.api!.state.filters).toEqual({ priority: 'critical' })
@@ -280,6 +284,47 @@ describe('AppDataTable — barra de filtros', () => {
     expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Todos', 'Aberto', 'Fechado'])
     await userEvent.click(screen.getByRole('option', { name: 'Aberto' }))
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent(/^Status: Aberto$/)
+  })
+
+  it('filtro em botões compacto: o seletor escolhe um valor só e "Todos" tira o filtro; a barra nunca quebra', async () => {
+    const columns: DataTableColumn<Row>[] = [
+      { id: 'name', header: 'Nome', hideable: false, cell: (r) => r.name },
+      {
+        id: 'urgency',
+        header: 'Urgência',
+        cell: () => '',
+        filter: {
+          label: 'Urgência',
+          variant: 'buttons',
+          options: [
+            { value: 'low', label: 'Baixa' },
+            { value: 'high', label: 'Alta' },
+          ],
+        },
+      },
+    ]
+    function Compact() {
+      const api = useDataTableState('compact-table', { sort: null })
+      useEffect(() => {
+        handle.api = api
+      })
+      return <AppDataTable caption="Compacto" columns={columns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} />
+    }
+    renderWithProviders(<Compact />)
+    const compact = screen.getByRole('combobox', { name: 'Urgência' })
+    await userEvent.click(compact)
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Todos', 'Baixa', 'Alta'])
+    await userEvent.click(screen.getByRole('option', { name: 'Alta' }))
+    expect(handle.api!.state.filters).toEqual({ urgency: 'high' })
+    expect(within(screen.getByRole('group', { name: 'Urgência' })).getByRole('button', { name: 'Alta' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(compact)
+    await userEvent.click(await screen.findByRole('option', { name: 'Todos' }))
+    expect(handle.api!.state.filters).toEqual({})
+    // a linha da barra: um contêiner que mede a si mesmo e uma linha que não quebra
+    const row = compact.closest('[data-toolbar]')!
+    expect(row).toHaveClass('flex-nowrap')
+    expect(row).not.toHaveClass('flex-wrap')
+    expect(row.parentElement).toHaveClass('@container')
   })
 
   it('"Limpar (n)" ao lado das ações, com quantos filtros estão ativos; volta ao padrão da tabela e, sem filtro, guarda o lugar escondido', async () => {

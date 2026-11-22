@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
 import { AppButton } from './AppButton'
+import { AppToolbar } from './AppToolbar'
 
 export interface AppFilterBarProps {
   search?: ReactNode
@@ -19,8 +20,9 @@ export interface AppFilterBarProps {
 
 /**
  * Barra padrão de uma listagem numa linha só: busca e filtros à esquerda; "Limpar" e as ações (colunas e
- * a ação principal) juntos à direita, todos com a mesma altura. Em telas estreitas a linha quebra entre
- * os grupos, com as ações sempre juntas.
+ * a ação principal) juntos à direita, todos com a mesma altura. Nunca quebra nem troca as coisas de lugar
+ * (AppToolbar): a busca encolhe primeiro, os grupos de botões viram seletores e as ações ficam só com o
+ * ícone; no celular a linha rola.
  */
 export function AppFilterBar({ search, filters, actions, hasActiveFilters, activeFilterCount, onReset }: AppFilterBarProps) {
   const { t } = useTranslation()
@@ -28,9 +30,9 @@ export function AppFilterBar({ search, filters, actions, hasActiveFilters, activ
   const counted = activeFilterCount !== undefined
   const showReset = !!onReset && (active || counted)
   return (
-    // os filtros em botões levam o nome ao lado, na mesma linha (§37); a busca cede espaço antes de a linha quebrar
-    <div className="flex flex-wrap items-center gap-2">
-      {search && <div className="w-full sm:w-auto sm:min-w-44 sm:max-w-64 sm:flex-1">{search}</div>}
+    // os filtros em botões levam o nome ao lado, na mesma linha (§37); a busca é a primeira a ceder espaço
+    <AppToolbar>
+      {search && <div className="min-w-[110px] max-w-64 flex-[1_1_150px]">{search}</div>}
       {filters}
       {(showReset || actions) && (
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -51,6 +53,6 @@ export function AppFilterBar({ search, filters, actions, hasActiveFilters, activ
           {actions}
         </div>
       )}
-    </div>
+    </AppToolbar>
   )
 }

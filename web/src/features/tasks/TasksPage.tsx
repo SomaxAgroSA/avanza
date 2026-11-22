@@ -57,7 +57,6 @@ export function TasksPage() {
   const [scope, setScope] = useTaskListScope(urlScope === 'all' || urlScope === 'mine' ? urlScope : null)
   const [kind, setKind] = useState<TaskKind>('all')
   // "Colunas e ações" vai para a linha das visões
-  const [tableActions, setTableActions] = useState<HTMLElement | null>(null)
   const mineTotal = useTasksList(countQuery('mine', kind)).data?.total
   const allTotal = useTasksList(countQuery('all', kind)).data?.total
   useEffect(() => {
@@ -76,14 +75,16 @@ export function TasksPage() {
   const label = (text: string, total: number | undefined) => (
     <>
       {text}
-      {total !== undefined && <span className="rounded-full bg-surface-2 px-1.5 text-xs font-semibold tabular-nums text-muted">{total}</span>}
+      {/* numa linha apertada (< 960px) os números somem */}
+      {total !== undefined && <span className="rounded-full bg-surface-2 px-1.5 text-xs font-semibold tabular-nums text-muted @max-[960px]:hidden">{total}</span>}
     </>
   )
 
   return (
     <>
-      <TasksHeader end={<div ref={setTableActions} className="flex items-center gap-2 empty:hidden" />}>
+      <TasksHeader>
         <AppSegmentedControl<TaskScope>
+          className="shrink-0"
           label={t('taskList.scopeLabel')}
           value={scope}
           onValueChange={setScope}
@@ -93,6 +94,7 @@ export function TasksPage() {
           ]}
         />
         <AppSegmentedControl<TaskKind>
+          className="shrink-0"
           label={t('taskList.kindLabel')}
           value={kind}
           onValueChange={setKind}
@@ -108,7 +110,6 @@ export function TasksPage() {
         scope={scope}
         kind={kind}
         search={search}
-        actionsSlot={tableActions}
         onSearchApplied={() =>
           setParams(
             (prev) => {

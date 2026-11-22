@@ -58,7 +58,8 @@
     "showColumn": "Show {{name}}",
     "columnName": "Column name {{name}}",
     "namesForAll": "Use these names for everyone",
-    "resetNames": "Reset names"
+    "resetNames": "Reset names",
+    "compactAll": "all"
   },
   "validation": {
     "required": "Required field",
@@ -4681,7 +4682,9 @@
   },
   "demands": {
     "newProjectTask": "Project task",
+    "newProjectTaskShort": "Task",
     "newDemand": "Internal request",
+    "newDemandShort": "Request",
     "chip": "Internal request",
     "internalProject": "Internal requests",
     "openDemands": "Open requests",

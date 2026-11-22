@@ -2,21 +2,23 @@ import { useState, type ReactNode } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { AppButton, AppNavTabs } from '@/presentation/components'
+import { AppButton, AppNavTabs, AppToolbar } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useCan } from '@/features/auth/session'
 import { useDemandBadge } from '@/features/demands/queries'
 import { TaskFormDialog, type TaskKindChoice } from './TaskFormDialog'
 
 /**
- * Cabeçalho do módulo Tarefas (§44/§45): título (sem texto de ajuda), os dois botões pequenos "＋ Tarefa de
- * projeto" e "＋ Demanda interna" (com `tasks.create`; cada um abre só o seu formulário) e, numa linha só, as
- * visões Lista · Caixa de entrada (antes "Demandas", mesmo endereço `/tasks/demands`; com o número do que espera
- * por mim: recebidas sem atribuir, atribuídas a mim abertas e pedidas por mim para validar), os controles da visão
- * (`children`: escopo e Com/Sem projeto; as caixas das Demandas) e, à direita, `end` (ex.: "Colunas e ações").
- * `?new=1` (paleta de comandos) abre o formulário de tarefa de projeto; `?new=demand`, o de demanda.
+ * Cabeçalho do módulo Tarefas (§44/§45): só o título (sem texto de ajuda) e, numa linha só (AppToolbar: nunca
+ * quebra nem troca as coisas de lugar), as visões Lista · Caixa de entrada (antes "Demandas", mesmo endereço
+ * `/tasks/demands`; com o número do que espera por mim: recebidas sem atribuir, atribuídas a mim abertas e pedidas
+ * por mim para validar), os controles da visão (`children`: escopo e Com/Sem projeto; as caixas da Caixa de entrada)
+ * e, no fim da linha, os dois botões "＋ Tarefa de projeto" e "＋ Demanda interna" (com `tasks.create`; cada um abre
+ * só o seu formulário; numa linha apertada viram "＋ Tarefa" e "＋ Demanda"). "Colunas e ações" fica na linha da
+ * busca e dos filtros (a da tabela). `?new=1` (paleta de comandos) abre o formulário de tarefa de projeto;
+ * `?new=demand`, o de demanda.
  */
-export function TasksHeader({ children, end }: { children?: ReactNode; end?: ReactNode }) {
+export function TasksHeader({ children }: { children?: ReactNode }) {
   const { t } = useTranslation()
   const canCreate = useCan('tasks.create')
   const { pathname } = useLocation()
@@ -30,25 +32,12 @@ export function TasksHeader({ children, end }: { children?: ReactNode; end?: Rea
 
   return (
     <>
-      <PageHeader
-        title={t('tasks.title')}
-        actions={
-          canCreate && (
-            <>
-              <AppButton size="sm" leftIcon={<Plus />} onClick={() => setCreating('project')}>
-                {t('demands.newProjectTask')}
-              </AppButton>
-              <AppButton size="sm" leftIcon={<Plus />} onClick={() => setCreating('demand')}>
-                {t('demands.newDemand')}
-              </AppButton>
-            </>
-          )
-        }
-      />
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <PageHeader title={t('tasks.title')} />
+      <AppToolbar className="mb-4">
         <AppNavTabs
           aria-label={t('taskList.viewLabel')}
           variant="pill"
+          className="shrink-0"
           items={[
             { key: 'list', to: '/tasks', label: t('taskList.viewList'), active: !onDemands },
             {
@@ -69,8 +58,13 @@ export function TasksHeader({ children, end }: { children?: ReactNode; end?: Rea
           ]}
         />
         {children}
-        {end && <div className="ml-auto flex items-center gap-2">{end}</div>}
-      </div>
+        {canCreate && (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <CreateButton full={t('demands.newProjectTask')} short={t('demands.newProjectTaskShort')} onClick={() => setCreating('project')} />
+            <CreateButton full={t('demands.newDemand')} short={t('demands.newDemandShort')} onClick={() => setCreating('demand')} />
+          </div>
+        )}
+      </AppToolbar>
       <TaskFormDialog
         open={!!kind}
         initialKind={kind ?? 'project'}
@@ -85,5 +79,17 @@ export function TasksHeader({ children, end }: { children?: ReactNode; end?: Rea
         }}
       />
     </>
+  )
+}
+
+/** "＋ Tarefa de projeto" que, numa linha apertada (< 1060px), vira "＋ Tarefa"; o nome inteiro fica no aria-label. */
+function CreateButton({ full, short, onClick }: { full: string; short: string; onClick: () => void }) {
+  return (
+    <AppButton size="sm" leftIcon={<Plus />} aria-label={full} title={full} onClick={onClick}>
+      <span className="@max-[1060px]:hidden">{full}</span>
+      <span aria-hidden className="hidden @max-[1060px]:inline">
+        {short}
+      </span>
+    </AppButton>
   )
 }
