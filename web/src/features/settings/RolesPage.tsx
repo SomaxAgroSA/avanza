@@ -101,6 +101,7 @@ export function RolesPage() {
         }
       />
       <AppDataTable
+        tableId="roles"
         caption={t('roles.title')}
         columns={columns}
         data={rows}

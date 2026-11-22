@@ -87,12 +87,16 @@ describe('Configurações → Empresas (§46)', () => {
     const { update } = setup([company('c1', 'Somax'), company('c2', 'Agro', { active: false })])
     const table = await screen.findByRole('table', { name: 'Empresas' })
     const somax = (await within(table).findByText('Somax')).closest('tr')!
-    await userEvent.click(within(somax).getByRole('button', { name: /Desativar/ }))
+    // Desativar/Ativar (o "Excluir" da tabela) vem desligado em "Colunas e ações": fica no ··· da linha
+    expect(within(somax).queryByRole('button', { name: /Desativar/ })).not.toBeInTheDocument()
+    await userEvent.click(within(somax).getByRole('button', { name: 'Mais ações' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Desativar/ }))
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: 'Desativar' }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('c1', { active: false }))
     const agro = within(table).getByText('Agro').closest('tr')!
-    await userEvent.click(within(agro).getByRole('button', { name: /Ativar/ }))
+    await userEvent.click(within(agro).getByRole('button', { name: 'Mais ações' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Ativar/ }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('c2', { active: true }))
     expect(screen.queryByRole('button', { name: /Excluir/ })).toBeNull()
   })

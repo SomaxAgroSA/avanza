@@ -3,8 +3,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
-import { renderWithProviders } from '@/test/utils'
-import { AppDataTable, type DataTableColumn } from './AppDataTable'
+import { fakeRepositories, makeCurrentUser, renderWithProviders } from '@/test/utils'
+import { AppDataTable, type DataTableColumn, type DataTableRowActions } from './AppDataTable'
 import { useDataTableState, type DataTableStateApi } from './data-table/use-data-table-state'
 
 interface Row {
@@ -38,6 +38,7 @@ function Harness(props: { data?: Row[]; loading?: boolean; error?: boolean; onVi
   })
   return (
     <AppDataTable
+      tableId="test-table"
       caption="Tabela de teste"
       columns={columns}
       data={props.data ?? rows}
@@ -149,6 +150,7 @@ describe('AppDataTable — embutida', () => {
     const api = useDataTableState('plain-table', { sort: null })
     return (
       <AppDataTable
+        tableId="plain-table"
         caption="Embutida"
         columns={[{ id: 'name', header: 'Nome', hideable: false, cell: (r: Row) => r.name }]}
         data={rows}
@@ -162,12 +164,11 @@ describe('AppDataTable — embutida', () => {
     )
   }
 
-  it('sem busca, filtros nem colunas para escolher: sem barra de ferramentas; sem moldura própria', () => {
+  it('sem busca nem filtros: a barra só com "Colunas" (para dar nome às colunas); sem moldura própria', () => {
     const { container } = renderWithProviders(<Plain />)
     expect(screen.getByRole('table', { name: 'Embutida' })).toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Colunas'])
     expect(container.querySelector('.shadow-card')).toBeNull()
-    expect(container.firstElementChild?.childElementCount).toBe(1)
   })
 })
 
@@ -176,6 +177,7 @@ describe('AppDataTable — clique na linha', () => {
     const api = useDataTableState('click-table', { sort: null })
     return (
       <AppDataTable
+        tableId="click-table"
         caption="Clicável"
         columns={[{ id: 'name', header: 'Nome', hideable: false, cell: (r: Row) => <a href={`#${r.id}`}>{r.name}</a> }, { id: 'status', header: 'Status', hideable: false, cell: (r: Row) => r.status }]}
         data={rows}
@@ -215,7 +217,7 @@ describe('AppDataTable — barra de filtros', () => {
     useEffect(() => {
       handle.api = api
     })
-    return <AppDataTable caption="Filtros" columns={filterColumns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} toolbarActions={<button type="button">Nova</button>} />
+    return <AppDataTable tableId="filters-table" caption="Filtros" columns={filterColumns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} toolbarActions={<button type="button">Nova</button>} />
   }
 
   it('todos os filtros à vista na barra, sem "Mais filtros"; filtro ativo mostra "Nome: valor"', async () => {
@@ -257,7 +259,7 @@ describe('AppDataTable — barra de filtros', () => {
       useEffect(() => {
         handle.api = api
       })
-      return <AppDataTable caption="Botões" columns={buttonColumns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} />
+      return <AppDataTable tableId="buttons-table" caption="Botões" columns={buttonColumns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} />
     }
     renderWithProviders(<Buttons />)
     const group = screen.getByRole('group', { name: 'Prioridade' })
@@ -303,12 +305,13 @@ describe('AppDataTable — barra de filtros', () => {
 
 describe('AppDataTable — Colunas e ações', () => {
   function ActionsHarness({ onDelete = () => {} }: { onDelete?: (r: Row) => void }) {
-    const api = useDataTableState('actions-table', { rowActions: { delete: false } })
+    const api = useDataTableState('actions-table')
     useEffect(() => {
       handle.api = api
     })
     return (
       <AppDataTable
+        tableId="actions-table"
         caption="Tabela com ações"
         columns={columns}
         data={rows}
@@ -333,11 +336,11 @@ describe('AppDataTable — Colunas e ações', () => {
     expect(onDelete).toHaveBeenCalledWith(rows[0])
 
     await userEvent.click(screen.getByRole('button', { name: 'Colunas e ações' }))
-    const menu = await screen.findByRole('menu')
+    const menu = await screen.findByRole('dialog', { name: 'Colunas e ações' })
     expect(within(menu).getByText('Ações em cada linha')).toBeInTheDocument()
-    expect(within(menu).getByRole('menuitemcheckbox', { name: 'Excluir' })).toHaveAttribute('aria-checked', 'false')
-    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Visualizar' }))
-    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: 'Excluir' }))
+    expect(within(menu).getByRole('checkbox', { name: 'Excluir' })).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'Visualizar' }))
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'Excluir' }))
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('button', { name: 'Visualizar' })).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Excluir' })).toHaveLength(2)
@@ -357,6 +360,7 @@ describe('AppDataTable — Colunas e ações', () => {
       const api = useDataTableState('all-label')
       return (
         <AppDataTable
+          tableId="all-label"
           caption="Rótulo padrão"
           columns={[{ id: 'status', header: 'Status', cell: (r: Row) => r.status, filter: { label: 'Status', allLabel: 'Abertas', options: [{ value: 'x', label: 'Concluído' }] } }]}
           data={rows}
@@ -368,5 +372,138 @@ describe('AppDataTable — Colunas e ações', () => {
     }
     renderWithProviders(<Harness2 />)
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Status: Abertas')
+  })
+})
+
+describe('AppDataTable — nomes das colunas (§44)', () => {
+  const nameColumns: DataTableColumn<Row>[] = [
+    { id: 'name', header: 'Nome', hideable: false, sortable: true, cell: (r) => r.name },
+    { id: 'status', header: 'Status', sortable: true, cell: (r) => r.status, filter: { label: 'Status', options: [{ value: 'active', label: 'Ativo' }] } },
+  ]
+
+  function NamesHarness({ actions }: { actions?: DataTableRowActions<Row> }) {
+    const api = useDataTableState('names-table')
+    return <AppDataTable tableId="names" caption="Nomes" columns={nameColumns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} actions={actions} />
+  }
+
+  const openMenu = async (name = 'Colunas') => {
+    await userEvent.click(screen.getByRole('button', { name }))
+    return screen.findByRole('dialog', { name })
+  }
+  const header = (name: string) => screen.getByRole('columnheader', { name: new RegExp(`^${name}( |$)`) })
+
+  it('o nome da coluna se edita no menu: Enter grava, o cabeçalho (e o filtro de mesmo nome) muda e fica guardado por tabela', async () => {
+    renderWithProviders(<NamesHarness />)
+    const menu = await openMenu()
+    // a primeira coluna não se oculta, mas o nome dela se edita
+    expect(within(menu).getByRole('checkbox', { name: 'Mostrar Nome' })).toBeDisabled()
+    expect(within(menu).getByRole('checkbox', { name: 'Mostrar Status' })).toBeEnabled()
+    const input = within(menu).getByRole('textbox', { name: 'Nome da coluna Status' })
+    await userEvent.clear(input)
+    await userEvent.type(input, '  Situação {Enter}')
+    expect(header('Situação')).toBeInTheDocument()
+    expect(within(header('Situação')).getByRole('button', { name: 'Situação' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Situação' })).toBeInTheDocument()
+    expect(within(menu).getByRole('checkbox', { name: 'Mostrar Situação' })).toBeInTheDocument()
+    expect(JSON.parse(window.localStorage.getItem('kamban.table.names.labels') ?? '{}')).toEqual({ status: 'Situação' })
+    // sem a caixa "para todos" para quem não tem platform.manage
+    expect(within(menu).queryByRole('checkbox', { name: 'Usar estes nomes para todos' })).not.toBeInTheDocument()
+  })
+
+  it('sair do campo também grava; vazio volta ao nome do sistema; Esc desfaz; "Restaurar nomes" volta todos', async () => {
+    window.localStorage.setItem('kamban.table.names.labels', JSON.stringify({ name: 'Registro' }))
+    renderWithProviders(<NamesHarness />)
+    expect(header('Registro')).toBeInTheDocument()
+    const menu = await openMenu()
+    const status = within(menu).getByRole('textbox', { name: 'Nome da coluna Status' })
+    await userEvent.clear(status)
+    await userEvent.type(status, 'Fase')
+    await userEvent.tab()
+    expect(header('Fase')).toBeInTheDocument()
+
+    await userEvent.clear(status)
+    await userEvent.type(status, 'Outro{Escape}')
+    expect(header('Fase')).toBeInTheDocument()
+
+    const name = within(await openMenu()).getByRole('textbox', { name: 'Nome da coluna Nome' })
+    await userEvent.clear(name)
+    await userEvent.keyboard('{Enter}')
+    expect(header('Nome')).toBeInTheDocument()
+    expect(name).toHaveValue('Nome')
+
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Colunas' })).getByRole('button', { name: 'Restaurar nomes' }))
+    expect(header('Status')).toBeInTheDocument()
+    expect(window.localStorage.getItem('kamban.table.names.labels')).toBe('{}')
+    expect(within(screen.getByRole('dialog', { name: 'Colunas' })).getByRole('button', { name: 'Restaurar nomes' })).toBeDisabled()
+  })
+
+  it('o nome definido para todos vale para quem não deu outro; o da pessoa vem antes', async () => {
+    const repositories = fakeRepositories({ platform: { getTableColumnLabels: () => Promise.resolve({ names: { status: 'Etapa', name: 'Item' } }) } })
+    window.localStorage.setItem('kamban.table.names.labels', JSON.stringify({ name: 'Meu item' }))
+    renderWithProviders(<NamesHarness />, repositories)
+    await waitFor(() => expect(header('Etapa')).toBeInTheDocument())
+    expect(header('Meu item')).toBeInTheDocument()
+    // apagar o próprio nome volta ao de todos
+    const input = within(await openMenu()).getByRole('textbox', { name: 'Nome da coluna Nome' })
+    await userEvent.clear(input)
+    await userEvent.keyboard('{Enter}')
+    expect(header('Item')).toBeInTheDocument()
+  })
+
+  it('platform.manage: "Usar estes nomes para todos" grava os nomes à vista para todos; com a caixa marcada, cada nome vai para todos', async () => {
+    const update = vi.fn((tableId: string, labels: Record<string, string>) => Promise.resolve({ [tableId]: labels }))
+    const repositories = fakeRepositories({
+      auth: { me: () => Promise.resolve(makeCurrentUser(['platform.manage'])) },
+      platform: { getTableColumnLabels: () => Promise.resolve({ names: { name: 'Item' } }), updateTableColumnLabels: update },
+    })
+    window.localStorage.setItem('kamban.table.names.labels', JSON.stringify({ status: 'Etapa' }))
+    renderWithProviders(<NamesHarness />, repositories)
+    const menu = await openMenu()
+    const forAll = await within(menu).findByRole('checkbox', { name: 'Usar estes nomes para todos' })
+    await waitFor(() => expect(header('Item')).toBeInTheDocument())
+    await userEvent.click(forAll)
+    expect(update).toHaveBeenLastCalledWith('names', { name: 'Item', status: 'Etapa' })
+    // deixam de ser só da pessoa
+    expect(window.localStorage.getItem('kamban.table.names.labels')).toBe('{}')
+
+    const input = within(menu).getByRole('textbox', { name: 'Nome da coluna Status' })
+    await userEvent.clear(input)
+    await userEvent.type(input, 'Fase{Enter}')
+    expect(update).toHaveBeenLastCalledWith('names', { name: 'Item', status: 'Fase' })
+    expect(header('Fase')).toBeInTheDocument()
+
+    await userEvent.click(within(menu).getByRole('button', { name: 'Restaurar nomes' }))
+    expect(update).toHaveBeenLastCalledWith('names', {})
+    expect(header('Status')).toBeInTheDocument()
+  })
+
+  it('servidor recusa o nome para todos: o cabeçalho volta', async () => {
+    const repositories = fakeRepositories({
+      auth: { me: () => Promise.resolve(makeCurrentUser(['platform.manage'])) },
+      platform: { updateTableColumnLabels: () => Promise.reject(new Error('falhou')) },
+    })
+    renderWithProviders(<NamesHarness />, repositories)
+    const menu = await openMenu()
+    await userEvent.click(await within(menu).findByRole('checkbox', { name: 'Usar estes nomes para todos' }))
+    const input = within(menu).getByRole('textbox', { name: 'Nome da coluna Status' })
+    await userEvent.clear(input)
+    await userEvent.type(input, 'Fase{Enter}')
+    await waitFor(() => expect(header('Status')).toBeInTheDocument())
+  })
+
+  it('tabela sem outras ações no "⋯" (hideMore): Excluir desligado aparece no "⋯", com o nome da tela no menu', async () => {
+    const onDelete = vi.fn()
+    renderWithProviders(<NamesHarness actions={{ onEdit: () => {}, onDelete, deleteLabel: () => 'Desativar', deleteName: 'Desativar', hideMore: true }} />)
+    expect(screen.queryByRole('button', { name: 'Desativar' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('button', { name: 'Mais ações' })[0]!)
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Desativar' }))
+    expect(onDelete).toHaveBeenCalledWith(rows[0])
+
+    const menu = await openMenu('Colunas e ações')
+    expect(within(menu).queryByRole('checkbox', { name: 'Mais (···)' })).not.toBeInTheDocument()
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'Desativar' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getAllByRole('button', { name: 'Desativar' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument()
   })
 })

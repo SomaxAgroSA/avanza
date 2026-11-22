@@ -168,6 +168,7 @@ export function UsersPage() {
       />
 
       <AppDataTable
+        tableId="users"
         caption={t('users.title')}
         columns={columns}
         data={users.data?.items ?? EMPTY}
@@ -186,6 +187,7 @@ export function UsersPage() {
           onDelete: setDisabling,
           canDelete: (user) => actionsFor(user).includes('disable'),
           deleteLabel: () => t('users.disable'),
+          deleteName: t('users.disable'),
           more: (user) => [
             {
               key: 'copy',

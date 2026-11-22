@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef } from 'react'
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   columnPinningFeature,
@@ -19,6 +19,9 @@ import {
 import { ArrowDown, ArrowUp, ChevronsUpDown, Columns3, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
+import { labelOf, resolveColumnLabel, withColumnLabel, type ColumnLabels } from '@/domain/column-labels'
+import { useCan } from '@/features/auth/session'
+import { useCompanyColumnLabels, useOwnColumnLabels } from '@/presentation/common/use-column-labels'
 import { AppDropdown, type AppDropdownItem } from './AppDropdown'
 import { AppIconButton } from './AppIconButton'
 import { AppButton } from './AppButton'
@@ -27,6 +30,7 @@ import { AppEmptyState, AppErrorState, AppLoadingBar, AppSkeleton } from './AppS
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
 import { FilterButtons, FilterSelect, type TableFilterDef } from './data-table/TableFilters'
+import { ColumnsMenu, type ColumnsMenuAction, type ColumnsMenuColumn } from './data-table/ColumnsMenu'
 import type { DataTableStateApi } from './data-table/use-data-table-state'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
 import { useDelayedFlag } from '@/presentation/common/use-delayed-flag'
@@ -77,6 +81,8 @@ export interface DataTableRowActions<T> {
   canDelete?: (row: T) => boolean
   /** Rótulo da ação destrutiva (ex.: "Desativar" para usuários). */
   deleteLabel?: (row: T) => string
+  /** Nome da ação destrutiva em "Colunas e ações" (ex.: "Desativar", "Arquivar"); padrão: "Excluir". */
+  deleteName?: string
   /** Ícone da ação (padrão: lixeira) — ex.: arquivar usa ícone de arquivo. */
   deleteIcon?: (row: T) => ReactNode
   /** "danger" (padrão) para ações destrutivas; "ghost" para reversíveis (ex.: arquivar). */
@@ -87,6 +93,11 @@ export interface DataTableRowActions<T> {
 }
 
 export interface AppDataTableProps<T extends RowData> {
+  /**
+   * Id estável da tabela (ex.: `tasks`, `projects`, `users`): chave dos nomes das colunas, os da pessoa
+   * (no navegador) e os definidos para todos (§44). Mesmo id = mesmos nomes (ex.: todas as visões de Projetos).
+   */
+  tableId: string
   columns: DataTableColumn<T>[]
   data: T[]
   total: number
@@ -124,9 +135,10 @@ export interface AppDataTableProps<T extends RowData> {
    */
   onRowClick?: (row: T) => void
   /**
-   * "Colunas e ações": o menu de colunas ganha "Ações em cada linha" (Visualizar, Editar, Excluir, Mais),
-   * guardadas com as colunas (`rowActions` do estado). Excluir desligado vai para o "⋯"; nenhuma ligada
-   * (e sem ação própria da tela) = sem a coluna Ações.
+   * "Colunas e ações" (padrão ligado em toda tabela com ações por linha): o menu de colunas ganha "Ações em
+   * cada linha" (Visualizar, Editar, Excluir, Mais), guardadas com as colunas (`rowActions` do estado).
+   * Excluir começa desligado e fica no "⋯" (que aparece só para ele quando a tela não tem outras ações);
+   * nenhuma ligada (e sem ação própria da tela) = sem a coluna Ações.
    */
   configurableActions?: boolean
 }
@@ -135,6 +147,12 @@ export interface AppDataTableProps<T extends RowData> {
 const ROW_ACTION_KEYS = ['view', 'edit', 'delete', 'more'] as const
 type RowActionKey = (typeof ROW_ACTION_KEYS)[number]
 const ROW_ACTION_LABELS: Record<RowActionKey, string> = { view: 'common.view', edit: 'common.edit', delete: 'common.delete', more: 'table.moreActions' }
+/** Escolha guardada da ação: Excluir só ligado quando a pessoa ligou; as demais, ligadas até desligar. */
+const actionChosen = (prefs: Record<string, boolean>, key: RowActionKey) => (key === 'delete' ? prefs.delete === true : prefs[key] !== false)
+/** Ações que a tela oferece (as que aparecem em "Ações em cada linha"). */
+function offeredActions<T>(actions: DataTableRowActions<T>): RowActionKey[] {
+  return ROW_ACTION_KEYS.filter((key) => (key === 'view' ? !!actions.onView : key === 'edit' ? !!actions.onEdit : key === 'delete' ? !!actions.onDelete : !actions.hideMore))
+}
 
 /* ------------------------------------------------------------------ implementação */
 
@@ -175,7 +193,8 @@ function pinnedStyle(column: Column<typeof features, never, unknown>): CSSProper
  * carregamento/vazio/erro e ações por linha (Visualizar, Editar, Excluir, Mais).
  */
 export function AppDataTable<T extends RowData>({
-  columns,
+  tableId,
+  columns: baseColumns,
   data,
   total,
   getRowId,
@@ -195,23 +214,69 @@ export function AppDataTable<T extends RowData>({
   paginated = true,
   bordered = true,
   onRowClick,
-  configurableActions = false,
+  configurableActions = true,
 }: AppDataTableProps<T>) {
   const { t } = useTranslation()
   const { state } = tableState
   const clickTimer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(clickTimer.current), [])
 
-  // "Colunas e ações": quais ações a linha mostra (só as que a tela oferece); nenhuma = sem a coluna Ações
+  // Nomes das colunas (§44): o da pessoa > o definido para todos > o do sistema
+  const own = useOwnColumnLabels(tableId)
+  const company = useCompanyColumnLabels(tableId)
+  const canNameForAll = useCan('platform.manage')
+  const [namesForAll, setNamesForAll] = useState(false)
+  const columns = useMemo(
+    () =>
+      baseColumns.map((col) => {
+        const header = resolveColumnLabel(col.id, col.header, own.labels, company.labels)
+        if (header === col.header) return col
+        // o filtro com o mesmo nome da coluna acompanha o nome novo
+        return { ...col, header, filter: col.filter && col.filter.label === col.header ? { ...col.filter, label: header } : col.filter }
+      }),
+    [baseColumns, own.labels, company.labels],
+  )
+  const builtInOf = (id: string) => baseColumns.find((c) => c.id === id)?.header ?? id
+  const forAll = canNameForAll && namesForAll
+  const renameColumn = (id: string, value: string) => {
+    const builtIn = builtInOf(id)
+    if (forAll) {
+      void company.save(withColumnLabel(company.labels, id, value, builtIn))
+      if (labelOf(own.labels, id) !== undefined) own.save(withColumnLabel(own.labels, id, '', builtIn))
+      return
+    }
+    own.save(withColumnLabel(own.labels, id, value, resolveColumnLabel(id, builtIn, undefined, company.labels)))
+  }
+  // "Usar estes nomes para todos": os nomes à vista passam a valer para todos (e deixam de ser só da pessoa)
+  const chooseNamesForAll = (checked: boolean) => {
+    setNamesForAll(checked)
+    if (!checked || Object.keys(own.labels).length === 0) return
+    const next = baseColumns.reduce<ColumnLabels>((labels, col) => {
+      const name = labelOf(own.labels, col.id)
+      return name ? withColumnLabel(labels, col.id, name, col.header) : labels
+    }, company.labels)
+    void company.save(next)
+    own.save({})
+  }
+  const canResetNames = Object.keys(own.labels).length > 0 || (forAll && Object.keys(company.labels).length > 0)
+  const resetNames = () => {
+    own.save({})
+    if (forAll) void company.save({})
+  }
+
+  // "Colunas e ações": quais ações a linha mostra (só as que a tela oferece); nenhuma = sem a coluna Ações.
+  // Excluir começa desligado (fica no "⋯"); as demais começam ligadas.
   const rowActionPrefs = state.rowActions
   const visibleActions = useMemo<Record<RowActionKey, boolean> | null>(() => {
     if (!actions) return null
-    const on = (key: RowActionKey) => !configurableActions || rowActionPrefs[key] !== false
+    const on = (key: RowActionKey) => !configurableActions || actionChosen(rowActionPrefs, key)
+    const remove = !!actions.onDelete && on('delete')
     return {
       view: !!actions.onView && on('view'),
       edit: !!actions.onEdit && on('edit'),
-      delete: !!actions.onDelete && on('delete'),
-      more: !actions.hideMore && on('more'),
+      delete: remove,
+      // tela sem outras ações no "⋯" (hideMore): ele aparece só para levar o Excluir desligado
+      more: actions.hideMore ? configurableActions && !!actions.onDelete && !remove : on('more'),
     }
   }, [actions, configurableActions, rowActionPrefs])
   const actionButtons = visibleActions ? ROW_ACTION_KEYS.filter((key) => visibleActions[key]).length : 0
@@ -282,48 +347,50 @@ export function AppDataTable<T extends RowData>({
   const filterColumns = columns.filter((c) => c.filter)
   // todos os filtros à vista, na ordem das colunas
   const filterDefs: TableFilterDef[] = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
-  const hideableColumns = table.getAllLeafColumns().filter((c) => c.getCanHide())
   const visibleColumnCount = table.getVisibleLeafColumns().length
   const showSkeleton = loading && data.length === 0
   // Recargas rápidas (ex.: após salvar) não exibem indicador; só as que demoram.
   const slowFetch = useDelayedFlag(!!fetching && !showSkeleton)
 
-  const columnMenu: AppDropdownItem[] = [
-    { type: 'label', key: 'label', label: t('table.visibleColumns') },
-    ...hideableColumns.map<AppDropdownItem>((column) => ({
-      type: 'checkbox',
-      key: column.id,
+  // "Colunas" / "Colunas e ações": todas as colunas (as fixas, como a primeira, sem ocultar), com o nome editável
+  const menuColumns: ColumnsMenuColumn[] = table
+    .getAllLeafColumns()
+    .filter((column) => column.id !== ACTIONS_ID)
+    .map((column) => ({
+      id: column.id,
       label: String(column.columnDef.header ?? column.id),
-      checked: column.getIsVisible(),
+      builtIn: builtInOf(column.id),
+      visible: column.getIsVisible(),
       // mantém ao menos uma coluna de dados visível
-      disabled: column.getIsVisible() && visibleColumnCount <= (hasActionsColumn ? 2 : 1),
-      onCheckedChange: (checked) => column.toggleVisibility(checked),
-    })),
-    // "Ações em cada linha": guardadas com as colunas (por pessoa, neste navegador)
-    ...(configurableActions && actions
-      ? [
-          { type: 'separator' as const, key: 'actions-separator' },
-          { type: 'label' as const, key: 'actions-label', label: t('table.rowActions') },
-          ...ROW_ACTION_KEYS.filter((key) => (key === 'view' ? !!actions.onView : key === 'edit' ? !!actions.onEdit : key === 'delete' ? !!actions.onDelete : !actions.hideMore)).map<AppDropdownItem>(
-            (key) => ({
-              type: 'checkbox',
-              key: `action-${key}`,
-              label: t(ROW_ACTION_LABELS[key]),
-              checked: rowActionPrefs[key] !== false,
-              onCheckedChange: (checked) => tableState.setRowActions({ ...Object.fromEntries(ROW_ACTION_KEYS.map((k) => [k, rowActionPrefs[k] !== false])), [key]: checked }),
-            }),
-          ),
-        ]
-      : []),
-  ]
-  const columnsLabel = configurableActions && actions ? t('table.columnsAndActions') : t('table.columns')
+      locked: !column.getCanHide() || (column.getIsVisible() && visibleColumnCount <= (hasActionsColumn ? 2 : 1)),
+    }))
+  const actionsMenu = configurableActions && actions
+  const menuActions: ColumnsMenuAction[] = actionsMenu
+    ? offeredActions(actions).map((key) => ({
+        key,
+        label: key === 'delete' && actions.deleteName ? actions.deleteName : t(ROW_ACTION_LABELS[key]),
+        checked: actionChosen(rowActionPrefs, key),
+      }))
+    : []
+  // guarda as quatro escolhas explícitas (o padrão pode mudar sem mexer no que a pessoa escolheu)
+  const toggleAction = (key: string, checked: boolean) =>
+    tableState.setRowActions({ ...Object.fromEntries(ROW_ACTION_KEYS.map((k) => [k, actionChosen(rowActionPrefs, k)])), [key]: checked })
+  const columnsLabel = actionsMenu ? t('table.columnsAndActions') : t('table.columns')
 
   // "Colunas" e a ação principal: na barra ou no lugar indicado pela tela (actionsSlot)
   const toolbarButtons = (
     <>
-      {(hideableColumns.length > 0 || (configurableActions && !!actions)) && (
-        <AppDropdown
-          items={columnMenu}
+      {menuColumns.length > 0 && (
+        <ColumnsMenu
+          label={columnsLabel}
+          columns={menuColumns}
+          onToggleColumn={(id, visible) => table.getColumn(id)?.toggleVisibility(visible)}
+          onRename={renameColumn}
+          canResetNames={canResetNames}
+          onResetNames={resetNames}
+          forAll={canNameForAll ? { checked: namesForAll, onChange: chooseNamesForAll } : undefined}
+          actions={menuActions}
+          onToggleAction={toggleAction}
           trigger={
             <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={columnsLabel}>
               <span className="hidden sm:inline">{columnsLabel}</span>
@@ -336,7 +403,7 @@ export function AppDataTable<T extends RowData>({
   )
 
   // sem busca, filtros, colunas para escolher nem extras: nada de barra vazia acima da tabela
-  const hasToolbar = searchable || filterColumns.length > 0 || hideableColumns.length > 0 || !!toolbar || !!toolbarActions
+  const hasToolbar = searchable || filterColumns.length > 0 || menuColumns.length > 0 || !!toolbar || !!toolbarActions
 
   return (
     <div className="flex flex-col gap-3">
@@ -552,13 +619,20 @@ function RowActions<T extends RowData>({ row, actions, visible }: { row: T; acti
   const canEdit = actions.onEdit && (actions.canEdit ? actions.canEdit(row) : true)
   const canDelete = actions.onDelete && (actions.canDelete ? actions.canDelete(row) : true)
   const deleteLabel = actions.deleteLabel?.(row) ?? t('common.delete')
-  // Excluir fora da linha ("Colunas e ações"): continua no "⋯", para quem pode
-  const moreItems = [
-    ...(actions.more?.(row) ?? []),
+  // Excluir fora da linha ("Colunas e ações"): continua no "⋯", para quem pode (reversível, como arquivar, sem o vermelho)
+  const extraItems = actions.more?.(row) ?? []
+  const moreItems: AppDropdownItem[] = [
+    ...extraItems,
     ...(actions.onDelete && !visible.delete && canDelete
       ? [
-          { type: 'separator' as const, key: 'delete-separator' },
-          { key: 'delete', label: deleteLabel, icon: actions.deleteIcon?.(row) ?? <Trash2 />, tone: 'danger' as const, onSelect: () => actions.onDelete?.(row) },
+          ...(extraItems.length > 0 ? [{ type: 'separator' as const, key: 'delete-separator' }] : []),
+          {
+            key: 'delete',
+            label: deleteLabel,
+            icon: actions.deleteIcon?.(row) ?? <Trash2 />,
+            tone: actions.deleteTone?.(row) === 'ghost' ? ('default' as const) : ('danger' as const),
+            onSelect: () => actions.onDelete?.(row),
+          },
         ]
       : []),
   ]

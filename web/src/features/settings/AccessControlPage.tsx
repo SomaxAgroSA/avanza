@@ -464,6 +464,7 @@ function ProjectsCard({ user, rows, loading, seesAll }: { user: User; rows: Proj
   return (
     <AppCard title={t('access.projects.title')} description={seesAll ? t('access.projects.seesAll') : t('access.projects.hint')}>
       <AppDataTable
+        tableId="access-projects"
         caption={t('access.projects.title')}
         columns={columns}
         data={data}

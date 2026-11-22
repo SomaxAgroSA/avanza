@@ -86,6 +86,7 @@ export function CompaniesPage() {
         }
       />
       <AppDataTable
+        tableId="companies"
         caption={t('companies.title')}
         columns={columns}
         data={rows}
@@ -102,6 +103,7 @@ export function CompaniesPage() {
           onEdit: (c) => setEditing(c),
           onDelete: (c) => (c.active ? setDeactivating(c) : setActive(c, true)),
           deleteLabel: (c) => (c.active ? t('companies.deactivate') : t('companies.activate')),
+          deleteName: t('companies.deactivate'),
           deleteIcon: (c) => (c.active ? <PowerOff /> : <Power />),
           deleteTone: (c) => (c.active ? 'danger' : 'ghost'),
           hideMore: true,

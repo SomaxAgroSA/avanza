@@ -84,6 +84,7 @@ export function ApiTokensPage() {
         <AppErrorState onRetry={() => void list.refetch()} />
       ) : (
         <AppDataTable
+          tableId="api-tokens-mine"
           caption={t('apiTokens.title')}
           columns={columns}
           data={list.data ?? []}
@@ -93,7 +94,7 @@ export function ApiTokensPage() {
           table={table}
           paginated={false}
           searchable={false}
-          actions={{ onView: view, canView: (row) => row.state !== 'revoked', onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }) }}
+          actions={{ onView: view, canView: (row) => row.state !== 'revoked', onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }), deleteName: t('apiTokens.revoke') }}
           emptyState={<AppEmptyState compact icon={<KeyRound />} title={t('apiTokens.empty')} description={canCreate ? t('apiTokens.emptyHint') : t('apiTokens.noPermission')} />}
         />
       )}

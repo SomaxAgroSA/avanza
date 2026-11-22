@@ -100,6 +100,7 @@ function JournalSection({ plan }: { plan: Plan }) {
         )}
       </div>
       <AppDataTable
+        tableId="plan-journal"
         caption={t('plan.management.journal.title')}
         columns={columns}
         data={rows}
@@ -283,6 +284,7 @@ function IssuesSection({ plan }: { plan: Plan }) {
         )}
       </div>
       <AppDataTable
+        tableId="plan-issues"
         caption={t('plan.management.issues.title')}
         columns={columns}
         data={rows}

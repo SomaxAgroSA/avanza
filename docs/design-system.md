@@ -118,15 +118,16 @@ No celular, `AppBreadcrumb` mostra só a página atual e `AppCard` empilha as a�
 const table = useDataTableState('users', { sort: { id: 'name', direction: 'asc' } })
 const users = useUsersList(table.query)          // TanStack Query com keepPreviousData
 <AppDataTable
+  tableId="users"                                // id estável: chave dos nomes das colunas (§44)
   caption={t('users.title')}
   columns={columns}                              // DataTableColumn<T>[]: id, header, cell, sortable, filter, pinned, size…
   data={users.data?.items ?? EMPTY} total={users.data?.total ?? 0}
   getRowId={(u) => u.id} table={table}
   loading={users.isPending} fetching={users.isFetching} error={…} onRetry={…}
-  actions={{ onView, onOpen, onEdit, canEdit, onDelete, canDelete, deleteLabel, more }}
+  actions={{ onView, onOpen, onEdit, canEdit, onDelete, canDelete, deleteLabel, deleteName, more }}
 />
 ```
-Inclui: paginação e ordenação no servidor, contador total, busca global com debounce, filtros por coluna, seleção de colunas, redimensionamento (mouse, toque e teclado), colunas fixas (desktop), estado persistido por tabela (`kamban.table.<id>`), skeleton, vazio (com "limpar filtros"), erro (com referência), ações por linha **Visualizar · Editar · Excluir · Mais**. "Visualizar" abre `AppDrawer` sem sair da página; clicar na linha também abre. Com `onOpen` (projetos e tarefas), o **duplo clique** na linha abre a página completa — o clique simples espera 250 ms para não abrir os dois; no teclado, o "Abrir" do menu da linha.
+Inclui: paginação e ordenação no servidor, contador total, busca global com debounce, filtros por coluna, seleção de colunas, redimensionamento (mouse, toque e teclado), colunas fixas (desktop), estado persistido por tabela (`kamban.table.<id>`), skeleton, vazio (com "limpar filtros"), erro (com referência), ações por linha **Visualizar · Editar · Excluir · Mais**. O menu **Colunas e ações** (só **Colunas** sem ações por linha) mostra todas as colunas com a caixa de mostrar/ocultar e o **nome editável** (o da pessoa em `kamban.table.<tableId>.labels`, o de todos em `GET /settings/table-column-labels`; `platform.manage` vê "Usar estes nomes para todos") e escolhe as ações de cada linha (`rowActions` do estado): **Excluir começa desligado** e vai para o "⋯" (`deleteName` dá o nome dele no menu, ex.: "Desativar"); `configurableActions={false}` desliga a escolha. "Visualizar" abre `AppDrawer` sem sair da página; clicar na linha também abre. Com `onOpen` (projetos e tarefas), o **duplo clique** na linha abre a página completa — o clique simples espera 250 ms para não abrir os dois; no teclado, o "Abrir" do menu da linha.
 
 Constante `EMPTY` fora do componente: evite `?? []` inline (recria os modelos da tabela a cada render).
 

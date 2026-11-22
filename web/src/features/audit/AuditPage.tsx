@@ -95,6 +95,7 @@ export function AuditPage() {
     <>
       <PageHeader title={t('audit.title')} />
       <AppDataTable
+        tableId="audit"
         caption={t('audit.title')}
         columns={columns}
         data={logs.data?.items ?? EMPTY}

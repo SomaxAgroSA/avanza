@@ -55,7 +55,7 @@ describe('Listas de proyectos: filtros en una línea (§37)', () => {
     expect(texts(await screen.findAllByRole('option'))).toEqual(['Todos', 'Planificación', 'En curso', 'Pausado'])
   })
 
-  it('"Limpiar (n)" junto a Columnas cuenta los valores marcados y los quita todos', async () => {
+  it('"Limpiar (n)" junto a Columnas y acciones cuenta los valores marcados y los quita todos', async () => {
     const { list } = setup()
     const prioridad = await screen.findByRole('group', { name: 'Prioridad' })
     expect(screen.queryByRole('button', { name: /^Limpiar/ })).toBeNull()
@@ -64,7 +64,7 @@ describe('Listas de proyectos: filtros en una línea (§37)', () => {
     await userEvent.click(within(screen.getByRole('group', { name: 'Urgencia' })).getByRole('button', { name: 'Media' }))
     const clear = screen.getByRole('button', { name: 'Limpiar 3 filtros' })
     expect(clear).toHaveTextContent('Limpiar (3)')
-    expect(clear.parentElement).toContainElement(screen.getByRole('button', { name: 'Columnas' }))
+    expect(clear.parentElement).toContainElement(screen.getByRole('button', { name: 'Columnas y acciones' }))
     await userEvent.click(clear)
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ filters: {} })))
     expect(screen.queryByRole('button', { name: /^Limpiar/ })).toBeNull()

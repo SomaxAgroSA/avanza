@@ -419,6 +419,8 @@ export function fakeRepositories(overrides: {
       runRetention: notImplemented,
       getDependencyAreas: () => Promise.resolve({ areas: [{ key: 'ti', name: 'TI', userIds: [], users: [] }], candidates: [] }),
       updateDependencyAreas: notImplemented,
+      getTableColumnLabels: () => Promise.resolve({}),
+      updateTableColumnLabels: (tableId, labels) => Promise.resolve({ [tableId]: labels }),
       ...overrides.platform,
     },
     email: {

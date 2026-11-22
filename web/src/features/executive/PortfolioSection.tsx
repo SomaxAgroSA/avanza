@@ -155,6 +155,7 @@ export function PortfolioSection({
       }
     >
       <AppDataTable
+        tableId="executive-portfolio"
         caption={t('executive.portfolio.title')}
         columns={columns}
         data={shown}

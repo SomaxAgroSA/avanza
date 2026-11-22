@@ -347,6 +347,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
         ))}
 
       <AppDataTable
+        tableId="projects"
         caption={t(TITLES[view])}
         columns={columns}
         data={rows}
@@ -373,6 +374,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
               deleteLabel: (project) => (project.archivedAt ? t('common.delete') : t('projects.archive')),
               deleteIcon: (project) => (project.archivedAt ? undefined : <Archive />),
               deleteTone: (project) => (project.archivedAt ? 'danger' : 'ghost'),
+              deleteName: view === 'archived' ? undefined : t('projects.archive'),
               more: (project) => [
                 { key: 'open', label: t('projects.open'), icon: <ExternalLink />, onSelect: () => navigate(`/projects/${project.id}`) },
                 {
@@ -384,9 +386,7 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
                 ...(project.archivedAt && project.capabilities.archive
                   ? [{ key: 'unarchive', label: t('projects.unarchive'), icon: <ArchiveRestore />, onSelect: () => unarchive(project) }]
                   : []),
-                ...(!project.archivedAt && project.capabilities.archive
-                  ? [{ key: 'archive', label: t('projects.archive'), icon: <Archive />, onSelect: () => archive(project) }]
-                  : []),
+                // Arquivar é a ação "Excluir" da linha: desligada em "Colunas e ações" (o padrão), vem para cá
               ],
             }
         }

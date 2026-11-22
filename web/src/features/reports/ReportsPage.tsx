@@ -238,6 +238,7 @@ function BreakdownCard({ rows, dimension, onGroupBy }: { rows: BreakdownRow[]; d
           empty={t('reports.noOpen')}
         />
         <AppDataTable
+          tableId="report-breakdown"
           caption={t('reports.breakdownTitle')}
           columns={columns}
           data={sorted}
@@ -266,6 +267,7 @@ function OverdueCard({ tasks, onView }: { tasks: TaskSummary[]; onView: (id: str
   return (
     <AppCard title={t('reports.overdueTitle', { count: tasks.length })}>
       <AppDataTable
+        tableId="report-overdue"
         caption={t('reports.overdueTitle', { count: tasks.length })}
         columns={columns}
         data={tasks}

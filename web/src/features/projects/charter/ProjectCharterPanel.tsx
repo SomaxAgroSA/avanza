@@ -341,6 +341,7 @@ function FeaturesSection({ charter, canEdit, onCreate, onEdit, onDelete }: Secti
         />
       ) : (
         <AppDataTable
+          tableId="charter-features"
           caption={t('charter.sections.features')}
           columns={columns}
           data={rows}
@@ -464,6 +465,7 @@ function ResultsSection({
         <AppEmptyState compact icon={<Gauge />} title={t('charter.empty.results')} description={t('charter.emptyHint.results')} action={canEdit ? <AppButton leftIcon={<Plus />} onClick={onCreate}>{t('charter.add.result')}</AppButton> : undefined} />
       ) : (
         <AppDataTable
+          tableId="charter-results"
           caption={t('charter.sections.results')}
           columns={columns}
           data={rows}

@@ -34,6 +34,7 @@ import type { ColumnTypePreview } from '@/domain/plan-columns'
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto } from './dtos'
 import { fromPlatformValues, toPasswordPolicy, toPlatformInfo, toPlatformSettings } from './mappers'
 import type { ApiTokenRepository, EmailRepository, PlatformRepository, WebhookRepository } from '@/domain/repositories'
+import type { TableColumnLabels } from '@/domain/column-labels'
 import type { WebhookDto, WebhookDeliveryDto } from './dtos'
 import { toWebhook, toWebhookDelivery } from './mappers'
 import type { WebhookCatalog } from '@/domain/webhooks'
@@ -306,6 +307,12 @@ export function createHttpPlatformRepository(api: ApiClient): PlatformRepository
     async updateDependencyAreas(areas) {
       const body = { areas: areas.map((a) => ({ ...(a.key ? { key: a.key } : {}), name: a.name, user_ids: a.userIds })) }
       return toDependencyAreas((await api.put<DependencyAreasDto>('/settings/dependency-areas', body)).data)
+    },
+    async getTableColumnLabels() {
+      return (await api.get<{ labels: TableColumnLabels }>('/settings/table-column-labels')).data.labels
+    },
+    async updateTableColumnLabels(tableId, labels) {
+      return (await api.patch<{ labels: TableColumnLabels }>('/settings/table-column-labels', { table_id: tableId, labels })).data.labels
     },
   }
 }
