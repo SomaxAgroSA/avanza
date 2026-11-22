@@ -518,6 +518,7 @@ Tela **Configurações → Geral**, só para quem tem a permissão **Configurar 
 | Senhas | tamanho mínimo; exigir maiúsculas e minúsculas; exigir um símbolo | mínimo de 8 a 64; **letras e números são sempre exigidos** | 10 caracteres, letras e números |
 | Bloqueio de login | tentativas erradas antes do bloqueio; tempo inicial; tempo máximo | 3 a 20 tentativas; 1 a 60 min; máximo de 1 a 1.440 min e nunca menor que o inicial | 5 tentativas, 5 min, até 60 min |
 | Retenção do histórico | por quanto tempo o histórico de auditoria fica guardado | 1, 3, 6, 12 ou 24 meses, ou "Manter sempre" | 3 meses |
+| Panorama | ligar ou desligar o Panorama para todos (§26.2) | ligado ou desligado | ligado |
 
 - **Identidade:** nome, logo e ícone aparecem no menu, na tela de login, no título e no ícone da aba. São **públicos** (a tela de login precisa deles); o resto das configurações só quem tem a permissão vê. Sem logo do tema escuro, usa-se o do claro; sem nenhum, a marca padrão. O tipo da imagem é conferido pelo conteúdo; SVG com script, eventos, conteúdo externo ou entidades é recusado. Remover a imagem volta à marca padrão.
 - **Senhas:** a política vale para senhas **criadas ou trocadas** a partir da mudança (as atuais continuam valendo). As telas de troca de senha, novo usuário e redefinição mostram as exigências vigentes ("Mínimo de 12 caracteres, com letras e números e um símbolo").
@@ -668,6 +669,16 @@ Tela **Panorama** do menu (`/tracking`), para quem tem `executive.view`: a leitu
 - **Próximos marcos relevantes:** marcos da Gestão (`project_milestones`) pendentes já vencidos e os dos próximos 30 dias, em ordem de data, com o projeto e o **responsável do projeto** (o marco não tem responsável próprio). Etiqueta: "Vencido há n dias" (vermelho), "Hoje"/"Em n dias" até 7 dias (âmbar) ou "No prazo". Vencidos: até 20 na lista, com o aviso de quantos ficaram de fora.
 - **Fora desta versão:** decisões pendentes da direção (o conceito ainda não existe no Avanza) e PDF próprio (o botão imprime a tela).
 
+### 26.2 Panorama ligado ou desligado
+
+Desde 22/11/2026 (aprovado pela coordenação em demonstração). Em **Configurações → Geral** (`platform.manage`, §15), o card **Panorama** tem um interruptor (**ligado por padrão**) e uma linha que diz o efeito: ligado, "Visível no menu para os perfis que têm permissão."; desligado, "Oculto para todos. Quem o tinha como página inicial entra em Tarefas." Vale ao **Salvar alterações**, como o resto da tela, e fica no histórico (`platform_settings.update`, `panorama_enabled` antes e depois).
+
+- **Desligado vale para todos**, inclusive quem tem `executive.view` e o Super Admin: o Panorama sai do **menu lateral** e da **paleta de comandos** (Ctrl K), e o endereço `/tracking` (e o antigo `/executive`) leva a **Tarefas** — sem a Lista de tarefas (§44), à lista de projetos. Quem tem só `reports.view` (para quem o item do menu levava aos Relatórios) também deixa de ver o item; os Relatórios continuam em `/reports`.
+- **Página inicial (§38):** o Panorama sai das opções e a API recusa escolhê-lo (`home_page: panorama_disabled`). Quem já o tinha — escolhido ou pela Automática — entra em Tarefas; o valor guardado **não é apagado**, então religar devolve o Panorama a essas pessoas. Escolher outra página continua valendo (e troca o valor guardado).
+- **API e MCP:** enquanto estiver desligado, `GET /executive` (e o MCP `get_executive_dashboard`) responde **403 `PANORAMA_DISABLED`** para todos. A permissão é conferida antes: sem `executive.view` continua `FORBIDDEN`. Foi escolhido 403, e não 404, porque o recurso existe e volta ao religar; o código próprio deixa a tela distinguir "desligado" de "sem permissão".
+- **Quem já está com a tela aberta:** o estado viaja na sessão (`GET /auth/me` → `platform.panorama_enabled`, lido por qualquer pessoa logada), relida ao voltar para a aba ou a cada 5 minutos; quem salvou vê o menu mudar na hora. Se o painel responder `PANORAMA_DISABLED` com o Panorama aberto, a tela relê a sessão e leva a Tarefas.
+- Gravado em `platform_settings.values.panorama_enabled` (sem migration; ausente = ligado). O `PATCH /settings/platform` aceita só verdadeiro ou falso (`invalid_type`).
+
 ## 27. Configurador do filtro de projetos
 
 Toda tela com filtro ou seletor de projeto (Kanban, Planejamento, Gestão de projetos, Timeline, Relatórios e Painel executivo) tem, ao lado dele, uma **engrenagem** que abre o configurador daquela tela.
@@ -800,6 +811,7 @@ Na aba Tarefas → Lista do projeto, o botão **Visível para TI** (ícone de no
 - Em Configurações → Controle de acesso → Por pessoa, ao lado do Perfil, **Página inicial** define a tela que a pessoa abre ao entrar no Avanza (e em "Voltar ao início"); depois ela navega livremente.
 - Opções: **Automática** (como antes: Panorama para quem tem `executive.view`; senão, Todos os meus projetos), Panorama, Todos os meus projetos, Em andamento, Concluídos, Arquivados, Tarefas (§44), Kanban e Documentação — só as que o perfil da pessoa abre.
 - Se a pessoa perde o acesso à tela escolhida, entra na automática. Links de e-mail, avisos e o `?next=` do login continuam abrindo direto onde apontam.
+- **Panorama desligado (§26.2):** ele sai das opções e não pode ser escolhido (`panorama_disabled`); quem o tinha (escolhido ou pela automática) entra em Tarefas, e o valor guardado fica para quando ele religar.
 - Gravada em `users.home_page` (migration 0027; `''` = automática; lista fechada em `domain/user.js#HOME_PAGES`); muda por `PATCH /users/{id}` com `users.edit` (também para a própria) e fica no histórico (`user.updated`).
 
 ## 39. Filtros das tarefas, Kanban e Planejamento
