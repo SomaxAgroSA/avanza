@@ -170,6 +170,7 @@ Permissão global **e** regra do espaço (`domain/docs.js` → `spaceAccess`):
 | Ação | Exige |
 |---|---|
 | Ler espaço/página publicada, arquivos, versões, busca | `docs.view` **e** (espaço da empresa **ou** acesso ao projeto do espaço) — caso contrário 404 |
+| Exportar em PDF (`GET /docs/export`, §43) | a mesma regra de leitura: espaço invisível = 404; no módulo, só os espaços que a pessoa lê; só o publicado |
 | Ver rascunhos; criar, editar, publicar, mover, excluir páginas; enviar arquivos; restaurar versão | `docs.edit` **e** (espaço da empresa **ou** colaborador do projeto — leitor do projeto não) |
 | Criar, configurar e excluir espaço | `docs.manage` **e** (espaço da empresa **ou** gestor/dono do projeto) |
 
