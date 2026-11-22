@@ -245,8 +245,11 @@ export function toStatus(dto: LookupDto): TaskStatus {
   return { ...toLookup(dto), category: oneOf(STATUS_CATEGORIES, dto.category ?? '', 'todo'), wipLimit: dto.wip_limit ?? 0, allowedNext: dto.allowed_next ?? [] }
 }
 
+/** Prioridade: `name` no idioma da tela e as versões para edição (servidor antigo sem traduções: o próprio nome). */
 export function toPriority(dto: LookupDto): TaskPriority {
-  return toLookup(dto)
+  const source = dto.translations ?? {}
+  const version = (locale: ContentLocale) => ({ name: source[locale]?.name ?? '' })
+  return { ...toLookup(dto), translations: { 'pt-BR': source['pt-BR'] ? version('pt-BR') : { name: dto.name }, en: version('en'), es: version('es') } }
 }
 
 export function toArea(dto: LookupDto): Area {

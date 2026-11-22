@@ -365,6 +365,8 @@ export interface LookupInput {
   color: OptionColor
   isActive?: boolean
   isDefault?: boolean
+  /** Só prioridades: nome em en/es (substitui as traduções; '' = usa o original). */
+  translations?: Partial<Record<TranslatedLocale, { name: string }>>
   /** Só em status. */
   category?: StatusCategory
   wipLimit?: number

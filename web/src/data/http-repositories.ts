@@ -1509,6 +1509,7 @@ function lookupBody(data: Partial<LookupInput> & { key?: string }) {
     allowed_next: data.allowedNext,
     is_active: data.isActive,
     is_default: data.isDefault,
+    translations: data.translations,
   }
 }
 

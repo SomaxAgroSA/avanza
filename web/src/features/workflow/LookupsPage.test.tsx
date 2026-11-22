@@ -3,9 +3,9 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import type { LookupRepository } from '@/domain/repositories'
-import type { Area, TaskStatus } from '@/domain/workflow'
+import type { Area, TaskPriority, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, renderRoutes } from '@/test/utils'
-import { AreasPage, StatusesPage } from './LookupsPage'
+import { AreasPage, PrioritiesPage, StatusesPage } from './LookupsPage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR')
@@ -151,5 +151,72 @@ describe('AreasPage (áreas responsáveis, sem padrão)', () => {
     await waitFor(() => expect(create).toHaveBeenCalledOnce())
     expect(create.mock.calls[0]?.[0]).toMatchObject({ key: 'JURIDICO', name: 'Jurídico', isActive: true })
     expect(create.mock.calls[0]?.[0]).not.toHaveProperty('isDefault')
+  })
+})
+
+describe('PrioritiesPage — nome por idioma', () => {
+  // a API devolve `name` no idioma da tela (Accept-Language) e `translations` com o original e as traduções
+  const media = (name: string): TaskPriority => ({
+    id: 'p2',
+    key: 'MEDIA',
+    name,
+    description: '',
+    color: 'amber',
+    order: 1,
+    isActive: true,
+    isDefault: true,
+    translations: { 'pt-BR': { name: 'Média' }, es: { name: 'Media' }, en: { name: '' } },
+    createdAt: null,
+    updatedAt: null,
+  })
+
+  function setupPriorities(shown: string) {
+    const update = vi.fn<LookupRepository<TaskPriority>['update']>(() => Promise.resolve(media(shown)))
+    const create = vi.fn<LookupRepository<TaskPriority>['create']>(() => Promise.resolve(media(shown)))
+    const repositories = fakeRepositories({ priorities: { list: () => Promise.resolve([media(shown)]), update, create } })
+    renderRoutes([{ path: '/settings/priorities', element: <PrioritiesPage /> }], { repositories, initialPath: '/settings/priorities' })
+    return { update, create }
+  }
+
+  it('em espanhol: a lista mostra o nome em espanhol; editar mostra o original (pt-BR) e as traduções e grava as traduções', async () => {
+    await i18n.changeLanguage('es')
+    try {
+      const { update } = setupPriorities('Media')
+      expect(await screen.findByText('Media')).toBeInTheDocument()
+      expect(screen.queryByText('Média')).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Acciones de Media' }))
+      await userEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'Editar' }))
+      const dialog = await screen.findByRole('dialog')
+      expect(within(dialog).getByLabelText(/^Nombre · Português \(Brasil\)/)).toHaveValue('Média')
+      expect(within(dialog).getByLabelText(/^Nombre · Español/)).toHaveValue('Media')
+      const english = within(dialog).getByLabelText(/^Nombre · English/)
+      expect(english).toHaveValue('')
+      await userEvent.type(english, 'Medium')
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+      await waitFor(() => expect(update).toHaveBeenCalledOnce())
+      expect(update.mock.calls[0]?.[1]).toMatchObject({ name: 'Média', translations: { es: { name: 'Media' }, en: { name: 'Medium' } } })
+    } finally {
+      await i18n.changeLanguage('pt-BR')
+    }
+  })
+
+  it('em português: a lista mostra o nome em português; nova prioridade já grava as traduções', async () => {
+    const { create } = setupPriorities('Média')
+    expect(await screen.findByText('Média')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Nova prioridade' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.type(within(dialog).getByLabelText(/^Nome · Português \(Brasil\)/), 'Urgente')
+    expect(within(dialog).getByLabelText(/^Chave/)).toHaveValue('URGENTE')
+    await userEvent.type(within(dialog).getByLabelText(/^Nome · English/), 'Urgent')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ key: 'URGENTE', name: 'Urgente', translations: { es: { name: '' }, en: { name: 'Urgent' } } })
+  })
+
+  it('status e áreas continuam com um nome só', async () => {
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo status' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).queryByLabelText(/English/)).not.toBeInTheDocument()
   })
 })

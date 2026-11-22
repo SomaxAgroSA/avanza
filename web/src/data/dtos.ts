@@ -678,6 +678,8 @@ export interface LookupDto {
   category?: string
   wip_limit?: number
   allowed_next?: string[]
+  /** Só prioridades: pt-BR (original) + en/es. */
+  translations?: Partial<Record<string, { name?: string }>>
   created_at: string | null
   updated_at: string | null
 }
