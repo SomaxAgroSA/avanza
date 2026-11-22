@@ -308,7 +308,7 @@ describe('AppDataTable — barra de filtros', () => {
       useEffect(() => {
         handle.api = api
       })
-      return <AppDataTable caption="Compacto" columns={columns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} />
+      return <AppDataTable tableId="compact-table" caption="Compacto" columns={columns} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} paginated={false} />
     }
     renderWithProviders(<Compact />)
     const compact = screen.getByRole('combobox', { name: 'Urgência' })
