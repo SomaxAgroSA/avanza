@@ -225,8 +225,11 @@ describe('API /api/v1/task-types e /custom-fields', { timeout: 120000 }, () => {
 
     // a prioridade da tarefa também sai no idioma pedido
     const project = (await admin.post('/projects', { name: 'Prioridades', key: 'PRI' })).body.data
-    const type = (await admin.get('/task-types')).body.data[0]
-    const task = (await admin.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'Revisar contrato', priority_id: media.id })).body.data
+    // tipo sem campos obrigatórios (o BUG ganhou obrigatórios nos testes acima)
+    const type = (await admin.get('/task-types')).body.data.find((t) => t.key === 'SUPORTE')
+    const created2 = await admin.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'Revisar contrato', priority_id: media.id })
+    assert.equal(created2.status, 201, JSON.stringify(created2.body))
+    const task = created2.body.data
     assert.equal((await admin.get(`/tasks/${task.id}`, lang('es'))).body.data.priority.name, 'Mediana')
     assert.equal((await admin.get(`/tasks/${task.id}`)).body.data.priority.name, 'Média')
     await admin.patch(`/priorities/${media.id}`, { translations: { es: { name: 'Media' }, en: { name: 'Medium' } } })
