@@ -240,6 +240,8 @@ const getTeamActivity = configAction('teamActivity', (s, ctx) => s.getTeamActivi
 const getProjectTaskCounts = configAction('teamActivity', (s, ctx) => s.getProjectTaskCounts(ctx))
 const getDependencies = configAction('dependencies', (s, ctx, r) => s.getDependencies(ctx, r.query()))
 const getTiDependencies = configAction('dependencies', (s, ctx, r) => s.getTiDependencies(ctx, r.query()))
+const getTableColumnLabels = configAction('platformSettings', (s, ctx) => s.getTableColumnLabels(ctx))
+const updateTableColumnLabels = configAction('platformSettings', (s, ctx, r) => s.updateTableColumnLabels(ctx, r.body()))
 const getDependencyAreas = configAction('platformSettings', (s, ctx) => s.getDependencyAreas(ctx))
 const updateDependencyAreas = configAction('platformSettings', (s, ctx, r) => s.updateDependencyAreas(ctx, r.body()))
 const getItPeople = configAction('platformSettings', (s, ctx) => s.getItPeople(ctx))
@@ -722,6 +724,8 @@ module.exports = {
   getProjectTaskCounts,
   getDependencies,
   getTiDependencies,
+  getTableColumnLabels,
+  updateTableColumnLabels,
   getDependencyAreas,
   updateDependencyAreas,
   getItPeople,

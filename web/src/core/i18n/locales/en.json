@@ -54,7 +54,11 @@
     "openHint": "Click to preview · double-click to open",
     "columnsAndActions": "Columns and actions",
     "rowActions": "Actions on each row",
-    "moreActions": "More (···)"
+    "moreActions": "More (···)",
+    "showColumn": "Show {{name}}",
+    "columnName": "Column name {{name}}",
+    "namesForAll": "Use these names for everyone",
+    "resetNames": "Reset names"
   },
   "validation": {
     "required": "Required field",

@@ -2,7 +2,9 @@
  * Configurador geral da plataforma (regras de negócio §15): retenção do histórico, bloqueio de login,
  * política de senha e identidade (nome, logo e ícone do navegador). Também guarda as "Dependências por
  * área" (§42, `dependency_areas`; a área TI ainda espelha a lista antiga `it_people`), editadas por rotas
- * próprias com `settings.manage`, e o interruptor do Panorama (§26.2, `panorama_enabled`).
+ * próprias com `settings.manage`, o interruptor do Panorama (§26.2, `panorama_enabled`) e os nomes das
+ * colunas das tabelas para todos (§44, `table_column_labels`: { tabela: { coluna: nome } }, um texto só para
+ * os três idiomas), com rota própria.
  *
  * - Os padrões são os valores que antes ficavam fixos no código; valem até alguém mudar.
  * - Limites seguros: ninguém desliga uma proteção por engano (ex.: no mínimo 3 tentativas, senha de 8+).
@@ -29,6 +31,8 @@ const DEFAULTS = Object.freeze({
   dependency_areas: null,
   /** Panorama (§26.2): desligado, some do menu de todos e o painel (GET /executive) não responde. */
   panorama_enabled: true,
+  /** Nomes das colunas das tabelas para todos (§44): { tabela: { coluna: nome } }; vazio = os nomes do sistema. */
+  table_column_labels: Object.freeze({}),
 })
 
 const LIMITS = Object.freeze({
@@ -46,6 +50,11 @@ const AREA_KEY_PATTERN = /^[a-z0-9_-]{1,32}$/
 /** A área TI existe sempre: o Responsável TI de cada projeto pertence a ela (pode ser renomeada, não removida). */
 const TI_AREA_KEY = 'ti'
 const TI_AREA_NAME = 'TI'
+/** Nomes das colunas (§44): id seguro da tabela e da coluna; nome até 40; tetos para o valor não crescer sem fim. */
+const COLUMN_LABEL_MAX = 40
+const COLUMN_LABELS_PER_TABLE_MAX = 80
+const COLUMN_LABEL_TABLES_MAX = 100
+const TABLE_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/
 
 const INTEGER_KEYS = ['lockout_threshold', 'lockout_base_minutes', 'lockout_max_minutes', 'password_min_length']
 const BOOLEAN_KEYS = ['password_require_mixed_case', 'password_require_symbol', 'panorama_enabled']
@@ -75,13 +84,79 @@ function valueIssue(key, value) {
     // guardada: a TI pode faltar (resolveDependencyAreas a recoloca no topo)
     return validateDependencyAreas(value, { requireTi: false }).fields.areas || null
   }
+  if (key === 'table_column_labels') return columnLabelsIssue(value)
   return 'unknown_field'
 }
 
 function clean(key, value) {
   if (key === 'it_people') return value.filter((id, i, all) => all.indexOf(id) === i)
   if (key === 'dependency_areas') return validateDependencyAreas(value, { requireTi: false }).areas
+  if (key === 'table_column_labels') return cleanColumnLabels(value)
   return key === 'platform_name' ? value.trim() : value
+}
+
+// ------------------------------------------------------------------ nomes das colunas para todos (§44)
+
+const isPlainObject = (value) => isObject(value) && !Array.isArray(value)
+
+/** Mesmas chaves em ordem alfabética (o histórico e a comparação não dependem da ordem de chegada). */
+function sortedKeys(source, map) {
+  return Object.keys(source)
+    .sort()
+    .reduce((acc, key) => Object.assign(acc, { [key]: map(source[key]) }), {})
+}
+
+/**
+ * Nomes de uma tabela `{ coluna: nome }` → { tableId, labels, fields }. `fields.table_id`: required,
+ * invalid_format; `fields.labels`: invalid_type, invalid_format (id de coluna), too_long (> 40), too_many.
+ * Nome vazio (ou só espaços) sai: a coluna volta ao nome do sistema.
+ */
+function validateTableColumnLabels(tableId, labels) {
+  const fail = (field, code) => ({ tableId: '', labels: {}, fields: { [field]: code } })
+  if (tableId === undefined || tableId === null || tableId === '') return fail('table_id', 'required')
+  if (typeof tableId !== 'string' || !TABLE_ID_PATTERN.test(tableId)) return fail('table_id', 'invalid_format')
+  if (!isPlainObject(labels)) return fail('labels', 'invalid_type')
+  const out = {}
+  for (const column of Object.keys(labels)) {
+    if (!TABLE_ID_PATTERN.test(column)) return fail('labels', 'invalid_format')
+    const value = labels[column]
+    if (typeof value !== 'string') return fail('labels', 'invalid_type')
+    const name = value.trim()
+    if (name.length > COLUMN_LABEL_MAX) return fail('labels', 'too_long')
+    if (name) out[column] = name
+  }
+  if (Object.keys(out).length > COLUMN_LABELS_PER_TABLE_MAX) return fail('labels', 'too_many')
+  return { tableId, labels: sortedKeys(out, (name) => name), fields: {} }
+}
+
+function columnLabelsIssue(value) {
+  if (!isPlainObject(value)) return 'invalid_type'
+  const tables = Object.keys(value)
+  if (tables.length > COLUMN_LABEL_TABLES_MAX) return 'too_many'
+  const bad = tables.map((table) => validateTableColumnLabels(table, value[table]).fields).find((fields) => Object.keys(fields).length > 0)
+  return bad ? bad.table_id || bad.labels : null
+}
+
+function cleanColumnLabels(value) {
+  const out = {}
+  Object.keys(value).forEach((table) => {
+    const labels = validateTableColumnLabels(table, value[table]).labels
+    if (Object.keys(labels).length > 0) out[table] = labels
+  })
+  return sortedKeys(out, (labels) => labels)
+}
+
+/**
+ * Valores com os nomes de uma tabela trocados (`labels` já validados; vazio tira a tabela do mapa);
+ * null quando a tabela é nova e já há 100 tabelas com nomes próprios.
+ */
+function withTableColumnLabels(values, tableId, labels) {
+  const current = normalizeSettings(values)
+  const map = Object.assign({}, current.table_column_labels)
+  if (!map[tableId] && Object.keys(labels).length > 0 && Object.keys(map).length >= COLUMN_LABEL_TABLES_MAX) return null
+  if (Object.keys(labels).length > 0) map[tableId] = labels
+  else delete map[tableId]
+  return Object.assign({}, current, { table_column_labels: sortedKeys(map, (l) => l) })
 }
 
 // ------------------------------------------------------------------ Dependências por área (§42)
@@ -154,7 +229,8 @@ function resolveDependencyAreas(values) {
   return areas.some((a) => a.key === TI_AREA_KEY) ? areas : [legacy].concat(areas)
 }
 
-const same = (a, b) => (Array.isArray(a) || Array.isArray(b) ? JSON.stringify(a) === JSON.stringify(b) : a === b)
+const isObject = (value) => !!value && typeof value === 'object'
+const same = (a, b) => (isObject(a) || isObject(b) ? JSON.stringify(a) === JSON.stringify(b) : a === b)
 
 /** Configurações guardadas → valores completos (o que faltar ou estiver inválido volta ao padrão). */
 function normalizeSettings(stored) {
@@ -318,6 +394,11 @@ module.exports = {
   AREA_NAME_MAX,
   TI_AREA_KEY,
   TI_AREA_NAME,
+  COLUMN_LABEL_MAX,
+  COLUMN_LABELS_PER_TABLE_MAX,
+  COLUMN_LABEL_TABLES_MAX,
+  validateTableColumnLabels,
+  withTableColumnLabels,
   validateDependencyAreas,
   resolveDependencyAreas,
   BRANDING_SLOTS,

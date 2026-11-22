@@ -46,7 +46,9 @@ describe('E2E — Tokens de API', { timeout: 180000 }, () => {
 
     await page.reload()
     await page.getByText('Planilha de horas').waitFor()
-    await page.getByRole('button', { name: 'Revogar Planilha de horas' }).click()
+    // Revogar (o Excluir da tabela) vem desligado em "Colunas e ações": fica no ··· da linha
+    await page.getByRole('row').filter({ hasText: 'Planilha de horas' }).getByRole('button', { name: 'Mais ações' }).click()
+    await page.getByRole('menuitem', { name: 'Revogar Planilha de horas' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Revogar' }).click()
     await page.getByText('Token "Planilha de horas" revogado.').waitFor()
     assert.equal((await me(token)).status, 401)

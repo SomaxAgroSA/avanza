@@ -94,6 +94,7 @@ function IndicatorTasks({ query, report, metric, caption }: { query: ReportQuery
         {isPeriodMetric(metric) ? <PeriodLine report={report} className="text-xs text-muted" /> : <p className="text-xs text-muted">{t('reports.drill.now')}</p>}
       </div>
       <AppDataTable
+        tableId="report-indicator-tasks"
         caption={caption}
         columns={columns}
         data={tasks.data?.items ?? EMPTY}

@@ -72,7 +72,10 @@ describe('Minha conta — tokens de API', () => {
     expect(await screen.findByText('Power BI')).toBeInTheDocument()
     expect(screen.getByText('kb_pat_ab12…')).toBeInTheDocument()
     expect(screen.getByText('Nunca usado')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Revogar Power BI' }))
+    // Revogar (o "Excluir" da tabela) vem desligado em "Colunas e ações": fica no ··· da linha
+    expect(screen.queryByRole('button', { name: 'Revogar Power BI' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Revogar Power BI' }))
     const confirm = await screen.findByRole('alertdialog')
     await userEvent.click(within(confirm).getByRole('button', { name: 'Revogar' }))
     await waitFor(() => expect(revoke).toHaveBeenCalledWith('t1'))
@@ -124,7 +127,10 @@ describe('Integrações — tokens de todos', () => {
     renderRoutes([{ path: '/settings/integrations', element: <IntegrationsPage /> }], { repositories, initialPath: '/settings/integrations' })
     await userEvent.click(await screen.findByRole('tab', { name: 'Tokens de API' }))
     expect(await screen.findByText('Gil')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Revogar Power BI' }))
+    // Revogar (o "Excluir" da tabela) vem desligado em "Colunas e ações": fica no ··· da linha
+    expect(screen.queryByRole('button', { name: 'Revogar Power BI' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Revogar Power BI' }))
     const confirm = await screen.findByRole('alertdialog')
     expect(within(confirm).getByText(/O token de Gil para de funcionar na hora/)).toBeInTheDocument()
     await userEvent.click(within(confirm).getByRole('button', { name: 'Revogar' }))

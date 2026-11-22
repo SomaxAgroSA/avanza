@@ -54,7 +54,11 @@
     "openHint": "Clique para visualizar · duplo clique para abrir",
     "columnsAndActions": "Colunas e ações",
     "rowActions": "Ações em cada linha",
-    "moreActions": "Mais (···)"
+    "moreActions": "Mais (···)",
+    "showColumn": "Mostrar {{name}}",
+    "columnName": "Nome da coluna {{name}}",
+    "namesForAll": "Usar estes nomes para todos",
+    "resetNames": "Restaurar nomes"
   },
   "validation": {
     "required": "Campo obrigatório",

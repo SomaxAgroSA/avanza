@@ -146,6 +146,7 @@ export function CustomFieldsPage() {
         }
       />
       <AppDataTable
+        tableId="custom-fields"
         caption={t('fields.title')}
         columns={columns}
         data={rows.length ? rows : EMPTY}

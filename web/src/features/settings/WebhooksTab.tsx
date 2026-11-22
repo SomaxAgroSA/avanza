@@ -109,6 +109,7 @@ export function WebhooksTab() {
         </AppButton>
       </div>
       <AppDataTable
+        tableId="webhooks"
         caption={t('integrations.tabs.webhooks')}
         columns={columns}
         data={list.data ?? []}

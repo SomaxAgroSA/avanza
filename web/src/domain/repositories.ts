@@ -15,6 +15,7 @@ import type { DocDraft, DocFile, DocModule, DocModuleInput, DocMoveTarget, DocPa
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
 import type { Dependencies, DependencyArea, DependencyAreasConfig } from './dependencies'
+import type { ColumnLabels, TableColumnLabels } from './column-labels'
 import type {
   DependencyRule,
   Plan,
@@ -151,6 +152,10 @@ export interface PlatformRepository {
   getDependencyAreas(): Promise<DependencyAreasConfig>
   /** Troca a lista inteira; área com `key` vazio é nova (o servidor gera a chave). */
   updateDependencyAreas(areas: Array<Pick<DependencyArea, 'key' | 'name' | 'userIds'>>): Promise<DependencyAreasConfig>
+  /** Nomes das colunas das tabelas que valem para todos (§44; qualquer pessoa logada). */
+  getTableColumnLabels(): Promise<TableColumnLabels>
+  /** Troca os nomes de uma tabela para todos (`platform.manage`); devolve o mapa inteiro. */
+  updateTableColumnLabels(tableId: string, labels: ColumnLabels): Promise<TableColumnLabels>
 }
 
 export interface CreateUserData {

@@ -346,6 +346,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   return (
     <>
       <AppDataTable
+        tableId="tasks"
         caption={t('tasks.title')}
         columns={ordered}
         data={tasks.data?.items ?? EMPTY}

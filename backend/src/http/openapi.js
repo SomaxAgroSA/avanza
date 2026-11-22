@@ -1217,6 +1217,13 @@ function build() {
       '/settings/platform/purge-audit': {
         post: op('Aplica a retenção do histórico agora (platform.manage; mesma regra da rotina diária) → { removed }', ['platform'], { 200: ok('Resultado', { type: 'object' }) }, { parameters: [csrfHeader] }),
       },
+      '/settings/table-column-labels': {
+        get: op('Nomes das colunas das tabelas que valem para todos (§44; qualquer pessoa logada) → { labels: { tabela: { coluna: nome } } } — um texto só para os três idiomas; o nome da própria pessoa (guardado no navegador) vem antes', ['platform'], { 200: ok('Nomes', { type: 'object' }) }),
+        patch: op('Troca os nomes de uma tabela (platform.manage): { table_id, labels: { coluna: nome } } → { labels } (o mapa inteiro). Nome sem espaços nas pontas, até 40; vazio volta ao nome do sistema; labels vazio tira a tabela. Ids: letra seguida de letras, números, _ ou - (até 64); até 80 colunas por tabela e 100 tabelas. Erros: fields.table_id (required, invalid_format, too_many), fields.labels (invalid_type, invalid_format, too_long, too_many). Histórico platform_settings.update com os nomes da tabela antes e depois', ['platform'], { 200: ok('Nomes', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN') }, {
+          parameters: [csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['table_id'], properties: { table_id: { type: 'string', maxLength: 64 }, labels: { type: 'object', additionalProperties: { type: 'string', maxLength: 40 } } } }),
+        }),
+      },
       '/settings/dependency-areas': {
         get: op('Dependências por área (§42; settings.manage) → { areas: [{ key, name, user_ids, users }], configured, candidates } — sem configuração salva (configured = false), a área TI vem das antigas Pessoas de TI (it_people); candidates = usuários ativos, até 500', ['platform'], { 200: ok('Áreas', { type: 'object' }) }),
         put: op('Troca a lista inteira (settings.manage): { areas: [{ key?, name, user_ids }] } (até 20 áreas, nome até 40, até 50 pessoas por área). A área TI (key "ti") é obrigatória (pode ser renomeada); área nova sem key ganha uma pelo nome; uma pessoa fica numa área só. Erros em fields.areas: invalid_type, too_many, ti_required, name_required, name_too_long, duplicate_name, too_many_people, duplicate_person, invalid_option (usuário inexistente). A TI é espelhada em it_people; histórico platform_settings.update com "Área: nomes"', ['platform'], { 200: ok('Áreas', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, {

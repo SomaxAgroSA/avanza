@@ -193,4 +193,37 @@ describe('API Configurador geral', { timeout: 180000 }, () => {
     assert.equal((await admin.get('/executive')).status, 200)
     assert.equal((await root.patch(`/users/${gestorId}`, { home_page: '/tracking' })).body.data.home_page, '/tracking')
   })
+
+  it('nomes das colunas para todos (§44): qualquer pessoa logada lê; só platform.manage grava, com validação e histórico', async () => {
+    const anon = createClient(pb.api)
+    assert.equal((await anon.get('/settings/table-column-labels')).status, 401)
+    const empty = await gestor.get('/settings/table-column-labels')
+    assert.equal(empty.status, 200, JSON.stringify(empty.body))
+    assert.deepEqual(empty.body.data, { labels: {} })
+
+    const denied = await gestor.patch('/settings/table-column-labels', { table_id: 'projects', labels: { lead: 'Dono' } })
+    assert.equal(denied.status, 403)
+
+    const tooLong = await admin.patch('/settings/table-column-labels', { table_id: 'projects', labels: { lead: 'x'.repeat(41) } })
+    assert.equal(tooLong.status, 400)
+    assert.deepEqual(tooLong.body.error.details.fields, { labels: 'too_long' })
+    const badTable = await admin.patch('/settings/table-column-labels', { table_id: '../x', labels: {} })
+    assert.deepEqual(badTable.body.error.details.fields, { table_id: 'invalid_format' })
+
+    const saved = await admin.patch('/settings/table-column-labels', { table_id: 'projects', labels: { lead: '  Dono do projeto ', name: '' } })
+    assert.equal(saved.status, 200, JSON.stringify(saved.body))
+    assert.deepEqual(saved.body.data, { labels: { projects: { lead: 'Dono do projeto' } } })
+    // os outros veem os nomes; o PATCH geral não mexe neles
+    assert.deepEqual((await gestor.get('/settings/table-column-labels')).body.data.labels, { projects: { lead: 'Dono do projeto' } })
+    const general = await admin.patch('/settings/platform', { table_column_labels: {} })
+    assert.equal(general.status, 400)
+    assert.deepEqual(general.body.error.details.fields, { table_column_labels: 'unknown_field' })
+
+    const history = (await root.get('/audit-logs?entity_type=platform_settings')).body.data
+    assert.equal(history[0].action, 'platform_settings.update')
+    assert.deepEqual(history[0].new_value, { table_column_labels: { projects: { lead: 'Dono do projeto' } } })
+
+    const cleared = await admin.patch('/settings/table-column-labels', { table_id: 'projects', labels: {} })
+    assert.deepEqual(cleared.body.data, { labels: {} })
+  })
 })

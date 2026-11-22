@@ -231,3 +231,37 @@ describe('application/platform-settings — Panorama ligado ou desligado (§26.2
     assert.equal((await users.updateUser(ctx, manager.id, { home_page: '/tracking' })).home_page, '/tracking')
   })
 })
+
+describe('application/platform-settings — nomes das colunas para todos (§44)', () => {
+  it('qualquer pessoa logada lê; só platform.manage grava; histórico com a tabela antes/depois', async () => {
+    const { deps, service, admin, manager, ctxOf } = await setup()
+    assert.deepEqual(await service.getTableColumnLabels(await ctxOf(manager)), { labels: {} })
+    assert.equal(await codeOf(async () => service.getTableColumnLabels({ principal: null })), 'UNAUTHENTICATED')
+    assert.equal(await codeOf(async () => service.updateTableColumnLabels(await ctxOf(manager), { table_id: 'users', labels: { name: 'Pessoa' } })), 'FORBIDDEN')
+
+    const saved = await service.updateTableColumnLabels(await ctxOf(admin), { table_id: 'users', labels: { name: ' Pessoa ', email: '' } })
+    assert.deepEqual(saved, { labels: { users: { name: 'Pessoa' } } })
+    assert.deepEqual(await service.getTableColumnLabels(await ctxOf(manager)), { labels: { users: { name: 'Pessoa' } } })
+    const entry = deps.store.audit.at(-1)
+    assert.equal(entry.action, 'platform_settings.update')
+    assert.deepEqual(entry.oldValue, { table_column_labels: { users: {} } })
+    assert.deepEqual(entry.newValue, { table_column_labels: { users: { name: 'Pessoa' } } })
+
+    // mesma coisa de novo: nada a registrar; vazio volta aos nomes do sistema
+    const count = deps.store.audit.length
+    await service.updateTableColumnLabels(await ctxOf(admin), { table_id: 'users', labels: { name: 'Pessoa' } })
+    assert.equal(deps.store.audit.length, count)
+    assert.deepEqual(await service.updateTableColumnLabels(await ctxOf(admin), { table_id: 'users', labels: {} }), { labels: {} })
+    assert.deepEqual(deps.store.audit.at(-1).newValue, { table_column_labels: { users: {} } })
+  })
+
+  it('valida tabela e nomes; o PATCH geral não mexe nos nomes', async () => {
+    const { service, admin, ctxOf } = await setup()
+    const ctx = await ctxOf(admin)
+    assert.deepEqual(await fieldsOf(() => service.updateTableColumnLabels(ctx, { table_id: 'users', labels: { name: 'x'.repeat(41) } })), { labels: 'too_long' })
+    assert.deepEqual(await fieldsOf(() => service.updateTableColumnLabels(ctx, { labels: {} })), { table_id: 'required' })
+    assert.deepEqual(await fieldsOf(() => service.updateTableColumnLabels(ctx, { table_id: 'a b', labels: {} })), { table_id: 'invalid_format' })
+    assert.deepEqual(await fieldsOf(() => service.updateTableColumnLabels(ctx, null)), { table_id: 'required' })
+    assert.deepEqual(await fieldsOf(() => service.updateSettings(ctx, { table_column_labels: { users: { name: 'X' } } })), { table_column_labels: 'unknown_field' })
+  })
+})

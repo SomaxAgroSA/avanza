@@ -296,6 +296,7 @@ function OutboxCard() {
             ))}
           </div>
           <AppDataTable
+            tableId="email-outbox"
             caption={t('integrations.email.outboxTitle')}
             columns={columns}
             data={outbox.data.recent}
@@ -336,6 +337,7 @@ function AllTokensTab() {
     <div className="mt-4 flex flex-col gap-3">
       <p className="text-sm text-muted">{t('integrations.tokens.description')}</p>
       <AppDataTable
+        tableId="api-tokens-all"
         caption={t('integrations.tabs.tokens')}
         columns={columns}
         data={list.data ?? []}
@@ -345,7 +347,7 @@ function AllTokensTab() {
         table={table}
         paginated={false}
         searchable={false}
-        actions={{ onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }) }}
+        actions={{ onDelete: (row) => setRevoking(row), canDelete: (row) => row.state === 'active', deleteLabel: (row) => t('apiTokens.revokeNamed', { name: row.name }), deleteName: t('apiTokens.revoke') }}
         emptyState={<AppEmptyState compact icon={<KeyRound />} title={t('integrations.tokens.empty')} />}
       />
       <AppConfirmDialog
