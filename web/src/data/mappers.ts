@@ -824,6 +824,7 @@ export function toCurrentUser(dto: MeDto): CurrentUser {
     role: dto.role ? toRoleSummary(dto.role) : null,
     permissions: toPermissionCodes(dto.permissions),
     session: dto.session ? toSession(dto.session) : null,
+    platform: { panoramaEnabled: dto.platform?.panorama_enabled !== false },
   }
 }
 
@@ -1056,6 +1057,7 @@ function toPlatformValues(dto: PlatformValuesDto): PlatformSettingsValues {
     passwordRequireMixedCase: dto.password_require_mixed_case,
     passwordRequireSymbol: dto.password_require_symbol,
     platformName: dto.platform_name,
+    panoramaEnabled: dto.panorama_enabled !== false,
   }
 }
 
@@ -1070,6 +1072,7 @@ export function fromPlatformValues(values: Partial<PlatformSettingsValues>): Par
     passwordRequireMixedCase: 'password_require_mixed_case',
     passwordRequireSymbol: 'password_require_symbol',
     platformName: 'platform_name',
+    panoramaEnabled: 'panorama_enabled',
   }
   const out: Partial<PlatformValuesDto> = {}
   ;(Object.keys(values) as (keyof PlatformSettingsValues)[]).forEach((key) => {

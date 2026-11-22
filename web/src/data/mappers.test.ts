@@ -38,6 +38,13 @@ describe('data/mappers', () => {
     expect(toProjectTaskCounts({ projects: [{ project_id: 'p1', done: 3, open: 5 }] })).toEqual([{ projectId: 'p1', done: 3, open: 5 }])
   })
 
+  it('§26.2: o Panorama ligado ou desligado vem em /auth/me (sem o campo, ligado)', () => {
+    const me = { user: userDto, role: null, permissions: [], session: null }
+    expect(toCurrentUser(me).platform).toEqual({ panoramaEnabled: true })
+    expect(toCurrentUser({ ...me, platform: { panorama_enabled: false } }).platform).toEqual({ panoramaEnabled: false })
+    expect(toCurrentUser({ ...me, platform: { panorama_enabled: true } }).platform).toEqual({ panoramaEnabled: true })
+  })
+
   it('usa padrões seguros para valores desconhecidos', () => {
     const user = toUser({ ...userDto, locale: 'fr', theme: 'neon', status: 'weird', created_at: 'invalid' })
     expect(user.locale).toBe('pt-BR')

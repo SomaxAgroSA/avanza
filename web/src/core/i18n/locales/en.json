@@ -137,7 +137,8 @@
     "already_linked": "The task is already in Management",
     "not_in_team": "Choose someone on the owner's team",
     "same_assignee": "Choose someone else",
-    "demand_flow": "On a request, this changes through the flow (Assign, Start, Complete…)"
+    "demand_flow": "On a request, this changes through the flow (Assign, Start, Complete…)",
+    "panorama_disabled": "The Panorama is turned off: choose another page."
   },
   "errors": {
     "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -244,7 +245,8 @@
     "ICON_NOT_FOUND": "This icon is not in the library.",
     "CHARTER_ITEM_NOT_FOUND": "Charter item not found.",
     "PROJECT_HAS_DOCS": "This project has documentation: choose whether to move it, keep it as a general space or delete it.",
-    "DEMAND_STATE_CONFLICT": "This action is not available at the current step of the request. Refresh the page."
+    "DEMAND_STATE_CONFLICT": "This action is not available at the current step of the request. Refresh the page.",
+    "PANORAMA_DISABLED": "The Panorama is turned off in Settings → General."
   },
   "nav": {
     "main": "Main navigation",
@@ -3716,6 +3718,12 @@
       "uploaded": "Image uploaded.",
       "removed": "Image removed; back to the default mark.",
       "remove": "Remove"
+    },
+    "panorama": {
+      "title": "Panorama",
+      "toggle": "Panorama on",
+      "on": "Shown in the menu for the roles that have permission.",
+      "off": "Hidden for everyone. Whoever had it as home page lands on Tasks."
     },
     "password": {
       "title": "Passwords",

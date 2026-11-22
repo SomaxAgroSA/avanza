@@ -24,6 +24,7 @@ const current = (roleCode: string, permissions: PermissionCode[], roleId = `role
   role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '' },
   permissions,
   session: null,
+  platform: { panoramaEnabled: true },
 })
 
 const role = (code: string, permissions: PermissionCode[] = []): Role => ({

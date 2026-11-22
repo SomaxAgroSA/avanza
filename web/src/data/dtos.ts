@@ -49,6 +49,8 @@ export interface MeDto {
   role: RoleDto | null
   permissions: string[]
   session: SessionDto | null
+  /** §26.2 — ausente (servidor anterior) = ligado. */
+  platform?: { panorama_enabled?: boolean }
 }
 
 export interface AuditEntryDto {
@@ -791,6 +793,8 @@ export interface PlatformValuesDto {
   password_require_mixed_case: boolean
   password_require_symbol: boolean
   platform_name: string
+  /** §26.2 — ausente (servidor anterior) = ligado. */
+  panorama_enabled?: boolean
 }
 
 interface RangeDto {

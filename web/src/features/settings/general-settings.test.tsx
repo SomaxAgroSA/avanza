@@ -7,6 +7,7 @@ import type { PlatformRepository } from '@/domain/repositories'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { BrandMark } from '@/presentation/navigation/Sidebar'
 import { AccountPage } from '@/features/account/AccountPage'
+import { useSession } from '@/features/auth/session'
 import { GeneralSettingsPage } from './GeneralSettingsPage'
 
 beforeAll(async () => {
@@ -23,6 +24,7 @@ const SETTINGS: PlatformSettings = {
     passwordRequireMixedCase: false,
     passwordRequireSymbol: false,
     platformName: 'Avanza',
+    panoramaEnabled: true,
   },
   defaults: {
     auditRetentionMonths: 3,
@@ -33,6 +35,7 @@ const SETTINGS: PlatformSettings = {
     passwordRequireMixedCase: false,
     passwordRequireSymbol: false,
     platformName: 'Avanza',
+    panoramaEnabled: true,
   },
   limits: {
     lockoutThreshold: { min: 3, max: 20 },
@@ -118,6 +121,51 @@ describe('Configurações gerais', () => {
     await waitFor(() => expect(uploadBranding).toHaveBeenCalledWith('logo_dark', expect.any(File)))
     expect(await screen.findByText('marca.png · 2 KB')).toBeInTheDocument()
     expect(screen.getByLabelText(/^Nome da plataforma/)).toHaveValue('Rascunho')
+  })
+})
+
+describe('Configurações gerais — Panorama (§26.2)', () => {
+  /** O que o menu lê da sessão (o mesmo /auth/me que o AppShell observa). */
+  function MenuProbe() {
+    const { current } = useSession()
+    return <p>{current ? `panorama ${current.platform.panoramaEnabled ? 'no menu' : 'fora do menu'}` : ''}</p>
+  }
+
+  it('ligado por padrão, com a linha de estado; desligar mostra o efeito, salva junto e o menu relê a sessão', async () => {
+    let enabled = true
+    const updateSettings = vi.fn<PlatformRepository['updateSettings']>((patch) => {
+      if (patch.panoramaEnabled !== undefined) enabled = patch.panoramaEnabled
+      return Promise.resolve({ ...SETTINGS, values: { ...SETTINGS.values, ...patch } })
+    })
+    const repositories = fakeRepositories({
+      auth: { me: async () => makeCurrentUser(['platform.manage', 'executive.view'], 'ADMIN', { panoramaEnabled: enabled }) },
+      platform: { getSettings: () => Promise.resolve(SETTINGS), updateSettings },
+    })
+    renderRoutes(
+      [
+        {
+          path: '/settings/general',
+          element: (
+            <>
+              <GeneralSettingsPage />
+              <MenuProbe />
+            </>
+          ),
+        },
+      ],
+      { repositories, initialPath: '/settings/general' },
+    )
+    const toggle = await screen.findByRole('switch', { name: /^Panorama/ })
+    expect(toggle).toBeChecked()
+    expect(screen.getByText('Visível no menu para os perfis que têm permissão.')).toBeInTheDocument()
+    expect(await screen.findByText('panorama no menu')).toBeInTheDocument()
+
+    await userEvent.click(toggle)
+    expect(toggle).not.toBeChecked()
+    expect(screen.getByText('Oculto para todos. Quem o tinha como página inicial entra em Tarefas.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    await waitFor(() => expect(updateSettings).toHaveBeenCalledWith({ panoramaEnabled: false }))
+    expect(await screen.findByText('panorama fora do menu')).toBeInTheDocument()
   })
 })
 

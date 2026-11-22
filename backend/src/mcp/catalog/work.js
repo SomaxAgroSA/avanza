@@ -756,7 +756,7 @@ const TOOLS = [
     name: 'get_executive_dashboard',
     title: 'Executive dashboard',
     description:
-      'Returns the executive dashboard over ALL projects (or the given ones), read-only: summary, portfolio with each project health (from the project management board) and progress, project management totals (status, schedule, effort, open issues, upcoming milestones), Kanban (funnel, created vs completed, lead/cycle time, overdue), deliveries over time and what was done per project (archived included). Requires executive.view.',
+      'Returns the executive dashboard over ALL projects (or the given ones), read-only: summary, portfolio with each project health (from the project management board) and progress, project management totals (status, schedule, effort, open issues, upcoming milestones), Kanban (funnel, created vs completed, lead/cycle time, overdue), deliveries over time and what was done per project (archived included). Requires executive.view. Fails with PANORAMA_DISABLED while the Panorama is turned off in the platform settings.',
     inputSchema: schema({
       project_ids: ids(200, 'Only these projects (ids from list_projects); default: all.'),
       statuses: { type: 'array', items: { type: 'string', enum: projectDomain.PROJECT_STATUS.slice() }, maxItems: 5, description: 'Only projects with these project statuses; default: all.' },

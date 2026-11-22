@@ -77,10 +77,17 @@ export interface AuditEntry {
   createdAt: Date | null
 }
 
+/** O que a plataforma liga ou desliga para todos em Configurações → Geral (vem em GET /auth/me). */
+export interface PlatformFeatures {
+  /** Panorama (§26.2): desligado, some do menu, da paleta e da página inicial de todos. */
+  panoramaEnabled: boolean
+}
+
 /** Contexto do usuário autenticado (GET /auth/me). */
 export interface CurrentUser {
   user: User
   role: RoleSummary | null
   permissions: PermissionCode[]
   session: Session | null
+  platform: PlatformFeatures
 }

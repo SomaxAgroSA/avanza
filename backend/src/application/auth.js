@@ -11,7 +11,7 @@ const rbac = require('../domain/rbac')
 const { PERMISSIONS } = require('../domain/permissions')
 const { buildAuditEntry, truncate, MAX_USER_AGENT } = require('./audit')
 const { toUserDto, toRoleDto, toSessionDto } = require('./presenters')
-const { currentPasswordPolicy, currentLockoutPolicy } = require('./platform-settings')
+const { currentPasswordPolicy, currentLockoutPolicy, panoramaEnabled } = require('./platform-settings')
 const { assertBrowserSession } = require('./api-tokens')
 
 const passwordInput = rules.custom((value) => {
@@ -179,6 +179,8 @@ function createAuthService(deps) {
       role: role ? toRoleDto(role) : null,
       permissions: permissions.sort(),
       session: ctx.session ? toSessionDto(ctx.session, ctx.principal.sessionId) : null,
+      // o que a plataforma desligou para todos (§26.2): o menu e a página inicial do web dependem disso
+      platform: { panorama_enabled: await panoramaEnabled(deps) },
     }
   }
 

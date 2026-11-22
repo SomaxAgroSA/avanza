@@ -1,5 +1,6 @@
+import type { PlatformFeatures } from '@/domain/entities'
 import { can, type PermissionCode } from '@/domain/permissions'
-import { NAV_ITEMS, visibleNavItems, type NavItem } from './nav-items'
+import { platformNavItems, visibleNavItems, type NavItem } from './nav-items'
 
 /**
  * Telas que podem ser a página inicial de uma pessoa (regras §38) — a mesma lista fechada do servidor
@@ -23,19 +24,31 @@ function findItem(items: NavItem[], path: string): HomePageOption | null {
   return null
 }
 
+const PANORAMA_PATH = '/tracking'
+
 /** Páginas iniciais que quem tem estas permissões consegue abrir (as do menu dela), na ordem do menu. */
-export function homePageOptions(permissions: readonly PermissionCode[]): HomePageOption[] {
-  const visible = visibleNavItems(permissions, NAV_ITEMS)
+export function homePageOptions(permissions: readonly PermissionCode[], features?: PlatformFeatures): HomePageOption[] {
+  const visible = visibleNavItems(permissions, platformNavItems(features))
   return HOME_PAGE_PATHS.map((path) => findItem(visible, path)).filter((option): option is HomePageOption => option !== null)
 }
 
-/** Automática (como antes do §38): Panorama para quem vê o painel executivo; senão, a lista de projetos. */
-export function automaticHomePath(permissions: readonly PermissionCode[]): string {
-  return can(permissions, 'executive.view') ? '/tracking' : '/projects'
+/** Panorama desligado (§26.2): quem entraria nele vai para Tarefas; sem a Lista de tarefas (§44), para os projetos. */
+export function panoramaOffPath(permissions: readonly PermissionCode[]): string {
+  return can(permissions, 'tasks.list') && can(permissions, 'tasks.view') ? '/tasks' : '/projects'
 }
 
-/** Para onde "/" leva: a página escolhida, se a pessoa ainda pode abri-la; senão, a automática. */
-export function resolveHomePath(homePage: string, permissions: readonly PermissionCode[]): string {
-  const chosen = homePage ? homePageOptions(permissions).find((option) => option.path === homePage) : undefined
-  return chosen ? chosen.path : automaticHomePath(permissions)
+/** Automática (como antes do §38): Panorama para quem vê o painel executivo (se ligado); senão, a lista de projetos. */
+export function automaticHomePath(permissions: readonly PermissionCode[], features?: PlatformFeatures): string {
+  if (!can(permissions, 'executive.view')) return '/projects'
+  return features && !features.panoramaEnabled ? panoramaOffPath(permissions) : PANORAMA_PATH
+}
+
+/**
+ * Para onde "/" leva: a página escolhida, se a pessoa ainda pode abri-la; senão, a automática. O Panorama
+ * escolhido e desligado leva a Tarefas; a escolha fica guardada e volta a valer quando ele religa.
+ */
+export function resolveHomePath(homePage: string, permissions: readonly PermissionCode[], features?: PlatformFeatures): string {
+  if (homePage === PANORAMA_PATH && features && !features.panoramaEnabled) return panoramaOffPath(permissions)
+  const chosen = homePage ? homePageOptions(permissions, features).find((option) => option.path === homePage) : undefined
+  return chosen ? chosen.path : automaticHomePath(permissions, features)
 }

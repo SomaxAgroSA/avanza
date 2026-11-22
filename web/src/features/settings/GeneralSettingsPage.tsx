@@ -3,7 +3,7 @@ import { Controller, useForm, useWatch, type Control, type FieldPath, type UseFo
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Eraser, History, KeyRound, Save, ShieldAlert, Trash2, Type } from 'lucide-react'
+import { Eraser, Gauge, History, KeyRound, Save, ShieldAlert, Trash2, Type } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import {
   BRANDING_SLOTS,
@@ -24,6 +24,7 @@ import { useRepositories } from '@/presentation/common/repositories-context'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { PLATFORM_INFO_QUERY_KEY, usePlatformInfo } from '@/presentation/common/use-platform'
 import { PASSWORD_POLICY_QUERY_KEY } from '@/features/auth/use-password-policy'
+import { SESSION_QUERY_KEY } from '@/features/auth/session'
 
 const SETTINGS_QUERY_KEY = ['platform', 'settings'] as const
 const FORM_ID = 'platform-settings-form'
@@ -38,11 +39,12 @@ const API_FIELDS: Record<string, keyof PlatformSettingsValues> = {
   password_require_mixed_case: 'passwordRequireMixedCase',
   password_require_symbol: 'passwordRequireSymbol',
   platform_name: 'platformName',
+  panorama_enabled: 'panoramaEnabled',
 }
 
 const SLOT_URL: Record<BrandingSlot, keyof PlatformInfo> = { logo_light: 'logoLightUrl', logo_dark: 'logoDarkUrl', favicon: 'faviconUrl' }
 
-/** Configurações → Geral (platform.manage): identidade, senha, bloqueio de login e retenção do histórico. */
+/** Configurações → Geral (platform.manage): identidade, Panorama (§26.2), senha, bloqueio de login e retenção do histórico. */
 export function GeneralSettingsPage() {
   const { t } = useTranslation()
   const { platform } = useRepositories()
@@ -89,10 +91,12 @@ function SettingsForm({ settings }: { settings: PlatformSettings }) {
 
   const save = useMutation({
     mutationFn: (patch: Partial<PlatformSettingsValues>) => platform.updateSettings(patch),
-    onSuccess: (next) => {
+    onSuccess: (next, patch) => {
       queryClient.setQueryData(SETTINGS_QUERY_KEY, next)
       void queryClient.invalidateQueries({ queryKey: PLATFORM_INFO_QUERY_KEY })
       void queryClient.invalidateQueries({ queryKey: PASSWORD_POLICY_QUERY_KEY })
+      // o Panorama ligado/desligado viaja na sessão: o menu de quem salvou muda na hora
+      if (patch.panoramaEnabled !== undefined) void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
       setPending(null)
       notify.success(t('platform.saved'))
     },
@@ -134,6 +138,7 @@ function SettingsForm({ settings }: { settings: PlatformSettings }) {
   return (
     <form id={FORM_ID} onSubmit={onSubmit} noValidate className="grid gap-4 xl:grid-cols-2">
       <IdentityCard settings={settings} register={register('platformName')} error={formState.errors.platformName?.message} max={settings.limits.platformNameMax} />
+      <PanoramaCard control={control} />
       <PasswordCard settings={settings} control={control} />
       <LoginCard settings={settings} control={control} />
       <RetentionCard settings={settings} control={control} />
@@ -244,6 +249,28 @@ function BrandingSlotTile({ slot, file }: { slot: BrandingSlot; file: PlatformSe
       <p className="truncate text-xs text-muted">{file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB` : t('platform.identity.usingDefault')}</p>
       <AppFileDrop multiple={false} accept={acceptFor(slot)} disabled={upload.isPending} onFiles={take} hint={t(slot === 'favicon' ? 'platform.identity.faviconTypes' : 'platform.identity.logoTypes')} className="py-3" />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------- Panorama (§26.2)
+
+/** Liga ou desliga o Panorama para todos; a linha diz o efeito do estado escolhido (vale ao salvar). */
+function PanoramaCard({ control }: { control: Control<PlatformSettingsValues> }) {
+  const { t } = useTranslation()
+  return (
+    <Controller
+      control={control}
+      name="panoramaEnabled"
+      render={({ field }) => (
+        <AppCard
+          title={<CardTitle icon={<Gauge />} text={t('platform.panorama.title')} />}
+          description={t(field.value ? 'platform.panorama.on' : 'platform.panorama.off')}
+          actions={<AppSwitch checked={field.value} onCheckedChange={field.onChange} aria-label={t('platform.panorama.toggle')} />}
+          padded={false}
+          className="pb-4 xl:col-span-2"
+        />
+      )}
+    />
   )
 }
 

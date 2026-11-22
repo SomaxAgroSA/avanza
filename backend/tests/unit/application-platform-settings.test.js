@@ -186,3 +186,48 @@ describe('application/platform-settings — identidade', () => {
     assert.equal(deps.store.audit.at(-1).action, 'platform_settings.branding_remove')
   })
 })
+
+describe('application/platform-settings — Panorama ligado ou desligado (§26.2)', () => {
+  const { createExecutiveService } = require('../../src/application/executive')
+
+  it('ligado por padrão; só platform.manage desliga; a mudança fica no histórico; quem está logado lê em /auth/me', async () => {
+    const { deps, service, admin, manager, ctxOf } = await setup()
+    assert.equal((await service.getSettings(await ctxOf(admin))).values.panorama_enabled, true)
+    assert.equal(await codeOf(async () => service.updateSettings(await ctxOf(manager), { panorama_enabled: false })), 'FORBIDDEN')
+    assert.deepEqual(await fieldsOf(async () => service.updateSettings(await ctxOf(admin), { panorama_enabled: 'nao' })), { panorama_enabled: 'invalid_type' })
+
+    const auth = createAuthService(deps)
+    assert.deepEqual((await auth.getMe(await ctxOf(manager))).platform, { panorama_enabled: true })
+    const saved = await service.updateSettings(await ctxOf(admin), { panorama_enabled: false })
+    assert.equal(saved.values.panorama_enabled, false)
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['platform_settings.update', { panorama_enabled: true }, { panorama_enabled: false }])
+    assert.deepEqual((await auth.getMe(await ctxOf(manager))).platform, { panorama_enabled: false })
+  })
+
+  it('desligado, o painel do Panorama (GET /executive) responde PANORAMA_DISABLED (403) — também para quem tem executive.view', async () => {
+    const { deps, service, admin, manager, ctxOf } = await setup()
+    // (o painel ligado é conferido no teste de API: os fakes não montam a leitura inteira)
+    const executive = createExecutiveService(deps)
+    await service.updateSettings(await ctxOf(admin), { panorama_enabled: false })
+    assert.equal(await codeOf(async () => executive.getDashboard(await ctxOf(admin), {})), 'PANORAMA_DISABLED')
+    // sem a permissão continua FORBIDDEN (a permissão é conferida antes)
+    assert.equal(await codeOf(async () => executive.getDashboard(await ctxOf(manager), {})), 'FORBIDDEN')
+  })
+
+  it('desligado, ninguém escolhe o Panorama como página inicial; quem já o tinha guarda o valor (religar devolve)', async () => {
+    const { deps, service, admin, manager, ctxOf } = await setup()
+    const users = createUserService(deps)
+    const ctx = await ctxOf(admin)
+    assert.equal((await users.updateUser(ctx, manager.id, { home_page: '/tracking' })).home_page, '/tracking')
+    await service.updateSettings(ctx, { panorama_enabled: false })
+    // o valor guardado não é reescrito: mexer em outro campo (ou reenviar o mesmo) continua valendo
+    assert.equal((await users.updateUser(ctx, manager.id, { name: 'Gestor Novo', home_page: '/tracking' })).home_page, '/tracking')
+    assert.equal((await users.getUser(ctx, manager.id)).home_page, '/tracking')
+    assert.equal((await users.updateUser(ctx, manager.id, { home_page: '/tasks' })).home_page, '/tasks')
+    assert.deepEqual(await fieldsOf(() => users.updateUser(ctx, manager.id, { home_page: '/tracking' })), { home_page: 'panorama_disabled' })
+    assert.equal((await users.getUser(ctx, manager.id)).home_page, '/tasks')
+    await service.updateSettings(ctx, { panorama_enabled: true })
+    assert.equal((await users.updateUser(ctx, manager.id, { home_page: '/tracking' })).home_page, '/tracking')
+  })
+})

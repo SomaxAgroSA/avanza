@@ -148,4 +148,49 @@ describe('API Configurador geral', { timeout: 180000 }, () => {
     assert.equal(removed.body.data.branding.logo_light, null)
     assert.equal((await createClient(pb.api).get('/platform')).body.data.logo_light_url, null)
   })
+
+  it('Panorama (§26.2): ligado por padrão; desligado sai do /auth/me, o painel responde 403 PANORAMA_DISABLED e não vira página inicial', async () => {
+    const me = await gestor.get('/auth/me')
+    assert.equal(me.status, 200, JSON.stringify(me.body))
+    assert.deepEqual(me.body.data.platform, { panorama_enabled: true })
+    assert.equal((await admin.get('/settings/platform')).body.data.values.panorama_enabled, true)
+    assert.equal((await admin.get('/executive')).status, 200)
+    const gestorId = me.body.data.user.id
+    const chosen = await root.patch(`/users/${gestorId}`, { home_page: '/tracking' })
+    assert.equal(chosen.status, 200, JSON.stringify(chosen.body))
+    assert.equal(chosen.body.data.home_page, '/tracking')
+
+    // só platform.manage desliga; só verdadeiro/falso
+    assert.equal((await gestor.patch('/settings/platform', { panorama_enabled: false })).status, 403)
+    const bad = await admin.patch('/settings/platform', { panorama_enabled: 'nao' })
+    assert.equal(bad.status, 400)
+    assert.deepEqual(bad.body.error.details.fields, { panorama_enabled: 'invalid_type' })
+    const off = await admin.patch('/settings/platform', { panorama_enabled: false })
+    assert.equal(off.status, 200, JSON.stringify(off.body))
+    assert.equal(off.body.data.values.panorama_enabled, false)
+    const history = (await root.get('/audit-logs?entity_type=platform_settings&action=platform_settings.update')).body.data
+    assert.deepEqual([history[0].old_value, history[0].new_value], [{ panorama_enabled: true }, { panorama_enabled: false }])
+
+    // desligado: todos leem em /auth/me; o painel não responde nem para o Super Admin
+    assert.deepEqual((await gestor.get('/auth/me')).body.data.platform, { panorama_enabled: false })
+    for (const client of [admin, root]) {
+      const blocked = await client.get('/executive')
+      assert.equal(blocked.status, 403)
+      assert.equal(blocked.body.error.code, 'PANORAMA_DISABLED')
+    }
+    assert.equal((await gestor.get('/executive')).body.error.code, 'FORBIDDEN')
+
+    // página inicial: o valor guardado fica; escolher outra vale; escolher o Panorama é recusado
+    assert.equal((await root.get(`/users/${gestorId}`)).body.data.home_page, '/tracking')
+    assert.equal((await root.patch(`/users/${gestorId}`, { name: 'gestor', home_page: '/tracking' })).status, 200)
+    assert.equal((await root.patch(`/users/${gestorId}`, { home_page: '/kanban' })).body.data.home_page, '/kanban')
+    const refused = await root.patch(`/users/${gestorId}`, { home_page: '/tracking' })
+    assert.equal(refused.status, 400)
+    assert.deepEqual(refused.body.error.details.fields, { home_page: 'panorama_disabled' })
+
+    // religar devolve tudo
+    assert.equal((await admin.patch('/settings/platform', { panorama_enabled: true })).status, 200)
+    assert.equal((await admin.get('/executive')).status, 200)
+    assert.equal((await root.patch(`/users/${gestorId}`, { home_page: '/tracking' })).body.data.home_page, '/tracking')
+  })
 })

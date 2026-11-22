@@ -5,8 +5,9 @@ import i18n from '@/core/i18n'
 import type { ExecutiveDashboard, ExecutiveProjectOption, ExecutiveQuery, PortfolioRow } from '@/domain/executive'
 import type { HealthLevel } from '@/domain/plan-management'
 import type { ExecutiveRepository } from '@/domain/repositories'
+import { AppError } from '@/core/errors/app-error'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
-import { TrackingPage } from './TrackingPage'
+import { TrackingEntry, TrackingPage } from './TrackingPage'
 
 beforeAll(async () => {
   await i18n.changeLanguage('es')
@@ -231,5 +232,38 @@ describe('Panorama ejecutivo', () => {
     const last = get.mock.calls.at(-1)?.[0]
     expect(last?.from).toBe(rel(-89))
     expect(last?.to).toBe(rel(0))
+  })
+})
+
+describe('Panorama desactivado en Configuración → General (§26.2)', () => {
+  const perms = ['executive.view', 'tasks.view', 'tasks.list'] as const
+  function open(me: () => Promise<ReturnType<typeof makeCurrentUser>>, get: ExecutiveRepository['get']) {
+    const spy = vi.fn<ExecutiveRepository['get']>(get)
+    const repositories = fakeRepositories({ auth: { me }, executive: { get: spy } })
+    renderRoutes(
+      [
+        { path: '/tracking', element: <TrackingEntry /> },
+        { path: '/tasks', element: <p>lista de tareas</p> },
+      ],
+      { repositories, initialPath: '/tracking' },
+    )
+    return { get: spy }
+  }
+
+  it('la dirección del Panorama lleva a Tareas y no pide el panel', async () => {
+    const { get } = open(async () => makeCurrentUser([...perms], 'ADMIN', { panoramaEnabled: false }), () => Promise.resolve(dashboard()))
+    expect(await screen.findByText('lista de tareas')).toBeInTheDocument()
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('apagado con la pantalla abierta (PANORAMA_DISABLED): relee la sesión y lleva a Tareas', async () => {
+    let enabled = true
+    const me = vi.fn(async () => makeCurrentUser([...perms], 'ADMIN', { panoramaEnabled: enabled }))
+    open(me, () => {
+      enabled = false
+      return Promise.reject(new AppError({ code: 'PANORAMA_DISABLED', message: 'x', status: 403 }))
+    })
+    expect(await screen.findByText('lista de tareas')).toBeInTheDocument()
+    expect(me.mock.calls.length).toBeGreaterThan(1)
   })
 })

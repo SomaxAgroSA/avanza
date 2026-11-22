@@ -24,7 +24,7 @@ import { CommandPalette } from '@/presentation/navigation/CommandPalette'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useDemandBadge } from '@/features/demands/queries'
 import { useLiveNotifications, useRealtimeResync, useRealtimeStatus } from '@/presentation/common/use-live'
-import { findNavTrail, showsBreadcrumb, visibleNavItems } from '@/presentation/navigation/nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems } from '@/presentation/navigation/nav-items'
 import { rememberNavChild } from '@/presentation/navigation/nav-memory'
 
 /** Layout autenticado: sidebar, topbar, conteúdo e command palette. */
@@ -34,7 +34,8 @@ export function AppShell() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed)
   const mobileNavOpen = useUiStore((s) => s.mobileNavOpen)
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen)
-  const items = visibleNavItems(current?.permissions ?? [])
+  // o Panorama desligado na plataforma (§26.2) sai do menu de todos
+  const items = visibleNavItems(current?.permissions ?? [], platformNavItems(current?.platform))
   // Tarefas: demandas recebidas por mim ainda sem atribuir (§45)
   const unassignedDemands = useDemandBadge()
   const badges = { tasks: { count: unassignedDemands, label: t('demands.badge', { count: unassignedDemands }) } }

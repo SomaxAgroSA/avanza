@@ -43,6 +43,8 @@ export interface PlatformSettingsValues {
   passwordRequireMixedCase: boolean
   passwordRequireSymbol: boolean
   platformName: string
+  /** Panorama (§26.2): desligado, some do menu de todos. */
+  panoramaEnabled: boolean
 }
 
 export interface Range {
@@ -96,6 +98,7 @@ export function platformSettingsSchema(limits: PlatformLimits) {
       passwordMinLength: int(limits.passwordMinLength),
       passwordRequireMixedCase: z.boolean(),
       passwordRequireSymbol: z.boolean(),
+      panoramaEnabled: z.boolean(),
       platformName: z.string().trim().min(1, 'required').max(limits.platformNameMax, 'too_long'),
     })
     .refine((v) => v.lockoutMaxMinutes >= v.lockoutBaseMinutes, { path: ['lockoutMaxMinutes'], message: 'below_base' })

@@ -1,8 +1,9 @@
 /**
  * Casos de uso do Configurador geral (regras de negócio §15): configurações da plataforma (só
  * `platform.manage`), identidade pública (nome, logo e ícone — sem login), política de senha
- * (quem está logado), a limpeza diária do histórico de auditoria (rotina, sem usuário) e as Dependências
- * por área (§42, `settings.manage`; as antigas Pessoas de TI viram a área TI).
+ * (quem está logado), a limpeza diária do histórico de auditoria (rotina, sem usuário), as Dependências
+ * por área (§42, `settings.manage`; as antigas Pessoas de TI viram a área TI) e o Panorama ligado ou
+ * desligado para todos (§26.2, `panorama_enabled`, lido por quem está logado em `GET /auth/me`).
  *
  * Porta: `platformSettingsRepository` { get() → { values, files: { slot: { name, mime, size } }, updatedAt },
  * saveValues(values), setFile(slot, data), clearFile(slot), fileKeyOf(slot) }; o histórico usa
@@ -38,6 +39,16 @@ async function currentPasswordPolicy(deps) {
 
 async function currentLockoutPolicy(deps) {
   return settingsDomain.lockoutPolicy(await currentSettings(deps))
+}
+
+/** O Panorama (§26.2) está ligado para a plataforma? (padrão: sim) */
+async function panoramaEnabled(deps) {
+  return (await currentSettings(deps)).panorama_enabled
+}
+
+/** Desligado, o painel do Panorama não responde para ninguém (403 PANORAMA_DISABLED). */
+async function assertPanoramaEnabled(deps) {
+  if (!(await panoramaEnabled(deps))) throw appError('PANORAMA_DISABLED')
 }
 
 function invalid(fields) {
@@ -323,4 +334,4 @@ function createPlatformSettingsService(deps) {
   return { getDependencyAreas, updateDependencyAreas, getItPeople, updateItPeople, runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
 }
 
-module.exports = { createPlatformSettingsService, currentSettings, currentPasswordPolicy, currentLockoutPolicy }
+module.exports = { createPlatformSettingsService, currentSettings, currentPasswordPolicy, currentLockoutPolicy, panoramaEnabled, assertPanoramaEnabled }

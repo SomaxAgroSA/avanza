@@ -22,7 +22,7 @@ export function LegacyProjectRedirect({ section }: { section: ProjectSection }) 
  */
 export function HomeRedirect() {
   const { current } = useSession()
-  return <Navigate to={resolveHomePath(current?.user.homePage ?? '', current?.permissions ?? [])} replace />
+  return <Navigate to={resolveHomePath(current?.user.homePage ?? '', current?.permissions ?? [], current?.platform)} replace />
 }
 
 /** /settings → a primeira tela de Configurações que a pessoa pode abrir (na ordem do menu). */

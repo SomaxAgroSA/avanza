@@ -2,7 +2,7 @@
  * Configurador geral da plataforma (regras de negócio §15): retenção do histórico, bloqueio de login,
  * política de senha e identidade (nome, logo e ícone do navegador). Também guarda as "Dependências por
  * área" (§42, `dependency_areas`; a área TI ainda espelha a lista antiga `it_people`), editadas por rotas
- * próprias com `settings.manage`.
+ * próprias com `settings.manage`, e o interruptor do Panorama (§26.2, `panorama_enabled`).
  *
  * - Os padrões são os valores que antes ficavam fixos no código; valem até alguém mudar.
  * - Limites seguros: ninguém desliga uma proteção por engano (ex.: no mínimo 3 tentativas, senha de 8+).
@@ -27,6 +27,8 @@ const DEFAULTS = Object.freeze({
   it_people: Object.freeze([]),
   /** Dependências por área (§42): [{ key, name, user_ids }]; null = ainda não configurada (vale `it_people`). */
   dependency_areas: null,
+  /** Panorama (§26.2): desligado, some do menu de todos e o painel (GET /executive) não responde. */
+  panorama_enabled: true,
 })
 
 const LIMITS = Object.freeze({
@@ -46,7 +48,7 @@ const TI_AREA_KEY = 'ti'
 const TI_AREA_NAME = 'TI'
 
 const INTEGER_KEYS = ['lockout_threshold', 'lockout_base_minutes', 'lockout_max_minutes', 'password_min_length']
-const BOOLEAN_KEYS = ['password_require_mixed_case', 'password_require_symbol']
+const BOOLEAN_KEYS = ['password_require_mixed_case', 'password_require_symbol', 'panorama_enabled']
 const KEYS = Object.keys(DEFAULTS)
 
 /** Problema de um valor (null = válido). */

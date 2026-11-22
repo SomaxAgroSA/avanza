@@ -43,6 +43,7 @@ const PLATFORM_FIELDS = {
   password_min_length: intLimit('password_min_length', 'Minimum password length (letters and digits are always required).'),
   password_require_mixed_case: bool('Passwords need upper and lower case letters.'),
   password_require_symbol: bool('Passwords need a symbol.'),
+  panorama_enabled: bool('Panorama on for the platform (default true). Off hides it from the menu of everyone, it cannot be chosen as home page (who had it lands on Tasks; the stored choice is kept) and the executive dashboard answers PANORAMA_DISABLED.'),
 }
 
 /** Sem `password`: a senha do SMTP só se troca pela tela. */
@@ -264,7 +265,7 @@ const TOOLS = [
   {
     name: 'get_platform_settings',
     title: 'Platform settings',
-    description: 'Returns the general settings (platform name, password policy, login lockout, audit retention) with defaults, limits and the uploaded branding files. Requires platform.manage.',
+    description: 'Returns the general settings (platform name, password policy, login lockout, audit retention, Panorama on/off) with defaults, limits and the uploaded branding files. Requires platform.manage.',
     inputSchema: schema({}),
     annotations: READ,
     run: (_args, { services, ctx }) => services.platformSettings.getSettings(ctx),
