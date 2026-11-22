@@ -71,6 +71,11 @@ export interface TasksTableProps {
   kind?: TaskKind
 }
 
+/**
+ * Largura das colunas de pessoa (Responsável e Atribuída a): a mesma nas duas, com mínimo — nome e
+ * sobrenome cabem inteiros, e uma largura menor guardada no navegador não as estreita.
+ */
+const PERSON_COLUMN = { size: 200, minSize: 200 }
 /** Ordem das colunas na Lista de tarefas do menu (§44); as que não estão aqui ficam no fim. */
 const SCOPE_COLUMN_ORDER = ['code', 'project', 'status', 'responsible', 'assignee', 'priority', 'urgency', 'due_date']
 /** Ações de cada linha ("Colunas e ações"): Excluir desligado por padrão (fica no "⋯" e na página da tarefa). */
@@ -213,7 +218,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         // Responsável (ajuste 20/11): quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída
         id: 'responsible',
         header: t('tasks.fields.assignee'),
-        size: 180,
+        ...PERSON_COLUMN,
         cell: (task) => <PersonCell person={responsibleOf(task)} />,
         // na Lista de tarefas do menu o escopo (Minhas / Todas) faz o papel deste filtro; na aba do projeto,
         // "Responsável: Eu" segue a mesma regra da coluna (`responsible_id=me`)
@@ -223,7 +228,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         // Atribuída a: quem executa; "Sem atribuir" enquanto quem recebe e distribui não passou a ninguém
         id: 'assignee',
         header: t('tasks.fields.assignedTo'),
-        size: 180,
+        ...PERSON_COLUMN,
         cell: (task) =>
           task.assignee ? (
             <PersonCell person={task.assignee} />

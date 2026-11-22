@@ -195,6 +195,17 @@ describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
     expect(normalCells[4]).toMatch(/Ana Souza$/)
   })
 
+  it('"Atribuída a" tem a mesma largura de "Responsável" (nome e sobrenome inteiros), mesmo com uma largura menor guardada', async () => {
+    window.localStorage.setItem('kamban.table.task-list', JSON.stringify({ columnSizing: { assignee: 110 } }))
+    setup()
+    await screen.findByText(mine.title)
+    const responsible = screen.getByRole('columnheader', { name: /^Responsável/ })
+    const assigned = screen.getByRole('columnheader', { name: /^Atribuída a/ })
+    expect(assigned.style.width).toBe(responsible.style.width)
+    expect(assigned.style.minWidth).toBe(responsible.style.minWidth)
+    expect(parseInt(assigned.style.width, 10)).toBeGreaterThanOrEqual(200)
+  })
+
   it('quem vê todos os projetos abre em "Ver todas"; a última escolha fica guardada por pessoa', async () => {
     const { tableCalls } = setup(['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'])
     await screen.findByText(other.title)
