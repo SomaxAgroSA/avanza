@@ -230,14 +230,11 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   // o tipo atual continua na lista mesmo se foi desativado depois
   const typeList = types.data ?? []
   const currentType = task?.type && !typeList.some((x) => x.id === task.type?.id) ? [task.type] : []
+  // nome em texto + ícone no prefixo: a lista com busca filtra e mostra pelo nome
   const typeOptions = [...typeList, ...currentType].map((type) => ({
     value: type.id,
-    label: (
-      <span className="inline-flex items-center gap-2">
-        <TaskTypeIconBadge icon={type.icon} color={type.color} size="sm" />
-        {type.name}
-      </span>
-    ),
+    label: type.name,
+    prefix: <TaskTypeIconBadge icon={type.icon} color={type.color} size="sm" />,
   }))
 
   const lookupOptions = (list: LookupOption[], current: LookupOption | null | undefined) =>
@@ -399,6 +396,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
               <AppSelect
                 label={t('tasks.fields.project')}
                 required
+                searchable
                 value={draft.projectId || undefined}
                 placeholder={t('fields.selectPlaceholder')}
                 error={errors.project_id}
@@ -411,6 +409,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             <AppSelect
               label={t('tasks.fields.type')}
               required
+              searchable
               value={draft.typeId || undefined}
               placeholder={t('fields.selectPlaceholder')}
               error={errors.task_type_id}
@@ -458,6 +457,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             ) : (
               <AppSelect
                 label={t('tasks.stage.label')}
+                searchable
                 value={draft.planGroupId || NONE}
                 error={errors.plan_group_id}
                 onValueChange={(value) => set('planGroupId', value === NONE ? '' : value)}
@@ -524,6 +524,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
           />
           <AppSelect
             label={t('tasks.fields.assignee')}
+            searchable
             value={draft.assigneeId || NONE}
             error={errors.assignee_id}
             disabled={withOwner || !canChangeAssignee || !draft.projectId}
@@ -537,6 +538,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
           />
           <AppSelect
             label={t('tasks.fields.area')}
+            searchable
             value={draft.areaId || NONE}
             error={errors.area_id}
             onValueChange={(value) => set('areaId', value === NONE ? '' : value)}
@@ -546,6 +548,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
               ...[...(areas.data ?? []), ...(task?.area && !(areas.data ?? []).some((a) => a.id === task.area?.id) ? [task.area] : [])].map((a) => ({
                 value: a.id,
                 label: <AreaBadge area={a} />,
+                textValue: a.name,
               })),
             ]}
           />
@@ -584,6 +587,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
           />
           <AppSelect
             label={t('tasks.fields.sprint')}
+            searchable
             value={draft.sprintId || NONE}
             error={errors.sprint_id}
             disabled={!draft.projectId}

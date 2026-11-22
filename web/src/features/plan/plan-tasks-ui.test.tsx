@@ -201,7 +201,7 @@ describe('Gestão: tarefas vinculadas aos elementos', () => {
     expect(stage).toBeDisabled()
     expect(await within(form).findByText(/› Kickoff\./)).toBeInTheDocument()
     await userEvent.click(within(form).getByRole('combobox', { name: /^Tipo/ }))
-    await userEvent.click(await screen.findByRole('option', { name: 'Tarefa' }))
+    await userEvent.click(clickable(await screen.findByRole('option', { name: 'Tarefa' })))
     await userEvent.type(within(form).getByLabelText(/^Título/), 'Enviar convite')
     await userEvent.click(within(form).getByRole('button', { name: 'Nova tarefa' }))
     await waitFor(() => expect(create).toHaveBeenCalledOnce())
@@ -217,3 +217,8 @@ describe('Gestão: tarefas vinculadas aos elementos', () => {
     expect(within(panel).queryByRole('button', { name: /^Desvincular/ })).not.toBeInTheDocument()
   })
 })
+
+/** Na lista com busca a opção é um botão dentro do item; nas listas simples, o próprio item. */
+function clickable(option: HTMLElement): HTMLElement {
+  return within(option).queryByRole('button') ?? option
+}
