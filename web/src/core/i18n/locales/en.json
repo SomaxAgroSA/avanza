@@ -58,7 +58,8 @@
     "showColumn": "Show {{name}}",
     "columnName": "Column name {{name}}",
     "namesForAll": "Use these names for everyone",
-    "resetNames": "Reset names"
+    "resetNames": "Reset names",
+    "compactAll": "all"
   },
   "validation": {
     "required": "Required field",
@@ -1844,7 +1845,8 @@
     "kindDemand": "Without project",
     "viewLabel": "View",
     "viewList": "List",
-    "viewDemands": "Requests",
+    "viewDemands": "Inbox",
+    "viewDemandsShort": "Inbox",
     "openStatuses": "Open"
   },
   "tags": {
@@ -2937,6 +2939,52 @@
       "fieldHint": "Organizes the space on the Documentation home.",
       "createdOn": "Created on {{date}}",
       "backToAll": "All documentation"
+    },
+    "export": {
+      "button": "Export PDF",
+      "moduleButton": "Export module",
+      "moduleButtonLabel": "Export the {{name}} module as PDF",
+      "title": "Export PDF",
+      "scopeLabel": "What to export",
+      "scope": {
+        "page": "This page",
+        "branch": "This page and its subpages",
+        "space": "Full documentation",
+        "module": "The whole {{name}} module"
+      },
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "spacePages_one": "The only page of {{space}}",
+      "spacePages_other": "All {{count}} pages of {{space}}",
+      "moduleSummary": "{{spaces}} · {{pages}}",
+      "cover": "Cover and contents",
+      "annex": "Include appendices",
+      "sheets_one": "≈ {{count}} A4 sheet",
+      "sheets_other": "≈ {{count}} A4 sheets",
+      "withCover": "{{pages}} + cover and contents",
+      "preview": "View and print",
+      "back": "Back",
+      "change": "Change selection",
+      "print": "Print or save PDF",
+      "summaryCover": "{{pages}} · with cover and contents",
+      "kindDocs": "Documentation",
+      "kindModule": "{{name}} module",
+      "kindSpace": "Space",
+      "brand": "{{name}} · Somax",
+      "fields": {
+        "module": "Module",
+        "project": "Project",
+        "spaces": "Spaces",
+        "content": "Contents",
+        "exported": "Exported"
+      },
+      "contentValue": "{{pages}} · published version of each",
+      "exportedValue": "{{date}} by {{name}}",
+      "index": "Contents",
+      "versionLine": "Version {{version}} · {{date}}",
+      "pageMeta": "Version {{version}} · published on {{date}} by {{name}}",
+      "pageMetaAnonymous": "Version {{version}} · published on {{date}}",
+      "empty": "Nothing published to export"
     }
   },
   "plan": {
@@ -4681,7 +4729,9 @@
   },
   "demands": {
     "newProjectTask": "Project task",
+    "newProjectTaskShort": "Task",
     "newDemand": "Internal request",
+    "newDemandShort": "Request",
     "chip": "Internal request",
     "internalProject": "Internal requests",
     "openDemands": "Open requests",
@@ -4716,7 +4766,7 @@
     "created": "{{code}} created and sent to {{owner}}",
     "saved": "{{code}} saved",
     "page": {
-      "title": "Requests",
+      "title": "Inbox",
       "tabsLabel": "Request boxes",
       "kpis": "Requests by step",
       "truncated": "Showing the {{shown}} most recent of {{total}}. Use the filters to see the rest."
@@ -4755,8 +4805,8 @@
       "assignee": "Assigned to",
       "any": "Everyone"
     },
-    "badge_one": "{{count}} received request unassigned",
-    "badge_other": "{{count}} received requests unassigned",
+    "badge_one": "{{count}} waiting for you",
+    "badge_other": "{{count}} waiting for you",
     "actions": {
       "assign": "Assign",
       "reassign": "Reassign",

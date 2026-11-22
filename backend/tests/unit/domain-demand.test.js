@@ -86,6 +86,18 @@ describe('domain/demand — visibilidade e acesso', () => {
     assert.equal(demand.seesAllDemands(admin), true)
     assert.equal(demand.seesAllDemands(principal('ana')), false)
   })
+
+  it('Bandeja: pendentes para mim = recebidas sem atribuir + atribuídas a mim abertas + pedidas por mim para validar', () => {
+    const zero = { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 }
+    const counts = {
+      received: Object.assign({}, zero, { unassigned: 2, assigned: 5, in_progress: 4, to_validate: 3, done: 9 }),
+      assigned: Object.assign({}, zero, { assigned: 1, in_progress: 3, to_validate: 7, done: 8 }),
+      requested: Object.assign({}, zero, { unassigned: 6, in_progress: 2, to_validate: 4, done: 1 }),
+    }
+    assert.equal(demand.pendingCount(counts), 2 + 1 + 3 + 4)
+    assert.equal(demand.pendingCount({ received: {}, assigned: {}, requested: {} }), 0)
+    assert.equal(demand.pendingCount({}), 0)
+  })
 })
 
 describe('domain/demand — ações e passos', () => {

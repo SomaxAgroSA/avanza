@@ -47,6 +47,17 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [{ index: true, ...page(() => import('@/features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))) }],
   },
+  {
+    // vista de impressão da documentação (exportar PDF, §43): autenticada, mas sem o menu e a barra do app
+    path: '/print/docs',
+    element: (
+      <RequireAuth>
+        <PermissionGate permission="docs.view" />
+      </RequireAuth>
+    ),
+    errorElement: <RouteErrorPage />,
+    children: [{ index: true, ...page(() => import('@/features/docs/export/DocsPrintPage').then((m) => ({ default: m.DocsPrintPage }))) }],
+  },
   // link do e-mail (redefinir senha ou convite): vale com ou sem sessão aberta
   { path: '/reset-password', errorElement: <RouteErrorPage />, ...page(() => import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))) },
   {

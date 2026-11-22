@@ -279,6 +279,25 @@ function createDocPageRepository(db) {
         publishedAt: r.published_at,
       }))
     },
+    /** Publicadas dos espaços com o conteúdo publicado (exportar em PDF; a ordem vem da árvore). */
+    async listPublishedContent(spaceIds) {
+      if (!spaceIds || spaceIds.length === 0) return []
+      const rows = await db.query(
+        `SELECT id, space_id, title, content, content_text, version, published_at, published_by FROM doc_pages
+         WHERE space_id = ANY($1::text[]) AND status = 'published'`,
+        [spaceIds],
+      )
+      return rows.map((r) => ({
+        id: r.id,
+        spaceId: r.space_id,
+        title: r.title,
+        content: r.content,
+        contentText: r.content_text,
+        version: r.version,
+        publishedAt: r.published_at,
+        publishedBy: r.published_by || null,
+      }))
+    },
     async recent(spaceIds, limit) {
       if (!spaceIds || spaceIds.length === 0) return []
       const rows = await db.query(

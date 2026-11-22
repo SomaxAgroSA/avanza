@@ -140,4 +140,34 @@ describe('application/lookups — áreas responsáveis (sem padrão, §32)', () 
     deps.store.lookupTaskCounts[ti.id] = 3
     await assert.rejects(() => areas.delete(admin, ti.id), (err) => err.code === 'AREA_IN_USE' && err.details.tasks === 3 && err.details.projects === 1)
   })
+  it('prioridades com nome por idioma: original (pt-BR) + en/es, nome no idioma da requisição, edição e validação', async () => {
+    const { deps, priorities, statuses, admin, member } = await setup()
+    const media = await priorities.create(admin, { key: 'MEDIA', name: 'Média', color: 'amber', translations: { es: { name: ' Media ' }, en: { name: 'Medium' } } })
+    assert.deepEqual(media.translations, { 'pt-BR': { name: 'Média' }, en: { name: 'Medium' }, es: { name: 'Media' } })
+    assert.equal(media.name, 'Média')
+    deps.locale = 'es'
+    assert.equal((await priorities.list(member, {})).find((p) => p.id === media.id).name, 'Media')
+    assert.equal((await priorities.get(member, media.id)).name, 'Media')
+    deps.locale = 'en'
+    assert.equal((await priorities.get(member, media.id)).name, 'Medium')
+
+    // editar só uma tradução: o original não muda; a tradução vazia volta ao original
+    deps.locale = 'es'
+    const updated = await priorities.update(admin, media.id, { translations: { es: { name: 'Mediana' } } })
+    assert.deepEqual([updated.name, updated.translations['pt-BR'].name, updated.translations.es.name, updated.translations.en.name], ['Mediana', 'Média', 'Mediana', ''])
+    const audit = deps.store.audit.filter((e) => e.action === 'priority.updated').at(-1)
+    assert.ok(JSON.stringify(audit.newValue.translations).includes('Mediana'))
+    const count = deps.store.audit.length
+    await priorities.update(admin, media.id, { translations: { es: { name: 'Mediana' } } })
+    assert.equal(deps.store.audit.length, count)
+    deps.locale = 'en'
+    assert.equal((await priorities.get(member, media.id)).name, 'Média')
+
+    assert.equal(await codeOf(() => priorities.update(admin, media.id, { translations: { fr: { name: 'Moyenne' } } })), 'VALIDATION_ERROR:{"translations":"invalid_locale"}')
+    assert.equal(await codeOf(() => priorities.update(admin, media.id, { translations: { es: { name: 'x'.repeat(61) } } })), 'VALIDATION_ERROR:{"translations":"too_long"}')
+    assert.equal(await codeOf(() => priorities.update(admin, media.id, { translations: { es: { description: 'x' } } })), 'VALIDATION_ERROR:{"translations":"invalid_type"}')
+    // status não tem tradução
+    const todo = await statuses.create(admin, { key: 'TODO', name: 'A fazer', category: 'todo', translations: { es: { name: 'Por hacer' } } })
+    assert.equal(todo.translations, undefined)
+  })
 })

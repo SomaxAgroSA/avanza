@@ -50,7 +50,7 @@ export function AppNavTabs({ items, variant = 'line', replace, actions, classNam
                 'focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none',
                 line
                   ? cn('-mb-px border-b-2 px-3 py-2', item.active ? 'border-primary text-fg' : 'border-transparent text-muted hover:text-fg')
-                  : cn('rounded-lg px-3 py-1.5', item.active ? 'bg-surface text-fg shadow-xs' : 'text-muted hover:bg-surface-3 hover:text-fg'),
+                  : cn('rounded-lg px-3 py-1.5 @max-[960px]:px-2.5', item.active ? 'bg-surface text-fg shadow-xs' : 'text-muted hover:bg-surface-3 hover:text-fg'),
               )}
             >
               {item.icon && (

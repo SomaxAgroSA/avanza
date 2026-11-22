@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Building2, MoreHorizontal, Pencil, Plus, Power, Star, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { cn } from '@/core/utils/cn'
-import { normalizeTypeKey, type OptionColor } from '@/domain/task-config'
-import { STATUS_CATEGORIES, lookupHasDefault, type LookupItem, type LookupKind, type StatusCategory } from '@/domain/workflow'
+import { normalizeTypeKey, TRANSLATED_LOCALES, type OptionColor, type TranslatedLocale } from '@/domain/task-config'
+import { STATUS_CATEGORIES, lookupHasDefault, lookupHasTranslations, type LookupItem, type LookupKind, type StatusCategory } from '@/domain/workflow'
 import {
   AppBadge,
   AppButton,
@@ -211,6 +211,8 @@ interface Draft {
   /** Só status (Kanban). */
   wipLimit: string
   allowedNext: string[]
+  /** Só prioridades: nome em en/es (o original pt-BR é `name`). */
+  translations: Record<TranslatedLocale, string>
 }
 
 function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind; open: boolean; item: LookupItem | null; onOpenChange: (open: boolean) => void }) {
@@ -218,7 +220,8 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
   const errorMessage = useErrorMessage()
   const { create, update } = useLookupMutations(kind)
   const isEdit = !!item
-  const blank: Draft = { key: '', name: '', description: '', color: 'gray', category: 'todo', isActive: true, isDefault: false, wipLimit: '', allowedNext: [] }
+  const blank: Draft = { key: '', name: '', description: '', color: 'gray', category: 'todo', isActive: true, isDefault: false, wipLimit: '', allowedNext: [], translations: { en: '', es: '' } }
+  const translated = lookupHasTranslations(kind)
   const statuses = useLookups('status', true)
   const [draft, setDraft] = useState<Draft>(blank)
   const [keyTouched, setKeyTouched] = useState(false)
@@ -234,7 +237,8 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
         item
           ? {
               key: item.key,
-              name: item.name,
+              // prioridade: edita sempre o original (pt-BR), mesmo com a tela em outro idioma
+              name: item.translations?.['pt-BR'].name || item.name,
               description: item.description,
               color: item.color,
               category: item.category ?? 'todo',
@@ -242,6 +246,7 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
               isDefault: item.isDefault,
               wipLimit: item.wipLimit ? String(item.wipLimit) : '',
               allowedNext: item.allowedNext ?? [],
+              translations: { en: item.translations?.en.name ?? '', es: item.translations?.es.name ?? '' },
             }
           : blank,
       )
@@ -272,6 +277,7 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
       // a área não tem padrão: o campo nem vai
       ...(lookupHasDefault(kind) ? { isDefault: draft.isDefault } : {}),
       ...(kind === 'status' ? { category: draft.category, wipLimit: wip, allowedNext: draft.allowedNext } : {}),
+      ...(translated ? { translations: Object.fromEntries(TRANSLATED_LOCALES.map((locale) => [locale, { name: draft.translations[locale].trim() }])) as Record<TranslatedLocale, { name: string }> } : {}),
     }
     const onError = (error: unknown) => {
       if (isAppError(error) && error.code.endsWith('_KEY_IN_USE')) return setErrors({ key: 'key_in_use' })
@@ -319,7 +325,9 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
         </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
           <AppTextField
-            label={t('workflow.fields.name')}
+            // prioridade: o nome de cada idioma tem o seu campo (este é o original, pt-BR)
+            label={translated ? `${t('workflow.fields.name')} · ${t('language.pt-BR')}` : t('workflow.fields.name')}
+            lang={translated ? 'pt-BR' : undefined}
             required
             autoComplete="off"
             maxLength={60}
@@ -345,6 +353,23 @@ function LookupFormDialog({ kind, open, item, onOpenChange }: { kind: LookupKind
             }}
           />
         </div>
+        {translated && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(['es', 'en'] as const).map((locale) => (
+              <AppTextField
+                key={locale}
+                label={`${t('workflow.fields.name')} · ${t(`language.${locale}`)}`}
+                lang={locale}
+                autoComplete="off"
+                maxLength={60}
+                placeholder={draft.name}
+                value={draft.translations[locale]}
+                error={errors.translations}
+                onChange={(event) => setDraft((d) => ({ ...d, translations: { ...d.translations, [locale]: event.target.value } }))}
+              />
+            ))}
+          </div>
+        )}
         {kind === 'status' && (
           <AppSelect
             label={t('workflow.fields.category')}

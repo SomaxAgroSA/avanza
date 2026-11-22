@@ -209,6 +209,8 @@ export interface DemandDto {
 export interface DemandOverviewDto {
   /** `all` só para quem tem `projects.view_all`. */
   counts: Record<string, Record<string, number>>
+  /** Selo da Caixa de entrada (o que espera por quem consulta). */
+  pending?: number
   team: Array<{ user: UserSummaryDto; open_count: number; estimated_hours: number }>
   /** Carga das equipes (caixa Todas); só para quem tem `projects.view_all`. */
   all_team?: Array<{ user: UserSummaryDto; open_count: number; estimated_hours: number }>
@@ -414,6 +416,33 @@ export interface TaskDocLinkDto {
   updated_at: string | null
   linked_at: string | null
   capabilities?: { unlink?: boolean }
+}
+
+/** GET /docs/export (§43): páginas publicadas de um espaço ou de um módulo, na ordem de leitura. */
+export interface DocExportDto {
+  module: { id: string; name: string; color: string } | null
+  spaces: Array<{
+    id: string
+    key: string
+    name: string
+    description?: string
+    icon?: string
+    color?: string
+    module: { id: string; name: string; color: string } | null
+    project: { id: string; key: string; name: string } | null
+    home_page_id: string | null
+    pages: Array<{
+      id: string
+      parent_id: string | null
+      depth: number
+      title: string
+      version: number
+      published_at: string | null
+      published_by: UserSummaryDto | null
+      words: number
+      content: unknown
+    }>
+  }>
 }
 
 export interface DocPageDto {
@@ -676,6 +705,8 @@ export interface LookupDto {
   category?: string
   wip_limit?: number
   allowed_next?: string[]
+  /** Só prioridades: pt-BR (original) + en/es. */
+  translations?: Partial<Record<string, { name?: string }>>
   created_at: string | null
   updated_at: string | null
 }

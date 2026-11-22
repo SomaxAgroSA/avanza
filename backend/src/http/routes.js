@@ -463,6 +463,8 @@ const moveDocPage = configAction('docPages', (s, ctx, r) => s.movePage(ctx, r.id
 const listDocVersions = configAction('docPages', (s, ctx, r) => s.listVersions(ctx, r.id))
 const searchDocs = configAction('docPages', (s, ctx, r) => s.search(ctx, r.query()))
 const recentDocs = configAction('docPages', (s, ctx) => s.recent(ctx))
+// exportar em PDF (§43): páginas publicadas de um espaço ou de um módulo, na ordem de leitura
+const exportDocs = configAction('docExport', (s, ctx, r) => s.exportDocs(ctx, r.query()))
 
 function getDocVersion(e) {
   return handle(e, async ({ ctx, services, param }) => ({ data: await services.docPages.getVersion(ctx, param('id'), param('version')) }))
@@ -823,6 +825,7 @@ module.exports = {
   getPreference,
   savePreference,
   listDocModules,
+  exportDocs,
   createDocModule,
   updateDocModule,
   deleteDocModule,

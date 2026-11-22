@@ -49,7 +49,8 @@ export function DemandsPage() {
   const label = (text: string, total: number | undefined) => (
     <>
       {text}
-      {total !== undefined && <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted">{total}</span>}
+      {/* numa linha apertada (< 960px) os números somem */}
+      {total !== undefined && <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted @max-[960px]:hidden">{total}</span>}
     </>
   )
 
@@ -64,6 +65,7 @@ export function DemandsPage() {
     <>
       <TasksHeader>
         <AppSegmentedControl<DemandBox>
+          className="shrink-0"
           label={t('demands.page.tabsLabel')}
           value={box}
           onValueChange={(value) => setParams(value === 'received' ? {} : { box: value }, { replace: true })}
@@ -139,7 +141,8 @@ function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters
   ]
   const known = (id: string | undefined) => (id && people.has(id) ? id : ANY)
   return (
-    <div role="group" aria-label={t('demands.filters.label')} className="flex flex-wrap items-end gap-3">
+    // uma linha só, que nunca quebra: os seletores dividem o espaço e param em ~132px (no celular, a linha rola)
+    <div role="group" aria-label={t('demands.filters.label')} className="-m-1 flex flex-nowrap items-end gap-3 overflow-x-auto p-1">
       <AppSelect
         size="sm"
         searchable
@@ -147,7 +150,7 @@ function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters
         value={known(filters.ownerId)}
         onValueChange={(value) => onChange('owner', value)}
         options={options}
-        className="min-w-48"
+        className="min-w-[8.25rem] max-w-64 flex-1"
       />
       <AppSelect
         size="sm"
@@ -156,7 +159,7 @@ function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters
         value={known(filters.assigneeId)}
         onValueChange={(value) => onChange('assignee', value)}
         options={options}
-        className="min-w-48"
+        className="min-w-[8.25rem] max-w-64 flex-1"
       />
       <AppSelect
         size="sm"
@@ -164,7 +167,7 @@ function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters
         value={filters.companyId && companyOptions.some((o) => o.value === filters.companyId) ? filters.companyId : ANY}
         onValueChange={(value) => onChange('company', value)}
         options={companyOptions}
-        className="min-w-48"
+        className="min-w-[8.25rem] max-w-64 flex-1"
       />
     </div>
   )

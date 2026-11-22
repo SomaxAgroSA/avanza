@@ -51,6 +51,20 @@ const TRANSLATION = {
   description: 'Translated version; null removes it.',
 }
 
+/** Prioridade: nome por idioma (en/es), como os tipos de tarefa; `name` é o original (pt-BR). */
+const PRIORITY_FIELDS = Object.assign({}, LOOKUP_FIELDS, {
+  name: text(60, 'Display name (Brazilian Portuguese, the original).'),
+  translations: {
+    type: 'object',
+    properties: {
+      en: { type: ['object', 'null'], properties: { name: text(60, 'Translated name.') }, additionalProperties: false, description: 'Translated version; null removes it.' },
+      es: { type: ['object', 'null'], properties: { name: text(60, 'Translated name.') }, additionalProperties: false, description: 'Translated version; null removes it.' },
+    },
+    additionalProperties: false,
+    description: 'English and Spanish names; replaces the current translations.',
+  },
+})
+
 const TASK_TYPE_FIELDS = {
   name: text(60, 'Display name (Brazilian Portuguese, the original).'),
   description: text(255, 'Short description.'),
@@ -176,7 +190,7 @@ const TOOLS = [
   {
     name: 'list_priorities',
     title: 'List priorities',
-    description: 'Lists the task priorities in order: key, color, default and active flags. Requires tasks.view or settings.manage.',
+    description: 'Lists the task priorities in order: key, name in the request language, translations, color, default and active flags. Requires tasks.view or settings.manage.',
     inputSchema: schema({ include_inactive: INCLUDE_INACTIVE }),
     annotations: READ,
     run: (args, { services, ctx }) => services.priorities.list(ctx, includeInactive(args)),
@@ -185,7 +199,7 @@ const TOOLS = [
     name: 'create_priority',
     title: 'Create priority',
     description: 'Creates a task priority (added at the end). Requires settings.manage.',
-    inputSchema: schema(Object.assign({ key: KEY }, LOOKUP_FIELDS), ['key', 'name']),
+    inputSchema: schema(Object.assign({ key: KEY }, PRIORITY_FIELDS), ['key', 'name']),
     annotations: ADD,
     run: (args, { services, ctx }) => services.priorities.create(ctx, args),
   },
@@ -193,7 +207,7 @@ const TOOLS = [
     name: 'update_priority',
     title: 'Update priority',
     description: 'Changes a task priority (only the fields sent; the key cannot change). Requires settings.manage.',
-    inputSchema: schema(Object.assign({ priority_id: PRIORITY_ID }, LOOKUP_FIELDS), ['priority_id']),
+    inputSchema: schema(Object.assign({ priority_id: PRIORITY_ID }, PRIORITY_FIELDS), ['priority_id']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.priorities.update(ctx, args.priority_id, without(args, 'priority_id')),
   },

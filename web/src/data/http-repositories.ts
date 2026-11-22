@@ -27,7 +27,7 @@ import { toProjectTaskCounts, toTeamActivity } from './mappers'
 import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
 import { toDependencies, toDependencyAreas } from './mappers'
 import type { DependenciesDto, DependencyAreasDto } from './dtos'
-import { toDocModule, toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
+import { toDocExport, toDocModule, toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
 import type { ColumnTypePreview } from '@/domain/plan-columns'
@@ -45,7 +45,7 @@ import { fromEmailPatch, toEmailSettings, toOutboxSummary, toResetTokenCheck } f
 import type { FlushResult } from '@/domain/email'
 import type { IssueInput, JournalInput } from '@/domain/plan-management'
 import type { PlanBulkInput, PlanBulkResult, PlanGroupInput, PlanImportResult, PlanImportRow, PlanItemInput } from '@/domain/plan'
-import type { DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
+import type { DocExportDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
 import type { DocFile, DocModuleInput, DocSpaceInput, RichContent } from '@/domain/docs'
 import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
@@ -1293,6 +1293,10 @@ export function createHttpDocsRepository(api: ApiClient): DocsRepository {
       const { data } = await api.get<Array<{ page_id: string; title: string; space: { id: string; key: string; name: string }; snippet: string; published_at: string | null }>>('/docs/search', { query: { q } })
       return data.map((r) => ({ pageId: r.page_id, title: r.title, space: r.space, snippet: r.snippet, publishedAt: dateOrNull(r.published_at) }))
     },
+    async exportDocs(target) {
+      const query = 'module' in target ? { module: target.module } : { space: target.space }
+      return toDocExport((await api.get<DocExportDto>('/docs/export', { query })).data)
+    },
     async recent() {
       const { data } = await api.get<Array<{ page_id: string; title: string; space: { id: string; key: string; name: string }; published_at: string | null; published_by: UserDtoLike | null }>>('/docs/recent')
       return data.map((r) => ({ pageId: r.page_id, title: r.title, space: r.space, publishedAt: dateOrNull(r.published_at), publishedBy: userOrNull(r.published_by) }))
@@ -1509,6 +1513,7 @@ function lookupBody(data: Partial<LookupInput> & { key?: string }) {
     allowed_next: data.allowedNext,
     is_active: data.isActive,
     is_default: data.isDefault,
+    translations: data.translations,
   }
 }
 

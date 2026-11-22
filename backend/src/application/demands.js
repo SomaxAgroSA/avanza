@@ -14,8 +14,9 @@
  * - Tudo vai para o histórico da tarefa (`task.demand_*`, com quem, quando e a nota) e avisa pelas
  *   notificações internas de sempre (o e-mail só sai se a integração estiver configurada).
  * - As demandas moram no projeto de sistema `kind = 'demands'` (oculto); `inbox()` o recria se sumir.
- * - Caixas da tela Demandas: Recebidas por mim, Atribuídas a mim e Pedidas por mim; `overview` traz os
- *   números de cada passo (o selo do menu Tarefas = Recebidas "Sem atribuir") e a carga da equipe.
+ * - Caixas da tela Bandeja: Recebidas por mim, Atribuídas a mim e Pedidas por mim; `overview` traz os
+ *   números de cada passo, `pending` (o selo da aba Bandeja e do menu Tarefas: o que espera por mim —
+ *   domain/demand.js#pendingCount) e a carga da equipe.
  * - Caixa Todas (`all`, só com `projects.view_all`; sem ela, FORBIDDEN): todas as demandas — internas e
  *   tarefas de projeto com responsável —, com filtros por responsável e por quem executa; o `overview`
  *   dessas pessoas traz também os números de todas e a carga de todas as pessoas (`all_team`).
@@ -427,7 +428,7 @@ function createDemandService(deps) {
   }
 
   /**
-   * Números da tela Demandas e o selo do menu: quantas há em cada passo nas três caixas, e a carga da
+   * Números da Bandeja e o selo (`pending`): quantas há em cada passo nas três caixas, e a carga da
    * equipe (as outras pessoas da área de quem consulta + quem executa as demandas que ela recebeu):
    * demandas atribuídas e em andamento e as horas estimadas delas. Com `projects.view_all`, também a
    * caixa Todas (`counts.all`) e a carga de todas as pessoas com demandas abertas (`all_team`).
@@ -448,10 +449,12 @@ function createDemandService(deps) {
     const mates = demandDomain.teamOf(await taskAccess.areas(), me).memberIds
     const ids = mates.concat(await tasks.demandAssignees(me, demandDomain.LOAD_STATUSES)).filter((id, i, all) => id && all.indexOf(id) === i)
     const team = await loadOf(ids, await tasks.demandLoad(ids, demandDomain.LOAD_STATUSES))
-    if (!seesAll) return { counts, team }
+    // Bandeja: o selo da aba e do menu Tarefas
+    const pending = demandDomain.pendingCount(counts)
+    if (!seesAll) return { counts, pending, team }
     // Carga das equipes (caixa Todas): todas as pessoas com demandas atribuídas ou em andamento
     const everyone = await tasks.demandLoadAll(demandDomain.LOAD_STATUSES)
-    return { counts, team, all_team: await loadOf(Object.keys(everyone), everyone) }
+    return { counts, pending, team, all_team: await loadOf(Object.keys(everyone), everyone) }
   }
 
   /**

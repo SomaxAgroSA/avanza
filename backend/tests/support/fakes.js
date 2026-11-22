@@ -1213,6 +1213,11 @@ function createFakeRepositories(store) {
         .filter((p) => spaceIds.includes(p.spaceId) && p.status === 'published')
         .sort((a, b) => b.publishedAt - a.publishedAt)
         .slice(0, limit),
+    /** Publicadas dos espaços, com o conteúdo publicado (exportar em PDF). */
+    listPublishedContent: (spaceIds) =>
+      store.docPages
+        .filter((p) => spaceIds.includes(p.spaceId) && p.status === 'published')
+        .map((p) => ({ id: p.id, spaceId: p.spaceId, title: p.title, content: p.content, contentText: p.contentText, version: p.version, publishedAt: p.publishedAt, publishedBy: p.publishedBy || null })),
   }
   const docPageVersionRepository = {
     create: (data) => {

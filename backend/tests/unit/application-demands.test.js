@@ -535,6 +535,13 @@ describe('application/demands — caixas e carga da equipe', () => {
       ['Carlos', 0, 0],
     ])
     assert.equal((await s.demands.overview(s.ctx.jorge)).counts.assigned.assigned, 1)
+    // Bandeja (§45): o que espera por mim — César: 1 sem atribuir; Jorge: A atribuída + B em andamento; Ana: nada para validar ainda
+    assert.equal(overview.pending, 1)
+    assert.equal((await s.demands.overview(s.ctx.jorge)).pending, 2)
+    assert.equal((await s.demands.overview(s.ctx.ana)).pending, 0)
+    await s.demands.conclude(s.ctx.jorge, b.id, { comment: 'Pronto' })
+    assert.equal((await s.demands.overview(s.ctx.ana)).pending, 1)
+    assert.equal((await s.demands.overview(s.ctx.jorge)).pending, 1)
   })
 
   it('Todas (só com projects.view_all): todas as demandas, filtros por responsável e quem executa, números e a carga de todos', async () => {

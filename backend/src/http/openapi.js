@@ -613,7 +613,7 @@ function build() {
       },
       '/demands/overview': {
         get: op(
-          'Números da tela Demandas (§45): counts.received|assigned|requested = { unassigned, assigned, in_progress, to_validate, done } de quem consulta (o selo do menu Tarefas = received.unassigned) e team = carga da equipe [{ user, open_count, estimated_hours }] — as outras pessoas da área de quem consulta (Dependências por área) e quem executa as demandas que ela recebeu; conta atribuídas e em andamento. Com projects.view_all, também counts.all (todas as demandas, caixa Todas) e all_team (Carga das equipes: todas as pessoas com demandas atribuídas ou em andamento, no mesmo formato); sem ela, as duas chaves não vêm',
+          'Números da Bandeja (§45): counts.received|assigned|requested = { unassigned, assigned, in_progress, to_validate, done } de quem consulta; pending = o selo da aba Bandeja e do menu Tarefas (o que espera por quem consulta: received.unassigned + assigned.assigned + assigned.in_progress + requested.to_validate) e team = carga da equipe [{ user, open_count, estimated_hours }] — as outras pessoas da área de quem consulta (Dependências por área) e quem executa as demandas que ela recebeu; conta atribuídas e em andamento. Com projects.view_all, também counts.all (todas as demandas, caixa Todas) e all_team (Carga das equipes: todas as pessoas com demandas atribuídas ou em andamento, no mesmo formato); sem ela, as duas chaves não vêm',
           ['demands'],
           { 200: ok('Resumo', { type: 'object' }) },
         ),
@@ -1320,6 +1320,30 @@ function build() {
       '/docs/recent': {
         get: op('Páginas publicadas mais recentes dos espaços visíveis', ['docs'], { 200: ok('Recentes', { type: 'array', items: { type: 'object' } }) }),
       },
+      '/docs/export': {
+        get: op(
+          'Exportar em PDF (§43, ADR-059; o navegador imprime): páginas publicadas de um espaço (space = chave) ou de todos os espaços de um módulo que a pessoa lê (module = id, pelo nome; espaço sem página publicada fica de fora), na ordem de leitura da árvore. Cada espaço: id, key, name, description, icon, color, module, project, home_page_id e pages [{ id, parent_id (primeira página publicada acima; null = raiz), depth, title, version, published_at, published_by, words, content }]. Nunca sai rascunho. Mesmas regras de leitura da tela (docs.view + visibilidade): espaço invisível = DOC_SPACE_NOT_FOUND. Exatamente um de space/module (fields.space = required; os dois = fields.module = invalid_option)',
+          ['docs'],
+          {
+            200: ok('Exportação', {
+              type: 'object',
+              properties: {
+                module: { type: ['object', 'null'], properties: { id: { type: 'string' }, name: { type: 'string' }, color: { type: 'string' } } },
+                spaces: { type: 'array', items: { type: 'object' } },
+              },
+            }),
+            400: errorResponse('VALIDATION_ERROR'),
+            403: errorResponse('FORBIDDEN'),
+            404: errorResponse('DOC_SPACE_NOT_FOUND'),
+          },
+          {
+            parameters: [
+              { name: 'space', in: 'query', schema: { type: 'string' }, description: 'chave do espaço' },
+              { name: 'module', in: 'query', schema: { type: 'string' }, description: 'id do módulo (DOC_MODULE_NOT_FOUND se não existir)' },
+            ],
+          },
+        ),
+      },
       '/executive': {
         get: op(
           'Painel executivo (executive.view): Gestão de projetos + Kanban de TODOS os projetos (mesmo sem ser membro), só leitura — resumo, portfólio com a saúde de cada projeto, Gestão (status, cronograma, esforço, problemas, marcos), Kanban (funil, criadas × concluídas, tempos, atrasadas), série de entregas (semana/mês) e o que já foi feito (arquivados só nas entregas). Panorama: portfólio com objective e updated_at, plan.overdue_milestones, projects com area e owner. Com o Panorama desligado em Configurações → Geral (§26.2), 403 PANORAMA_DISABLED para todos',
@@ -1995,8 +2019,28 @@ function build() {
         },
         Status: { type: 'object', properties: Object.assign({}, LOOKUP_PROPERTIES, { category: STATUS_CATEGORY }, STATUS_FLOW) },
         StatusInput: { type: 'object', properties: Object.assign({}, LOOKUP_INPUT, { category: STATUS_CATEGORY }, STATUS_FLOW) },
-        Priority: { type: 'object', properties: LOOKUP_PROPERTIES },
-        PriorityInput: { type: 'object', properties: LOOKUP_INPUT },
+        Priority: {
+          type: 'object',
+          properties: Object.assign({}, LOOKUP_PROPERTIES, {
+            name: { type: 'string', description: 'no idioma do Accept-Language (pt-BR, en, es); sem tradução = original' },
+            translations: {
+              type: 'object',
+              description: 'todas as versões para edição: pt-BR (original) + en/es ("" = sem tradução)',
+              additionalProperties: { type: 'object', properties: { name: { type: 'string' } } },
+            },
+          }),
+        },
+        PriorityInput: {
+          type: 'object',
+          properties: Object.assign({}, LOOKUP_INPUT, {
+            name: { type: 'string', description: 'original (pt-BR)' },
+            translations: {
+              type: 'object',
+              description: 'opcional: { en: { name }, es: { name } } — substitui as traduções; vazio = usa o original. Idioma fora de en/es = invalid_locale',
+              additionalProperties: { type: 'object', properties: { name: { type: 'string', maxLength: 60 } } },
+            },
+          }),
+        },
         Area: { type: 'object', properties: LOOKUP_PROPERTIES, description: 'is_default sempre false (a área não tem padrão)' },
         AreaInput: { type: 'object', properties: Object.fromEntries(Object.entries(LOOKUP_INPUT).filter(([key]) => key !== 'is_default')) },
         FieldOption: {

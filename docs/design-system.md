@@ -31,7 +31,8 @@
 | `AppToaster` + `notify` | toasts **React-Toastify** no canto superior direito: `success`, `error`, `info`, `warning` (com **desfazer** opcional) e `promise` (pendente → sucesso/erro). Nunca chame a biblioteca direto nas features |
 | `AppBreadcrumb`, `AppTabs` | navegação |
 | `AppSearch` | busca com debounce (300 ms; Enter aplica na hora) |
-| `AppFilterBar` | barra padrão de busca/filtros/ações |
+| `AppFilterBar` | barra padrão de busca/filtros/ações (uma `AppToolbar`) |
+| `AppToolbar` | linha de ferramentas que **nunca quebra nem troca as coisas de lugar**: mede a própria largura (`@container`) e compacta em etapas — busca encolhe primeiro (~110px), seletores param em ~132px, grupos de botões com nome viram seletor (< 1440px), "Colunas e ações" só com o ícone (< 1150px), botões de criar com o texto curto (< 1060px), números dos segmentados somem e "Limpar (n)" vira ✕ n (< 960px); só rola quando não cabe (celular). As etapas ficam nos próprios componentes com `@max-[…px]:` |
 | `AppPagination` | contador "x–y de N", tamanho de página, anterior/próxima |
 | `AppDataTable` + `useDataTableState` | ver abaixo |
 | `AppCommandPalette` | paleta genérica (a global está em `presentation/navigation/CommandPalette.tsx`, Ctrl/⌘+K: criar projeto/tarefa, buscar tarefa (resultados com código e título, em todos os projetos visíveis) e usuário, projetos, navegação e preferências) |

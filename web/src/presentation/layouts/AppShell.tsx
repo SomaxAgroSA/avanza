@@ -36,9 +36,9 @@ export function AppShell() {
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen)
   // o Panorama desligado na plataforma (§26.2) sai do menu de todos
   const items = visibleNavItems(current?.permissions ?? [], platformNavItems(current?.platform))
-  // Tarefas: demandas recebidas por mim ainda sem atribuir (§45)
-  const unassignedDemands = useDemandBadge()
-  const badges = { tasks: { count: unassignedDemands, label: t('demands.badge', { count: unassignedDemands }) } }
+  // Tarefas: o que espera por mim na Caixa de entrada (§45)
+  const pendingDemands = useDemandBadge()
+  const badges = { tasks: { count: pendingDemands, label: t('demands.badge', { count: pendingDemands }) } }
   useLiveNotifications(current?.user.id)
   useRealtimeResync()
 

@@ -88,9 +88,15 @@ function demand(overrides: Omit<Partial<TaskDetail>, 'status'> & { step?: Demand
 
 const emptyCounts = () => ({ unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 })
 
-function overview(received: Partial<Record<DemandStatus, number>>, team: DemandOverview['team'] = [], all?: { counts: Partial<Record<DemandStatus, number>>; team: DemandOverview['team'] }): DemandOverview {
+function overview(
+  received: Partial<Record<DemandStatus, number>>,
+  team: DemandOverview['team'] = [],
+  all?: { counts: Partial<Record<DemandStatus, number>>; team: DemandOverview['team'] },
+  pending = 0,
+): DemandOverview {
   return {
     counts: { received: { ...emptyCounts(), ...received }, assigned: emptyCounts(), requested: emptyCounts(), all: { ...emptyCounts(), ...all?.counts } },
+    pending,
     team,
     allTeam: all?.team ?? [],
   }
@@ -570,7 +576,7 @@ describe('Tarefa de projeto com quem recebe e distribui (§45)', () => {
 })
 
 describe('Menu — selo de Tarefas (§45)', () => {
-  it('mostra quantas demandas recebidas estão sem atribuir', async () => {
+  it('mostra quantas demandas esperam pela pessoa (o mesmo número da aba Caixa de entrada)', async () => {
     renderRoutes(
       [
         {
@@ -586,15 +592,53 @@ describe('Menu — selo de Tarefas (§45)', () => {
       {
         repositories: fakeRepositories({
           auth: { me: async () => makeCurrentUser(['tasks.view', 'tasks.list']) },
-          demands: { overview: () => Promise.resolve(overview({ unassigned: 3 })) },
+          demands: { overview: () => Promise.resolve(overview({ unassigned: 3 }, [], undefined, 5)) },
         }),
         initialPath: '/home',
       },
     )
     const nav = await screen.findByRole('navigation', { name: i18n.t('nav.main') })
     const badge = await within(nav).findByTestId('nav-count')
-    expect(badge).toHaveTextContent('3')
-    expect(within(badge).getByText('3 demandas recebidas sem atribuir')).toHaveClass('sr-only')
+    expect(badge).toHaveTextContent('5')
+    expect(within(badge).getByText('5 pendentes para você')).toHaveClass('sr-only')
     expect(badge.closest('a')).toHaveAttribute('href', '/tasks')
+  })
+})
+
+describe('Tarefas — aba Caixa de entrada (antes "Demandas")', () => {
+  it('Lista | Caixa de entrada com o número do que espera por mim; o endereço antigo continua abrindo a aba', async () => {
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({
+        me: cesar,
+        demands: {
+          // 1 recebida sem atribuir + 2 atribuídas a mim + 1 para validar: o servidor manda o total em `pending`
+          overview: () => Promise.resolve(overview({ unassigned: 1, assigned: 4 }, [], undefined, 4)),
+          list: () => Promise.resolve(page([])),
+        },
+      }),
+      initialPath: '/tasks/demands',
+    })
+    const tabs = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
+    const inbox = await within(tabs).findByRole('link', { name: /Caixa de entrada/ })
+    expect(inbox).toHaveAttribute('href', '/tasks/demands')
+    expect(inbox).toHaveAttribute('aria-current', 'page')
+    expect(within(inbox).getByText('4')).toHaveAttribute('title', '4 pendentes para você')
+    expect(within(tabs).queryByRole('link', { name: /^Demandas/ })).not.toBeInTheDocument()
+    // mesma linha (que não quebra): as caixas e, no fim, os dois botões de criar
+    const row = tabs.parentElement!
+    expect(row).toHaveClass('flex-nowrap')
+    expect(within(row).getByRole('radiogroup', { name: i18n.t('demands.page.tabsLabel') })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Tarefa de projeto' })).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Demanda interna' })).toBeInTheDocument()
+  })
+
+  it('sem nada pendente, a aba fica sem número', async () => {
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({ me: cesar, demands: { overview: () => Promise.resolve(overview({ assigned: 2, done: 3 })), list: () => Promise.resolve(page([])) } }),
+      initialPath: '/tasks/demands',
+    })
+    const tabs = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
+    const inbox = await within(tabs).findByRole('link', { name: 'Caixa de entrada' })
+    await waitFor(() => expect(within(inbox).queryByText(/\d/)).not.toBeInTheDocument())
   })
 })

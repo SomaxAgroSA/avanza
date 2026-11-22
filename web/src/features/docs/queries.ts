@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { applyMove, type DocModuleInput, type DocMoveTarget, type DocPage, type DocSpaceDetail, type DocSpaceInput, type RichContent } from '@/domain/docs'
+import type { DocExportTarget } from '@/domain/doc-export'
 import { useRepositories } from '@/presentation/common/repositories-context'
 
 export const docsKeys = {
@@ -14,6 +15,8 @@ export const docsKeys = {
   search: (q: string) => ['docs', 'search', q] as const,
   recent: ['docs', 'recent'] as const,
   pageTasks: (id: string) => ['docs', 'page-tasks', id] as const,
+  /** Exportar em PDF: o espaço ou o módulo inteiro (a janela e a vista de impressão usam a mesma busca). */
+  export: (target: DocExportTarget) => ['docs', 'export', 'module' in target ? `module:${target.module}` : `space:${target.space}`] as const,
   taskDocs: (taskId: string) => ['docs', 'task-docs', taskId] as const,
 }
 
@@ -71,6 +74,17 @@ export function useDocSearch(q: string) {
   const { docs } = useRepositories()
   const term = q.trim()
   return useQuery({ queryKey: docsKeys.search(term), queryFn: () => docs.search(term), enabled: term.length >= 2, placeholderData: keepPreviousData })
+}
+
+/** Páginas publicadas para exportar em PDF (§43); `null` = nada a buscar (janela fechada). */
+export function useDocExport(target: DocExportTarget | null) {
+  const { docs } = useRepositories()
+  return useQuery({
+    queryKey: docsKeys.export(target ?? { space: '' }),
+    queryFn: () => docs.exportDocs(target as DocExportTarget),
+    enabled: !!target,
+    staleTime: 60_000,
+  })
 }
 
 export function useDocRecent() {

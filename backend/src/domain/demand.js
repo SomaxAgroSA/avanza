@@ -248,6 +248,16 @@ function boxIssue(principal, box) {
   return box === 'all' && !seesAllDemands(principal) ? 'FORBIDDEN' : null
 }
 
+/**
+ * Bandeja (§45): quantas demandas esperam por quem consulta — recebidas por ela ainda sem atribuir,
+ * atribuídas a ela e não concluídas (Atribuída/Em andamento) e pedidas por ela esperando validação.
+ * Cada demanda está num passo só, então nenhuma conta duas vezes. `counts`: os números das caixas.
+ */
+function pendingCount(counts) {
+  const of = (box, status) => Number((counts && counts[box] && counts[box][status]) || 0)
+  return of('received', 'unassigned') + of('assigned', 'assigned') + of('assigned', 'in_progress') + of('requested', 'to_validate')
+}
+
 /** Comentário obrigatório (passar, concluir, devolver): texto aparado ou o código do erro. */
 function noteIssue(note) {
   if (typeof note !== 'string' || !note.trim()) return 'required'
@@ -283,5 +293,6 @@ module.exports = {
   workflowStatusFor,
   noteIssue,
   seesAllDemands,
+  pendingCount,
   boxIssue,
 }

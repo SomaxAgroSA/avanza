@@ -1,4 +1,4 @@
-import type { OptionColor } from './task-config'
+import type { ContentLocale, OptionColor } from './task-config'
 
 /** Categoria do status: dá significado ao fluxo independentemente do nome escolhido. */
 export const STATUS_CATEGORIES = ['backlog', 'todo', 'in_progress', 'done', 'cancelled'] as const
@@ -11,6 +11,11 @@ export type LookupKind = (typeof LOOKUP_KINDS)[number]
 /** A área responsável não tem padrão: tarefa e projeto podem ficar sem área (regras §32). */
 export function lookupHasDefault(kind: LookupKind): boolean {
   return kind !== 'area'
+}
+
+/** Prioridades têm nome por idioma (como os tipos de tarefa): `name` é o original (pt-BR) + en/es. */
+export function lookupHasTranslations(kind: LookupKind): boolean {
+  return kind === 'priority'
 }
 
 export interface LookupItem {
@@ -28,6 +33,11 @@ export interface LookupItem {
   wipLimit?: number
   /** Só em status: destinos permitidos (vazio = qualquer). */
   allowedNext?: string[]
+  /**
+   * Só em prioridades: o nome em cada idioma para editar — pt-BR (original) + en/es ('' = sem tradução).
+   * `name` já vem no idioma da tela (a API traduz pelo Accept-Language).
+   */
+  translations?: Record<ContentLocale, { name: string }>
   createdAt: Date | null
   updatedAt: Date | null
 }

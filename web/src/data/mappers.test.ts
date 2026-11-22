@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toArea, toBoard, toCurrentUser, toDependencies, toProject, toProjectBrief, toProjectTaskCounts, toReport, toRole, toTaskSummary, toTeamActivity, toUser } from './mappers'
+import { toArea, toBoard, toCurrentUser, toDependencies, toPriority, toProject, toProjectBrief, toProjectTaskCounts, toReport, toRole, toTaskSummary, toTeamActivity, toUser } from './mappers'
 import type { BoardDto, DependenciesDto, ProjectDto, ReportDto, TaskDto, TeamActivityDto, UserDto } from './dtos'
 
 const userDto: UserDto = {
@@ -186,5 +186,19 @@ describe('data/mappers', () => {
       } as unknown as ReportDto)
       expect(report.breakdown.rows[0]?.label).toEqual({ kind: 'project', id: 'sys', key: 'DEM', name: 'Demandas internas', demands: true })
     })
+  })
+})
+
+describe('data/mappers — prioridade com nome por idioma', () => {
+  const base = { id: 'p1', key: 'MEDIA', description: '', color: 'amber', order: 2, is_active: true, is_default: true, created_at: null, updated_at: null }
+
+  it('nome no idioma da tela e as versões para editar', () => {
+    const priority = toPriority({ ...base, name: 'Media', translations: { 'pt-BR': { name: 'Média' }, en: { name: 'Medium' }, es: { name: 'Media' } } })
+    expect(priority.name).toBe('Media')
+    expect(priority.translations).toEqual({ 'pt-BR': { name: 'Média' }, en: { name: 'Medium' }, es: { name: 'Media' } })
+  })
+
+  it('servidor sem traduções: o original é o próprio nome', () => {
+    expect(toPriority({ ...base, name: 'Média' }).translations).toEqual({ 'pt-BR': { name: 'Média' }, en: { name: '' }, es: { name: '' } })
   })
 })

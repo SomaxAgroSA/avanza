@@ -330,8 +330,8 @@ const LOOKUP_ERRORS = {
 /**
  * Status, prioridades e áreas: mesmas colunas; status têm ainda categoria, limite WIP e destinos permitidos.
  * @param {string} table 'task_statuses' | 'task_priorities' | 'areas'
- * @param {{ hasCategory: boolean, taskColumn: string, projectColumn?: string }} options colunas de `tasks`
- *   (e de `projects`, na área) que referenciam o cadastro
+ * @param {{ hasCategory: boolean, taskColumn: string, projectColumn?: string, translatable?: boolean }} options colunas de
+ *   `tasks` (e de `projects`, na área) que referenciam o cadastro; `translatable`: nome por idioma (prioridades)
  */
 function createLookupRepository(db, _ctx, table, options) {
   const TABLE = ident(table)
@@ -345,6 +345,8 @@ function createLookupRepository(db, _ctx, table, options) {
     isActive: ['is_active', 'bool'],
     isDefault: ['is_default', 'bool'],
   }
+  // prioridades: nome por idioma (en/es), como os tipos de tarefa
+  if (options.translatable) FIELDS.translations = ['translations', 'json']
   if (options.hasCategory) {
     FIELDS.category = ['category', 'text']
     FIELDS.wipLimit = ['wip_limit', 'number']
@@ -369,6 +371,7 @@ function createLookupRepository(db, _ctx, table, options) {
       createdAt: row.created,
       updatedAt: row.updated,
     }
+    if (options.translatable) entity.translations = row.translations || {}
     if (options.hasCategory) {
       entity.category = row.category
       entity.wipLimit = row.wip_limit

@@ -392,8 +392,9 @@ export function AppDataTable<T extends RowData>({
           actions={menuActions}
           onToggleAction={toggleAction}
           trigger={
-            <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={columnsLabel}>
-              <span className="hidden sm:inline">{columnsLabel}</span>
+            // numa barra apertada (AppToolbar < 1150px) fica só o ícone; o nome segue no aria-label e na dica
+            <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={columnsLabel} title={columnsLabel}>
+              <span className="hidden sm:inline @max-[1150px]:hidden">{columnsLabel}</span>
             </AppButton>
           }
         />

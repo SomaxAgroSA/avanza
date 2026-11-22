@@ -22,9 +22,10 @@ import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
 import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
-import type { BacklogDto, BoardDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
+import type { BacklogDto, BoardDto, DocExportDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
 import { SPACE_ICONS, SPACE_VISIBILITIES, type DocModule, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
+import type { DocExport } from '@/domain/doc-export'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
@@ -245,8 +246,11 @@ export function toStatus(dto: LookupDto): TaskStatus {
   return { ...toLookup(dto), category: oneOf(STATUS_CATEGORIES, dto.category ?? '', 'todo'), wipLimit: dto.wip_limit ?? 0, allowedNext: dto.allowed_next ?? [] }
 }
 
+/** Prioridade: `name` no idioma da tela e as versões para edição (servidor antigo sem traduções: o próprio nome). */
 export function toPriority(dto: LookupDto): TaskPriority {
-  return toLookup(dto)
+  const source = dto.translations ?? {}
+  const version = (locale: ContentLocale) => ({ name: source[locale]?.name ?? '' })
+  return { ...toLookup(dto), translations: { 'pt-BR': source['pt-BR'] ? version('pt-BR') : { name: dto.name }, en: version('en'), es: version('es') } }
 }
 
 export function toArea(dto: LookupDto): Area {
@@ -328,7 +332,7 @@ export function toDemandOverview(dto: DemandOverviewDto): DemandOverview {
   })
   const load = (list: DemandOverviewDto['team'] | undefined) =>
     (list ?? []).map((member) => ({ user: toUserSummary(member.user), openCount: member.open_count, estimatedHours: member.estimated_hours }))
-  return { counts, team: load(dto.team), allTeam: load(dto.all_team) }
+  return { counts, pending: Number(dto.pending ?? 0), team: load(dto.team), allTeam: load(dto.all_team) }
 }
 
 export function toTaskSummary(dto: TaskDto): TaskSummary {
@@ -506,6 +510,36 @@ export function toTaskDocLink(dto: TaskDocLinkDto): TaskDocLink {
     updatedAt: toDate(dto.updated_at),
     linkedAt: toDate(dto.linked_at),
     canUnlink: !!dto.capabilities?.unlink,
+  }
+}
+
+/** Exportar em PDF (§43): o conteúdo publicado de cada página, com versão, autor e palavras. */
+export function toDocExport(dto: DocExportDto): DocExport {
+  const moduleRef = (m: DocExportDto['module']) => (m ? { id: m.id, name: m.name, color: toColor(OPTION_COLORS, m.color, 'blue') } : null)
+  return {
+    module: moduleRef(dto.module),
+    spaces: (dto.spaces ?? []).map((space) => ({
+      id: space.id,
+      key: space.key,
+      name: space.name,
+      description: space.description ?? '',
+      icon: toIcon(SPACE_ICONS, space.icon, 'book'),
+      color: toColor(OPTION_COLORS, space.color, 'blue'),
+      module: moduleRef(space.module),
+      project: space.project,
+      homePageId: space.home_page_id,
+      pages: (space.pages ?? []).map((page) => ({
+        id: page.id,
+        parentId: page.parent_id,
+        depth: page.depth ?? 1,
+        title: page.title,
+        version: page.version ?? 0,
+        publishedAt: toDate(page.published_at),
+        publishedBy: page.published_by ? toUserSummary(page.published_by) : null,
+        words: page.words ?? 0,
+        content: (page.content as RichContent) ?? { type: 'doc', content: [] },
+      })),
+    })),
   }
 }
 

@@ -139,10 +139,13 @@ describe('Documentação — módulos na tela inicial', () => {
     await waitFor(() => expect(success).toHaveBeenCalledWith('“Integração com IA” agora está em “TI e sistemas”.'))
   })
 
-  it('leitor (sem configurar o espaço) não tem o "⋯" do cartão', async () => {
+  it('leitor (sem configurar o espaço): o "⋯" do cartão só tem "Exportar PDF" (sem mover de módulo)', async () => {
     setup(READ, {}, '/docs', SPACES.map((s) => ({ ...s, capabilities: { edit: false, manage: false } })))
     expect(await screen.findByRole('link', { name: /Dashboard Resultado/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Ações do espaço/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /Ações do espaço Dashboard Resultado/ }))
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Exportar PDF'])
+    expect(within(menu).queryByText('Mover para')).toBeNull()
   })
 
   it('"Novo módulo": nome e cor da paleta; cria e passa a filtrar por ele', async () => {

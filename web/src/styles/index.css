@@ -368,6 +368,248 @@
   }
 }
 
+/*
+ * Exportar PDF da documentação (§43, ADR-059): folhas A4 na tela ("mesa" cinza, folhas brancas com
+ * sombra) e no papel (o navegador imprime: as margens e o rodapé "marca · n / total" vêm das regras
+ * @page que a vista põe enquanto está aberta). A vista tira o tema escuro: o papel é sempre claro.
+ */
+@layer components {
+  .kb-print-desk {
+    min-height: 100dvh;
+    background: var(--kb-surface-3);
+    color: var(--kb-text);
+  }
+  .kb-sheet {
+    position: relative;
+    width: 210mm;
+    max-width: calc(100vw - 2rem);
+    margin: 1.5rem auto;
+    padding: 18mm 16mm 20mm;
+    background: var(--kb-surface);
+    box-shadow: var(--kb-shadow);
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+  .kb-sheet-cover {
+    display: grid;
+    grid-template-columns: 22mm minmax(0, 1fr);
+    min-height: 297mm;
+    padding: 0;
+  }
+  .kb-cover-band {
+    position: relative;
+    background: var(--kb-brand-primary);
+  }
+  .kb-cover-band::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 30mm;
+    height: 30mm;
+    background: var(--kb-brand-ink);
+  }
+  .kb-cover-body {
+    display: flex;
+    flex-direction: column;
+    padding: 26mm 18mm 20mm 16mm;
+  }
+  .kb-cover-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: var(--kb-brand-ink);
+  }
+  .kb-cover-kind {
+    margin-top: auto;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--kb-primary-text);
+  }
+  .kb-sheet-divider .kb-cover-kind {
+    margin-top: 60mm;
+  }
+  .kb-cover-title {
+    margin: 0.625rem 0 1rem;
+    max-width: 14ch;
+    font-family: var(--font-display);
+    font-size: 2.875rem;
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    color: var(--kb-brand-ink);
+    overflow-wrap: anywhere;
+  }
+  .kb-divider-title {
+    margin: 0.5rem 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--kb-brand-ink);
+  }
+  .kb-cover-description {
+    max-width: 46ch;
+    margin: 0 0 30mm;
+    font-size: 0.9375rem;
+    color: var(--kb-text-muted);
+  }
+  .kb-sheet-divider .kb-cover-description {
+    margin-bottom: 1rem;
+  }
+  .kb-cover-facts {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.5rem 1.375rem;
+    margin: 0;
+    padding-top: 0.875rem;
+    border-top: 2px solid var(--kb-brand-ink);
+    font-size: 0.8125rem;
+  }
+  .kb-cover-facts dt {
+    color: var(--kb-text-muted);
+  }
+  .kb-cover-facts dd {
+    margin: 0;
+    font-weight: 600;
+  }
+  .kb-sheet-run {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 14mm;
+    padding-bottom: 0.375rem;
+    border-bottom: 1px solid var(--kb-border);
+    font-size: 0.65625rem;
+    color: var(--kb-text-muted);
+  }
+  .kb-sheet-run b {
+    font-weight: 600;
+    color: var(--kb-text);
+  }
+  .kb-index-title {
+    margin-bottom: 1.125rem;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--kb-brand-ink);
+  }
+  .kb-index-space {
+    margin: 1.25rem 0 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kb-text-muted);
+  }
+  .kb-index li {
+    display: grid;
+    grid-template-columns: 2.125rem minmax(0, 1fr);
+    gap: 0.375rem;
+    padding: 0.5625rem 0;
+    border-bottom: 1px solid var(--kb-border);
+  }
+  .kb-index-number,
+  .kb-page-number {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--kb-primary-text);
+  }
+  .kb-page-number {
+    margin-bottom: 0.25rem;
+    font-weight: 800;
+  }
+  .kb-page-title {
+    margin-bottom: 0.375rem;
+    font-family: var(--font-display);
+    font-size: 1.5625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--kb-brand-ink);
+  }
+  .kb-page-meta {
+    margin-bottom: 1rem;
+    font-size: 0.71875rem;
+    color: var(--kb-text-muted);
+  }
+  /* miniatura da janela "Exportar PDF": a pilha de folhas */
+  .kb-mini-sheet {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--kb-surface);
+    box-shadow: var(--kb-shadow);
+  }
+  .kb-mini-cover {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1.375rem 1.125rem 1rem 1.875rem;
+  }
+  .kb-mini-cover::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 12px;
+    background: var(--kb-brand-primary);
+  }
+  .kb-mini-cover-title {
+    margin-top: auto;
+    margin-bottom: 0.75rem;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--kb-brand-ink);
+    overflow-wrap: anywhere;
+  }
+  .kb-mini-line {
+    display: block;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--kb-border);
+  }
+}
+
+@media print {
+  .kb-print-desk {
+    min-height: 0;
+    background: var(--kb-surface);
+  }
+  .kb-sheet {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    font-size: 10.5pt;
+    break-after: page;
+  }
+  .kb-sheet:last-of-type {
+    break-after: auto;
+  }
+  /* a capa ocupa a primeira folha inteira (sem margens: @page :first) */
+  .kb-sheet-cover {
+    height: 297mm;
+    min-height: 297mm;
+  }
+  .kb-sheet-run {
+    margin-bottom: 8mm;
+  }
+  .kb-sheet .kb-rich :is(h1, h2, h3, h4) {
+    break-after: avoid;
+  }
+  .kb-sheet .kb-rich :is(table, pre, blockquote, img, li, [data-callout]) {
+    break-inside: avoid;
+  }
+}
+
 @utility bg-brand-gradient {
   background-image: var(--kb-gradient-brand);
 }

@@ -214,7 +214,7 @@ export function fakeRepositories(overrides: {
     demands: {
       list: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }),
       create: notImplemented,
-      overview: () => Promise.resolve({ counts: EMPTY_DEMAND_COUNTS, team: [], allTeam: [] }),
+      overview: () => Promise.resolve({ counts: EMPTY_DEMAND_COUNTS, pending: 0, team: [], allTeam: [] }),
       owners: () => Promise.resolve([]),
       team: () => Promise.resolve([]),
       assign: notImplemented,
@@ -378,6 +378,7 @@ export function fakeRepositories(overrides: {
       createModule: notImplemented,
       updateModule: notImplemented,
       deleteModule: notImplemented,
+      exportDocs: notImplemented,
       ...overrides.docs,
     },
     reports: {

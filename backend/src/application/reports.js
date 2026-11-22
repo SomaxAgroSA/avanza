@@ -182,7 +182,7 @@ function createReportService(deps) {
       },
       definitions: {
         bug_types: bugTypes.map((t) => ({ id: t.id, name: contentLocale.localize(t, deps.locale, ['name']).name })),
-        critical_priority: critical ? { id: critical.id, name: critical.name } : null,
+        critical_priority: critical ? { id: critical.id, name: contentLocale.localize(critical, deps.locale, ['name']).name } : null,
       },
       indicators: report.indicators(rows, context),
       series: report.series(rows, context),
@@ -203,7 +203,7 @@ function createReportService(deps) {
         label = { id: s.id, name: s.name, color: s.color, category: s.category }
       } else if (dimension === 'priority' && refs.priorities[g.key]) {
         const p = refs.priorities[g.key]
-        label = { id: p.id, name: p.name, color: p.color }
+        label = { id: p.id, name: contentLocale.localize(p, deps.locale, ['name']).name, color: p.color }
       } else if (dimension === 'type' && refs.types[g.key]) {
         const t = refs.types[g.key]
         label = { id: t.id, name: contentLocale.localize(t, deps.locale, ['name']).name, icon: t.icon || 'check-square', color: t.color || 'blue' }

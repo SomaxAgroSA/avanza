@@ -58,7 +58,8 @@
     "showColumn": "Mostrar {{name}}",
     "columnName": "Nombre de la columna {{name}}",
     "namesForAll": "Usar estos nombres para todos",
-    "resetNames": "Restablecer nombres"
+    "resetNames": "Restablecer nombres",
+    "compactAll": "todas"
   },
   "validation": {
     "required": "Campo obligatorio",
@@ -1844,7 +1845,8 @@
     "kindDemand": "Sin proyecto",
     "viewLabel": "Vista",
     "viewList": "Lista",
-    "viewDemands": "Demandas",
+    "viewDemands": "Bandeja",
+    "viewDemandsShort": "Bandeja",
     "openStatuses": "Abiertas"
   },
   "tags": {
@@ -2937,6 +2939,52 @@
       "fieldHint": "Organiza el espacio en el inicio de la Documentación.",
       "createdOn": "Creado el {{date}}",
       "backToAll": "Todas las documentaciones"
+    },
+    "export": {
+      "button": "Exportar PDF",
+      "moduleButton": "Exportar módulo",
+      "moduleButtonLabel": "Exportar el módulo {{name}} en PDF",
+      "title": "Exportar PDF",
+      "scopeLabel": "Qué exportar",
+      "scope": {
+        "page": "Esta página",
+        "branch": "Esta página y sus subpáginas",
+        "space": "Documentación completa",
+        "module": "Todo el módulo {{name}}"
+      },
+      "pages_one": "{{count}} página",
+      "pages_other": "{{count}} páginas",
+      "spacePages_one": "La única página de {{space}}",
+      "spacePages_other": "Las {{count}} páginas de {{space}}",
+      "moduleSummary": "{{spaces}} · {{pages}}",
+      "cover": "Portada e índice",
+      "annex": "Incluir anexos",
+      "sheets_one": "≈ {{count}} hoja A4",
+      "sheets_other": "≈ {{count}} hojas A4",
+      "withCover": "{{pages}} + portada e índice",
+      "preview": "Ver e imprimir",
+      "back": "Volver",
+      "change": "Cambiar selección",
+      "print": "Imprimir o guardar PDF",
+      "summaryCover": "{{pages}} · con portada e índice",
+      "kindDocs": "Documentación",
+      "kindModule": "Módulo {{name}}",
+      "kindSpace": "Espacio",
+      "brand": "{{name}} · Somax",
+      "fields": {
+        "module": "Módulo",
+        "project": "Proyecto",
+        "spaces": "Espacios",
+        "content": "Contenido",
+        "exported": "Exportado"
+      },
+      "contentValue": "{{pages}} · versión publicada de cada una",
+      "exportedValue": "{{date}} por {{name}}",
+      "index": "Índice",
+      "versionLine": "Versión {{version}} · {{date}}",
+      "pageMeta": "Versión {{version}} · publicada el {{date}} por {{name}}",
+      "pageMetaAnonymous": "Versión {{version}} · publicada el {{date}}",
+      "empty": "Nada publicado para exportar"
     }
   },
   "plan": {
@@ -4681,7 +4729,9 @@
   },
   "demands": {
     "newProjectTask": "Tarea de proyecto",
+    "newProjectTaskShort": "Tarea",
     "newDemand": "Demanda interna",
+    "newDemandShort": "Demanda",
     "chip": "Demanda interna",
     "internalProject": "Demandas internas",
     "openDemands": "Abrir las demandas",
@@ -4716,7 +4766,7 @@
     "created": "{{code}} creada y enviada a {{owner}}",
     "saved": "{{code}} guardada",
     "page": {
-      "title": "Demandas",
+      "title": "Bandeja",
       "tabsLabel": "Bandejas de demandas",
       "kpis": "Demandas por paso",
       "truncated": "Mostrando las {{shown}} más recientes de {{total}}. Usa los filtros para ver las demás."
@@ -4755,8 +4805,8 @@
       "assignee": "Asignada a",
       "any": "Todos"
     },
-    "badge_one": "{{count}} demanda recibida sin asignar",
-    "badge_other": "{{count}} demandas recibidas sin asignar",
+    "badge_one": "{{count}} pendiente para ti",
+    "badge_other": "{{count}} pendientes para ti",
     "actions": {
       "assign": "Asignar",
       "reassign": "Reasignar",

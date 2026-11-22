@@ -10,6 +10,7 @@ const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
 const cf = require('../domain/custom-field')
 const { colorRule } = require('../domain/color')
+const contentLocale = require('../domain/content-locale')
 const workflow = require('../domain/workflow')
 const { buildAuditEntry, diff } = require('./audit')
 const { iso } = require('./presenters')
@@ -17,8 +18,17 @@ const { READ_PERMISSIONS } = require('./custom-fields')
 
 const keyRule = rules.custom((value) => (typeof value !== 'string' ? 'invalid_type' : cf.typeKeyIssue(cf.normalizeTypeKey(value))))
 
+/** Campos traduzíveis da prioridade (en/es) e seus limites — os mesmos do original. */
+const TRANSLATABLE = { name: 60 }
+
 function invalid(field, code) {
   return appError('VALIDATION_ERROR', undefined, { fields: { [field]: code } })
+}
+
+function parseTranslations(raw) {
+  const result = contentLocale.normalizeTranslations(raw, TRANSLATABLE)
+  if (result.error) throw invalid('translations', result.error)
+  return result.value
 }
 
 function createLookupService(deps, kind) {
@@ -75,11 +85,12 @@ function createLookupService(deps, kind) {
     return item
   }
 
+  /** Prioridade: `name` no idioma da requisição e `translations` com todas as versões (edição). */
   function present(item) {
     const dto = {
       id: item.id,
       key: item.key,
-      name: item.name,
+      name: spec.translatable ? contentLocale.localize(item, deps.locale, ['name']).name : item.name,
       description: item.description || '',
       color: item.color || 'gray',
       order: item.order,
@@ -88,6 +99,7 @@ function createLookupService(deps, kind) {
       created_at: iso(item.createdAt),
       updated_at: iso(item.updatedAt),
     }
+    if (spec.translatable) dto.translations = contentLocale.allVersions(item, Object.keys(TRANSLATABLE))
     if (spec.hasCategory) {
       dto.category = item.category
       dto.wip_limit = item.wipLimit || 0
@@ -129,6 +141,7 @@ function createLookupService(deps, kind) {
     rbac.assertCan(ctx.principal, 'settings.manage')
     const data = assertValid(input, Object.assign({ key: [rules.required(), keyRule] }, fieldRules))
     const key = cf.normalizeTypeKey(data.key)
+    const translations = spec.translatable ? parseTranslations((input || {}).translations) : undefined
     if (await repository().findByKey(key)) throw appError(spec.errors.keyInUse)
     await assertAllowedNext(data.allowed_next, null)
 
@@ -145,6 +158,7 @@ function createLookupService(deps, kind) {
         key,
         name: data.name,
         description: data.description || '',
+        translations,
         color: data.color || 'gray',
         category: spec.hasCategory ? data.category : undefined,
         wipLimit: spec.hasCategory ? data.wip_limit || 0 : undefined,
@@ -153,7 +167,7 @@ function createLookupService(deps, kind) {
         isActive,
         isDefault,
       })
-      await audit(repos, ctx, item.id, 'created', null, Object.assign({ key }, await snapshot(item)))
+      await audit(repos, ctx, item.id, 'created', null, Object.assign({ key }, await snapshot(item), translations && Object.keys(translations).length ? { translations } : {}))
       return item
     })
     return present(created)
@@ -183,7 +197,17 @@ function createLookupService(deps, kind) {
     // destinos comparados pela forma legível (a lista de IDs mudaria sempre por referência)
     const comparable = Object.assign({}, data)
     if (data.allowed_next !== undefined) comparable.allowed_next = await nextLabel(data.allowed_next)
-    const change = diff(before, comparable, Object.keys(before))
+    let change = diff(before, comparable, Object.keys(before))
+    // traduções (prioridade): substituem as anteriores quando enviadas (objeto comparado pelo conteúdo)
+    if (spec.translatable && source.translations !== undefined) {
+      const next = parseTranslations(source.translations)
+      const previous = item.translations || {}
+      if (JSON.stringify(next) !== JSON.stringify(previous)) {
+        change = change || { oldValue: {}, newValue: {} }
+        change.oldValue.translations = previous
+        change.newValue.translations = next
+      }
+    }
     if (!change) return present(item)
 
     const saved = await deps.unitOfWork.run(async (repos) => {

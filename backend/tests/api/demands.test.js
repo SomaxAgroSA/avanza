@@ -131,6 +131,8 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
   it('selo, responsáveis possíveis e equipe para atribuir', async () => {
     const overview = (await people.cesar.client.get('/demands/overview')).body.data
     assert.equal(overview.counts.received.unassigned, 1)
+    // Bandeja: o selo conta o que espera por mim (aqui, a demanda recebida sem atribuir)
+    assert.equal(overview.pending, 1)
     assert.deepEqual(overview.team.map((m) => m.user.id).sort(), [people.jorge.user.id, people.carlos.user.id].sort())
     assert.deepEqual((await people.ana.client.get('/demands/owners?search=Jorge')).body.data.map((u) => u.name), ['Jorge TI'])
     const team = (await people.cesar.client.get(`/demands/${demand.id}/team`)).body.data.map((u) => u.name)

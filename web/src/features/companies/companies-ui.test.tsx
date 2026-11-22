@@ -206,7 +206,7 @@ describe('Listas: coluna e filtro Empresa (§46)', () => {
     const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page<TaskSummary>([])))
     renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
       repositories: repos({
-        demands: { list, owners: () => Promise.resolve([cesar]), overview: () => Promise.resolve({ counts: EMPTY_DEMAND_COUNTS, team: [], allTeam: [] }) },
+        demands: { list, owners: () => Promise.resolve([cesar]), overview: () => Promise.resolve({ counts: EMPTY_DEMAND_COUNTS, pending: 0, team: [], allTeam: [] }) },
       }),
       initialPath: '/tasks/demands?box=all',
     })

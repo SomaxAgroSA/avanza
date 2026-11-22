@@ -1,7 +1,8 @@
 /**
  * Documentação (expansão, Onda 2) no navegador: espaço criado pela tela, página escrita no editor
  * (menu "/", aviso, imagem enviada, tabela), rascunho salvo sozinho, publicação, nova versão e
- * restauração, busca sem acento, arrastar na árvore e leitor sem edição nem rascunhos.
+ * restauração, busca sem acento, arrastar na árvore e leitor sem edição nem rascunhos; exportar PDF
+ * (janela, vista de impressão e o PDF gerado pelo navegador).
  */
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert/strict'
@@ -180,5 +181,36 @@ describe('E2E — Documentação', { timeout: 300000 }, () => {
     await viewer.page.goto(`${app.baseUrl}/docs/MDC/${pageId}/edit`)
     await viewer.page.waitForURL(`**/docs/MDC/${pageId}`)
     assert.deepEqual(viewer.errors, [])
+  })
+
+  it('exportar PDF (§43): janela, vista de impressão só com o publicado e o PDF do navegador', async () => {
+    const { page, errors } = await signIn(ADMIN.email, ADMIN.password, { viewport: { width: 1400, height: 900 } })
+    const paragraph = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] })
+    const space = (await api(page, 'POST', '/docs/spaces', { key: 'PDFX', name: 'Guia de exportação', description: 'Teste do PDF', visibility: 'company' })).json.data
+    const chapter = (await api(page, 'POST', `/docs/spaces/${space.id}/pages`, { title: 'Capítulo publicado' })).json.data
+    await api(page, 'POST', `/docs/pages/${chapter.id}/publish`, { title: 'Capítulo publicado', content: paragraph('Texto do capítulo.') })
+    await api(page, 'POST', `/docs/spaces/${space.id}/pages`, { title: 'Rascunho escondido' })
+
+    await page.goto(`${app.baseUrl}/docs/PDFX/${chapter.id}`)
+    await page.getByRole('button', { name: 'Exportar PDF' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'Exportar PDF' })
+    await dialog.getByRole('radio', { name: /Documentação completa/ }).check()
+    await dialog.getByText('≈ 4 folhas A4').waitFor()
+    await dialog.getByRole('button', { name: 'Ver e imprimir' }).click()
+    await page.waitForURL('**/print/docs?**')
+
+    const sheets = page.getByTestId('print-sheets')
+    await sheets.getByText('Texto do capítulo.').waitFor()
+    await sheets.getByRole('heading', { level: 2, name: 'Índice' }).waitFor()
+    assert.equal(await sheets.getByText('Rascunho escondido').count(), 0)
+    // sem menu nem barra do app
+    assert.equal(await page.getByRole('navigation', { name: 'Navegação principal' }).count(), 0)
+    await page.waitForFunction(() => {
+      const button = Array.from(document.querySelectorAll('button')).find((b) => b.textContent.includes('Imprimir ou salvar PDF'))
+      return button && !button.disabled
+    })
+    const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true })
+    assert.equal(pdf.subarray(0, 4).toString(), '%PDF')
+    assert.deepEqual(errors, [])
   })
 })
