@@ -9,7 +9,7 @@ const rbac = require('../domain/rbac')
 const userDomain = require('../domain/user')
 const { buildAuditEntry, diff } = require('./audit')
 const { toUserDto } = require('./presenters')
-const { currentPasswordPolicy } = require('./platform-settings')
+const { currentPasswordPolicy, panoramaEnabled } = require('./platform-settings')
 const { emailContext } = require('./email')
 const { createAccountLinkService } = require('./account-links')
 
@@ -192,7 +192,13 @@ function createUserService(deps) {
     }
     // página ao entrar (§38): é configuração de acesso (Controle de acesso), exige users.edit — também para a própria
     const current = Object.assign({}, target, { homePage: target.homePage || '' })
-    if (data.homePage !== undefined && data.homePage !== current.homePage) rbac.assertCan(ctx.principal, 'users.edit')
+    if (data.homePage !== undefined && data.homePage !== current.homePage) {
+      rbac.assertCan(ctx.principal, 'users.edit')
+      // Panorama desligado (§26.2): não vira página inicial; quem já o tinha guarda o valor (religar devolve)
+      if (data.homePage === userDomain.PANORAMA_HOME_PAGE && !(await panoramaEnabled(deps))) {
+        throw appError('VALIDATION_ERROR', undefined, { fields: { home_page: 'panorama_disabled' } })
+      }
+    }
     if (data.roleId !== undefined && data.roleId !== target.roleId) await findAssignableRole(ctx.principal, data.roleId)
     if (data.email !== undefined && data.email !== target.email && (await deps.userRepository.emailExists(data.email, target.id))) {
       throw appError('EMAIL_ALREADY_IN_USE')

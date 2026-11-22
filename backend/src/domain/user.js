@@ -15,6 +15,8 @@ const THEMES = Object.freeze(['light', 'dark', 'system'])
  * (Panorama para quem vê o painel executivo; senão, a lista de projetos). Só telas do menu.
  */
 const HOME_PAGES = Object.freeze(['', '/tracking', '/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/tasks', '/kanban', '/docs'])
+/** O Panorama (§26.2): com ele desligado na plataforma, não pode ser escolhido como página inicial. */
+const PANORAMA_HOME_PAGE = '/tracking'
 
 const PASSWORD_MIN = 10
 const PASSWORD_MAX = 72 // limite do bcrypt
@@ -81,6 +83,7 @@ module.exports = {
   LOCALES,
   THEMES,
   HOME_PAGES,
+  PANORAMA_HOME_PAGE,
   PASSWORD_MIN,
   PASSWORD_MAX,
   AVATAR_MAX_BYTES,

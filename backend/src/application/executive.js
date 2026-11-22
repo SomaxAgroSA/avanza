@@ -24,6 +24,7 @@ const report = require('../domain/report')
 const workflow = require('../domain/workflow')
 const executive = require('../domain/executive')
 const { toUserSummary } = require('./presenters')
+const { assertPanoramaEnabled } = require('./platform-settings')
 
 const MAX_PROJECT_IDS = 200
 const ID_PATTERN = /^[A-Za-z0-9_]{1,64}$/
@@ -129,6 +130,8 @@ function createExecutiveService(deps) {
   async function getDashboard(ctx, query) {
     rbac.assertAuthenticated(ctx.principal)
     rbac.assertCan(ctx.principal, 'executive.view')
+    // Panorama desligado em Configurações → Geral (§26.2): o painel não responde para ninguém
+    await assertPanoramaEnabled(deps)
     const params = parse(query)
     const today = report.localDay(params.now, params.tzOffset)
 

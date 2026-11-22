@@ -195,7 +195,7 @@ function build() {
         ),
       },
       '/auth/logout': { post: op('Encerra a sessão atual', ['auth'], { 200: ok('Sessão encerrada', { type: 'object' }) }, { parameters: [csrfHeader] }) },
-      '/auth/me': { get: op('Usuário autenticado, perfil e permissões', ['auth'], { 200: ok('Contexto do usuário', ref('Me')) }) },
+      '/auth/me': { get: op('Usuário autenticado, perfil, permissões e o que a plataforma desligou para todos (platform.panorama_enabled, §26.2)', ['auth'], { 200: ok('Contexto do usuário', ref('Me')) }) },
       '/auth/sessions': { get: op('Sessões ativas do usuário', ['auth'], { 200: ok('Sessões', { type: 'array', items: ref('Session') }) }) },
       '/auth/sessions/revoke-others': {
         post: op('Encerra todas as outras sessões do usuário (mantém a atual)', ['auth'], { 200: ok('Encerradas', { type: 'object', properties: { revoked: { type: 'integer' } } }) }, {
@@ -1208,7 +1208,7 @@ function build() {
       },
       '/settings/platform': {
         get: op('Configurações da plataforma (platform.manage): { values, defaults, limits, retention_options, branding, updated_at }', ['platform'], { 200: ok('Configurações', { type: 'object' }) }),
-        patch: op('Altera (platform.manage), parcial: audit_retention_months (1, 3, 6, 12, 24 ou 0 = manter sempre), lockout_threshold (3–20), lockout_base_minutes (1–60), lockout_max_minutes (≥ inicial, até 1440), password_min_length (8–64), password_require_mixed_case, password_require_symbol, platform_name (até 40). Com dry_run: true devolve { dry_run, audit_to_delete } sem gravar', ['platform'], { 200: ok('Configurações ou prévia', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [csrfHeader] }),
+        patch: op('Altera (platform.manage), parcial: audit_retention_months (1, 3, 6, 12, 24 ou 0 = manter sempre), lockout_threshold (3–20), lockout_base_minutes (1–60), lockout_max_minutes (≥ inicial, até 1440), password_min_length (8–64), password_require_mixed_case, password_require_symbol, platform_name (até 40), panorama_enabled (§26.2: false tira o Panorama do menu de todos e o GET /executive responde 403 PANORAMA_DISABLED). Com dry_run: true devolve { dry_run, audit_to_delete } sem gravar', ['platform'], { 200: ok('Configurações ou prévia', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [csrfHeader] }),
       },
       '/settings/platform/branding/{slot}': {
         post: op('Envia logo/ícone (platform.manage): multipart "file" — PNG, JPG, WebP, SVG sem conteúdo ativo (ICO só no ícone), até 1 MB, tipo conferido pelo conteúdo', ['platform'], { 200: ok('Configurações', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') }, { parameters: [{ name: 'slot', in: 'path', required: true, schema: { type: 'string', enum: ['logo_light', 'logo_dark', 'favicon'] } }, csrfHeader] }),
@@ -1315,9 +1315,9 @@ function build() {
       },
       '/executive': {
         get: op(
-          'Painel executivo (executive.view): Gestão de projetos + Kanban de TODOS os projetos (mesmo sem ser membro), só leitura — resumo, portfólio com a saúde de cada projeto, Gestão (status, cronograma, esforço, problemas, marcos), Kanban (funil, criadas × concluídas, tempos, atrasadas), série de entregas (semana/mês) e o que já foi feito (arquivados só nas entregas). Panorama: portfólio com objective e updated_at, plan.overdue_milestones, projects com area e owner',
+          'Painel executivo (executive.view): Gestão de projetos + Kanban de TODOS os projetos (mesmo sem ser membro), só leitura — resumo, portfólio com a saúde de cada projeto, Gestão (status, cronograma, esforço, problemas, marcos), Kanban (funil, criadas × concluídas, tempos, atrasadas), série de entregas (semana/mês) e o que já foi feito (arquivados só nas entregas). Panorama: portfólio com objective e updated_at, plan.overdue_milestones, projects com area e owner. Com o Panorama desligado em Configurações → Geral (§26.2), 403 PANORAMA_DISABLED para todos',
           ['reports'],
-          { 200: ok('Painel', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR') },
+          { 200: ok('Painel', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN ou PANORAMA_DISABLED') },
           {
             parameters: [
               { name: 'project_ids', in: 'query', schema: { type: 'string' }, description: 'ids separados por vírgula (até 200); vazio = todos' },
@@ -1493,7 +1493,11 @@ function build() {
             role_id: { type: 'string' },
             locale: { type: 'string', enum: ['pt-BR', 'en', 'es'] },
             theme: { type: 'string', enum: ['light', 'dark', 'system'] },
-            home_page: { type: 'string', enum: HOME_PAGES, description: 'tela aberta ao entrar (§38; exige users.edit, também para a própria); "" = automática' },
+            home_page: {
+              type: 'string',
+              enum: HOME_PAGES,
+              description: 'tela aberta ao entrar (§38; exige users.edit, também para a própria); "" = automática. Com o Panorama desligado (§26.2), mudar para /tracking = panorama_disabled (quem já o tinha guarda o valor)',
+            },
           },
         },
         Role: {
@@ -2357,6 +2361,11 @@ function build() {
             role: ref('Role'),
             permissions: { type: 'array', items: { type: 'string' } },
             session: ref('Session'),
+            platform: {
+              type: 'object',
+              description: 'o que a plataforma liga ou desliga para todos (Configurações → Geral)',
+              properties: { panorama_enabled: { type: 'boolean', description: 'Panorama (§26.2); false = fora do menu e da página inicial de todos' } },
+            },
           },
         },
       },

@@ -53,6 +53,18 @@ describe('domain/platform-settings — valores e limites seguros', () => {
     assert.equal(settings.validateSettings({ platform_name: '   ' }, current).fields.platform_name, 'required')
   })
 
+  it('Panorama (§26.2): ligado por padrão (também quando o valor guardado falta ou é inválido); só aceita verdadeiro/falso', () => {
+    assert.equal(settings.DEFAULTS.panorama_enabled, true)
+    assert.equal(settings.normalizeSettings({}).panorama_enabled, true)
+    assert.equal(settings.normalizeSettings({ panorama_enabled: 'nao' }).panorama_enabled, true)
+    assert.equal(settings.normalizeSettings({ panorama_enabled: false }).panorama_enabled, false)
+    const off = settings.validateSettings({ panorama_enabled: false }, settings.DEFAULTS)
+    assert.deepEqual(off.fields, {})
+    assert.equal(off.values.panorama_enabled, false)
+    assert.equal(settings.validateSettings({ panorama_enabled: 0 }, settings.DEFAULTS).fields.panorama_enabled, 'invalid_type')
+    assert.deepEqual(settings.diffSettings(settings.DEFAULTS, off.values), { old: { panorama_enabled: true }, new: { panorama_enabled: false } })
+  })
+
   it('o tempo máximo do bloqueio não pode ser menor que o inicial (considera o valor atual)', () => {
     const current = Object.assign({}, settings.DEFAULTS, { lockout_base_minutes: 30 })
     assert.equal(settings.validateSettings({ lockout_max_minutes: 20 }, current).fields.lockout_max_minutes, 'below_base')
