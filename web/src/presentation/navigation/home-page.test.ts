@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PermissionCode } from '@/domain/permissions'
-import { automaticHomePath, homePageOptions, resolveHomePath } from './home-page'
+import { automaticHomePath, homePageOptions, panoramaOffPath, resolveHomePath } from './home-page'
 
 const director: PermissionCode[] = ['projects.view', 'tasks.view', 'kanban.view', 'docs.view']
 const manager: PermissionCode[] = [...director, 'executive.view']
@@ -31,5 +31,27 @@ describe('página inicial (§38)', () => {
     // sem kanban.view: a escolha antiga não leva a uma tela sem acesso
     expect(resolveHomePath('/kanban', ['projects.view'])).toBe('/projects')
     expect(resolveHomePath('/settings/access', manager)).toBe('/tracking')
+  })
+})
+
+describe('página inicial com o Panorama desligado (§26.2)', () => {
+  const off = { panoramaEnabled: false }
+  const withTasks: PermissionCode[] = [...manager, 'tasks.list']
+
+  it('o Panorama sai das opções; ligado, continua', () => {
+    expect(homePageOptions(manager, off).map((o) => o.path)).not.toContain('/tracking')
+    expect(homePageOptions(manager, { panoramaEnabled: true })[0]?.path).toBe('/tracking')
+  })
+
+  it('quem o tinha (escolhido ou pela automática) entra em Tarefas; sem a Lista de tarefas, nos projetos', () => {
+    expect(resolveHomePath('/tracking', withTasks, off)).toBe('/tasks')
+    expect(resolveHomePath('', withTasks, off)).toBe('/tasks')
+    expect(automaticHomePath(withTasks, off)).toBe('/tasks')
+    expect(resolveHomePath('/tracking', manager, off)).toBe('/projects')
+    expect(panoramaOffPath(withTasks)).toBe('/tasks')
+    expect(panoramaOffPath(manager)).toBe('/projects')
+    // as outras escolhas e a automática de quem não via o Panorama não mudam
+    expect(resolveHomePath('/kanban', withTasks, off)).toBe('/kanban')
+    expect(automaticHomePath(director, off)).toBe('/projects')
   })
 })

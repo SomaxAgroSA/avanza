@@ -8,6 +8,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import type { PlatformFeatures } from '@/domain/entities'
 import { canAny, type PermissionCode } from '@/domain/permissions'
 
 export interface NavItem {
@@ -84,6 +85,11 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
 ]
+
+/** O menu da plataforma: sem o Panorama quando ele está desligado para todos (§26.2; sem a informação, ligado). */
+export function platformNavItems(features: PlatformFeatures | undefined, items: NavItem[] = NAV_ITEMS): NavItem[] {
+  return features && !features.panoramaEnabled ? items.filter((item) => item.id !== 'tracking') : items
+}
 
 /** Filtra a navegação pelas permissões do usuário (itens sem filhos visíveis somem). */
 export function visibleNavItems(permissions: readonly string[], items: NavItem[] = NAV_ITEMS): NavItem[] {

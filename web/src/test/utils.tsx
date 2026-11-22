@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router'
 import { render } from '@testing-library/react'
-import type { CurrentUser, Role, User } from '@/domain/entities'
+import type { CurrentUser, PlatformFeatures, Role, User } from '@/domain/entities'
 import type { Page } from '@/domain/pagination'
 import type { PermissionCode } from '@/domain/permissions'
 import type { Repositories } from '@/domain/repositories'
@@ -32,12 +32,13 @@ export function makeUser(overrides: Partial<User> = {}): User {
   }
 }
 
-export function makeCurrentUser(permissions: PermissionCode[], roleCode = 'ADMIN'): CurrentUser {
+export function makeCurrentUser(permissions: PermissionCode[], roleCode = 'ADMIN', platform: PlatformFeatures = { panoramaEnabled: true }): CurrentUser {
   return {
     user: makeUser(),
     role: { id: `role-${roleCode.toLowerCase()}`, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '' },
     permissions,
     session: null,
+    platform,
   }
 }
 

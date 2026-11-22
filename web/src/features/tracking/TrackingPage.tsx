@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { FolderKanban, Printer } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
@@ -22,14 +23,33 @@ import {
 } from '@/domain/tracking'
 import { AppButton, AppDatePicker, AppEmptyState, AppErrorState, AppIconButton, AppLoading, AppSegmentedControl, AppSelect } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
-import { useCan } from '@/features/auth/session'
+import { SESSION_QUERY_KEY, useCan, useSession } from '@/features/auth/session'
+import { panoramaOffPath } from '@/presentation/navigation/home-page'
 import { useExecutiveDashboard } from '@/features/executive/queries'
 import { AttentionTable, ExecutionCard, HealthCard, KpiRow, MilestonesList, ProjectSummaryDrawer, SynthesisCard } from './panorama-sections'
 import { scrollToTable } from './panorama-scroll'
 
-/** Entrada do menu: a gerência (executive.view) vê o Panorama; quem só tem reports.view, os Relatórios. */
+/**
+ * Entrada do menu: a gerência (executive.view) vê o Panorama; quem só tem reports.view, os Relatórios.
+ * Com o Panorama desligado na plataforma (§26.2), o endereço leva todos a Tarefas.
+ */
 export function TrackingEntry() {
-  return useCan('executive.view') ? <TrackingPage /> : <Navigate to="/reports" replace />
+  const { current } = useSession()
+  const canView = useCan('executive.view')
+  if (current && !current.platform.panoramaEnabled) return <PanoramaOff />
+  return canView ? <TrackingPage /> : <Navigate to="/reports" replace />
+}
+
+/** Panorama desligado (§26.2): vai para Tarefas (sem a Lista de tarefas, para os projetos) e relê a sessão (o menu acompanha). */
+function PanoramaOff() {
+  const { current } = useSession()
+  const queryClient = useQueryClient()
+  const disabledInSession = !!current && !current.platform.panoramaEnabled
+  useEffect(() => {
+    // desligado com a tela aberta: a sessão ainda dizia ligado
+    if (!disabledInSession) void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+  }, [disabledInSession, queryClient])
+  return <Navigate to={panoramaOffPath(current?.permissions ?? [])} replace />
 }
 
 /**
@@ -98,6 +118,7 @@ export function TrackingPage() {
   }
 
   if (dashboard.isError && !data) {
+    if (isAppError(dashboard.error) && dashboard.error.code === 'PANORAMA_DISABLED') return <PanoramaOff />
     return <AppErrorState title={t('tracking.loadError')} correlationId={isAppError(dashboard.error) ? dashboard.error.correlationId : undefined} onRetry={() => void dashboard.refetch()} />
   }
   if (!data) return <AppLoading label={t('tracking.loading')} />

@@ -137,7 +137,8 @@
     "already_linked": "A tarefa já está na Gestão",
     "not_in_team": "Escolha alguém da equipe do responsável",
     "same_assignee": "Escolha outra pessoa",
-    "demand_flow": "Na demanda, isso muda pelo fluxo (Atribuir, Começar, Concluir…)"
+    "demand_flow": "Na demanda, isso muda pelo fluxo (Atribuir, Começar, Concluir…)",
+    "panorama_disabled": "O Panorama está desligado: escolha outra página."
   },
   "errors": {
     "VALIDATION_ERROR": "Verifique os campos destacados.",
@@ -244,7 +245,8 @@
     "ICON_NOT_FOUND": "Este ícone não está na biblioteca.",
     "CHARTER_ITEM_NOT_FOUND": "Item da ficha não encontrado.",
     "PROJECT_HAS_DOCS": "Este projeto tem documentação: escolha se quer movê-la, deixá-la como espaço geral ou excluí-la.",
-    "DEMAND_STATE_CONFLICT": "Esta ação não está disponível no passo atual da demanda. Atualize a página."
+    "DEMAND_STATE_CONFLICT": "Esta ação não está disponível no passo atual da demanda. Atualize a página.",
+    "PANORAMA_DISABLED": "O Panorama está desligado em Configurações → Geral."
   },
   "nav": {
     "main": "Navegação principal",
@@ -3716,6 +3718,12 @@
       "uploaded": "Imagem enviada.",
       "removed": "Imagem removida; voltou a marca padrão.",
       "remove": "Remover"
+    },
+    "panorama": {
+      "title": "Panorama",
+      "toggle": "Panorama ativo",
+      "on": "Visível no menu para os perfis que têm permissão.",
+      "off": "Oculto para todos. Quem o tinha como página inicial entra em Tarefas."
     },
     "password": {
       "title": "Senhas",

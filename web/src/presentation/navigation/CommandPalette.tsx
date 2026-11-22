@@ -11,7 +11,7 @@ import { usePreferences } from '@/features/preferences/use-preferences'
 import { useProjects } from '@/features/projects/queries'
 import { useTasksList } from '@/features/tasks/queries'
 import { useDebouncedValue } from '@/presentation/common/use-debounced-value'
-import { NAV_ITEMS, visibleNavItems, type NavItem } from './nav-items'
+import { platformNavItems, visibleNavItems, type NavItem } from './nav-items'
 
 function flatten(items: NavItem[]): NavItem[] {
   // Filhos herdam o ícone do grupo; itens com o mesmo destino aparecem uma vez só.
@@ -49,8 +49,10 @@ export function CommandPalette() {
   useHotkey('k', () => setOpen(!useUiStore.getState().commandPaletteOpen), { mod: true, allowInInputs: true })
 
   const permissions = current?.permissions
+  const platform = current?.platform
   const groups = useMemo<CommandGroup[]>(() => {
-    const nav = flatten(visibleNavItems(permissions ?? [], NAV_ITEMS))
+    // o Panorama desligado na plataforma (§26.2) também não é oferecido aqui
+    const nav = flatten(visibleNavItems(permissions ?? [], platformNavItems(platform)))
     const canViewUsers = permissions?.includes('users.view')
     // criar e buscar abrem a Lista de tarefas (/tasks): só com o módulo (§44); as tarefas encontradas abrem direto
     const canListTasks = canViewTasks && !!permissions?.includes('tasks.list')
@@ -139,7 +141,7 @@ export function CommandPalette() {
         ],
       },
     ]
-  }, [permissions, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
+  }, [permissions, platform, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
 
   return (
     <AppCommandPalette

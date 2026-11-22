@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { findNavTrail, showsBreadcrumb, visibleNavItems } from './nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems } from './nav-items'
 
 describe('navegação', () => {
+  it('Panorama desligado na plataforma (§26.2): some do menu de todos, mesmo com executive.view; ligado, fica', () => {
+    const perms: Parameters<typeof visibleNavItems>[0] = ['executive.view', 'reports.view', 'projects.view']
+    expect(visibleNavItems(perms, platformNavItems({ panoramaEnabled: false })).map((i) => i.id)).toEqual(['projects'])
+    expect(visibleNavItems(perms, platformNavItems({ panoramaEnabled: true })).map((i) => i.id)).toEqual(['tracking', 'projects'])
+    expect(visibleNavItems(perms, platformNavItems(undefined)).map((i) => i.id)).toEqual(['tracking', 'projects'])
+  })
+
   it('esconde módulos sem permissão e grupos sem filhos visíveis', () => {
     const items = visibleNavItems(['tasks.view', 'tasks.list'])
     const ids = items.map((i) => i.id)

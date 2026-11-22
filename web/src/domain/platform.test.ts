@@ -31,6 +31,7 @@ const VALUES: PlatformSettingsValues = {
   passwordRequireMixedCase: false,
   passwordRequireSymbol: false,
   platformName: 'KAMBAN',
+  panoramaEnabled: true,
 }
 
 describe('domain/platform', () => {

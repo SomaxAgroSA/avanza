@@ -74,3 +74,23 @@ describe('Command palette — tarefas', () => {
     expect(await screen.findByRole('option', { name: /SB-3 · Filtro por período/ })).toBeInTheDocument()
   })
 })
+
+describe('Command palette — Panorama desligado (§26.2)', () => {
+  function open(panoramaEnabled: boolean) {
+    const repositories = fakeRepositories({ auth: { me: async () => makeCurrentUser(['executive.view', 'projects.view'], 'ADMIN', { panoramaEnabled }) } })
+    renderRoutes([{ path: '/', element: <CommandPalette /> }], { repositories, initialPath: '/' })
+    act(() => useUiStore.getState().setCommandPaletteOpen(true))
+  }
+
+  it('ligado, oferece o Panorama a quem tem executive.view', async () => {
+    open(true)
+    expect(await screen.findByRole('option', { name: /^Panorama$/ })).toBeInTheDocument()
+  })
+
+  it('desligado, não oferece o Panorama (nem com a permissão); o resto do menu continua', async () => {
+    open(false)
+    // a sessão já chegou (o menu dela aparece), sem o Panorama
+    expect(await screen.findByRole('option', { name: /^Projetos$/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /^Panorama$/ })).not.toBeInTheDocument()
+  })
+})

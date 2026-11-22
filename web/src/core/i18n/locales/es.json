@@ -137,7 +137,8 @@
     "already_linked": "La tarea ya está en la Gestión",
     "not_in_team": "Elige a alguien del equipo del responsable",
     "same_assignee": "Elige a otra persona",
-    "demand_flow": "En la demanda, esto cambia por el flujo (Asignar, Empezar, Concluir…)"
+    "demand_flow": "En la demanda, esto cambia por el flujo (Asignar, Empezar, Concluir…)",
+    "panorama_disabled": "El Panorama está desactivado: elige otra página."
   },
   "errors": {
     "VALIDATION_ERROR": "Revise los campos destacados.",
@@ -244,7 +245,8 @@
     "ICON_NOT_FOUND": "Este ícono no está en la biblioteca.",
     "CHARTER_ITEM_NOT_FOUND": "Ítem de la ficha no encontrado.",
     "PROJECT_HAS_DOCS": "Este proyecto tiene documentación: elige si moverla, dejarla como espacio general o eliminarla.",
-    "DEMAND_STATE_CONFLICT": "Esta acción no está disponible en el paso actual de la demanda. Actualiza la página."
+    "DEMAND_STATE_CONFLICT": "Esta acción no está disponible en el paso actual de la demanda. Actualiza la página.",
+    "PANORAMA_DISABLED": "El Panorama está desactivado en Configuración → General."
   },
   "nav": {
     "main": "Navegación principal",
@@ -3716,6 +3718,12 @@
       "uploaded": "Imagen enviada.",
       "removed": "Imagen eliminada; volvió la marca predeterminada.",
       "remove": "Quitar"
+    },
+    "panorama": {
+      "title": "Panorama",
+      "toggle": "Panorama activo",
+      "on": "Visible en el menú para los perfiles que tienen permiso.",
+      "off": "Oculto para todos. Quien lo tenía como página de inicio entra a Tareas."
     },
     "password": {
       "title": "Contraseñas",

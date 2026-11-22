@@ -200,12 +200,14 @@ function HomePageSelect({ user, role }: { user: User; role: Role | undefined }) 
   const update = useUpdateUser()
   const canEdit = useCan('users.edit')
   const perms: PermissionCode[] = role?.code === SUPER_ADMIN_ROLE ? [...PERMISSION_CODES] : (role?.permissions ?? [])
-  const options = homePageOptions(perms)
+  // Panorama desligado na plataforma (§26.2): não é oferecido; quem já o tinha aparece na automática
+  const platform = useSession().current?.platform
+  const options = homePageOptions(perms, platform)
   const labelOf = (path: string) => {
     const option = options.find((o) => o.path === path) ?? homePageOptions([...PERMISSION_CODES]).find((o) => o.path === path)
     return option ? option.labelKeys.map((key) => t(key)).join(' › ') : path
   }
-  const auto = t('access.homePageAuto', { page: labelOf(automaticHomePath(perms)) })
+  const auto = t('access.homePageAuto', { page: labelOf(automaticHomePath(perms, platform)) })
   const current = options.some((o) => o.path === user.homePage) ? user.homePage : AUTO_HOME
   return (
     <AppSelect
@@ -220,7 +222,11 @@ function HomePageSelect({ user, role }: { user: User; role: Role | undefined }) 
           { id: user.id, data: { homePage } },
           {
             onSuccess: () => notify.success(t('access.homePageSaved', { name: user.name, page: homePage ? labelOf(homePage) : auto })),
-            onError: (error) => notify.error(errorMessage(error)),
+            onError: (error) => {
+              // ex.: o Panorama foi desligado depois que a tela abriu (§26.2)
+              const field = isAppError(error) ? error.fieldErrors().home_page : undefined
+              notify.error(field ? t(`validation.${field}`, { defaultValue: errorMessage(error) }) : errorMessage(error))
+            },
           },
         )
       }}
