@@ -36,7 +36,9 @@ import { scrollToTable } from './panorama-scroll'
 export function TrackingEntry() {
   const { current } = useSession()
   const canView = useCan('executive.view')
-  if (current && !current.platform.panoramaEnabled) return <PanoramaOff />
+  // sem a sessão ainda não dá para decidir (no app, RequireAuth já espera por ela)
+  if (!current) return null
+  if (!current.platform.panoramaEnabled) return <PanoramaOff />
   return canView ? <TrackingPage /> : <Navigate to="/reports" replace />
 }
 
