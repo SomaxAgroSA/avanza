@@ -1846,6 +1846,7 @@
     "viewLabel": "View",
     "viewList": "List",
     "viewDemands": "Inbox",
+    "viewDemandsShort": "Inbox",
     "openStatuses": "Open"
   },
   "tags": {
@@ -2938,6 +2939,52 @@
       "fieldHint": "Organizes the space on the Documentation home.",
       "createdOn": "Created on {{date}}",
       "backToAll": "All documentation"
+    },
+    "export": {
+      "button": "Export PDF",
+      "moduleButton": "Export module",
+      "moduleButtonLabel": "Export the {{name}} module as PDF",
+      "title": "Export PDF",
+      "scopeLabel": "What to export",
+      "scope": {
+        "page": "This page",
+        "branch": "This page and its subpages",
+        "space": "Full documentation",
+        "module": "The whole {{name}} module"
+      },
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "spacePages_one": "The only page of {{space}}",
+      "spacePages_other": "All {{count}} pages of {{space}}",
+      "moduleSummary": "{{spaces}} · {{pages}}",
+      "cover": "Cover and contents",
+      "annex": "Include appendices",
+      "sheets_one": "≈ {{count}} A4 sheet",
+      "sheets_other": "≈ {{count}} A4 sheets",
+      "withCover": "{{pages}} + cover and contents",
+      "preview": "View and print",
+      "back": "Back",
+      "change": "Change selection",
+      "print": "Print or save PDF",
+      "summaryCover": "{{pages}} · with cover and contents",
+      "kindDocs": "Documentation",
+      "kindModule": "{{name}} module",
+      "kindSpace": "Space",
+      "brand": "{{name}} · Somax",
+      "fields": {
+        "module": "Module",
+        "project": "Project",
+        "spaces": "Spaces",
+        "content": "Contents",
+        "exported": "Exported"
+      },
+      "contentValue": "{{pages}} · published version of each",
+      "exportedValue": "{{date}} by {{name}}",
+      "index": "Contents",
+      "versionLine": "Version {{version}} · {{date}}",
+      "pageMeta": "Version {{version}} · published on {{date}} by {{name}}",
+      "pageMetaAnonymous": "Version {{version}} · published on {{date}}",
+      "empty": "Nothing published to export"
     }
   },
   "plan": {

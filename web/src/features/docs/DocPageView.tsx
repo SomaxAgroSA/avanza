@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { FilePlus2, FileText, FolderInput, History, Link2, MoreHorizontal, PenLine, Pencil, Trash2 } from 'lucide-react'
+import { FilePlus2, FileText, FolderInput, History, Link2, MoreHorizontal, PenLine, Pencil, Printer, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { docOutline, MAX_DOC_DEPTH, type DocPage, type DocSpaceDetail, type DocTreePage } from '@/domain/docs'
@@ -12,6 +12,7 @@ import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { editPath, pagePath } from './docs-paths'
 import { DraftBadge } from './docs-visuals'
 import { PageTasksBar } from './doc-links'
+import { ExportPdfDialog } from './export/ExportPdfDialog'
 import { useDocPage } from './queries'
 import { VersionsDrawer } from './VersionsDrawer'
 
@@ -50,7 +51,10 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
   const navigate = useNavigate()
   const contentRef = useRef<HTMLDivElement>(null)
   const [versionsOpen, setVersionsOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
   useDocumentTitle(page.title)
+  // só o publicado sai no PDF: a página nunca publicada não tem o que exportar
+  const canExport = page.version > 0
   const outline = useMemo(() => docOutline(page.content), [page.content])
   const treePage = detail.pages.find((p) => p.id === page.id)
   const depth = page.ancestors.length + 1
@@ -62,6 +66,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
     ...(canEdit && depth < MAX_DOC_DEPTH ? [{ key: 'child', label: t('docs.page.addChild'), icon: <FilePlus2 />, onSelect: () => onCreateChild(page.id) }] : []),
     { key: 'link', label: t('docs.page.copyLink'), icon: <Link2 />, onSelect: copyLink },
     ...(page.version > 0 ? [{ key: 'versions', label: t('docs.versions.title'), icon: <History />, onSelect: () => setVersionsOpen(true) }] : []),
+    ...(canExport ? [{ key: 'export', label: t('docs.export.button'), icon: <Printer />, onSelect: () => setExporting(true) }] : []),
     ...(canEdit && treePage && !page.isHome
       ? [
           { key: 'move', label: t('docs.page.move'), icon: <FolderInput />, onSelect: () => onRequestMove(treePage) },
@@ -112,6 +117,11 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
           {page.version > 0 && (
             <AppButton variant="secondary" leftIcon={<History />} onClick={() => setVersionsOpen(true)} className="max-sm:hidden">
               {t('docs.versions.short')}
+            </AppButton>
+          )}
+          {canExport && (
+            <AppButton variant="secondary" leftIcon={<Printer />} onClick={() => setExporting(true)} className="max-sm:hidden">
+              {t('docs.export.button')}
             </AppButton>
           )}
           <AppDropdown trigger={<AppIconButton variant="secondary" label={t('common.more')} icon={<MoreHorizontal />} />} items={moreItems} />
@@ -189,6 +199,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
       </div>
 
       {page.version > 0 && <VersionsDrawer page={page} open={versionsOpen} onOpenChange={setVersionsOpen} />}
+      <ExportPdfDialog origin={exporting ? { kind: 'page', spaceKey: page.space.key, pageId: page.id } : null} onOpenChange={setExporting} />
     </article>
   )
 }

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Check, Clock, FileText, MoreHorizontal, Plus, SearchX } from 'lucide-react'
+import { BookOpen, Check, Clock, FileText, MoreHorizontal, Plus, Printer, SearchX } from 'lucide-react'
 import { formatRelative } from '@/core/utils/format'
 import { countSpacesByModule, groupSpacesByModule, orderedModules, resolveModuleFilter, type DocModule, type DocSpace, type DocSpaceGroup, type ModuleFilter } from '@/domain/docs'
+import type { ExportOrigin } from '@/domain/doc-export'
 import { AppButton, AppDropdown, AppEmptyState, AppErrorState, AppSearch, AppSkeleton, notify, type AppDropdownItem } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
@@ -11,6 +12,7 @@ import { useCan } from '@/features/auth/session'
 import { optionColor } from '@/features/task-config/config-theme'
 import { pagePath } from './docs-paths'
 import { Highlighted, ModuleSwatch, SpaceAvatar, SpaceVisibilityBadge } from './docs-visuals'
+import { ExportPdfDialog } from './export/ExportPdfDialog'
 import { ModuleList } from './ModuleList'
 import { useDocModules, useDocRecent, useDocSearch, useDocSpaces, useSpaceMutations } from './queries'
 import { SpaceFormDialog } from './SpaceFormDialog'
@@ -69,6 +71,8 @@ function Overview({ canManage, onCreate, modules, modulesPending, filter, onSele
   const spaces = useDocSpaces()
   const list = spaces.data ?? []
   const groups = groupSpacesByModule(list, modules, filter)
+  // exportar em PDF: o módulo inteiro (título do grupo) ou um espaço (⋯ do cartão)
+  const [exporting, setExporting] = useState<ExportOrigin | null>(null)
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
       <ModuleList modules={modules} counts={countSpacesByModule(list, modules)} selected={filter} onSelect={onSelectModule} canManage={canManage} />
@@ -101,22 +105,25 @@ function Overview({ canManage, onCreate, modules, modulesPending, filter, onSele
           ) : (
             <div className="space-y-7">
               {groups.map((group) => (
-                <SpaceGroup key={group.module?.id ?? 'none'} group={group} modules={modules} canManage={canManage} />
+                <SpaceGroup key={group.module?.id ?? 'none'} group={group} modules={modules} onExport={setExporting} />
               ))}
             </div>
           )}
         </section>
         <RecentPages />
       </div>
+      <ExportPdfDialog origin={exporting} onOpenChange={(open) => !open && setExporting(null)} />
     </div>
   )
 }
 
-/** Um módulo (ou "Sem módulo"): faixa da cor, nome, quantidade e os cartões. */
-function SpaceGroup({ group, modules, canManage }: { group: DocSpaceGroup; modules: DocModule[]; canManage: boolean }) {
+/** Um módulo (ou "Sem módulo"): faixa da cor, nome, quantidade, "Exportar módulo" e os cartões. */
+function SpaceGroup({ group, modules, onExport }: { group: DocSpaceGroup; modules: DocModule[]; onExport: (origin: ExportOrigin) => void }) {
   const { t } = useTranslation()
+  const canManage = useCan('docs.manage')
   const name = group.module ? group.module.name : t('docs.modules.none')
   const headingId = `docs-group-${group.module?.id ?? 'none'}`
+  const exportable = !!group.module && group.spaces.length > 0
   return (
     <section aria-labelledby={headingId}>
       <div className="mb-3 flex items-center gap-2.5">
@@ -125,6 +132,18 @@ function SpaceGroup({ group, modules, canManage }: { group: DocSpaceGroup; modul
           {name}
         </h3>
         <span className="shrink-0 text-xs text-subtle">{t('docs.modules.spaces', { count: group.spaces.length })}</span>
+        {exportable && group.module && (
+          <AppButton
+            variant="ghost"
+            size="sm"
+            leftIcon={<Printer />}
+            className="ml-auto"
+            aria-label={t('docs.export.moduleButtonLabel', { name: group.module.name })}
+            onClick={() => onExport({ kind: 'module', moduleId: group.module!.id })}
+          >
+            {t('docs.export.moduleButton')}
+          </AppButton>
+        )}
       </div>
       {group.spaces.length === 0 ? (
         <p className="text-sm text-muted">{canManage ? t('docs.modules.emptyModule') : t('docs.modules.emptyModuleReader')}</p>
@@ -132,8 +151,8 @@ function SpaceGroup({ group, modules, canManage }: { group: DocSpaceGroup; modul
         <ul className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))]">
           {group.spaces.map((space) => (
             <li key={space.id} className="relative">
-              <SpaceCard space={space} withMenu={space.capabilities.manage && modules.length > 0} />
-              {space.capabilities.manage && modules.length > 0 && <SpaceMenu space={space} modules={modules} />}
+              <SpaceCard space={space} withMenu />
+              <SpaceMenu space={space} modules={space.capabilities.manage ? modules : []} onExport={() => onExport({ kind: 'space', spaceKey: space.key })} />
             </li>
           ))}
         </ul>
@@ -173,8 +192,8 @@ function SpaceCard({ space, withMenu }: { space: DocSpace; withMenu: boolean }) 
   )
 }
 
-/** "⋯" do cartão (quem configura o espaço): mover para outro módulo ou para "Sem módulo". */
-function SpaceMenu({ space, modules }: { space: DocSpace; modules: DocModule[] }) {
+/** "⋯" do cartão: "Exportar PDF" (quem lê) e, para quem configura o espaço, mover para outro módulo ou para "Sem módulo". */
+function SpaceMenu({ space, modules, onExport }: { space: DocSpace; modules: DocModule[]; onExport: () => void }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const { update } = useSpaceMutations()
@@ -212,10 +231,16 @@ function SpaceMenu({ space, modules }: { space: DocSpace; modules: DocModule[] }
         </button>
       }
       items={[
-        { type: 'label', key: 'title', label: t('docs.modules.moveTo') },
-        ...orderedModules(modules).map((m) => option(m.id, m.name, m.color, m)),
-        { type: 'separator', key: 's' },
-        option('none', t('docs.modules.none'), null, null),
+        { key: 'export', label: t('docs.export.button'), icon: <Printer />, onSelect: onExport },
+        ...(modules.length > 0
+          ? [
+              { type: 'separator' as const, key: 'export-separator' },
+              { type: 'label' as const, key: 'title', label: t('docs.modules.moveTo') },
+              ...orderedModules(modules).map((m) => option(m.id, m.name, m.color, m)),
+              { type: 'separator' as const, key: 's' },
+              option('none', t('docs.modules.none'), null, null),
+            ]
+          : []),
       ]}
     />
   )

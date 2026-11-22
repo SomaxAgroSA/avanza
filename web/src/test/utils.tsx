@@ -378,6 +378,7 @@ export function fakeRepositories(overrides: {
       createModule: notImplemented,
       updateModule: notImplemented,
       deleteModule: notImplemented,
+      exportDocs: notImplemented,
       ...overrides.docs,
     },
     reports: {

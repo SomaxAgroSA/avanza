@@ -11,6 +11,7 @@ import type { ForkInput, LinkOption, TaskRelation, TaskRelations } from './relat
 import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { ExecutiveDashboard, ExecutiveQuery } from './executive'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
+import type { DocExport, DocExportTarget } from './doc-export'
 import type { DocDraft, DocFile, DocModule, DocModuleInput, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
@@ -628,6 +629,8 @@ export interface DocsRepository {
   updateModule(id: string, input: DocModuleInput): Promise<DocModule>
   /** Os espaços do módulo ficam "Sem módulo"; devolve quantos. */
   deleteModule(id: string): Promise<number>
+  /** Exportar em PDF (§43): páginas publicadas de um espaço ou de um módulo, na ordem de leitura. */
+  exportDocs(target: DocExportTarget): Promise<DocExport>
 }
 
 /** Relacionamentos, subtarefas e fork. */

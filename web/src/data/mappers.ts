@@ -22,9 +22,10 @@ import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
 import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
-import type { BacklogDto, BoardDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
+import type { BacklogDto, BoardDto, DocExportDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
 import { SPACE_ICONS, SPACE_VISIBILITIES, type DocModule, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
+import type { DocExport } from '@/domain/doc-export'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
 import type { Board } from '@/domain/kanban'
@@ -509,6 +510,36 @@ export function toTaskDocLink(dto: TaskDocLinkDto): TaskDocLink {
     updatedAt: toDate(dto.updated_at),
     linkedAt: toDate(dto.linked_at),
     canUnlink: !!dto.capabilities?.unlink,
+  }
+}
+
+/** Exportar em PDF (§43): o conteúdo publicado de cada página, com versão, autor e palavras. */
+export function toDocExport(dto: DocExportDto): DocExport {
+  const moduleRef = (m: DocExportDto['module']) => (m ? { id: m.id, name: m.name, color: toColor(OPTION_COLORS, m.color, 'blue') } : null)
+  return {
+    module: moduleRef(dto.module),
+    spaces: (dto.spaces ?? []).map((space) => ({
+      id: space.id,
+      key: space.key,
+      name: space.name,
+      description: space.description ?? '',
+      icon: toIcon(SPACE_ICONS, space.icon, 'book'),
+      color: toColor(OPTION_COLORS, space.color, 'blue'),
+      module: moduleRef(space.module),
+      project: space.project,
+      homePageId: space.home_page_id,
+      pages: (space.pages ?? []).map((page) => ({
+        id: page.id,
+        parentId: page.parent_id,
+        depth: page.depth ?? 1,
+        title: page.title,
+        version: page.version ?? 0,
+        publishedAt: toDate(page.published_at),
+        publishedBy: page.published_by ? toUserSummary(page.published_by) : null,
+        words: page.words ?? 0,
+        content: (page.content as RichContent) ?? { type: 'doc', content: [] },
+      })),
+    })),
   }
 }
 

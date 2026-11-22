@@ -418,6 +418,33 @@ export interface TaskDocLinkDto {
   capabilities?: { unlink?: boolean }
 }
 
+/** GET /docs/export (§43): páginas publicadas de um espaço ou de um módulo, na ordem de leitura. */
+export interface DocExportDto {
+  module: { id: string; name: string; color: string } | null
+  spaces: Array<{
+    id: string
+    key: string
+    name: string
+    description?: string
+    icon?: string
+    color?: string
+    module: { id: string; name: string; color: string } | null
+    project: { id: string; key: string; name: string } | null
+    home_page_id: string | null
+    pages: Array<{
+      id: string
+      parent_id: string | null
+      depth: number
+      title: string
+      version: number
+      published_at: string | null
+      published_by: UserSummaryDto | null
+      words: number
+      content: unknown
+    }>
+  }>
+}
+
 export interface DocPageDto {
   id: string
   space: { id: string; key: string; name: string }
