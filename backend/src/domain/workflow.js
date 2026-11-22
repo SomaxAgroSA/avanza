@@ -20,10 +20,12 @@ const LOOKUP_KINDS = Object.freeze({
     hasCategory: true,
     errors: { notFound: 'STATUS_NOT_FOUND', keyInUse: 'STATUS_KEY_IN_USE', inUse: 'STATUS_IN_USE', isDefault: 'STATUS_IS_DEFAULT' },
   },
+  // nome por idioma (como os tipos de tarefa): `name` é o original (pt-BR) e `translations` traz en/es
   priority: {
     entityType: 'priority',
     repository: 'priorityRepository',
     hasCategory: false,
+    translatable: true,
     errors: { notFound: 'PRIORITY_NOT_FOUND', keyInUse: 'PRIORITY_KEY_IN_USE', inUse: 'PRIORITY_IN_USE', isDefault: 'PRIORITY_IS_DEFAULT' },
   },
   // em uso = por tarefas ou por projetos (`countProjects` no repositório); sem padrão, `isDefault` nunca ocorre

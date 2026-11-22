@@ -204,6 +204,34 @@ describe('API /api/v1/task-types e /custom-fields', { timeout: 120000 }, () => {
     assert.equal((await admin.get(`/tasks/${task.id}`)).body.data.type.name, 'Suporte')
   })
 
+  it('prioridades com nome por idioma: padrões traduzidos pela chave (0033), Accept-Language, edição pela rota e na tarefa', async () => {
+    const lang = (value) => ({ headers: { 'Accept-Language': value } })
+    const names = (list) => list.map((p) => p.name)
+    const pt = (await admin.get('/priorities')).body.data
+    assert.deepEqual(names(pt), ['Crítica', 'Alta', 'Média', 'Baixa'])
+    assert.deepEqual(names((await admin.get('/priorities', lang('es-PY,es;q=0.9'))).body.data), ['Crítica', 'Alta', 'Media', 'Baja'])
+    assert.deepEqual(names((await admin.get('/priorities', lang('en'))).body.data), ['Critical', 'High', 'Medium', 'Low'])
+    const media = pt.find((p) => p.key === 'MEDIA')
+    assert.deepEqual(media.translations, { 'pt-BR': { name: 'Média' }, en: { name: 'Medium' }, es: { name: 'Media' } })
+
+    // a tradução passa pela rota inteira (criar e editar) e o original não muda
+    const created = await admin.post('/priorities', { key: 'URGENTE', name: 'Urgente', color: 'red', translations: { en: { name: 'Urgent' } } })
+    assert.equal(created.status, 201, JSON.stringify(created.body))
+    assert.equal((await admin.get(`/priorities/${created.body.data.id}`, lang('en'))).body.data.name, 'Urgent')
+    const saved = await admin.patch(`/priorities/${media.id}`, { translations: { es: { name: 'Mediana' }, en: { name: 'Medium' } } })
+    assert.equal(saved.status, 200, JSON.stringify(saved.body))
+    assert.equal(saved.body.data.translations['pt-BR'].name, 'Média')
+    assert.equal((await admin.patch(`/priorities/${media.id}`, { translations: { fr: { name: 'Moyenne' } } })).body.error.details.fields.translations, 'invalid_locale')
+
+    // a prioridade da tarefa também sai no idioma pedido
+    const project = (await admin.post('/projects', { name: 'Prioridades', key: 'PRI' })).body.data
+    const type = (await admin.get('/task-types')).body.data[0]
+    const task = (await admin.post('/tasks', { project_id: project.id, task_type_id: type.id, title: 'Revisar contrato', priority_id: media.id })).body.data
+    assert.equal((await admin.get(`/tasks/${task.id}`, lang('es'))).body.data.priority.name, 'Mediana')
+    assert.equal((await admin.get(`/tasks/${task.id}`)).body.data.priority.name, 'Média')
+    await admin.patch(`/priorities/${media.id}`, { translations: { es: { name: 'Media' }, en: { name: 'Medium' } } })
+  })
+
   it('opção adicionada pela tarefa: só com a configuração ligada, sem duplicar e com histórico', async () => {
     const field = (
       await admin.post('/custom-fields', { label: 'Sistema afetado', type: 'multiselect', options: [{ label: 'ERP', color: 'blue' }] })

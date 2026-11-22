@@ -203,6 +203,7 @@ const ROUTES = [
   ['DELETE', '/api/v1/plan/columns/:id', 'deletePlanColumn'],
   ['GET', '/api/v1/docs/search', 'searchDocs'],
   ['GET', '/api/v1/docs/recent', 'recentDocs'],
+  ['GET', '/api/v1/docs/export', 'exportDocs'],
   ['GET', '/api/v1/docs/modules', 'listDocModules'],
   ['POST', '/api/v1/docs/modules', 'createDocModule', JSON_LIMIT],
   ['PATCH', '/api/v1/docs/modules/:id', 'updateDocModule', JSON_LIMIT],

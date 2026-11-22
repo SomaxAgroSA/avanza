@@ -494,7 +494,8 @@ function createTaskService(deps) {
       // nome do tipo no idioma da requisição (o histórico guarda o original)
       type: type ? { id: type.id, key: type.key, name: contentLocale.localize(type, deps.locale, ['name']).name, icon: type.icon || 'check-square', color: type.color || 'blue' } : null,
       status: status ? { id: status.id, key: status.key, name: status.name, color: status.color, category: status.category } : null,
-      priority: priority ? { id: priority.id, key: priority.key, name: priority.name, color: priority.color } : null,
+      // nome da prioridade no idioma da requisição (o histórico guarda o original)
+      priority: priority ? { id: priority.id, key: priority.key, name: contentLocale.localize(priority, deps.locale, ['name']).name, color: priority.color } : null,
       sprint: sprint ? { id: sprint.id, name: sprint.name, state: sprint.state } : null,
       // a Gestão de projetos fica fechada para o Responsável TI
       plan_item: !scoped && task.planItemId && refs.planItems[task.planItemId] ? { id: task.planItemId, name: refs.planItems[task.planItemId].name } : null,

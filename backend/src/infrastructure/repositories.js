@@ -44,7 +44,7 @@ function createRepositories(db, ctx) {
     taskTypeRepository: taskConfig.createTaskTypeRepository(db, ctx),
     taskTypeFieldRepository: taskConfig.createTaskTypeFieldRepository(db, ctx),
     statusRepository: taskConfig.createLookupRepository(db, ctx, 'task_statuses', { hasCategory: true, taskColumn: 'status_id' }),
-    priorityRepository: taskConfig.createLookupRepository(db, ctx, 'task_priorities', { hasCategory: false, taskColumn: 'priority_id' }),
+    priorityRepository: taskConfig.createLookupRepository(db, ctx, 'task_priorities', { hasCategory: false, taskColumn: 'priority_id', translatable: true }),
     areaRepository: taskConfig.createLookupRepository(db, ctx, 'areas', { hasCategory: false, taskColumn: 'area_id', projectColumn: 'area_id' }),
     tagRepository: taskConfig.createTagRepository(db, ctx),
     companyRepository: taskConfig.createCompanyRepository(db, ctx),
