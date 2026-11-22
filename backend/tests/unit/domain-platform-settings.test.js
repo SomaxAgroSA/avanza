@@ -213,3 +213,44 @@ describe('domain/platform-settings — Dependências por área (§42)', () => {
     assert.deepEqual(twins.areas.map((a) => a.key), ['ti', 'ventas', 'ventas-2'])
   })
 })
+
+describe('domain/platform-settings — nomes das colunas para todos (§44)', () => {
+  it('sem nada salvo, nenhum nome; guardados inválidos são ignorados', () => {
+    assert.deepEqual(settings.normalizeSettings(null).table_column_labels, {})
+    assert.deepEqual(settings.normalizeSettings({ table_column_labels: 'x' }).table_column_labels, {})
+    const loaded = settings.normalizeSettings({ table_column_labels: { users: { name: 'Pessoa' }, projects: { lead: 'Dono' } } })
+    assert.deepEqual(loaded.table_column_labels, { projects: { lead: 'Dono' }, users: { name: 'Pessoa' } })
+  })
+
+  it('valida os nomes de uma tabela: texto até 40 (sem espaços nas pontas), vazio sai, ids seguros', () => {
+    assert.equal(settings.COLUMN_LABEL_MAX, 40)
+    const ok = settings.validateTableColumnLabels('users', { name: '  Pessoa  ', role: '', email: 'E-mail corporativo' })
+    assert.deepEqual(ok, { tableId: 'users', labels: { email: 'E-mail corporativo', name: 'Pessoa' }, fields: {} })
+    assert.deepEqual(settings.validateTableColumnLabels('users', { name: 'x'.repeat(41) }).fields, { labels: 'too_long' })
+    assert.deepEqual(settings.validateTableColumnLabels('users', { name: 12 }).fields, { labels: 'invalid_type' })
+    assert.deepEqual(settings.validateTableColumnLabels('users', ['Nome']).fields, { labels: 'invalid_type' })
+    assert.deepEqual(settings.validateTableColumnLabels('users', { 'nome com espaço': 'X' }).fields, { labels: 'invalid_format' })
+    assert.deepEqual(settings.validateTableColumnLabels('users', { __proto__x: 'X', ['a'.repeat(65)]: 'Y' }).fields, { labels: 'invalid_format' })
+    assert.deepEqual(settings.validateTableColumnLabels('', {}).fields, { table_id: 'required' })
+    assert.deepEqual(settings.validateTableColumnLabels('../users', {}).fields, { table_id: 'invalid_format' })
+    assert.deepEqual(settings.validateTableColumnLabels(undefined, {}).fields, { table_id: 'required' })
+    const many = Object.fromEntries(Array.from({ length: settings.COLUMN_LABELS_PER_TABLE_MAX + 1 }, (_, i) => [`c${i}`, 'X']))
+    assert.deepEqual(settings.validateTableColumnLabels('users', many).fields, { labels: 'too_many' })
+  })
+
+  it('a tabela troca os seus nomes; sem nenhum, sai do mapa; o resto fica como estava', () => {
+    const current = { table_column_labels: { users: { name: 'Pessoa' }, roles: { name: 'Perfil' } } }
+    const changed = settings.withTableColumnLabels(current, 'users', { email: 'Correio' })
+    assert.deepEqual(changed.table_column_labels, { roles: { name: 'Perfil' }, users: { email: 'Correio' } })
+    assert.deepEqual(settings.withTableColumnLabels(current, 'users', {}).table_column_labels, { roles: { name: 'Perfil' } })
+    assert.equal(settings.diffSettings(settings.normalizeSettings(current), settings.normalizeSettings(current)), null)
+    assert.deepEqual(Object.keys(settings.diffSettings(settings.normalizeSettings(current), changed).new), ['table_column_labels'])
+  })
+
+  it('no máximo 100 tabelas com nomes próprios', () => {
+    const full = { table_column_labels: Object.fromEntries(Array.from({ length: settings.COLUMN_LABEL_TABLES_MAX }, (_, i) => [`t${i}`, { a: 'X' }])) }
+    assert.equal(Object.keys(settings.normalizeSettings(full).table_column_labels).length, settings.COLUMN_LABEL_TABLES_MAX)
+    assert.equal(settings.withTableColumnLabels(full, 'nova', { a: 'X' }), null)
+    assert.ok(settings.withTableColumnLabels(full, 't1', { a: 'Y' }))
+  })
+})

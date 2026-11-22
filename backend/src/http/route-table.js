@@ -243,6 +243,8 @@ const ROUTES = [
   ['POST', '/api/v1/settings/platform/branding/:slot', 'uploadPlatformBranding', 2 * MB],
   ['DELETE', '/api/v1/settings/platform/branding/:slot', 'removePlatformBranding'],
   ['POST', '/api/v1/settings/platform/purge-audit', 'runAuditRetention'],
+  ['GET', '/api/v1/settings/table-column-labels', 'getTableColumnLabels'],
+  ['PATCH', '/api/v1/settings/table-column-labels', 'updateTableColumnLabels', JSON_LIMIT],
   ['GET', '/api/v1/settings/dependency-areas', 'getDependencyAreas'],
   ['PUT', '/api/v1/settings/dependency-areas', 'updateDependencyAreas', JSON_LIMIT],
   ['GET', '/api/v1/settings/it-people', 'getItPeople'],

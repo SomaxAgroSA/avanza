@@ -2,8 +2,9 @@
  * Casos de uso do Configurador geral (regras de negócio §15): configurações da plataforma (só
  * `platform.manage`), identidade pública (nome, logo e ícone — sem login), política de senha
  * (quem está logado), a limpeza diária do histórico de auditoria (rotina, sem usuário), as Dependências
- * por área (§42, `settings.manage`; as antigas Pessoas de TI viram a área TI) e o Panorama ligado ou
- * desligado para todos (§26.2, `panorama_enabled`, lido por quem está logado em `GET /auth/me`).
+ * por área (§42, `settings.manage`; as antigas Pessoas de TI viram a área TI), o Panorama ligado ou
+ * desligado para todos (§26.2, `panorama_enabled`, lido por quem está logado em `GET /auth/me`) e os nomes
+ * das colunas das tabelas para todos (§44: lê quem está logado, grava `platform.manage`).
  *
  * Porta: `platformSettingsRepository` { get() → { values, files: { slot: { name, mime, size } }, updatedAt },
  * saveValues(values), setFile(slot, data), clearFile(slot), fileKeyOf(slot) }; o histórico usa
@@ -96,8 +97,8 @@ function createPlatformSettingsService(deps) {
     const input = Object.assign({}, raw || {})
     const dryRun = input.dry_run === true
     delete input.dry_run
-    // Pessoas de TI e Dependências por área têm rotas e permissão próprias (settings.manage): aqui não entram
-    ;['it_people', 'dependency_areas'].forEach((key) => {
+    // Pessoas de TI, Dependências por área e nomes das colunas têm rotas próprias: aqui não entram
+    ;['it_people', 'dependency_areas', 'table_column_labels'].forEach((key) => {
       if (Object.prototype.hasOwnProperty.call(input, key)) throw invalid({ [key]: 'unknown_field' })
     })
     const before = await currentSettings(deps)
@@ -210,6 +211,36 @@ function createPlatformSettingsService(deps) {
   async function runRetentionNow(ctx) {
     rbac.assertCan(ctx.principal, PERMISSION)
     return await purgeAuditLogs(ctx)
+  }
+
+  // ------------------------------------------------------------------ nomes das colunas para todos (§44)
+
+  /** Nomes das colunas que valem para todos: { labels: { tabela: { coluna: nome } } } (só os nomes). */
+  async function getTableColumnLabels(ctx) {
+    rbac.assertAuthenticated(ctx.principal)
+    return { labels: (await currentSettings(deps)).table_column_labels }
+  }
+
+  /**
+   * Troca os nomes de uma tabela `{ table_id, labels: { coluna: nome } }` (nome vazio = o do sistema; nenhum =
+   * a tabela sai do mapa). Histórico `platform_settings.update` com os nomes da tabela antes e depois.
+   */
+  async function updateTableColumnLabels(ctx, raw) {
+    rbac.assertCan(ctx.principal, PERMISSION)
+    const input = raw || {}
+    const checked = settingsDomain.validateTableColumnLabels(input.table_id, input.labels === undefined ? {} : input.labels)
+    if (Object.keys(checked.fields).length > 0) throw invalid(checked.fields)
+    const before = await currentSettings(deps)
+    const after = settingsDomain.withTableColumnLabels(before, checked.tableId, checked.labels)
+    if (!after) throw invalid({ table_id: 'too_many' })
+    if (settingsDomain.diffSettings(before, after)) {
+      const of = (values) => ({ table_column_labels: { [checked.tableId]: values.table_column_labels[checked.tableId] || {} } })
+      await deps.unitOfWork.run(async (repos) => {
+        await repos.platformSettingsRepository.saveValues(after)
+        await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: ENTITY, entityId: ENTITY_ID, action: 'platform_settings.update', oldValue: of(before), newValue: of(after) }))
+      })
+    }
+    return { labels: (await currentSettings(deps)).table_column_labels }
   }
 
   // ------------------------------------------------------------------ Dependências por área (§42)
@@ -331,7 +362,7 @@ function createPlatformSettingsService(deps) {
     return presentItPeople(unique)
   }
 
-  return { getDependencyAreas, updateDependencyAreas, getItPeople, updateItPeople, runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
+  return { getTableColumnLabels, updateTableColumnLabels, getDependencyAreas, updateDependencyAreas, getItPeople, updateItPeople, runRetentionNow, getSettings, updateSettings, uploadBranding, removeBranding, publicInfo, brandingFile, passwordPolicy, purgeAuditLogs }
 }
 
 module.exports = { createPlatformSettingsService, currentSettings, currentPasswordPolicy, currentLockoutPolicy, panoramaEnabled, assertPanoramaEnabled }
