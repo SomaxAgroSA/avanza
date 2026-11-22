@@ -266,11 +266,11 @@ describe('AppDataTable — barra de filtros', () => {
     const alta = within(group).getByRole('button', { name: 'Alta' })
     expect(alta).toHaveAttribute('aria-pressed', 'false')
     expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Alta', 'Crítica'])
-    // o seletor compacto do mesmo filtro fica escondido até a barra apertar (AppToolbar < 1250px); os botões somem nessa hora
+    // o seletor compacto do mesmo filtro fica escondido até a barra apertar (AppToolbar < 1440px); os botões somem nessa hora
     const compact = screen.getByRole('combobox', { name: 'Prioridade' })
-    expect(compact.parentElement).toHaveClass('hidden', '@max-[1250px]:flex')
+    expect(compact.parentElement).toHaveClass('hidden', '@max-[1440px]:flex')
     expect(compact).toHaveTextContent(/^Prioridade: todas$/)
-    expect(group).toHaveClass('@max-[1250px]:hidden')
+    expect(group).toHaveClass('@max-[1440px]:hidden')
     await userEvent.click(alta)
     await userEvent.click(within(group).getByRole('button', { name: 'Crítica' }))
     expect(handle.api!.state.filters).toEqual({ priority: 'high,critical' })
@@ -321,7 +321,7 @@ describe('AppDataTable — barra de filtros', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Todos' }))
     expect(handle.api!.state.filters).toEqual({})
     // a linha da barra: um contêiner que mede a si mesmo e uma linha que não quebra
-    const row = compact.closest('[data-toolbar]')!
+    const row = compact.closest<HTMLElement>('[data-toolbar]')!
     expect(row).toHaveClass('flex-nowrap')
     expect(row).not.toHaveClass('flex-wrap')
     expect(row.parentElement).toHaveClass('@container')

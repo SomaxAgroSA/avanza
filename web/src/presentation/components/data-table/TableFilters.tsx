@@ -52,7 +52,7 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
           filter.label
         )
       }
-      className="w-auto"
+      className="w-auto min-w-[8.25rem]"
       triggerClassName={filterTriggerClass(active)}
     />
   )
@@ -72,7 +72,7 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
  * com mouse); ligado, verde cheio com o ✓; ao clicar, encolhe um pouco (não com movimento reduzido); com o teclado,
  * contorno verde.
  *
- * Numa barra apertada (AppToolbar com menos de 1250px) o grupo vira um seletor compacto ("Prioridade: todas"): os dois
+ * Numa barra apertada (AppToolbar com menos de 1440px) o grupo vira um seletor compacto ("Prioridade: todas"): os dois
  * ficam na página e o CSS mostra um só — nunca dois grupos de botões sem espaço para o nome.
  */
 export function FilterButtons({ filter, value, onChange }: FilterProps) {
@@ -111,7 +111,7 @@ function CompactFilterSelect({ filter, value, onChange }: FilterProps) {
           </>
         )
       }
-      className="hidden w-auto @max-[1250px]:flex"
+      className="hidden w-auto min-w-[8.25rem] @max-[1440px]:flex"
       triggerClassName={filterTriggerClass(selected.length > 0)}
     />
   )
@@ -124,7 +124,7 @@ function FilterButtonGroup({ filter, value, onChange }: FilterProps) {
     onChange(next.length ? next.join(',') : undefined)
   }
   return (
-    <div role="group" aria-label={filter.label} className="ml-1 flex shrink-0 flex-nowrap items-center gap-2 border-l border-border pl-3 @max-[1250px]:hidden">
+    <div role="group" aria-label={filter.label} className="ml-1 flex shrink-0 flex-nowrap items-center gap-2 border-l border-border pl-3 @max-[1440px]:hidden">
       <span aria-hidden className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">
         {filter.label}
       </span>

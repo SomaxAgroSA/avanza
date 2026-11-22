@@ -46,7 +46,10 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
               active: onDemands,
               label: (
                 <>
-                  {t('taskList.viewDemands')}
+                  <span className="@max-[1060px]:hidden">{t('taskList.viewDemands')}</span>
+                  <span aria-hidden className="hidden @max-[1060px]:inline">
+                    {t('taskList.viewDemandsShort')}
+                  </span>
                   {pending > 0 && (
                     <span className="rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-fg" title={t('demands.badge', { count: pending })}>
                       {pending}

@@ -45,9 +45,15 @@ export function AppFilterBar({ search, filters, actions, hasActiveFilters, activ
               aria-hidden={active ? undefined : true}
               tabIndex={active ? undefined : -1}
               aria-label={counted && active ? t('table.clearCountLabel', { count: activeFilterCount }) : undefined}
+              title={active ? (counted ? t('table.clearCountLabel', { count: activeFilterCount }) : t('table.clearFilters')) : undefined}
               className={cn('px-2.5 font-semibold text-primary-text hover:bg-primary-soft hover:text-primary-text', !active && 'invisible')}
             >
-              {counted ? t('table.clearCount', { count: activeFilterCount }) : t('table.clearFilters')}
+              <span className="@max-[960px]:hidden">{counted ? t('table.clearCount', { count: activeFilterCount }) : t('table.clearFilters')}</span>
+              {counted && (
+                <span aria-hidden className="hidden tabular-nums @max-[960px]:inline">
+                  {activeFilterCount}
+                </span>
+              )}
             </AppButton>
           )}
           {actions}

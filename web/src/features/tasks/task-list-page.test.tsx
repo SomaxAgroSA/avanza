@@ -166,7 +166,7 @@ describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
     expect(within(row).getByRole('button', { name: 'Tarefa de projeto' })).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: 'Demanda interna' })).toBeInTheDocument()
     expect(within(row).queryByRole('button', { name: 'Colunas e ações' })).not.toBeInTheDocument()
-    const filters = screen.getByRole('searchbox').closest('[data-toolbar]')!
+    const filters = screen.getByRole('searchbox').closest<HTMLElement>('[data-toolbar]')!
     expect(filters).toHaveClass('flex-nowrap')
     expect(await within(filters).findByRole('button', { name: 'Colunas e ações' })).toBeInTheDocument()
     expect(within(filters).getByRole('combobox', { name: 'Status' })).toBeInTheDocument()

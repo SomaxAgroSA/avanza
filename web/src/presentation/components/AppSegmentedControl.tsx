@@ -18,7 +18,7 @@ export interface AppSegmentedControlProps<V extends string = string> {
   className?: string
 }
 
-const SIZES = { sm: 'h-7 px-2.5 text-xs', md: 'h-8 px-3 text-sm' }
+const SIZES = { sm: 'h-7 px-2.5 text-xs', md: 'h-8 px-3 text-sm @max-[960px]:px-2' }
 
 /**
  * Controle segmentado: poucas opções exclusivas lado a lado (ex.: período de um painel). Segue o
