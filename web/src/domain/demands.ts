@@ -60,6 +60,11 @@ export interface TeamLoad {
 export interface DemandOverview {
   /** `all` só vem preenchido para quem tem `projects.view_all` (para os demais, zeros). */
   counts: DemandCounts
+  /**
+   * Selo da aba Caixa de entrada e do menu Tarefas: o que espera por quem consulta (recebidas sem
+   * atribuir + atribuídas a ela não concluídas + pedidas por ela para validar) — o servidor calcula.
+   */
+  pending: number
   /** Carga da equipe: atribuídas e em andamento de cada pessoa, com as horas estimadas. */
   team: TeamLoad[]
   /** Carga das equipes (caixa Todas): todas as pessoas com demandas abertas; vazia sem `projects.view_all`. */

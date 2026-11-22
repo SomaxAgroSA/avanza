@@ -209,6 +209,8 @@ export interface DemandDto {
 export interface DemandOverviewDto {
   /** `all` só para quem tem `projects.view_all`. */
   counts: Record<string, Record<string, number>>
+  /** Selo da Caixa de entrada (o que espera por quem consulta). */
+  pending?: number
   team: Array<{ user: UserSummaryDto; open_count: number; estimated_hours: number }>
   /** Carga das equipes (caixa Todas); só para quem tem `projects.view_all`. */
   all_team?: Array<{ user: UserSummaryDto; open_count: number; estimated_hours: number }>

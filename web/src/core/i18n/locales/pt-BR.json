@@ -1844,7 +1844,7 @@
     "kindDemand": "Sem projeto",
     "viewLabel": "Visão",
     "viewList": "Lista",
-    "viewDemands": "Demandas",
+    "viewDemands": "Caixa de entrada",
     "openStatuses": "Abertas"
   },
   "tags": {
@@ -4716,7 +4716,7 @@
     "created": "{{code}} criada e enviada para {{owner}}",
     "saved": "{{code}} salva",
     "page": {
-      "title": "Demandas",
+      "title": "Caixa de entrada",
       "tabsLabel": "Caixas de demandas",
       "kpis": "Demandas por passo",
       "truncated": "Mostrando as {{shown}} mais recentes de {{total}}. Use os filtros para ver as outras."
@@ -4755,8 +4755,8 @@
       "assignee": "Atribuída a",
       "any": "Todos"
     },
-    "badge_one": "{{count}} demanda recebida sem atribuir",
-    "badge_other": "{{count}} demandas recebidas sem atribuir",
+    "badge_one": "{{count}} pendente para você",
+    "badge_other": "{{count}} pendentes para você",
     "actions": {
       "assign": "Atribuir",
       "reassign": "Reatribuir",

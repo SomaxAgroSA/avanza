@@ -11,7 +11,8 @@ import { TaskFormDialog, type TaskKindChoice } from './TaskFormDialog'
 /**
  * Cabeçalho do módulo Tarefas (§44/§45): título (sem texto de ajuda), os dois botões pequenos "＋ Tarefa de
  * projeto" e "＋ Demanda interna" (com `tasks.create`; cada um abre só o seu formulário) e, numa linha só, as
- * visões Lista · Demandas (com o número de demandas recebidas ainda sem atribuir), os controles da visão
+ * visões Lista · Caixa de entrada (antes "Demandas", mesmo endereço `/tasks/demands`; com o número do que espera
+ * por mim: recebidas sem atribuir, atribuídas a mim abertas e pedidas por mim para validar), os controles da visão
  * (`children`: escopo e Com/Sem projeto; as caixas das Demandas) e, à direita, `end` (ex.: "Colunas e ações").
  * `?new=1` (paleta de comandos) abre o formulário de tarefa de projeto; `?new=demand`, o de demanda.
  */
@@ -24,7 +25,7 @@ export function TasksHeader({ children, end }: { children?: ReactNode; end?: Rea
   const fromUrl = params.get('new')
   const urlKind: TaskKindChoice | null = canCreate && fromUrl ? (fromUrl === 'demand' ? 'demand' : 'project') : null
   const kind = creating ?? urlKind
-  const unassigned = useDemandBadge()
+  const pending = useDemandBadge()
   const onDemands = pathname.startsWith('/tasks/demands')
 
   return (
@@ -57,9 +58,9 @@ export function TasksHeader({ children, end }: { children?: ReactNode; end?: Rea
               label: (
                 <>
                   {t('taskList.viewDemands')}
-                  {unassigned > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-fg" title={t('demands.badge', { count: unassigned })}>
-                      {unassigned}
+                  {pending > 0 && (
+                    <span className="rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-fg" title={t('demands.badge', { count: pending })}>
+                      {pending}
                     </span>
                   )}
                 </>

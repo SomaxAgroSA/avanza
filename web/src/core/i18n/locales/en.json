@@ -1844,7 +1844,7 @@
     "kindDemand": "Without project",
     "viewLabel": "View",
     "viewList": "List",
-    "viewDemands": "Requests",
+    "viewDemands": "Inbox",
     "openStatuses": "Open"
   },
   "tags": {
@@ -4716,7 +4716,7 @@
     "created": "{{code}} created and sent to {{owner}}",
     "saved": "{{code}} saved",
     "page": {
-      "title": "Requests",
+      "title": "Inbox",
       "tabsLabel": "Request boxes",
       "kpis": "Requests by step",
       "truncated": "Showing the {{shown}} most recent of {{total}}. Use the filters to see the rest."
@@ -4755,8 +4755,8 @@
       "assignee": "Assigned to",
       "any": "Everyone"
     },
-    "badge_one": "{{count}} received request unassigned",
-    "badge_other": "{{count}} received requests unassigned",
+    "badge_one": "{{count}} waiting for you",
+    "badge_other": "{{count}} waiting for you",
     "actions": {
       "assign": "Assign",
       "reassign": "Reassign",

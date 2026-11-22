@@ -29,13 +29,16 @@ export function useDemandOverview(enabled = true) {
   return useQuery({ queryKey: demandKeys.overview, queryFn: () => demands.overview(), enabled, staleTime: 60_000 })
 }
 
-/** Selo do menu Tarefas: demandas recebidas por mim ainda sem atribuir (0 = sem selo). */
+/**
+ * Selo da aba Caixa de entrada e do menu Tarefas: o que espera por mim — recebidas sem atribuir,
+ * atribuídas a mim não concluídas e pedidas por mim para validar (o servidor soma; 0 = sem selo).
+ */
 export function useDemandBadge(): number {
   const canView = useCan('tasks.view')
   const canList = useCan('tasks.list')
   const allowed = canView && canList
   const overview = useDemandOverview(allowed)
-  return allowed ? (overview.data?.counts.received.unassigned ?? 0) : 0
+  return allowed ? (overview.data?.pending ?? 0) : 0
 }
 
 /** Responsáveis possíveis no formulário de demanda (pessoas ativas). */
