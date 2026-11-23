@@ -563,6 +563,20 @@
       "hint": "Gestão: a lista de sempre. Direção e gerência: painel de consulta (indicadores, linha do tempo, equipe e tabela) sem ações de editar. Para bloquear a edição em todo o Avanza, desligue as permissões de edição deste perfil.",
       "inherited": "Visão de Em andamento: {{view}} (muda no perfil)",
       "both": "Ambas (escolhe na tela)"
+    },
+    "tasks": {
+      "title": "Tarefas",
+      "start": "Ao entrar em Tarefas abre",
+      "startInboxAll": "Caixa de entrada · Todas",
+      "startInbox": "Caixa de entrada · Recebidas",
+      "startList": "Lista",
+      "list": "Lista de tarefas",
+      "listAll": "Todas as que pode ver",
+      "listMine": "Só as suas tarefas",
+      "listHidden": "Oculta",
+      "allBox": "Caixa “Todas” da Caixa de entrada",
+      "allBoxShown": "Visível",
+      "allBoxHidden": "Oculta"
     }
   },
   "permissions": {

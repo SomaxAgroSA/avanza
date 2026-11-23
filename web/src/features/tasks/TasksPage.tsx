@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Navigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { readJson, writeJson } from '@/core/storage/safe-storage'
 import { initialTaskScope, scopeCountFilters, type TaskKind, type TaskScope } from '@/domain/tasks'
@@ -9,6 +9,7 @@ import { useCan, useSession } from '@/features/auth/session'
 import { useTasksList } from './queries'
 import { TasksHeader } from './TasksHeader'
 import { TasksTable } from './TasksTable'
+import { useTaskViews } from './use-task-views'
 
 /** Só o total: a contagem pede uma linha (o número vem em `meta.total`). */
 const countQuery = (scope: TaskScope, kind: TaskKind) => ({ page: 1, perPage: 1, sort: null, search: '', filters: scopeCountFilters(scope, kind) })
@@ -54,11 +55,15 @@ export function TasksPage() {
   const [params, setParams] = useSearchParams()
   const search = params.get('search')
   const urlScope = params.get('scope')
-  const [scope, setScope] = useTaskListScope(urlScope === 'all' || urlScope === 'mine' ? urlScope : null)
+  const [chosenScope, setScope] = useTaskListScope(urlScope === 'all' || urlScope === 'mine' ? urlScope : null)
+  // Tarefas do perfil (ajuste 23/11): "Só as suas tarefas" fica sem o "Ver todas"; sem a Lista, a Caixa de entrada
+  const { views, inbox } = useTaskViews()
+  const onlyMine = views.tasksList === 'mine'
+  const scope: TaskScope = onlyMine ? 'mine' : chosenScope
   const [kind, setKind] = useState<TaskKind>('all')
   // "Colunas e ações" vai para a linha das visões
   const mineTotal = useTasksList(countQuery('mine', kind)).data?.total
-  const allTotal = useTasksList(countQuery('all', kind)).data?.total
+  const allTotal = useTasksList(countQuery('all', kind), undefined, !onlyMine).data?.total
   useEffect(() => {
     if (!urlScope) return
     setParams(
@@ -71,6 +76,11 @@ export function TasksPage() {
     )
   }, [urlScope, setParams])
   useDocumentTitle(t('tasks.title'))
+  if (views.tasksList === 'hidden') {
+    // "＋ Tarefa" pela paleta (/tasks?new=1) continua abrindo o formulário, agora na Caixa de entrada
+    const extra = params.has('new') ? `${inbox.includes('?') ? '&' : '?'}new=1` : ''
+    return <Navigate to={inbox + extra} replace />
+  }
 
   const label = (text: string, total: number | undefined) => (
     <>
@@ -90,7 +100,7 @@ export function TasksPage() {
           onValueChange={setScope}
           options={[
             { value: 'mine', label: label(t('taskList.mine'), mineTotal) },
-            { value: 'all', label: label(t('taskList.all'), allTotal) },
+            ...(onlyMine ? [] : [{ value: 'all' as const, label: label(t('taskList.all'), allTotal) }]),
           ]}
         />
         <AppSegmentedControl<TaskKind>

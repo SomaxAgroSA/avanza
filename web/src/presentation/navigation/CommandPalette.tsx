@@ -11,7 +11,8 @@ import { usePreferences } from '@/features/preferences/use-preferences'
 import { useProjects } from '@/features/projects/queries'
 import { useTasksList } from '@/features/tasks/queries'
 import { useDebouncedValue } from '@/presentation/common/use-debounced-value'
-import { platformNavItems, visibleNavItems, type NavItem } from './nav-items'
+import { platformNavItems, visibleNavItems, withNavEntry, type NavItem } from './nav-items'
+import { useTaskViews } from '@/features/tasks/use-task-views'
 
 function flatten(items: NavItem[]): NavItem[] {
   // Filhos herdam o ícone do grupo; itens com o mesmo destino aparecem uma vez só.
@@ -50,9 +51,10 @@ export function CommandPalette() {
 
   const permissions = current?.permissions
   const platform = current?.platform
+  const tasksEntry = useTaskViews().entry
   const groups = useMemo<CommandGroup[]>(() => {
     // o Panorama desligado na plataforma (§26.2) também não é oferecido aqui
-    const nav = flatten(visibleNavItems(permissions ?? [], platformNavItems(platform)))
+    const nav = flatten(withNavEntry(visibleNavItems(permissions ?? [], platformNavItems(platform)), 'tasks', tasksEntry))
     const canViewUsers = permissions?.includes('users.view')
     // criar e buscar abrem a Lista de tarefas (/tasks): só com o módulo (§44); as tarefas encontradas abrem direto
     const canListTasks = canViewTasks && !!permissions?.includes('tasks.list')
@@ -122,7 +124,7 @@ export function CommandPalette() {
           label: t(item.labelKey),
           icon: item.icon ? <item.icon /> : undefined,
           hint: item.phase ? t('nav.soon') : undefined,
-          onSelect: () => navigate(item.to),
+          onSelect: () => navigate(item.entry ?? item.to),
         })),
       },
       {
@@ -141,7 +143,7 @@ export function CommandPalette() {
         ],
       },
     ]
-  }, [permissions, platform, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
+  }, [permissions, platform, tasksEntry, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
 
   return (
     <AppCommandPalette

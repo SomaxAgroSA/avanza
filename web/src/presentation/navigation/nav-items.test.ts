@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems } from './nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry } from './nav-items'
 
 describe('navegação', () => {
   it('Panorama desligado na plataforma (§26.2): some do menu de todos, mesmo com executive.view; ligado, fica', () => {
@@ -64,5 +64,14 @@ describe('navegação', () => {
   it('as quatro listas de projetos não mostram a trilha (repetiria o título da página); as demais páginas, sim', () => {
     expect(['/projects', '/projects/ongoing', '/projects/finished', '/projects/archived', '/projects/ongoing/'].map((path) => showsBreadcrumb(path))).toEqual([false, false, false, false, false])
     expect(['/projects/mine', '/projects/p1', '/projects/p1/kanban', '/kanban', '/settings/access', '/desconhecido'].map((path) => showsBreadcrumb(path))).toEqual([true, true, true, true, true, true])
+  })
+})
+
+describe('Tarefas abre onde o perfil escolheu (ajuste 23/11)', () => {
+  it('o item Tarefas ganha a entrada; com a Lista (o próprio endereço), nada muda', () => {
+    const items = visibleNavItems(['tasks.view', 'tasks.list', 'projects.view'])
+    expect(withNavEntry(items, 'tasks', '/tasks/demands?box=all').find((item) => item.id === 'tasks')).toMatchObject({ to: '/tasks', entry: '/tasks/demands?box=all' })
+    expect(withNavEntry(items, 'tasks', '/tasks').find((item) => item.id === 'tasks')?.entry).toBeUndefined()
+    expect(withNavEntry(items, 'tasks', '/tasks/demands').find((item) => item.id === 'projects')?.entry).toBeUndefined()
   })
 })

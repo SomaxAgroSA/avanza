@@ -4,7 +4,14 @@
  */
 
 const { HOME_PAGES } = require('../domain/user')
-const { ONGOING_VIEWS } = require('../domain/permissions')
+const { ONGOING_VIEWS, TASK_VIEWS } = require('../domain/permissions')
+
+/** Tarefas do perfil (ajuste 23/11): só a tela de quem tem o perfil; o acesso segue as permissões. */
+const TASK_VIEW_PROPS = {
+  tasks_start: { type: 'string', enum: TASK_VIEWS.tasks_start, description: 'onde o menu Tarefas abre: "" = Lista; inbox = Caixa de entrada; inbox_all = a caixa Todas' },
+  tasks_list: { type: 'string', enum: TASK_VIEWS.tasks_list, description: 'a Lista: "" = todas as que a pessoa pode ver; mine = só Minhas tarefas; hidden = sem a Lista' },
+  tasks_all_box: { type: 'string', enum: TASK_VIEWS.tasks_all_box, description: 'a caixa Todas da Caixa de entrada (exige projects.view_all): "" = visível; hidden = escondida' },
+}
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` })
 
@@ -227,7 +234,12 @@ function build() {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({
             type: 'object',
-            properties: { name: { type: 'string' }, description: { type: 'string' }, ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista de Em andamento do perfil (§41); "" = Gestão' } },
+            properties: {
+              name: { type: 'string' },
+              description: { type: 'string' },
+              ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista de Em andamento do perfil (§41); "" = Gestão' },
+              ...TASK_VIEW_PROPS,
+            },
           }),
         }),
         delete: op('Exclui perfil customizado', ['rbac'], { 200: ok('Excluído', { type: 'object' }), 409: errorResponse('ROLE_IN_USE') }, {
@@ -1545,6 +1557,7 @@ function build() {
             description: { type: 'string' },
             is_system: { type: 'boolean' },
             ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "both" = as duas, com seletor na tela; "executive" = Direção e gerência' },
+            ...TASK_VIEW_PROPS,
             permissions: { type: 'array', items: { type: 'string' } },
             user_count: { type: 'integer' },
           },
@@ -1558,6 +1571,7 @@ function build() {
             description: { type: 'string' },
             permissions: { type: 'array', items: { type: 'string' } },
             ongoing_view: { type: 'string', enum: ONGOING_VIEWS },
+            ...TASK_VIEW_PROPS,
           },
         },
         Permission: { type: 'object', properties: { id: { type: 'string' }, code: { type: 'string' }, module: { type: 'string' } } },

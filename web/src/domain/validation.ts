@@ -94,6 +94,10 @@ export const roleSchema = z.object({
   description: z.string().trim().max(255, 'too_long'),
   /** Vista da lista Em andamento do perfil (§41): '' = Gestão. */
   ongoingView: z.enum(['', 'executive', 'both']),
+  /** Tarefas do perfil (ajuste 23/11): onde o menu abre, a Lista e a caixa Todas. */
+  tasksStart: z.enum(['', 'inbox', 'inbox_all']),
+  tasksList: z.enum(['', 'mine', 'hidden']),
+  tasksAllBox: z.enum(['', 'hidden']),
 })
 export type RoleInput = z.input<typeof roleSchema>
 

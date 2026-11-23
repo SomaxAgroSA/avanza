@@ -35,7 +35,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
 export function makeCurrentUser(permissions: PermissionCode[], roleCode = 'ADMIN', platform: PlatformFeatures = { panoramaEnabled: true }): CurrentUser {
   return {
     user: makeUser(),
-    role: { id: `role-${roleCode.toLowerCase()}`, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '' },
+    role: { id: `role-${roleCode.toLowerCase()}`, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '', tasksStart: '', tasksList: '', tasksAllBox: '' },
     permissions,
     session: null,
     platform,
@@ -48,7 +48,7 @@ export function typeTexts(name: string, description = ''): Record<ContentLocale,
 }
 
 export function makeRole(overrides: Partial<Role> = {}): Role {
-  return { id: 'role-member', code: 'MEMBER', name: 'Member', description: '', isSystem: true, ongoingView: '', permissions: [], userCount: 0, ...overrides }
+  return { id: 'role-member', code: 'MEMBER', name: 'Member', description: '', isSystem: true, ongoingView: '', tasksStart: '', tasksList: '', tasksAllBox: '', permissions: [], userCount: 0, ...overrides }
 }
 
 const notImplemented = () => Promise.reject(new Error('não usado neste teste'))

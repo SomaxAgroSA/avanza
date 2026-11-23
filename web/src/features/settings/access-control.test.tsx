@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { DEFAULT_TASK_VIEWS } from '@/domain/task-views'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
@@ -12,7 +13,7 @@ beforeAll(async () => {
   await i18n.changeLanguage('es')
 })
 
-const role = (id: string, code: string, name: string, permissions: Role['permissions'], userCount: number): Role => ({ id, code, name, description: '', isSystem: false, ongoingView: '', permissions, userCount })
+const role = (id: string, code: string, name: string, permissions: Role['permissions'], userCount: number): Role => ({ id, code, name, description: '', isSystem: false, ongoingView: '', ...DEFAULT_TASK_VIEWS, permissions, userCount })
 const admin = role('role-admin', 'ADMIN', 'Admin', [...PERMISSION_CODES], 1)
 const memberRole = role('role-member', 'MEMBER', 'Miembro', ['projects.view', 'tasks.view', 'tasks.edit', 'reports.view'], 2)
 const douglas = makeUser({ id: 'u2', name: 'Douglas Martins', email: 'douglas@x.test', roleId: 'role-member' })
@@ -163,7 +164,7 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Gestión', 'Dirección y gerencia', 'Ambas (se elige en la pantalla)'])
     await userEvent.click(screen.getByRole('option', { name: 'Dirección y gerencia' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
-    await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: 'executive' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: 'executive', ...DEFAULT_TASK_VIEWS }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
     // vuelve a leerse del servidor
     await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
@@ -179,7 +180,29 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     await userEvent.click(within(dialog).getByRole('combobox', { name: 'Vista de En marcha' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Dirección y gerencia' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
-    await waitFor(() => expect(createRole).toHaveBeenCalledWith({ code: 'DIRETORIA', name: 'Dirección', description: '', permissions: [], ongoingView: 'executive' }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledWith({ code: 'DIRETORIA', name: 'Dirección', description: '', permissions: [], ongoingView: 'executive', ...DEFAULT_TASK_VIEWS }))
+  })
+
+  it('Tareas del perfil (23/11): dónde abre el menú, la Lista y la caja Todas; guarda y vuelve a leerse', async () => {
+    const { update } = setupRoles([admin, memberRole])
+    await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar perfil' })
+    const start = within(dialog).getByRole('radiogroup', { name: 'Al entrar en Tareas abre' })
+    // por defecto, como antes: Lista, todas las que puede ver y la caja Todas visible
+    expect(within(start).getByRole('radio', { name: 'Lista' })).toBeChecked()
+    expect(within(dialog).getByRole('radio', { name: 'Todas las que puede ver' })).toBeChecked()
+    expect(within(dialog).getByRole('radio', { name: 'Visible' })).toBeChecked()
+    await userEvent.click(within(start).getByRole('radio', { name: 'Bandeja · Todas' }))
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Solo sus tareas' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: '', tasksStart: 'inbox_all', tasksList: 'mine', tasksAllBox: '' }),
+    )
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
+    await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
+    const again = await screen.findByRole('dialog', { name: 'Editar perfil' })
+    expect(within(again).getByRole('radio', { name: 'Bandeja · Todas' })).toBeChecked()
+    expect(within(again).getByRole('radio', { name: 'Solo sus tareas' })).toBeChecked()
   })
 
   it('Por persona muestra la vista heredada del perfil (solo lectura; no hay opción por persona)', async () => {

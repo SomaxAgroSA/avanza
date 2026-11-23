@@ -6,6 +6,7 @@ import type { TaskRepository } from '@/domain/repositories'
 import { OPEN_TASK_CATEGORIES, type TaskSummary } from '@/domain/tasks'
 import type { TaskPriority, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
+import type { TaskViews } from '@/domain/task-views'
 import { TasksPage } from './TasksPage'
 
 beforeAll(async () => {
@@ -77,6 +78,45 @@ function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'tasks
   const tableCalls = () => list.mock.calls.filter(([query]) => query.perPage !== 1)
   return { list, tableCalls }
 }
+
+describe('Lista — Tarefas do perfil (ajuste 23/11)', () => {
+  function setupViews(views: Partial<TaskViews>, initialPath = '/tasks') {
+    const list = vi.fn<TaskRepository['list']>((query) => Promise.resolve({ items: query.perPage === 1 ? [] : [mine], page: 1, perPage: 20, total: 1, totalPages: 1 }))
+    const current = makeCurrentUser(['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'])
+    renderRoutes(
+      [
+        { path: '/tasks', element: <TasksPage /> },
+        { path: '/tasks/demands', element: <p>Caixa de entrada aberta</p> },
+      ],
+      {
+        repositories: fakeRepositories({
+          auth: { me: async () => ({ ...current, role: current.role && { ...current.role, ...views } }) },
+          statuses: { list: () => Promise.resolve([backlog, done]) },
+          priorities: { list: () => Promise.resolve([alta, media]) },
+          areas: { list: () => Promise.resolve([]) },
+          tasks: { list },
+        }),
+        initialPath,
+      },
+    )
+    return { list }
+  }
+
+  it('"Só as suas tarefas": sem "Ver todas" (nem por ?scope=all), mesmo vendo todos os projetos; só pede mine=true', async () => {
+    const { list } = setupViews({ tasksList: 'mine' }, '/tasks?scope=all')
+    // a sessão (com o perfil) chega depois da primeira pintura
+    await waitFor(() =>
+      expect(within(screen.getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).getAllByRole('radio').map((r) => r.textContent?.replace(/\d+$/, ''))).toEqual(['Minhas tarefas']),
+    )
+    // a tabela, já com o perfil, pede só as dela
+    await waitFor(() => expect(list.mock.calls.filter(([query]) => query.perPage !== 1).at(-1)?.[0].filters.mine).toBe('true'))
+  })
+
+  it('Lista oculta: /tasks leva à Caixa de entrada', async () => {
+    setupViews({ tasksList: 'hidden' })
+    expect(await screen.findByText('Caixa de entrada aberta')).toBeInTheDocument()
+  })
+})
 
 describe('Lista de tarefas do menu (§44)', () => {
   it('abre em "Minhas tarefas": pede mine=true (atribuídas e demandas pedidas ou recebidas, §45), só as abertas, pelo prazo; mostra quantas abertas há em cada escopo', async () => {

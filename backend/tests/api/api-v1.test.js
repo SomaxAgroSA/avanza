@@ -357,6 +357,20 @@ describe('API /api/v1', { timeout: 120000 }, () => {
     })
   })
 
+  describe('Tarefas por perfil (ajuste 23/11)', () => {
+    it('PATCH /roles/:id grava tasks_start, tasks_list e tasks_all_box; saem em /auth/me de quem tem o perfil', async () => {
+      const { client } = await createUserAndLogin('MEMBER', 'tarefas-perfil@kamban.test')
+      const role = (await client.get('/auth/me')).body.data.role
+      assert.deepEqual([role.tasks_start, role.tasks_list, role.tasks_all_box], ['', '', ''])
+      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: 'inbox', tasks_list: 'mine', tasks_all_box: 'hidden' })
+      assert.equal(res.status, 200, JSON.stringify(res.body))
+      const after = (await client.get('/auth/me')).body.data.role
+      assert.deepEqual([after.tasks_start, after.tasks_list, after.tasks_all_box], ['inbox', 'mine', 'hidden'])
+      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_list: 'tudo' })).body.error.code, 'VALIDATION_ERROR')
+      await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: '', tasks_list: '', tasks_all_box: '' })
+    })
+  })
+
   describe('página inicial por pessoa (§38)', () => {
     it('PATCH /users/:id grava home_page e devolve o valor salvo', async () => {
       const { user } = await createUserAndLogin('MEMBER', 'pagina-inicial@kamban.test')

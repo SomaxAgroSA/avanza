@@ -16,6 +16,8 @@ export interface NavItem {
   /** Chave de i18n do rótulo. */
   labelKey: string
   to: string
+  /** Para onde o clique leva, quando não é `to` (Tarefas abre onde o perfil escolheu, ajuste 23/11); `to` segue marcando o item. */
+  entry?: string
   icon?: LucideIcon
   /** Exige ao menos uma destas permissões para aparecer. */
   anyOf?: PermissionCode[]
@@ -89,6 +91,11 @@ export const NAV_ITEMS: NavItem[] = [
 /** O menu da plataforma: sem o Panorama quando ele está desligado para todos (§26.2; sem a informação, ligado). */
 export function platformNavItems(features: PlatformFeatures | undefined, items: NavItem[] = NAV_ITEMS): NavItem[] {
   return features && !features.panoramaEnabled ? items.filter((item) => item.id !== 'tracking') : items
+}
+
+/** O item `id` passa a levar a `entry` (ex.: Tarefas → a Caixa de entrada do perfil); sem mudança quando é o `to`. */
+export function withNavEntry(items: NavItem[], id: string, entry: string): NavItem[] {
+  return items.map((item) => (item.id === id && item.to !== entry ? { ...item, entry } : item))
 }
 
 /** Filtra a navegação pelas permissões do usuário (itens sem filhos visíveis somem). */

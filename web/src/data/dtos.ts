@@ -23,6 +23,10 @@ export interface RoleDto {
   description: string
   is_system: boolean
   ongoing_view?: string
+  /** Tarefas do perfil (ajuste 23/11). */
+  tasks_start?: string
+  tasks_list?: string
+  tasks_all_box?: string
   permissions?: string[]
   user_count?: number
 }

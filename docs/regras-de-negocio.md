@@ -854,6 +854,16 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
 - **Só consulta:** nessa vista somem criar, editar, arquivar, excluir e duplicar (o olho "Ver" fica; a urgência e o departamento da tabela não se trocam com um clique). **As permissões reais continuam as do perfil**: para impedir a edição em todo o Avanza (Kanban, tarefas, projeto), desligue as permissões de edição do **mesmo perfil** em Controle de acesso → Perfis → Editar permissões. Nada em RBAC mudou.
 
 - **Ambas (19/11/2026):** o perfil pode ter `ongoing_view = both`. Em Em andamento aparece no topo o seletor **Gestão | Direção e gerência**; abre em Direção e o navegador lembra a última escolha de cada pessoa. Perfil Admin (Angelica e Douglas) usa essa opção.
+
+### Tarefas por perfil (ajuste 23/11/2026)
+
+Em Controle de acesso → Perfis, cada perfil tem o bloco **Tarefas** — só a tela, para a pessoa ver o que precisa sem se perder (o acesso continua nas permissões):
+- **Ao entrar em Tarefas abre:** Lista (padrão, como antes), Caixa de entrada (Recebidas) ou a caixa **Todas** — é para onde o item Tarefas do menu (e a paleta) leva; o item segue marcado na Lista e na Caixa de entrada. A aba Caixa de entrada também abre a caixa Todas quando é a entrada do perfil.
+- **Lista de tarefas:** todas as que a pessoa pode ver (padrão), **só as suas** (sem "Ver todas", nem por `?scope=all`) ou **oculta** (sem a aba Lista; `/tasks` leva à Caixa de entrada).
+- **Caixa "Todas" da Caixa de entrada:** visível (padrão) ou oculta. Continua exigindo `projects.view_all`; o perfil só pode escondê-la.
+- Escolha sem efeito vira a mais próxima: "a caixa Todas" sem poder vê-la abre Recebidas; "Lista" com a Lista oculta abre a Caixa de entrada.
+- É só tela: dentro de cada projeto as tarefas seguem como antes, e a API (`GET /tasks`) não muda — quem tem `projects.view_all` ainda chega a todas pelos projetos, pelo Kanban e pela busca. Restringir dados é tirar a permissão.
+- Gravado em `roles.tasks_start`, `roles.tasks_list` e `roles.tasks_all_box` (migration 0034; listas fechadas em `domain/permissions.js#TASK_VIEWS`); auditado em `role.updated`/`role.created`; chega ao navegador em `GET /auth/me` → `role`. O perfil próprio de uma pessoa herda os três do perfil compartilhado.
 - **Sem data de entrega:** a linha do tempo mostra no fim, sob "Sem data de entrega · N", os projetos do filtro sem início e entrega válidos (só o nome e a marca, sem barra), para o número dos indicadores bater com o que se vê.
 - O painel de Dependências não traz mais o bloco "Como é calculado" (a regra fica no §42).
 

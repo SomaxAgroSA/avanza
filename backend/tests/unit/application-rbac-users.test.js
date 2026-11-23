@@ -92,6 +92,31 @@ describe('application/roles', () => {
     await assert.rejects(async () => roles.updateRole(await ctxFor(deps, 'MANAGER'), viewer.id, { name: 'X', ongoing_view: 'executive' }), { code: 'FORBIDDEN' })
   })
 
+  it('Tarefas do perfil (23/11): onde o menu abre, a Lista e a caixa Todas; padrão como antes, auditados', async () => {
+    const deps = createFakeDeps()
+    const roles = createRoleService(deps)
+    const admin = await ctxFor(deps, 'ADMIN')
+    const manager = await deps.roleRepository.findByCode('MANAGER')
+    const before = await roles.getRole(admin, manager.id)
+    assert.deepEqual([before.tasks_start, before.tasks_list, before.tasks_all_box], ['', '', ''])
+
+    const saved = await roles.updateRole(admin, manager.id, { name: manager.name, tasks_start: 'inbox_all', tasks_list: 'mine' })
+    assert.deepEqual([saved.tasks_start, saved.tasks_list, saved.tasks_all_box], ['inbox_all', 'mine', ''])
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.oldValue, entry.newValue], [{ tasks_start: '', tasks_list: '' }, { tasks_start: 'inbox_all', tasks_list: 'mine' }])
+
+    // omitir não apaga; cada um aceita só a lista fechada
+    const kept = await roles.updateRole(admin, manager.id, { name: manager.name, tasks_all_box: 'hidden' })
+    assert.deepEqual([kept.tasks_start, kept.tasks_list, kept.tasks_all_box], ['inbox_all', 'mine', 'hidden'])
+    for (const bad of [{ tasks_start: 'kanban' }, { tasks_list: 'all' }, { tasks_all_box: 'on' }]) {
+      await assert.rejects(() => roles.updateRole(admin, manager.id, Object.assign({ name: manager.name }, bad)), { code: 'VALIDATION_ERROR' })
+    }
+
+    const created = await roles.createRole(admin, { code: 'diretorio', name: 'Diretório', tasks_start: 'inbox_all', tasks_list: 'hidden' })
+    assert.deepEqual([created.tasks_start, created.tasks_list, created.tasks_all_box], ['inbox_all', 'hidden', ''])
+    assert.equal(deps.store.audit.at(-1).newValue.tasks_list, 'hidden')
+  })
+
   it('§41: SUPER_ADMIN continua imutável (fica em Gestão) e o perfil novo aceita a vista', async () => {
     const deps = createFakeDeps()
     const roles = createRoleService(deps)

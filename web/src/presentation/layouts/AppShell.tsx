@@ -24,7 +24,8 @@ import { CommandPalette } from '@/presentation/navigation/CommandPalette'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useDemandBadge } from '@/features/demands/queries'
 import { useLiveNotifications, useRealtimeResync, useRealtimeStatus } from '@/presentation/common/use-live'
-import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems } from '@/presentation/navigation/nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry } from '@/presentation/navigation/nav-items'
+import { useTaskViews } from '@/features/tasks/use-task-views'
 import { rememberNavChild } from '@/presentation/navigation/nav-memory'
 
 /** Layout autenticado: sidebar, topbar, conteúdo e command palette. */
@@ -35,7 +36,9 @@ export function AppShell() {
   const mobileNavOpen = useUiStore((s) => s.mobileNavOpen)
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen)
   // o Panorama desligado na plataforma (§26.2) sai do menu de todos
-  const items = visibleNavItems(current?.permissions ?? [], platformNavItems(current?.platform))
+  // Tarefas abre onde o perfil escolheu (Lista ou Caixa de entrada, ajuste 23/11)
+  const tasksEntry = useTaskViews().entry
+  const items = withNavEntry(visibleNavItems(current?.permissions ?? [], platformNavItems(current?.platform)), 'tasks', tasksEntry)
   // Tarefas: o que espera por mim na Caixa de entrada (§45)
   const pendingDemands = useDemandBadge()
   const badges = { tasks: { count: pendingDemands, label: t('demands.badge', { count: pendingDemands }) } }

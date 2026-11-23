@@ -15,6 +15,7 @@ import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/te
 import { TasksPage } from '@/features/tasks/TasksPage'
 import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
 import { TaskFormDialog } from '@/features/tasks/TaskFormDialog'
+import type { TaskViews } from '@/domain/task-views'
 import { DemandsPage } from './DemandsPage'
 
 beforeAll(async () => {
@@ -105,14 +106,22 @@ function overview(
 const page = (items: TaskSummary[]) => ({ items, page: 1, perPage: 100, total: items.length, totalPages: 1 })
 
 function repos(
-  options: { me?: typeof ana; demands?: Partial<DemandRepository>; tasks?: Partial<TaskRepository>; taskTypes?: Partial<TaskTypeRepository>; permissions?: Parameters<typeof makeCurrentUser>[0] } = {},
+  options: {
+    me?: typeof ana
+    demands?: Partial<DemandRepository>
+    tasks?: Partial<TaskRepository>
+    taskTypes?: Partial<TaskTypeRepository>
+    permissions?: Parameters<typeof makeCurrentUser>[0]
+    /** Tarefas do perfil (ajuste 23/11) */
+    views?: Partial<TaskViews>
+  } = {},
 ) {
   const me = options.me ?? ana
   return fakeRepositories({
     auth: {
       me: async () => {
         const current = makeCurrentUser(options.permissions ?? ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.edit', 'tasks.assign', 'projects.view'])
-        return { ...current, user: { ...current.user, id: me.id, name: me.name } }
+        return { ...current, user: { ...current.user, id: me.id, name: me.name }, role: current.role && { ...current.role, ...options.views } }
       },
     },
     taskTypes: { list: () => Promise.resolve([devType]), get: () => Promise.resolve({ ...devType, fields: [] }), ...options.taskTypes },
@@ -509,6 +518,40 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
         { user: carlos, openCount: 1, estimatedHours: 0 },
       ],
     })
+
+  it('Tarefas do perfil (23/11): caixa Todas oculta mesmo com projects.view_all; sem a Lista, a aba Lista some', async () => {
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({
+        me: cesar,
+        permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.assign', 'projects.view', 'projects.view_all'],
+        views: { tasksAllBox: 'hidden', tasksList: 'hidden' },
+        demands: { list: () => Promise.resolve(page([])), overview: () => Promise.resolve(allOverview()) },
+      }),
+      initialPath: '/tasks/demands?box=all',
+    })
+    const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
+    expect(within(tabs).queryByRole('radio', { name: /Todas/ })).toBeNull()
+    expect(within(tabs).getByRole('radio', { name: /Recebidas por mim/ })).toHaveAttribute('aria-checked', 'true')
+    const views = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
+    expect(within(views).queryByRole('link', { name: 'Lista' })).toBeNull()
+  })
+
+  it('Tarefas do perfil (23/11): entrada "Caixa de entrada · Todas": a aba Caixa de entrada leva à caixa Todas', async () => {
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({
+        me: cesar,
+        permissions: ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'],
+        views: { tasksStart: 'inbox_all' },
+        demands: { list: () => Promise.resolve(page([])), overview: () => Promise.resolve(allOverview()) },
+      }),
+      initialPath: '/tasks/demands?box=all',
+    })
+    const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
+    expect(await within(tabs).findByRole('radio', { name: /Todas/ })).toHaveAttribute('aria-checked', 'true')
+    const views = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
+    await waitFor(() => expect(within(views).getByRole('link', { name: /Caixa de entrada/ })).toHaveAttribute('href', '/tasks/demands?box=all'))
+    expect(within(views).getByRole('link', { name: 'Lista' })).toHaveAttribute('href', '/tasks')
+  })
 
   it('sem projects.view_all: a aba Todas não aparece e ?box=all mostra Recebidas por mim', async () => {
     const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page([])))

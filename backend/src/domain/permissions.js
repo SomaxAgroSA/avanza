@@ -115,4 +115,17 @@ function isKnownPermission(code) {
  */
 const ONGOING_VIEWS = Object.freeze(['', 'executive', 'both'])
 
-module.exports = { PERMISSIONS, ONGOING_VIEWS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }
+/**
+ * Tarefas por perfil (ajuste 23/11/2026), escolhido em Controle de acesso → Perfis — só a tela, como a vista de
+ * Em andamento: a pessoa enxerga o que precisa, sem se perder (o acesso continua nas permissões).
+ * - tasks_start: onde o menu Tarefas abre — '' Lista; 'inbox' Caixa de entrada; 'inbox_all' a caixa Todas;
+ * - tasks_list: a Lista — '' todas as que a pessoa pode ver; 'mine' só "Minhas tarefas"; 'hidden' sem a Lista;
+ * - tasks_all_box: a caixa Todas da Caixa de entrada (que exige projects.view_all) — '' visível; 'hidden' não.
+ */
+const TASK_VIEWS = Object.freeze({
+  tasks_start: Object.freeze(['', 'inbox', 'inbox_all']),
+  tasks_list: Object.freeze(['', 'mine', 'hidden']),
+  tasks_all_box: Object.freeze(['', 'hidden']),
+})
+
+module.exports = { PERMISSIONS, ONGOING_VIEWS, TASK_VIEWS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }

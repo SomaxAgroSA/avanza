@@ -6,6 +6,7 @@ import { AppButton, AppNavTabs, AppToolbar } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useCan } from '@/features/auth/session'
 import { useDemandBadge } from '@/features/demands/queries'
+import { useTaskViews } from './use-task-views'
 import { TaskFormDialog, type TaskKindChoice } from './TaskFormDialog'
 
 /**
@@ -29,6 +30,8 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
   const kind = creating ?? urlKind
   const pending = useDemandBadge()
   const onDemands = pathname.startsWith('/tasks/demands')
+  // Tarefas do perfil (ajuste 23/11): sem a Lista, só a Caixa de entrada; a aba dela abre a caixa escolhida
+  const { views, inbox } = useTaskViews()
 
   return (
     <>
@@ -39,10 +42,10 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
           variant="pill"
           className="shrink-0"
           items={[
-            { key: 'list', to: '/tasks', label: t('taskList.viewList'), active: !onDemands },
+            ...(views.tasksList === 'hidden' ? [] : [{ key: 'list', to: '/tasks', label: t('taskList.viewList'), active: !onDemands }]),
             {
               key: 'demands',
-              to: '/tasks/demands',
+              to: inbox,
               active: onDemands,
               label: (
                 <>
