@@ -162,6 +162,24 @@ describe('application/tasks — criação', () => {
 })
 
 describe('application/tasks — edição e histórico', () => {
+  it('descrição longa: mudar só depois dos 1000 primeiros caracteres também grava (correção 23/11)', async () => {
+    const s = await setup()
+    const long = 'A'.repeat(1500) + '\n\n**QUIÉN**\n- PIDE: X\n\n**RELACIONADAS**\n- CRM-9'
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s, { description: long }))
+    const shorter = long.replace('\n\n**QUIÉN**\n- PIDE: X', '')
+    const saved = await s.tasks.updateTask(s.ctx.mario, task.id, { description: shorter })
+    assert.equal(saved.description, shorter)
+    const audit = s.deps.store.audit.at(-1)
+    assert.equal(audit.action, 'task.updated')
+    // o histórico guarda o trecho em que a mudança aconteceu
+    assert.ok(audit.oldValue.description.startsWith('…') && audit.oldValue.description.includes('QUIÉN'))
+    assert.ok(audit.newValue.description.startsWith('…') && !audit.newValue.description.includes('QUIÉN'))
+    // a mesma descrição de novo não gera histórico
+    const count = s.deps.store.audit.length
+    await s.tasks.updateTask(s.ctx.mario, task.id, { description: shorter })
+    assert.equal(s.deps.store.audit.length, count)
+  })
+
   it('mudar status preenche início/conclusão e o histórico mostra nomes', async () => {
     const s = await setup()
     const task = await s.tasks.createTask(s.ctx.mario, newBug(s))

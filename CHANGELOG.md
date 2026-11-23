@@ -4,6 +4,9 @@ Todas as mudanças relevantes do projeto ficam aqui. Formato baseado em [Keep a 
 
 ## [Não lançado]
 
+### Corrigido
+- **Descrição longa não gravava mudanças no fim (23/11/2026):** ao editar uma descrição com mais de 1000 caracteres mexendo só depois desse ponto, a tarefa respondia como salva mas nada mudava (a comparação do histórico olhava só os primeiros 1000 caracteres). Agora a descrição inteira decide se houve mudança, e o histórico guarda o trecho em que ela aconteceu (com "…" na frente). Vale para tarefas de projeto e demandas internas.
+
 ### Adicionado
 - **Bandeja: ajuste visual (23/11/2026):** a linha das caixas mede a largura da tela e, quando não cabe, compacta os filtros ("Projeto ▾", só o valor escolhido) e depois os botões de criar ("＋ Tarefa"), sem cortar nada; o grupo de filtros ocupa o espaço livre e a busca cresce com ele. As colunas da lista ficam proporcionais à largura (não colam à direita numa caixa sem o painel da carga), a urgência aparece como na demonstração aprovada (ponto colorido e o nome) e a prioridade em texto.
 - **Bandeja com filtros, ordem por urgência e colunas (§45, aprovado em demonstração em 23/11/2026):** na mesma linha das caixas e com o mesmo botão delas, **Buscar**, **Projeto** (um, ou só as **Demandas internas**), **Prioridade** e **Urgência** (várias; o botão mostra "Urgência: Alta +1"), cada um com o seu menu, e **Limpar**. Valem em todas as caixas, ficam no endereço (o "← Voltar" da tarefa volta com eles) e continuam ao trocar de caixa; com filtro, os números de cima contam o que a lista mostra. Dentro de cada passo, as demandas vêm **das mais urgentes para as menos e, no empate, pela prioridade**. A lista ganhou títulos e colunas separadas: **Estado**, **Urgência** (semáforo), **Prioridade** e **Atribuída a** (com o prazo embaixo). `GET /demands` aceita `project_id` (`internal` = só as demandas internas), `priority_id`, `urgency` e `search`.
