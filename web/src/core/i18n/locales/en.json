@@ -4740,14 +4740,18 @@
       "assigned": "Assigned",
       "in_progress": "In progress",
       "to_validate": "To validate",
-      "done": "Done"
+      "done": "Done",
+      "inValidation": "In validation"
     },
     "groups": {
       "unassigned": "Unassigned",
       "assigned": "Assigned",
       "in_progress": "In progress",
       "to_validate": "To validate",
-      "done": "Done"
+      "done": "Done",
+      "inValidation": "In validation",
+      "recentDone": "Done · last 30 days",
+      "passed": "Passed to someone else"
     },
     "form": {
       "createTitle": "New internal request",
@@ -4787,7 +4791,8 @@
       "due": "due {{date}}",
       "priority": "{{name}} priority",
       "noAssignee": "Unassigned",
-      "owner": "Owner: {{name}}"
+      "owner": "Owner: {{name}}",
+      "awaitingValidation": "Awaiting validation by {{name}}"
     },
     "load": {
       "title": "My team's load",

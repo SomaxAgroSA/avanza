@@ -14,7 +14,8 @@
  * - Tudo vai para o histórico da tarefa (`task.demand_*`, com quem, quando e a nota) e avisa pelas
  *   notificações internas de sempre (o e-mail só sai se a integração estiver configurada).
  * - As demandas moram no projeto de sistema `kind = 'demands'` (oculto); `inbox()` o recria se sumir.
- * - Caixas da tela Bandeja: Recebidas por mim, Atribuídas a mim e Pedidas por mim; `overview` traz os
+ * - Caixas da tela Bandeja: Recebidas por mim, Atribuídas a mim (também as que a pessoa passou a outra e as
+ *   concluídas dos últimos 30 dias, como histórico) e Pedidas por mim; `overview` traz os
  *   números de cada passo, `pending` (o selo da aba Bandeja e do menu Tarefas: o que espera por mim —
  *   domain/demand.js#pendingCount) e a carga da equipe.
  * - Caixa Todas (`all`, só com `projects.view_all`; sem ela, FORBIDDEN): todas as demandas — internas e
@@ -41,6 +42,8 @@ const INBOX = Object.freeze({ name: 'Demandas internas', keys: ['DEM', 'DEMINT',
 const MAX_HOURS = 100000
 const OWNER_SEARCH_LIMIT = 500
 const TEAM_LIMIT = 500
+/** Atribuídas a mim: quantos dias as concluídas continuam na caixa (histórico recente). */
+const RECENT_DONE_DAYS = 30
 
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
 const hoursRule = rules.custom((value) => {
@@ -410,7 +413,11 @@ function createDemandService(deps) {
     const result = await tasks.list({
       // a caixa já é de quem participa (ou, em Todas, de quem vê todas): tudo nela é visível à pessoa
       scope: { userId: ctx.principal.userId, viewAll: true },
-      demandBox: { box: filters.box, userId: ctx.principal.userId },
+      // Atribuídas a mim: as concluídas dos últimos 30 dias ficam como histórico (ajuste 23/11)
+      demandBox: Object.assign(
+        { box: filters.box, userId: ctx.principal.userId },
+        filters.box === 'assigned' ? { doneSince: new Date(deps.clock.now().getTime() - RECENT_DONE_DAYS * 86400000) } : {},
+      ),
       demandOwnerId: filters.owner_id,
       assigneeId: filters.assignee_id,
       companyId: filters.company_id,

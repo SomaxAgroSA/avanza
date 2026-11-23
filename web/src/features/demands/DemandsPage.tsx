@@ -1,11 +1,13 @@
 import { Link, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Inbox } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { ChevronRight, Inbox } from 'lucide-react'
 import {
   DEMAND_BOXES,
   DEMAND_KPI_STATUSES,
   demandActionsFor,
   groupByStatus,
+  splitAssignedBox,
   loadPercent,
   type DemandBox,
   type DemandCounts,
@@ -16,6 +18,7 @@ import type { UserSummary } from '@/domain/projects'
 import type { TaskSummary } from '@/domain/tasks'
 import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSelect, AppSkeleton } from '@/presentation/components'
 import { formatNumber, formatShortDateTime } from '@/core/utils/format'
+import { cn } from '@/core/utils/cn'
 import { useCan, useSession } from '@/features/auth/session'
 import { TasksHeader } from '@/features/tasks/TasksHeader'
 import { DemandActions } from './DemandActions'
@@ -173,45 +176,81 @@ function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters
   )
 }
 
-/** Uma caixa: as demandas agrupadas por passo (as concluídas por último), cada uma com os botões dela. */
+/**
+ * Uma caixa: as demandas agrupadas por passo (as concluídas por último), cada uma com os botões dela. Em
+ * Atribuídas a mim (ajuste 23/11): o que está comigo ("Para validar" vira "Em validação") e, recolhidos no fim,
+ * Concluídas (últimos 30 dias) e Passadas a outra pessoa — o histórico de quem executa.
+ */
 function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListFilters }) {
   const { t } = useTranslation()
   const me = useSession().current?.user.id
   const [params] = useSearchParams()
   const list = useDemandList(box, filters)
-  // Atribuídas a mim: só o que ainda está comigo (as concluídas ficam na lista de tarefas)
-  const items = (list.data?.items ?? []).filter((task) => box !== 'assigned' || task.demand?.status !== 'done')
+  const all = list.data?.items ?? []
+  const split = box === 'assigned' ? splitAssignedBox(all, me) : null
+  const items = split ? split.active : all
   const total = list.data?.total ?? 0
   // o "← Voltar" da página da tarefa volta para a mesma caixa (com os filtros)
   const back = box === 'received' ? '/tasks/demands' : `/tasks/demands?${params.toString()}`
+  const executor = box === 'assigned'
 
   if (list.isPending) return <AppSkeleton className="h-64 rounded-2xl" />
   if (list.isError) return <AppErrorState onRetry={() => void list.refetch()} />
-  if (items.length === 0) {
+  if (all.length === 0) {
     return (
       <AppCard>
         <AppEmptyState compact icon={<Inbox />} title={t(`demands.empty.${box}`)} />
       </AppCard>
     )
   }
+  const rows = (list: readonly TaskSummary[]) => (
+    <ul>
+      {list.map((task) => (
+        <li key={task.id} className="border-t border-border first:border-t-0">
+          <DemandRow task={task} box={box} back={back} executor={executor} actions={demandActionsFor(me, task, { viewAll: box === 'all' })} />
+        </li>
+      ))}
+    </ul>
+  )
   return (
     <AppCard padded={false} className="px-4 py-2">
-      {groupByStatus(items).map((group) => (
-        <section key={group.status} aria-label={t(`demands.groups.${group.status}`)}>
-          <h2 className="mt-3 mb-1 text-[11px] font-bold tracking-wider text-muted uppercase">
-            {t(`demands.groups.${group.status}`)} · {group.items.length}
-          </h2>
-          <ul>
-            {group.items.map((task) => (
-              <li key={task.id} className="border-t border-border first:border-t-0">
-                <DemandRow task={task} box={box} back={back} actions={demandActionsFor(me, task, { viewAll: box === 'all' })} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      {items.length === 0 && <p className="py-3 text-sm text-muted">{t('demands.empty.assigned')}</p>}
+      {groupByStatus(items).map((group) => {
+        const label = executor && group.status === 'to_validate' ? t('demands.groups.inValidation') : t(`demands.groups.${group.status}`)
+        return (
+          <section key={group.status} aria-label={label}>
+            <h2 className="mt-3 mb-1 text-[11px] font-bold tracking-wider text-muted uppercase">
+              {label} · {group.items.length}
+            </h2>
+            {rows(group.items)}
+          </section>
+        )
+      })}
+      {split && split.done.length > 0 && <HistoryGroup label={t('demands.groups.recentDone')} count={split.done.length}>{rows(split.done)}</HistoryGroup>}
+      {split && split.passed.length > 0 && <HistoryGroup label={t('demands.groups.passed')} count={split.passed.length}>{rows(split.passed)}</HistoryGroup>}
       {box === 'all' && total > items.length && <p className="border-t border-border py-3 text-xs text-muted">{t('demands.page.truncated', { shown: items.length, total })}</p>}
     </AppCard>
+  )
+}
+
+/** Grupo recolhido do histórico (fechado ao abrir a caixa; o número fica à vista). */
+function HistoryGroup({ label, count, children }: { label: string; count: number; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <section aria-label={label} className="border-t border-border">
+      <h2 className="mt-1">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="flex w-full items-center gap-1.5 py-2 text-left text-[11px] font-bold tracking-wider text-muted uppercase hover:text-fg focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} aria-hidden />
+          {label} · {count}
+        </button>
+      </h2>
+      {open && children}
+    </section>
   )
 }
 
@@ -219,7 +258,7 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
  * Linha: tipo · departamento, título (abre a página inteira), passo, quem executa e prazo (ou
  * prioridade) e os botões. Na caixa Todas, também o responsável.
  */
-function DemandRow({ task, box, back, actions }: { task: TaskSummary; box: DemandBox; back: string; actions: ReturnType<typeof demandActionsFor> }) {
+function DemandRow({ task, box, back, actions, executor = false }: { task: TaskSummary; box: DemandBox; back: string; actions: ReturnType<typeof demandActionsFor>; executor?: boolean }) {
   const { t, i18n } = useTranslation()
   const demand = task.demand
   return (
@@ -235,8 +274,12 @@ function DemandRow({ task, box, back, actions }: { task: TaskSummary; box: Deman
           {task.title}
         </Link>
         {box === 'all' && demand?.owner && <p className="truncate text-xs text-muted">{t('demands.row.owner', { name: demand.owner.name })}</p>}
+        {/* quem valida (ajuste 23/11): à vista de quem executa e do responsável; em Pedidas por mim é a própria pessoa */}
+        {demand?.status === 'to_validate' && box !== 'requested' && task.reporter && (
+          <p className="truncate text-xs text-warning-soft-fg">{t('demands.row.awaitingValidation', { name: task.reporter.name })}</p>
+        )}
       </div>
-      <div>{demand && <DemandStatusBadge status={demand.status} />}</div>
+      <div>{demand && <DemandStatusBadge status={demand.status} executor={executor} />}</div>
       <div className="min-w-0 text-xs text-muted">
         {task.assignee ? (
           <span className="inline-flex max-w-full items-center gap-1.5 text-fg">

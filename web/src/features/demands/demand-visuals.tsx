@@ -15,11 +15,15 @@ const DEMAND_STATUS_LOOK: Record<DemandStatus, { color: PaletteColor; icon: Luci
   done: { color: 'gray', icon: CircleCheckBig },
 }
 
-/** Selo do passo da demanda (Sem atribuir, Atribuída, Em andamento, Para validar, Concluída). */
-export function DemandStatusBadge({ status, className }: { status: DemandStatus; className?: string }) {
+/**
+ * Selo do passo da demanda (Sem atribuir, Atribuída, Em andamento, Para validar, Concluída). `executor`: para quem
+ * executa, "Para validar" aparece como "Em validação" (a ação é de quem pediu).
+ */
+export function DemandStatusBadge({ status, className, executor = false }: { status: DemandStatus; className?: string; executor?: boolean }) {
   const { t } = useTranslation()
   const look = DEMAND_STATUS_LOOK[status]
-  return <LookupBadge item={{ name: t(`demands.status.${status}`), color: look.color }} icon={look.icon} className={className} />
+  const name = executor && status === 'to_validate' ? t('demands.status.inValidation') : t(`demands.status.${status}`)
+  return <LookupBadge item={{ name, color: look.color }} icon={look.icon} className={className} />
 }
 
 /** Chip "Demanda interna" (no lugar do projeto). */

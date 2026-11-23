@@ -406,6 +406,25 @@ describe('application/demands — fluxo', () => {
     assert.equal((await s.tasks.getTask(s.ctx.jorge, s.id)).id, s.id)
   })
 
+  it('Atribuídas a mim guarda o histórico: as que passei a outra pessoa e as concluídas dos últimos 30 dias', async () => {
+    const s = await opened()
+    const box = async (name) => (await s.demands.listDemands(s.ctx[name], { box: 'assigned' })).items.map((t) => [t.title, t.demand.status, t.assignee && t.assignee.name])
+    await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE })
+    await s.demands.pass(s.ctx.jorge, s.id, { assignee_id: s.users.carlos.id, comment: 'Carlos conhece a conexão' })
+    // Jorge passou: continua na caixa dele (agora com Carlos); Carlos a tem como dele
+    assert.deepEqual(await box('jorge'), [['Vista DMR: agregar Fecha cuenta', 'assigned', 'Carlos']])
+    assert.deepEqual(await box('carlos'), [['Vista DMR: agregar Fecha cuenta', 'assigned', 'Carlos']])
+    await s.demands.conclude(s.ctx.carlos, s.id, { comment: 'Publicado' })
+    await s.demands.validate(s.ctx.ana, s.id)
+    assert.deepEqual(await box('carlos'), [['Vista DMR: agregar Fecha cuenta', 'done', 'Carlos']])
+    // passados 30 dias da conclusão, sai da caixa (continua na Lista de tarefas)
+    s.deps.store.tasks.find((t) => t.id === s.id).completedAt = new Date(s.deps.clock.now().getTime() - 31 * 86400000)
+    assert.deepEqual(await box('carlos'), [])
+    assert.deepEqual(await box('jorge'), [])
+    // os números (selo) continuam contando só o que está com a pessoa
+    assert.equal((await s.demands.overview(s.ctx.jorge)).pending, 0)
+  })
+
   it('quem executa começa, passa (com comentário) e conclui (com comentário); quem pediu valida', async () => {
     const s = await opened()
     await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 4 })

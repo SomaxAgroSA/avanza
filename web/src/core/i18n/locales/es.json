@@ -4740,14 +4740,18 @@
       "assigned": "Asignada",
       "in_progress": "En curso",
       "to_validate": "Para validar",
-      "done": "Concluida"
+      "done": "Concluida",
+      "inValidation": "En validación"
     },
     "groups": {
       "unassigned": "Sin asignar",
       "assigned": "Asignadas",
       "in_progress": "En curso",
       "to_validate": "Para validar",
-      "done": "Concluidas"
+      "done": "Concluidas",
+      "inValidation": "En validación",
+      "recentDone": "Concluidas · últimos 30 días",
+      "passed": "Pasadas a otra persona"
     },
     "form": {
       "createTitle": "Nueva demanda interna",
@@ -4787,7 +4791,8 @@
       "due": "plazo {{date}}",
       "priority": "Prioridad {{name}}",
       "noAssignee": "Sin asignar",
-      "owner": "Responsable: {{name}}"
+      "owner": "Responsable: {{name}}",
+      "awaitingValidation": "Espera validación de {{name}}"
     },
     "load": {
       "title": "Carga de mi equipo",

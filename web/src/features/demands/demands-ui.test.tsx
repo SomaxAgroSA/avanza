@@ -363,6 +363,31 @@ describe('Demandas — caixas (§45)', () => {
     expect(assign.mock.calls[0]).toEqual(['d1', { assigneeId: 'u3', dueAt: new Date(2026, 10, 21, 17, 0).toISOString(), estimatedHours: 4 }])
   })
 
+  it('Atribuídas a mim guarda o histórico: "Em validação", Concluídas e Passadas a outra pessoa (recolhidas)', async () => {
+    const waiting = demand({ id: 'd4', code: 'DEM-4', title: 'Esperando a Ana', step: 'to_validate', assignee: jorge })
+    const finished = demand({ id: 'd5', code: 'DEM-5', title: 'Já validada', step: 'done', assignee: jorge })
+    const passed = demand({ id: 'd6', code: 'DEM-6', title: 'Passei ao Carlos', step: 'in_progress', assignee: carlos })
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({ me: jorge, demands: { list: () => Promise.resolve(page([waiting, finished, passed])) } }),
+      initialPath: '/tasks/demands?box=assigned',
+    })
+    const row = (await screen.findByText('Esperando a Ana')).closest('li')!
+    expect(within(row).getByText('Em validação')).toBeInTheDocument()
+    expect(within(row).getByText('Espera validação de Ana Souza')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Em validação · 1' })).toBeInTheDocument()
+    // histórico recolhido: o número à vista, as linhas só ao abrir
+    const done = screen.getByRole('button', { name: 'Concluídas · últimos 30 dias · 1' })
+    expect(done).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Já validada')).not.toBeInTheDocument()
+    await userEvent.click(done)
+    expect(screen.getByText('Já validada')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Passadas a outra pessoa · 1' }))
+    const other = screen.getByText('Passei ao Carlos').closest('li')!
+    // com outra pessoa: sem os botões de quem executa
+    expect(within(other).queryByRole('button', { name: 'Concluir' })).not.toBeInTheDocument()
+    expect(within(other).getByText('Carlos')).toBeInTheDocument()
+  })
+
   it('Atribuídas a mim: Começar, Passar a… e Concluir (com o comentário obrigatório)', async () => {
     const assigned = demand({ id: 'd3', code: 'DEM-3', step: 'assigned', assignee: jorge })
     const start = vi.fn<DemandRepository['start']>(() => Promise.resolve(assigned))
