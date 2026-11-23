@@ -532,8 +532,38 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
     const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
     expect(within(tabs).queryByRole('radio', { name: /Todas/ })).toBeNull()
     expect(within(tabs).getByRole('radio', { name: /Recebidas por mim/ })).toHaveAttribute('aria-checked', 'true')
-    const views = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
-    expect(within(views).queryByRole('link', { name: 'Lista' })).toBeNull()
+    // com uma tela só (a Caixa de entrada), as abas Lista | Caixa de entrada não aparecem
+    await waitFor(() => expect(screen.queryByRole('navigation', { name: i18n.t('taskList.viewLabel') })).toBeNull())
+  })
+
+  it('Tarefas do perfil (24/11): só as caixas marcadas aparecem; perfil só com a Todas abre nela, sem as outras', async () => {
+    const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page([])))
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({
+        me: cesar,
+        permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.assign', 'projects.view', 'projects.view_all'],
+        views: { tasksStart: 'inbox_all', tasksList: 'hidden', tasksHiddenBoxes: ['received', 'assigned', 'requested'] },
+        demands: { list, overview: () => Promise.resolve(allOverview()) },
+      }),
+      initialPath: '/tasks/demands',
+    })
+    const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
+    await waitFor(() => expect(within(tabs).getAllByRole('radio')).toHaveLength(1))
+    expect(within(tabs).getByRole('radio', { name: /Todas/ })).toHaveAttribute('aria-checked', 'true')
+    // sem ?box=, abre na primeira (a única) caixa visível
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', expect.anything()))
+  })
+
+  it('Tarefas do perfil (24/11): sem a caixa Recebidas, a Caixa de entrada abre na primeira marcada', async () => {
+    const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page([])))
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({ me: cesar, views: { tasksHiddenBoxes: ['received'] }, demands: { list, overview: () => Promise.resolve(allOverview()) } }),
+      initialPath: '/tasks/demands',
+    })
+    const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
+    await waitFor(() => expect(within(tabs).getAllByRole('radio')).toHaveLength(2))
+    expect(within(tabs).getByRole('radio', { name: /Atribuídas a mim/ })).toHaveAttribute('aria-checked', 'true')
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('assigned', expect.anything()))
   })
 
   it('Tarefas do perfil (23/11): entrada "Caixa de entrada · Todas": a aba Caixa de entrada leva à caixa Todas', async () => {

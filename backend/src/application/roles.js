@@ -5,7 +5,7 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const { ROLE_CODES, ONGOING_VIEWS, TASK_VIEWS } = require('../domain/permissions')
+const { ROLE_CODES, ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES } = require('../domain/permissions')
 const { buildAuditEntry, diff } = require('./audit')
 const { toRoleDto } = require('./presenters')
 
@@ -17,6 +17,12 @@ const roleCode = rules.custom((value) => {
   return ROLE_CODE_PATTERN.test(value.trim().toUpperCase()) ? null : 'invalid_format'
 })
 
+/** Caixas pessoais escondidas (ajuste 24/11): lista só com as conhecidas. */
+const hiddenBoxes = rules.custom((value) => {
+  if (!Array.isArray(value)) return 'invalid_type'
+  return value.every((box) => TASK_HIDDEN_BOXES.indexOf(box) >= 0) ? null : 'invalid_option'
+})
+
 const CREATE_SCHEMA = {
   code: [rules.required(), roleCode],
   name: [rules.required(), rules.maxLength(60)],
@@ -26,6 +32,7 @@ const CREATE_SCHEMA = {
   tasks_start: [rules.oneOf(TASK_VIEWS.tasks_start)],
   tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
   tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
+  tasks_hidden_boxes: [hiddenBoxes],
 }
 
 const UPDATE_SCHEMA = {
@@ -35,6 +42,7 @@ const UPDATE_SCHEMA = {
   tasks_start: [rules.oneOf(TASK_VIEWS.tasks_start)],
   tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
   tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
+  tasks_hidden_boxes: [hiddenBoxes],
 }
 
 const READ_ROLES_PERMISSIONS = ['permissions.manage', 'users.view', 'users.create', 'users.edit']
@@ -44,13 +52,16 @@ function uniqueSorted(codes) {
 }
 
 /** Ajustes de tela do perfil: o nome na API e o da entidade (vista de Em andamento §41 e Tarefas, 23/11). */
-const SCREEN_FIELDS = Object.freeze({ ongoing_view: 'ongoingView', tasks_start: 'tasksStart', tasks_list: 'tasksList', tasks_all_box: 'tasksAllBox' })
+const SCREEN_FIELDS = Object.freeze({ ongoing_view: 'ongoingView', tasks_start: 'tasksStart', tasks_list: 'tasksList', tasks_all_box: 'tasksAllBox', tasks_hidden_boxes: 'tasksHiddenBoxes' })
+
+/** Na entidade (e no histórico) as caixas escondidas são um texto, na ordem da tela e sem repetidas. */
+const storedValue = (api, value) => (api === 'tasks_hidden_boxes' ? TASK_HIDDEN_BOXES.filter((box) => value.indexOf(box) >= 0).join(',') : value)
 
 /** Os ajustes vindos da API, com o nome da entidade ('' para os que não vieram, com `fill`). */
 function screenValues(data, fill) {
   const out = {}
   Object.keys(SCREEN_FIELDS).forEach((api) => {
-    if (data[api] !== undefined) out[SCREEN_FIELDS[api]] = data[api]
+    if (data[api] !== undefined) out[SCREEN_FIELDS[api]] = storedValue(api, data[api])
     else if (fill) out[SCREEN_FIELDS[api]] = ''
   })
   return out

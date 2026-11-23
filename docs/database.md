@@ -24,7 +24,7 @@ Os tipos abaixo são os lógicos, herdados das collections: `select` é `text` v
 Índices: `role_id`, `status`, `name` (+ índice único em `lower(email)`).
 
 ### `roles`
-`code` (text, único, `^[A-Z][A-Z0-9_]{1,31}$`), `name`, `description`, `is_system` (bool), `ongoing_view` (text, `''` = Gestão; `'executive'` = Direção e gerência — vista da lista Em andamento, §41; migration 0028), `tasks_start` / `tasks_list` / `tasks_all_box` (text, `''` = como antes — Tarefas do perfil: onde o menu abre, a Lista e a caixa Todas; migration 0034), `created`, `updated`. Perfis de sistema: SUPER_ADMIN, ADMIN, MANAGER, MEMBER, VIEWER.
+`code` (text, único, `^[A-Z][A-Z0-9_]{1,31}$`), `name`, `description`, `is_system` (bool), `ongoing_view` (text, `''` = Gestão; `'executive'` = Direção e gerência — vista da lista Em andamento, §41; migration 0028), `tasks_start` / `tasks_list` / `tasks_all_box` (text, `''` = como antes — Tarefas do perfil: onde o menu abre, a Lista e a caixa Todas; migration 0034), `tasks_hidden_boxes` (text, caixas pessoais escondidas separadas por vírgula — `received`, `assigned`, `requested`; `''` = todas visíveis; migration 0035), `created`, `updated`. Perfis de sistema: SUPER_ADMIN, ADMIN, MANAGER, MEMBER, VIEWER.
 
 ### `permissions`
 `code` (único, ex.: `tasks.edit`), `module`, `description`. Populada pelo seed a partir de `src/domain/permissions.js`.

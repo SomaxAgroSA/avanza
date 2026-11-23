@@ -30,39 +30,43 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
   const kind = creating ?? urlKind
   const pending = useDemandBadge()
   const onDemands = pathname.startsWith('/tasks/demands')
-  // Tarefas do perfil (ajuste 23/11): sem a Lista, só a Caixa de entrada; a aba dela abre a caixa escolhida
-  const { views, inbox } = useTaskViews()
+  // Tarefas do perfil (ajustes 23 e 24/11): as abas Lista | Caixa de entrada só aparecem quando o perfil tem as
+  // duas (com uma só, não há o que escolher); a aba Caixa de entrada abre na caixa do perfil
+  const { views, boxes, inbox } = useTaskViews()
+  const showTabs = views.tasksList !== 'hidden' && boxes.length > 0
 
   return (
     <>
       <PageHeader title={t('tasks.title')} />
       <AppToolbar className="mb-4">
-        <AppNavTabs
-          aria-label={t('taskList.viewLabel')}
-          variant="pill"
-          className="shrink-0"
-          items={[
-            ...(views.tasksList === 'hidden' ? [] : [{ key: 'list', to: '/tasks', label: t('taskList.viewList'), active: !onDemands }]),
-            {
-              key: 'demands',
-              to: inbox,
-              active: onDemands,
-              label: (
-                <>
-                  <span className="@max-[1060px]:hidden">{t('taskList.viewDemands')}</span>
-                  <span aria-hidden className="hidden @max-[1060px]:inline">
-                    {t('taskList.viewDemandsShort')}
-                  </span>
-                  {pending > 0 && (
-                    <span className="rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-fg" title={t('demands.badge', { count: pending })}>
-                      {pending}
+        {showTabs && (
+          <AppNavTabs
+            aria-label={t('taskList.viewLabel')}
+            variant="pill"
+            className="shrink-0"
+            items={[
+              { key: 'list', to: '/tasks', label: t('taskList.viewList'), active: !onDemands },
+              {
+                key: 'demands',
+                to: inbox,
+                active: onDemands,
+                label: (
+                  <>
+                    <span className="@max-[1060px]:hidden">{t('taskList.viewDemands')}</span>
+                    <span aria-hidden className="hidden @max-[1060px]:inline">
+                      {t('taskList.viewDemandsShort')}
                     </span>
-                  )}
-                </>
-              ),
-            },
-          ]}
-        />
+                    {pending > 0 && (
+                      <span className="rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-fg" title={t('demands.badge', { count: pending })}>
+                        {pending}
+                      </span>
+                    )}
+                  </>
+                ),
+              },
+            ]}
+          />
+        )}
         {children}
         {canCreate && (
           <div className="ml-auto flex shrink-0 items-center gap-2">

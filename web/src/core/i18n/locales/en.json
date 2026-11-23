@@ -566,17 +566,8 @@
     },
     "tasks": {
       "title": "Tasks",
-      "start": "Tasks opens on",
-      "startInboxAll": "Inbox · All",
-      "startInbox": "Inbox · Received",
-      "startList": "List",
-      "list": "Task list",
-      "listAll": "All they can see",
-      "listMine": "Only their tasks",
-      "listHidden": "Hidden",
-      "allBox": "Inbox “All” box",
-      "allBoxShown": "Shown",
-      "allBoxHidden": "Hidden"
+      "show": "What shows",
+      "start": "Tasks opens on"
     }
   },
   "permissions": {

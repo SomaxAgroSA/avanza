@@ -27,6 +27,7 @@ export interface RoleDto {
   tasks_start?: string
   tasks_list?: string
   tasks_all_box?: string
+  tasks_hidden_boxes?: string[]
   permissions?: string[]
   user_count?: number
 }

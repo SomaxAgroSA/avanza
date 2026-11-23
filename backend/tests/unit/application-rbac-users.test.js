@@ -115,6 +115,19 @@ describe('application/roles', () => {
     const created = await roles.createRole(admin, { code: 'diretorio', name: 'Diretório', tasks_start: 'inbox_all', tasks_list: 'hidden' })
     assert.deepEqual([created.tasks_start, created.tasks_list, created.tasks_all_box], ['inbox_all', 'hidden', ''])
     assert.equal(deps.store.audit.at(-1).newValue.tasks_list, 'hidden')
+
+    // caixas da Caixa de entrada (24/11): o perfil esconde as pessoais e pode abrir em qualquer uma
+    assert.deepEqual(before.tasks_hidden_boxes, [])
+    const boxes = await roles.updateRole(admin, manager.id, { name: manager.name, tasks_start: 'inbox_requested', tasks_hidden_boxes: ['assigned', 'received', 'assigned'] })
+    assert.deepEqual([boxes.tasks_start, boxes.tasks_hidden_boxes], ['inbox_requested', ['received', 'assigned']])
+    assert.deepEqual(deps.store.audit.at(-1).newValue, { tasks_start: 'inbox_requested', tasks_hidden_boxes: 'received,assigned' })
+    const count = deps.store.audit.length
+    await roles.updateRole(admin, manager.id, { name: manager.name, tasks_hidden_boxes: ['received', 'assigned'] })
+    assert.equal(deps.store.audit.length, count, 'sem mudança, nada no histórico')
+    assert.deepEqual((await roles.updateRole(admin, manager.id, { name: manager.name, tasks_hidden_boxes: [] })).tasks_hidden_boxes, [])
+    for (const bad of [{ tasks_hidden_boxes: ['all'] }, { tasks_hidden_boxes: 'received' }]) {
+      await assert.rejects(() => roles.updateRole(admin, manager.id, Object.assign({ name: manager.name }, bad)), { code: 'VALIDATION_ERROR' })
+    }
   })
 
   it('§41: SUPER_ADMIN continua imutável (fica em Gestão) e o perfil novo aceita a vista', async () => {

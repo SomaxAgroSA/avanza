@@ -367,7 +367,13 @@ describe('API /api/v1', { timeout: 120000 }, () => {
       const after = (await client.get('/auth/me')).body.data.role
       assert.deepEqual([after.tasks_start, after.tasks_list, after.tasks_all_box], ['inbox', 'mine', 'hidden'])
       assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_list: 'tudo' })).body.error.code, 'VALIDATION_ERROR')
-      await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: '', tasks_list: '', tasks_all_box: '' })
+      // caixas da Caixa de entrada (24/11)
+      const boxes = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: 'inbox_assigned', tasks_hidden_boxes: ['requested', 'received'] })
+      assert.equal(boxes.status, 200, JSON.stringify(boxes.body))
+      const withBoxes = (await client.get('/auth/me')).body.data.role
+      assert.deepEqual([withBoxes.tasks_start, withBoxes.tasks_hidden_boxes], ['inbox_assigned', ['received', 'requested']])
+      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_hidden_boxes: ['todas'] })).body.error.code, 'VALIDATION_ERROR')
+      await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: '', tasks_list: '', tasks_all_box: '', tasks_hidden_boxes: [] })
     })
   })
 

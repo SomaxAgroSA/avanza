@@ -4,12 +4,13 @@
  */
 
 const { HOME_PAGES } = require('../domain/user')
-const { ONGOING_VIEWS, TASK_VIEWS } = require('../domain/permissions')
+const { ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES } = require('../domain/permissions')
 
 /** Tarefas do perfil (ajuste 23/11): só a tela de quem tem o perfil; o acesso segue as permissões. */
 const TASK_VIEW_PROPS = {
-  tasks_start: { type: 'string', enum: TASK_VIEWS.tasks_start, description: 'onde o menu Tarefas abre: "" = Lista; inbox = Caixa de entrada; inbox_all = a caixa Todas' },
+  tasks_start: { type: 'string', enum: TASK_VIEWS.tasks_start, description: 'onde o menu Tarefas abre: "" = Lista; inbox = Caixa de entrada (Recebidas); inbox_assigned, inbox_requested e inbox_all = as caixas Atribuídas a mim, Pedidas por mim e Todas' },
   tasks_list: { type: 'string', enum: TASK_VIEWS.tasks_list, description: 'a Lista: "" = todas as que a pessoa pode ver; mine = só Minhas tarefas; hidden = sem a Lista' },
+  tasks_hidden_boxes: { type: 'array', items: { type: 'string', enum: TASK_HIDDEN_BOXES }, description: 'caixas pessoais da Caixa de entrada escondidas para o perfil ([] = todas visíveis)' },
   tasks_all_box: { type: 'string', enum: TASK_VIEWS.tasks_all_box, description: 'a caixa Todas da Caixa de entrada (exige projects.view_all): "" = visível; hidden = escondida' },
 }
 

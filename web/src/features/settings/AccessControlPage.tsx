@@ -314,7 +314,7 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
     if (!pending || !role) return
     const code = personalRoleCode(user.name, roles.map((r) => r.code))
     createRole.mutate(
-      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, ongoingView: role.ongoingView, tasksStart: role.tasksStart, tasksList: role.tasksList, tasksAllBox: role.tasksAllBox },
+      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, ongoingView: role.ongoingView, tasksStart: role.tasksStart, tasksList: role.tasksList, tasksAllBox: role.tasksAllBox, tasksHiddenBoxes: role.tasksHiddenBoxes },
       {
         onSuccess: (created) =>
           updateUser.mutate(

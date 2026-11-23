@@ -566,17 +566,8 @@
     },
     "tasks": {
       "title": "Tareas",
-      "start": "Al entrar en Tareas abre",
-      "startInboxAll": "Bandeja · Todas",
-      "startInbox": "Bandeja · Recibidas",
-      "startList": "Lista",
-      "list": "Lista de tareas",
-      "listAll": "Todas las que puede ver",
-      "listMine": "Solo sus tareas",
-      "listHidden": "Oculta",
-      "allBox": "Caja «Todas» de la Bandeja",
-      "allBoxShown": "Visible",
-      "allBoxHidden": "Oculta"
+      "show": "Qué aparece",
+      "start": "Al entrar en Tareas abre"
     }
   },
   "permissions": {
