@@ -32,6 +32,85 @@ export interface DemandListFilters {
   assigneeId?: string
   /** Só as demandas dessa empresa (§46). */
   companyId?: string
+  /** Filtros da Bandeja (ajuste 23/11): projeto (`internal` = só as demandas internas). */
+  projectId?: string
+  priorityIds?: string[]
+  /** high, medium, low ou none (sem urgência). */
+  urgencies?: string[]
+  /** Título ou código. */
+  search?: string
+}
+
+/** Valor do filtro Projeto que traz só as demandas internas (sem projeto). */
+export const INTERNAL_PROJECT = 'internal'
+
+/** Filtros da Bandeja, guardados no endereço: `q`, `project`, `priority` e `urgency` (os dois últimos com vírgulas). */
+export interface InboxFilters {
+  search: string
+  projectId: string
+  priorityIds: string[]
+  urgencies: string[]
+}
+
+const INBOX_KEYS = { search: 'q', projectId: 'project', priorityIds: 'priority', urgencies: 'urgency' } as const
+const splitList = (value: string | null) => (value ? value.split(',').filter(Boolean) : [])
+
+export function readInboxFilters(params: URLSearchParams): InboxFilters {
+  return {
+    search: params.get(INBOX_KEYS.search) ?? '',
+    projectId: params.get(INBOX_KEYS.projectId) ?? '',
+    priorityIds: splitList(params.get(INBOX_KEYS.priorityIds)),
+    urgencies: splitList(params.get(INBOX_KEYS.urgencies)),
+  }
+}
+
+/** Novo endereço com os filtros (vazios saem); as outras chaves (caixa, pessoas) ficam. */
+export function writeInboxFilters(params: URLSearchParams, filters: InboxFilters): URLSearchParams {
+  const next = new URLSearchParams(params)
+  const set = (key: string, value: string) => (value ? next.set(key, value) : next.delete(key))
+  set(INBOX_KEYS.search, filters.search)
+  set(INBOX_KEYS.projectId, filters.projectId)
+  set(INBOX_KEYS.priorityIds, filters.priorityIds.join(','))
+  set(INBOX_KEYS.urgencies, filters.urgencies.join(','))
+  return next
+}
+
+export const hasInboxFilters = (filters: InboxFilters) => !!(filters.search.trim() || filters.projectId || filters.priorityIds.length || filters.urgencies.length)
+
+/** Filtros da Bandeja no formato da consulta (`DemandListFilters`). */
+export function inboxQuery(filters: InboxFilters): DemandListFilters {
+  const out: DemandListFilters = {}
+  if (filters.search.trim()) out.search = filters.search.trim()
+  if (filters.projectId) out.projectId = filters.projectId
+  if (filters.priorityIds.length) out.priorityIds = filters.priorityIds
+  if (filters.urgencies.length) out.urgencies = filters.urgencies
+  return out
+}
+
+const URGENCY_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 }
+
+/**
+ * Ordem dentro de cada passo da Bandeja (ajuste 23/11): primeiro as mais urgentes, depois as de maior
+ * prioridade (`priorityOrder` = ids na ordem de importância, a mais importante primeiro); empate mantém a ordem.
+ */
+export function sortByUrgencyPriority<T extends Pick<TaskSummary, 'urgency' | 'priority'>>(list: readonly T[], priorityOrder: readonly string[]): T[] {
+  const rank = (task: T) => {
+    const index = task.priority ? priorityOrder.indexOf(task.priority.id) : -1
+    return index < 0 ? priorityOrder.length : index
+  }
+  return list
+    .map((task, index) => ({ task, index }))
+    .sort((a, b) => (URGENCY_RANK[b.task.urgency ?? ''] ?? 0) - (URGENCY_RANK[a.task.urgency ?? ''] ?? 0) || rank(a.task) - rank(b.task) || a.index - b.index)
+    .map((entry) => entry.task)
+}
+
+/** Quantas há em cada passo (números da Bandeja quando há filtro). */
+export function countByStatus(list: readonly Pick<TaskSummary, 'demand'>[]): Record<DemandStatus, number> {
+  const out = Object.fromEntries(DEMAND_STATUSES.map((status) => [status, 0])) as Record<DemandStatus, number>
+  list.forEach((task) => {
+    if (task.demand) out[task.demand.status] += 1
+  })
+  return out
 }
 
 export const DEMAND_ACTIONS = ['assign', 'start', 'pass', 'conclude', 'validate', 'return'] as const

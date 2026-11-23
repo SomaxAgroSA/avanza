@@ -4786,7 +4786,8 @@
       "received": "No requests received yet.",
       "assigned": "You have no open requests.",
       "requested": "You have not requested anything yet.",
-      "all": "No requests here."
+      "all": "No requests here.",
+      "filtered": "No demands match these filters"
     },
     "row": {
       "due": "due {{date}}",
@@ -4809,7 +4810,15 @@
       "label": "Request filters",
       "owner": "Owner",
       "assignee": "Assigned to",
-      "any": "Everyone"
+      "any": "Everyone",
+      "bar": "Inbox filters",
+      "search": "Search",
+      "project": "Project",
+      "projectAll": "all",
+      "priority": "Priority",
+      "urgency": "Urgency",
+      "all": "all",
+      "clear": "Clear"
     },
     "badge_one": "{{count}} waiting for you",
     "badge_other": "{{count}} waiting for you",
@@ -4904,6 +4913,13 @@
       "step": "Step",
       "assignee": "Assigned to",
       "deadline": "Deadline"
+    },
+    "columns": {
+      "task": "Task",
+      "status": "Status",
+      "urgency": "Urgency",
+      "priority": "Priority",
+      "assignee": "Assigned to"
     }
   }
 }

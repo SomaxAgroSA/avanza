@@ -76,7 +76,15 @@ const LIST_SCHEMA = {
   assignee_id: [idRule],
   // empresa (§46): a da demanda interna ou a do projeto; `none` = sem empresa
   company_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  // filtros da Bandeja (ajuste 23/11): projeto (`internal` = só as demandas internas), prioridades e urgências
+  // (várias, separadas por vírgula; urgência `none` = sem urgência) e busca no título/código
+  project_id: [rules.custom((value) => (value === 'internal' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  priority_id: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type'))],
+  urgency: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => ['high', 'medium', 'low', 'none'].indexOf(v) >= 0) ? null : 'invalid_option'))],
+  search: [rules.maxLength(100)],
 }
+
+const toList = (value) => (value ? Array.from(new Set(value.split(','))) : undefined)
 
 function invalid(fields) {
   return appError('VALIDATION_ERROR', undefined, { fields })
@@ -404,7 +412,8 @@ function createDemandService(deps) {
 
   /**
    * Caixas da tela Demandas (`box` = received | assigned | requested | all; `status` = passos separados por
-   * vírgula; `owner_id` e `assignee_id` filtram pelo responsável e por quem executa). `all` = todas as
+   * vírgula; `owner_id` e `assignee_id` filtram pelo responsável e por quem executa; `project_id` (ou
+   * `internal`), `priority_id`, `urgency` e `search` são os filtros da Bandeja). `all` = todas as
    * demandas, só para quem tem `projects.view_all` (FORBIDDEN para os demais).
    */
   async function listDemands(ctx, query) {
@@ -412,7 +421,20 @@ function createDemandService(deps) {
     rbac.assertCan(ctx.principal, 'tasks.view')
     const q = query || {}
     const pick = (key) => (q[key] === undefined || q[key] === '' ? undefined : q[key])
-    const filters = assertValid({ box: pick('box'), status: pick('status'), owner_id: pick('owner_id'), assignee_id: pick('assignee_id'), company_id: pick('company_id') }, LIST_SCHEMA)
+    const filters = assertValid(
+      {
+        box: pick('box'),
+        status: pick('status'),
+        owner_id: pick('owner_id'),
+        assignee_id: pick('assignee_id'),
+        company_id: pick('company_id'),
+        project_id: pick('project_id'),
+        priority_id: pick('priority_id'),
+        urgency: pick('urgency'),
+        search: typeof pick('search') === 'string' ? pick('search').trim() || undefined : pick('search'),
+      },
+      LIST_SCHEMA,
+    )
     const issue = demandDomain.boxIssue(ctx.principal, filters.box)
     if (issue) throw appError(issue)
     const pagination = parsePagination(q, { defaultPerPage: 100, maxPerPage: 100 })
@@ -428,6 +450,11 @@ function createDemandService(deps) {
       assigneeId: filters.assignee_id,
       companyId: filters.company_id,
       demandStatuses: filters.status ? filters.status.split(',').map((s) => s.trim()) : undefined,
+      kind: filters.project_id === 'internal' ? 'demand' : undefined,
+      projectId: filters.project_id && filters.project_id !== 'internal' ? filters.project_id : undefined,
+      priorityId: toList(filters.priority_id),
+      urgency: toList(filters.urgency),
+      search: filters.search ? { text: filters.search, fieldIds: [] } : undefined,
       sort: [{ column: 'created', direction: 'DESC' }],
       pagination,
     })

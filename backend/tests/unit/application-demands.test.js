@@ -592,6 +592,18 @@ describe('application/demands — caixas e carga da equipe', () => {
     await s.demands.conclude(s.ctx.jorge, b.id, { comment: 'Pronto' })
     assert.equal((await s.demands.overview(s.ctx.ana)).pending, 1)
     assert.equal((await s.demands.overview(s.ctx.jorge)).pending, 1)
+
+    // filtros da Bandeja (ajuste 23/11): prioridade e urgência (várias), projeto (internal = demandas internas) e busca
+    await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'D urgente', priority_id: s.priorities.high.id, urgency: 'high' }))
+    const filtered = async (extra) => (await s.demands.listDemands(s.ctx.cesar, Object.assign({ box: 'received' }, extra))).items.map((t) => t.title).sort()
+    assert.deepEqual(await filtered({ urgency: 'high' }), ['D urgente'])
+    assert.deepEqual(await filtered({ urgency: 'none' }), ['A', 'B', 'C'])
+    assert.deepEqual(await filtered({ urgency: 'high,none' }), ['A', 'B', 'C', 'D urgente'])
+    assert.deepEqual(await filtered({ priority_id: s.priorities.high.id }), ['D urgente'])
+    assert.deepEqual(await filtered({ project_id: 'internal', search: 'urgente' }), ['D urgente'])
+    assert.deepEqual(await filtered({ project_id: 'internal', search: '  ' }), ['A', 'B', 'C', 'D urgente'])
+    assert.deepEqual(await filtered({ project_id: 'p_outro' }), [])
+    assert.equal(await codeOf(() => s.demands.listDemands(s.ctx.cesar, { box: 'received', urgency: 'altissima' })), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
   })
 
   it('Todas (só com projects.view_all): todas as demandas, filtros por responsável e quem executa, números e a carga de todos', async () => {

@@ -1,17 +1,24 @@
 import { Link, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight, Inbox } from 'lucide-react'
 import {
   DEMAND_BOXES,
   DEMAND_KPI_STATUSES,
+  countByStatus,
   demandActionsFor,
   groupByStatus,
+  hasInboxFilters,
+  inboxQuery,
+  readInboxFilters,
+  sortByUrgencyPriority,
   splitAssignedBox,
   loadPercent,
+  writeInboxFilters,
   type DemandBox,
   type DemandCounts,
   type DemandListFilters,
+  type InboxFilters,
   type TeamLoad,
 } from '@/domain/demands'
 import type { UserSummary } from '@/domain/projects'
@@ -25,6 +32,11 @@ import { DemandActions } from './DemandActions'
 import { DemandChip, DemandStatusBadge, ProjectChip } from './demand-visuals'
 import { useDemandList, useDemandOverview, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
+import { PROJECT_OPTIONS_QUERY, useProjects } from '@/features/projects/queries'
+import { usePriorities } from '@/features/workflow/queries'
+import { TaskPriorityBadge } from '@/features/tasks/task-visuals'
+import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
+import { InboxFilterBar, type InboxFilterOption } from './InboxFilterBar'
 
 const isBox = (value: string | null): value is DemandBox => !!value && (DEMAND_BOXES as readonly string[]).includes(value)
 /** Opção "Todos" dos filtros de pessoa. */
@@ -47,7 +59,21 @@ export function DemandsPage() {
   const overview = useDemandOverview()
   const counts = overview.data?.counts
   const open = (b: DemandBox) => (counts ? DEMAND_KPI_STATUSES.reduce((sum, status) => sum + counts[b][status], 0) : undefined)
-  const filters = box === 'all' ? personFilters(params) : {}
+  // filtros da Bandeja (ajuste 23/11): valem em todas as caixas e ficam no endereço
+  const inbox = readInboxFilters(params)
+  const filtering = hasInboxFilters(inbox)
+  const filters: DemandListFilters = { ...inboxQuery(inbox), ...(box === 'all' ? personFilters(params) : {}) }
+  const list = useDemandList(box, filters)
+  const projectOptions = useInboxProjects(list.data?.items ?? [])
+  const priorities = usePriorities(false)
+  const priorityOptions: InboxFilterOption[] = (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name }))
+  const setInbox = useCallback((next: InboxFilters) => setParams(writeInboxFilters(params, next), { replace: true }), [params, setParams])
+  // com filtro, os números contam o que a lista mostra (enquanto ela vem inteira); sem filtro, os da caixa
+  const kpiCounts = (b: DemandBox) => {
+    const data = list.data
+    if (filtering && data && data.total <= data.items.length) return countByStatus(data.items)
+    return counts?.[b]
+  }
 
   const label = (text: string, total: number | undefined) => (
     <>
@@ -71,14 +97,16 @@ export function DemandsPage() {
           className="shrink-0"
           label={t('demands.page.tabsLabel')}
           value={box}
-          onValueChange={(value) => setParams(value === 'received' ? {} : { box: value }, { replace: true })}
+          // trocar de caixa mantém os filtros da Bandeja (os de pessoa são só da caixa Todas)
+          onValueChange={(value) => setParams(writeInboxFilters(value === 'received' ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
           options={boxes.map((b) => ({ value: b, label: label(t(`demands.tabs.${b}`), open(b)) }))}
         />
+        <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} />
       </TasksHeader>
-      {(box === 'received' || box === 'all') && counts && <KpiCards counts={counts[box]} />}
+      {(box === 'received' || box === 'all') && kpiCounts(box) && <KpiCards counts={kpiCounts(box)!} />}
       {box === 'received' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <DemandBoxList box="received" />
+          <DemandBoxList box="received" filters={filters} />
           <TeamLoadCard team={overview.data?.team ?? []} loading={overview.isPending} />
         </div>
       ) : box === 'all' ? (
@@ -90,10 +118,26 @@ export function DemandsPage() {
           <TeamLoadCard variant="all" team={overview.data?.allTeam ?? []} loading={overview.isPending} />
         </div>
       ) : (
-        <DemandBoxList box={box} />
+        <DemandBoxList box={box} filters={filters} />
       )}
     </>
   )
+}
+
+/**
+ * Projetos do filtro da Bandeja: os que a pessoa vê, somados aos que aparecem na caixa (tarefa de projeto com
+ * responsável, que ela recebe sem ser do projeto), pelo nome.
+ */
+function useInboxProjects(items: readonly TaskSummary[]): InboxFilterOption[] {
+  const projects = useProjects(PROJECT_OPTIONS_QUERY)
+  return useMemo(() => {
+    const byId = new Map<string, string>()
+    ;(projects.data?.items ?? []).forEach((p) => byId.set(p.id, p.name))
+    items.forEach((task) => {
+      if (task.project) byId.set(task.project.id, task.project.name)
+    })
+    return [...byId.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
+  }, [projects.data, items])
 }
 
 /** Filtros de pessoa da caixa Todas, lidos do endereço (`owner`, `assignee`). */
@@ -109,7 +153,7 @@ function personFilters(params: URLSearchParams): DemandListFilters {
 }
 
 /** Números dos quatro primeiros passos (Sem atribuir, Atribuídas, Em andamento, Para validar). */
-function KpiCards({ counts }: { counts: DemandCounts[DemandBox] }) {
+function KpiCards({ counts }: { counts: Pick<DemandCounts[DemandBox], (typeof DEMAND_KPI_STATUSES)[number]> }) {
   const { t } = useTranslation()
   return (
     <section aria-label={t('demands.page.kpis')} className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -186,12 +230,15 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
   const me = useSession().current?.user.id
   const [params] = useSearchParams()
   const list = useDemandList(box, filters)
+  const priorities = usePriorities(false)
+  const order = (priorities.data ?? []).map((p) => p.id)
   const all = list.data?.items ?? []
   const split = box === 'assigned' ? splitAssignedBox(all, me) : null
   const items = split ? split.active : all
   const total = list.data?.total ?? 0
+  const filtering = hasInboxFilters(readInboxFilters(params))
   // o "← Voltar" da página da tarefa volta para a mesma caixa (com os filtros)
-  const back = box === 'received' ? '/tasks/demands' : `/tasks/demands?${params.toString()}`
+  const back = params.toString() ? `/tasks/demands?${params.toString()}` : '/tasks/demands'
   const executor = box === 'assigned'
 
   if (list.isPending) return <AppSkeleton className="h-64 rounded-2xl" />
@@ -199,7 +246,7 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
   if (all.length === 0) {
     return (
       <AppCard>
-        <AppEmptyState compact icon={<Inbox />} title={t(`demands.empty.${box}`)} />
+        <AppEmptyState compact icon={<Inbox />} title={filtering ? t('demands.empty.filtered') : t(`demands.empty.${box}`)} />
       </AppCard>
     )
   }
@@ -214,8 +261,17 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
   )
   return (
     <AppCard padded={false} className="px-4 py-2">
+      {/* colunas (ajuste 23/11): Estado, Urgência, Prioridade e Atribuída a, cada uma com o seu título */}
+      <div aria-hidden className={cn(ROW_GRID, 'hidden border-b border-border pt-2 pb-2 text-[11px] font-bold tracking-wider text-muted uppercase sm:grid')}>
+        <span>{t('demands.columns.task')}</span>
+        <span>{t('demands.columns.status')}</span>
+        <span>{t('demands.columns.urgency')}</span>
+        <span>{t('demands.columns.priority')}</span>
+        <span>{t('demands.columns.assignee')}</span>
+        <span />
+      </div>
       {items.length === 0 && <p className="py-3 text-sm text-muted">{t('demands.empty.assigned')}</p>}
-      {groupByStatus(items).map((group) => {
+      {groupByStatus(sortByUrgencyPriority(items, order)).map((group) => {
         const label = executor && group.status === 'to_validate' ? t('demands.groups.inValidation') : t(`demands.groups.${group.status}`)
         return (
           <section key={group.status} aria-label={label}>
@@ -262,7 +318,7 @@ function DemandRow({ task, box, back, actions, executor = false }: { task: TaskS
   const { t, i18n } = useTranslation()
   const demand = task.demand
   return (
-    <div className="grid items-center gap-x-3 gap-y-2 py-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_11rem_auto]">
+    <div className={cn(ROW_GRID, 'grid gap-y-2 py-3')}>
       <div className="min-w-0">
         <p className="flex min-w-0 items-center gap-2 text-xs text-muted">
           {/* demanda interna ou tarefa de projeto com quem recebe e distribui (o nome do projeto) */}
@@ -280,18 +336,22 @@ function DemandRow({ task, box, back, actions, executor = false }: { task: TaskS
         )}
       </div>
       <div>{demand && <DemandStatusBadge status={demand.status} executor={executor} />}</div>
+      <div className="min-w-0 text-sm" data-testid="demand-urgency">
+        <UrgencyLabel urgency={task.urgency} />
+      </div>
+      <div className="min-w-0" data-testid="demand-priority">
+        <TaskPriorityBadge priority={task.priority} />
+      </div>
       <div className="min-w-0 text-xs text-muted">
         {task.assignee ? (
-          <span className="inline-flex max-w-full items-center gap-1.5 text-fg">
+          <span className="inline-flex max-w-full items-center gap-1.5 text-sm text-fg">
             <AppAvatar name={task.assignee.name} src={task.assignee.avatarUrl} size="xs" />
             <span className="truncate">{task.assignee.name}</span>
           </span>
         ) : (
-          <span>{t('demands.row.noAssignee')}</span>
+          <span className="text-sm">{t('demands.row.noAssignee')}</span>
         )}
-        <span className="block">
-          {demand?.dueAt ? t('demands.row.due', { date: formatShortDateTime(demand.dueAt, i18n.language) }) : t('demands.row.priority', { name: task.priority?.name ?? '—' })}
-        </span>
+        {demand?.dueAt && <span className="block">{t('demands.row.due', { date: formatShortDateTime(demand.dueAt, i18n.language) })}</span>}
       </div>
       <div className="sm:text-right">
         <DemandActions task={task} actions={actions} />
@@ -299,6 +359,9 @@ function DemandRow({ task, box, back, actions, executor = false }: { task: TaskS
     </div>
   )
 }
+
+/** Colunas da caixa: tarefa, estado, urgência, prioridade, atribuída a e os botões (no celular, uma embaixo da outra). */
+const ROW_GRID = 'items-center gap-x-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_7.5rem_6.5rem_10rem_auto]'
 
 /**
  * Carga por pessoa: demandas atribuídas e em andamento e as horas estimadas (barra pelas horas). `team` =

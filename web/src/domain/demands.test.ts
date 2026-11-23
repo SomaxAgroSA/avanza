@@ -1,11 +1,48 @@
 import { describe, expect, it } from 'vitest'
-import { deadlineToIso, demandActionsFor, groupByStatus, isoToDeadline, loadPercent, type DemandStatus } from './demands'
+import {
+  countByStatus,
+  deadlineToIso,
+  demandActionsFor,
+  groupByStatus,
+  hasInboxFilters,
+  inboxQuery,
+  isoToDeadline,
+  loadPercent,
+  readInboxFilters,
+  sortByUrgencyPriority,
+  writeInboxFilters,
+  type DemandStatus,
+} from './demands'
 
 const person = (id: string) => ({ id, name: id, email: `${id}@x`, avatarUrl: null })
 const demand = (status: DemandStatus, extra: { assignee?: string; owner?: string; reporter?: string } = {}) => ({
   assignee: extra.assignee ? person(extra.assignee) : null,
   reporter: person(extra.reporter ?? 'ana'),
   demand: { status, owner: person(extra.owner ?? 'cesar'), dueAt: null, openedAt: null },
+})
+
+describe('domain/demands — filtros e ordem da Bandeja (ajuste 23/11)', () => {
+  it('filtros no endereço: lê, grava (vazios saem, a caixa fica) e vira a consulta', () => {
+    const params = new URLSearchParams('box=assigned&q=dmr&project=internal&priority=p1,p2&urgency=high,none')
+    const filters = readInboxFilters(params)
+    expect(filters).toEqual({ search: 'dmr', projectId: 'internal', priorityIds: ['p1', 'p2'], urgencies: ['high', 'none'] })
+    expect(hasInboxFilters(filters)).toBe(true)
+    expect(inboxQuery(filters)).toEqual({ search: 'dmr', projectId: 'internal', priorityIds: ['p1', 'p2'], urgencies: ['high', 'none'] })
+    const cleared = writeInboxFilters(params, { search: '', projectId: '', priorityIds: [], urgencies: ['high'] })
+    expect(cleared.toString()).toBe('box=assigned&urgency=high')
+    expect(hasInboxFilters(readInboxFilters(new URLSearchParams('box=all')))).toBe(false)
+    expect(inboxQuery({ search: '  ', projectId: '', priorityIds: [], urgencies: [] })).toEqual({})
+  })
+
+  it('ordem: as mais urgentes primeiro, depois a prioridade mais importante; empate mantém a ordem', () => {
+    const task = (id: string, urgency: 'high' | 'medium' | 'low' | null, priority: string | null) => ({ id, urgency, priority: priority ? { id: priority, key: priority, name: priority, color: 'gray' as const } : null })
+    const list = [task('a', null, 'baixa'), task('b', 'low', 'critica'), task('c', 'high', 'media'), task('d', 'high', 'critica'), task('e', 'medium', null), task('f', null, 'baixa')]
+    expect(sortByUrgencyPriority(list, ['critica', 'alta', 'media', 'baixa']).map((t) => t.id)).toEqual(['d', 'c', 'e', 'b', 'a', 'f'])
+  })
+
+  it('números por passo (quando há filtro)', () => {
+    expect(countByStatus([demand('unassigned'), demand('unassigned'), demand('to_validate')])).toEqual({ unassigned: 2, assigned: 0, in_progress: 0, to_validate: 1, done: 0 })
+  })
 })
 
 describe('domain/demands (§45)', () => {
