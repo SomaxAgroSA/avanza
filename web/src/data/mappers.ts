@@ -104,7 +104,7 @@ export function toRoleSummary(dto: RoleDto): RoleSummary {
     description: dto.description,
     isSystem: dto.is_system,
     ongoingView: dto.ongoing_view === 'executive' || dto.ongoing_view === 'both' ? dto.ongoing_view : '',
-    ...toTaskViews({ tasksStart: dto.tasks_start, tasksList: dto.tasks_list, tasksAllBox: dto.tasks_all_box }),
+    ...toTaskViews({ tasksStart: dto.tasks_start, tasksList: dto.tasks_list, tasksAllBox: dto.tasks_all_box, tasksHiddenBoxes: dto.tasks_hidden_boxes }),
   }
 }
 

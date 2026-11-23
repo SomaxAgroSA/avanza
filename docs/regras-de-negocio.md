@@ -855,17 +855,16 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
 
 - **Ambas (19/11/2026):** o perfil pode ter `ongoing_view = both`. Em Em andamento aparece no topo o seletor **Gestão | Direção e gerência**; abre em Direção e o navegador lembra a última escolha de cada pessoa. Perfil Admin (Angelica e Douglas) usa essa opção.
 
-### Tarefas por perfil (ajuste 23/11/2026)
+### Tarefas por perfil (ajustes 23 e 24/11/2026)
 
 Em Controle de acesso → Perfis, cada perfil tem o bloco **Tarefas** — só a tela, para a pessoa ver o que precisa sem se perder (o acesso continua nas permissões):
-- **Ao entrar em Tarefas abre:** Lista (padrão, como antes), Caixa de entrada (Recebidas) ou a caixa **Todas** — é para onde o item Tarefas do menu (e a paleta) leva; o item segue marcado na Lista e na Caixa de entrada. A aba Caixa de entrada também abre a caixa Todas quando é a entrada do perfil.
-- **Lista de tarefas:** todas as que a pessoa pode ver (padrão), **só as suas** (sem "Ver todas", nem por `?scope=all`) ou **oculta** (sem a aba Lista; `/tasks` leva à Caixa de entrada).
-- **Caixa "Todas" da Caixa de entrada:** visível (padrão) ou oculta. Continua exigindo `projects.view_all`; o perfil só pode escondê-la.
-- Escolha sem efeito vira a mais próxima: "a caixa Todas" sem poder vê-la abre Recebidas; "Lista" com a Lista oculta abre a Caixa de entrada.
-- É só tela: dentro de cada projeto as tarefas seguem como antes, e a API (`GET /tasks`) não muda — quem tem `projects.view_all` ainda chega a todas pelos projetos, pelo Kanban e pela busca. Restringir dados é tirar a permissão.
-- Gravado em `roles.tasks_start`, `roles.tasks_list` e `roles.tasks_all_box` (migration 0034; listas fechadas em `domain/permissions.js#TASK_VIEWS`); auditado em `role.updated`/`role.created`; chega ao navegador em `GET /auth/me` → `role`. O perfil próprio de uma pessoa herda os três do perfil compartilhado.
-- **Sem data de entrega:** a linha do tempo mostra no fim, sob "Sem data de entrega · N", os projetos do filtro sem início e entrega válidos (só o nome e a marca, sem barra), para o número dos indicadores bater com o que se vê.
-- O painel de Dependências não traz mais o bloco "Como é calculado" (a regra fica no §42).
+- **O que aparece:** uma caixa de marcar por tela — **Lista**, **Recebidas por mim**, **Atribuídas a mim**, **Pedidas por mim** e **Todas**. Por padrão todas marcadas (como antes). Sempre fica ao menos uma: a última marcada não se desmarca.
+- **Ao entrar em Tarefas abre:** uma das telas marcadas (Lista ou "Caixa de entrada · caixa") — é para onde o item Tarefas do menu (e a paleta) leva; o item segue marcado na Lista e na Caixa de entrada. Desmarcar a tela de entrada passa a entrada para a primeira marcada.
+- Ex.: Diretoria só com **Todas** marcada → entra direto na caixa Todas e não vê a Lista nem as outras caixas.
+- Só as caixas marcadas aparecem na Caixa de entrada; sem `?box=` (ou com uma caixa que a pessoa não vê) ela abre na primeira visível. As abas **Lista | Caixa de entrada** só aparecem quando o perfil tem as duas. Sem a Lista, `/tasks` leva à Caixa de entrada; sem nenhuma caixa, `/tasks/demands` leva à Lista.
+- A caixa **Todas** continua exigindo `projects.view_all`; o perfil só pode escondê-la. Ninguém fica sem nada: perfil sem a Lista cujas caixas marcadas a pessoa não pode ver (só a Todas, sem `projects.view_all`) volta a mostrar Recebidas por mim.
+- É só tela: dentro de cada projeto as tarefas seguem como antes, e a API (`GET /tasks`, `GET /demands`) não muda — quem tem `projects.view_all` ainda chega a todas pelos projetos, pelo Kanban e pela busca. Restringir dados é tirar a permissão.
+- Gravado em `roles.tasks_start`, `roles.tasks_list`, `roles.tasks_all_box` (migration 0034) e `roles.tasks_hidden_boxes` (migration 0035); listas fechadas em `domain/permissions.js#TASK_VIEWS` e `#TASK_HIDDEN_BOXES`; auditado em `role.updated`/`role.created`; chega ao navegador em `GET /auth/me` → `role`. O perfil próprio de uma pessoa herda tudo do perfil compartilhado. `tasks_list = mine` (Lista sem "Ver todas") segue aceito pela API, mas a tela do perfil só marca ou desmarca a Lista.
 
 ## 42. Dependências por área (painel Direção e gerência)
 

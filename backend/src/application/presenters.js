@@ -44,6 +44,8 @@ function toRoleDto(role, extra) {
     tasks_start: role.tasksStart || '',
     tasks_list: role.tasksList || '',
     tasks_all_box: role.tasksAllBox || '',
+    // caixas pessoais escondidas (ajuste 24/11): na API, uma lista
+    tasks_hidden_boxes: (role.tasksHiddenBoxes || '').split(',').filter(Boolean),
   }
   if (extra && extra.permissions) dto.permissions = extra.permissions.slice().sort()
   if (extra && typeof extra.userCount === 'number') dto.user_count = extra.userCount

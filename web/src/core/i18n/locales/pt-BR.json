@@ -566,17 +566,8 @@
     },
     "tasks": {
       "title": "Tarefas",
-      "start": "Ao entrar em Tarefas abre",
-      "startInboxAll": "Caixa de entrada · Todas",
-      "startInbox": "Caixa de entrada · Recebidas",
-      "startList": "Lista",
-      "list": "Lista de tarefas",
-      "listAll": "Todas as que pode ver",
-      "listMine": "Só as suas tarefas",
-      "listHidden": "Oculta",
-      "allBox": "Caixa “Todas” da Caixa de entrada",
-      "allBoxShown": "Visível",
-      "allBoxHidden": "Oculta"
+      "show": "O que aparece",
+      "start": "Ao entrar em Tarefas abre"
     }
   },
   "permissions": {

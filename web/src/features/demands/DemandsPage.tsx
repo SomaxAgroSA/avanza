@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router'
+import { Link, Navigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight, Inbox } from 'lucide-react'
@@ -51,11 +51,11 @@ const ANY = '__any__'
 export function DemandsPage() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
-  // a caixa Todas: quem vê todos os projetos, se o perfil não a escondeu (Tarefas do perfil, ajuste 23/11)
-  const seesAll = useTaskViews().allBox
-  const boxes = DEMAND_BOXES.filter((b) => b !== 'all' || seesAll)
+  // as caixas do perfil (Tarefas do perfil, ajustes 23 e 24/11): só as marcadas; a Todas exige ver todos os
+  // projetos. Sem `?box=` (ou com uma caixa que a pessoa não vê), abre na primeira visível
+  const boxes: DemandBox[] = useTaskViews().boxes
   const raw = params.get('box')
-  const box: DemandBox = isBox(raw) && boxes.includes(raw) ? raw : 'received'
+  const box: DemandBox = isBox(raw) && boxes.includes(raw) ? raw : (boxes[0] ?? 'received')
   const overview = useDemandOverview()
   const counts = overview.data?.counts
   const open = (b: DemandBox) => (counts ? DEMAND_KPI_STATUSES.reduce((sum, status) => sum + counts[b][status], 0) : undefined)
@@ -82,6 +82,9 @@ export function DemandsPage() {
     setParams(next, { replace: true })
   }
 
+  // perfil sem nenhuma caixa (só a Lista): a Caixa de entrada não existe para ele
+  if (boxes.length === 0) return <Navigate to="/tasks" replace />
+
   return (
     <>
       <TasksHeader>
@@ -90,7 +93,7 @@ export function DemandsPage() {
           label={t('demands.page.tabsLabel')}
           value={box}
           // trocar de caixa mantém os filtros da Bandeja (os de pessoa são só da caixa Todas)
-          onValueChange={(value) => setParams(writeInboxFilters(value === 'received' ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
+          onValueChange={(value) => setParams(writeInboxFilters(value === boxes[0] ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
           options={boxes.map((b) => ({ value: b, label: <BoxLabel text={t(`demands.tabs.${b}`)} short={t(`demands.tabsShort.${b}`)} total={open(b)} /> }))}
         />
         <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} />

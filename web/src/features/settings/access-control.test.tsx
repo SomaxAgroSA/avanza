@@ -183,26 +183,43 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     await waitFor(() => expect(createRole).toHaveBeenCalledWith({ code: 'DIRETORIA', name: 'Dirección', description: '', permissions: [], ongoingView: 'executive', ...DEFAULT_TASK_VIEWS }))
   })
 
-  it('Tareas del perfil (23/11): dónde abre el menú, la Lista y la caja Todas; guarda y vuelve a leerse', async () => {
+  it('Tareas del perfil (23 y 24/11): qué aparece (Lista y cada caja) y dónde abre el menú; guarda y vuelve a leerse', async () => {
     const { update } = setupRoles([admin, memberRole])
     await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
     const dialog = await screen.findByRole('dialog', { name: 'Editar perfil' })
-    const start = within(dialog).getByRole('radiogroup', { name: 'Al entrar en Tareas abre' })
-    // por defecto, como antes: Lista, todas las que puede ver y la caja Todas visible
-    expect(within(start).getByRole('radio', { name: 'Lista' })).toBeChecked()
-    expect(within(dialog).getByRole('radio', { name: 'Todas las que puede ver' })).toBeChecked()
-    expect(within(dialog).getByRole('radio', { name: 'Visible' })).toBeChecked()
-    await userEvent.click(within(start).getByRole('radio', { name: 'Bandeja · Todas' }))
-    await userEvent.click(within(dialog).getByRole('radio', { name: 'Solo sus tareas' }))
+    const show = within(dialog).getByRole('group', { name: 'Qué aparece' })
+    // por defecto, como antes: todo marcado y el menú abre en la Lista
+    expect(within(show).getAllByRole('checkbox').map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'true', 'true', 'true', 'true'])
+    const start = within(dialog).getByRole('combobox', { name: 'Al entrar en Tareas abre' })
+    expect(start).toHaveTextContent('Lista')
+    // el caso del Directorio: solo la caja Todas
+    for (const name of ['Lista', 'Recibidas por mí', 'Asignadas a mí', 'Pedidas por mí']) await userEvent.click(within(show).getByRole('checkbox', { name }))
+    // la entrada acompaña (la Lista ya no aparece) y la última marcada no se puede desmarcar
+    expect(start).toHaveTextContent('Bandeja · Todas')
+    expect(within(show).getByRole('checkbox', { name: 'Todas' })).toBeDisabled()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
     await waitFor(() =>
-      expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: '', tasksStart: 'inbox_all', tasksList: 'mine', tasksAllBox: '' }),
+      expect(update).toHaveBeenCalledWith('role-member', {
+        name: 'Miembro',
+        description: '',
+        ongoingView: '',
+        tasksStart: 'inbox_all',
+        tasksList: 'hidden',
+        tasksAllBox: '',
+        tasksHiddenBoxes: ['received', 'assigned', 'requested'],
+      }),
     )
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
     await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
     const again = await screen.findByRole('dialog', { name: 'Editar perfil' })
-    expect(within(again).getByRole('radio', { name: 'Bandeja · Todas' })).toBeChecked()
-    expect(within(again).getByRole('radio', { name: 'Solo sus tareas' })).toBeChecked()
+    expect(within(again).getAllByRole('checkbox').map((c) => c.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'false', 'true'])
+    // volver a marcar una caja y elegirla como entrada
+    await userEvent.click(within(again).getByRole('checkbox', { name: 'Recibidas por mí' }))
+    await userEvent.click(within(again).getByRole('combobox', { name: 'Al entrar en Tareas abre' }))
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Bandeja · Recibidas por mí', 'Bandeja · Todas'])
+    await userEvent.click(screen.getByRole('option', { name: 'Bandeja · Recibidas por mí' }))
+    await userEvent.click(within(again).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(update).toHaveBeenLastCalledWith('role-member', expect.objectContaining({ tasksStart: 'inbox', tasksHiddenBoxes: ['assigned', 'requested'] })))
   })
 
   it('Por persona muestra la vista heredada del perfil (solo lectura; no hay opción por persona)', async () => {

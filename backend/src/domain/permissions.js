@@ -118,14 +118,21 @@ const ONGOING_VIEWS = Object.freeze(['', 'executive', 'both'])
 /**
  * Tarefas por perfil (ajuste 23/11/2026), escolhido em Controle de acesso → Perfis — só a tela, como a vista de
  * Em andamento: a pessoa enxerga o que precisa, sem se perder (o acesso continua nas permissões).
- * - tasks_start: onde o menu Tarefas abre — '' Lista; 'inbox' Caixa de entrada; 'inbox_all' a caixa Todas;
+ * - tasks_start: onde o menu Tarefas abre — '' Lista; 'inbox' Caixa de entrada (Recebidas); 'inbox_assigned',
+ *   'inbox_requested' e 'inbox_all' as caixas Atribuídas a mim, Pedidas por mim e Todas;
  * - tasks_list: a Lista — '' todas as que a pessoa pode ver; 'mine' só "Minhas tarefas"; 'hidden' sem a Lista;
  * - tasks_all_box: a caixa Todas da Caixa de entrada (que exige projects.view_all) — '' visível; 'hidden' não.
  */
 const TASK_VIEWS = Object.freeze({
-  tasks_start: Object.freeze(['', 'inbox', 'inbox_all']),
+  tasks_start: Object.freeze(['', 'inbox', 'inbox_assigned', 'inbox_requested', 'inbox_all']),
   tasks_list: Object.freeze(['', 'mine', 'hidden']),
   tasks_all_box: Object.freeze(['', 'hidden']),
 })
 
-module.exports = { PERMISSIONS, ONGOING_VIEWS, TASK_VIEWS, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }
+/**
+ * Caixas pessoais da Caixa de entrada que o perfil pode esconder (ajuste 24/11/2026), na ordem da tela; a caixa
+ * Todas fica em tasks_all_box. Gravadas em roles.tasks_hidden_boxes, separadas por vírgula.
+ */
+const TASK_HIDDEN_BOXES = Object.freeze(['received', 'assigned', 'requested'])
+
+module.exports = { PERMISSIONS, ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }
