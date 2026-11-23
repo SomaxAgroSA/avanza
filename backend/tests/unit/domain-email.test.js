@@ -67,45 +67,79 @@ describe('domain/email — modelos', () => {
     assert.equal(email.renderEmail('test', 'fr', { platform: 'K' }).subject, 'Teste de e-mail — K')
   })
 
-  it('notificação: frase do tipo, contexto, trecho e link para o item', () => {
+  it('notificação sem códigos: assunto "rótulo | projeto | prioridade", frase, título em destaque, dados e botão', () => {
+    const details = {
+      demand: false,
+      internal: false,
+      project: 'DRE SOMAX PARAGUAY',
+      priority: { name: 'Alta', translations: { en: { name: 'High' } } },
+      urgency: 'high',
+      company: 'Somax',
+      dueDate: '2026-11-25',
+    }
     const task = email.renderNotificationEmail(
       { type: 'mention', taskId: 't1', data: { code: 'CRM-12', title: 'Nova tela', comment: 'Pode revisar?' } },
-      { locale: 'pt-BR', actorName: 'Carla', platform: 'KAMBAN', appUrl: 'https://k.com' },
+      { locale: 'pt-BR', actorName: 'Carla', platform: 'Avanza', appUrl: 'https://k.com', details },
     )
-    assert.equal(task.subject, 'Carla mencionou você em CRM-12')
+    assert.equal(task.subject, 'Menção no Avanza | DRE SOMAX PARAGUAY | Alta')
+    assert.doesNotMatch(task.subject + task.html + task.text, /CRM-12/)
+    assert.match(task.html, /Carla mencionou você em uma tarefa\./)
     assert.match(task.html, /Nova tela/)
     assert.match(task.html, /Pode revisar\?/)
-    assert.match(task.html, /href="https:\/\/k\.com\/tasks\/t1"/)
-    const status = email.renderNotificationEmail(
+    assert.match(task.html, /Urgência<\/td><td[^>]*>Alta/)
+    assert.match(task.html, /Prazo<\/td><td[^>]*>25\/11\/2026/)
+    assert.match(task.html, /Avanza {2}· {2}Somax/)
+    assert.match(task.html, /href="https:\/\/k\.com\/tasks\/t1"[^>]*>Ver tarefa</)
+    assert.match(task.html, /bgcolor="#038831"/)
+    assert.match(task.text, /Projeto: DRE SOMAX PARAGUAY/)
+    // prioridade no idioma de quem recebe; prazo no formato do idioma
+    const en = email.renderNotificationEmail(
       { type: 'status_changed', taskId: 't1', data: { code: 'CRM-12', title: 'X', status: 'Em teste' } },
-      { locale: 'en', actorName: 'Carla', platform: 'KAMBAN', appUrl: 'https://k.com' },
+      { locale: 'en', actorName: 'Carla', platform: 'Avanza', appUrl: 'https://k.com', details },
     )
-    assert.equal(status.subject, 'Carla changed the status of CRM-12 to Em teste')
+    assert.equal(en.subject, 'Status change in Avanza | DRE SOMAX PARAGUAY | High')
+    assert.match(en.html, /Carla changed the status of a task to Em teste\./)
+    assert.match(en.html, /11\/25\/2026/)
+    // gestão do projeto: nome do elemento e o projeto
     const item = email.renderNotificationEmail(
       { type: 'plan_reply', planItemId: 'i9', projectId: 'p1', data: { name: 'Kickoff', project: 'ERP', update: 'Ok!' } },
-      { locale: 'es', actorName: 'Rafa', platform: 'KAMBAN', appUrl: 'https://k.com' },
+      { locale: 'es', actorName: 'Rafa', platform: 'Avanza', appUrl: 'https://k.com' },
     )
-    assert.equal(item.subject, 'Rafa respondió tu actualización en “Kickoff”')
-    assert.match(item.html, /href="https:\/\/k\.com\/projects\/p1\/management\?item=i9"/)
-    const due = email.renderNotificationEmail({ type: 'due_soon', taskId: 't2', data: { code: 'CRM-3', title: 'Y' } }, { locale: 'pt-BR', actorName: null, platform: 'KAMBAN', appUrl: 'https://k.com' })
-    assert.equal(due.subject, 'CRM-3 vence amanhã')
+    assert.equal(item.subject, 'Respuesta en Avanza | ERP')
+    assert.match(item.html, /Kickoff/)
+    assert.match(item.html, /href="https:\/\/k\.com\/projects\/p1\/management\?item=i9"[^>]*>Ver en la gestión</)
+    // sem detalhes (e-mail montado só com o aviso) continua saindo
+    const due = email.renderNotificationEmail({ type: 'overdue', taskId: 't2', data: { code: 'CRM-3', title: 'Y' } }, { locale: 'es', actorName: null, platform: 'Avanza', appUrl: 'https://k.com' })
+    assert.equal(due.subject, 'Plazo vencido en Avanza')
+    assert.match(due.html, /Tienes una tarea con el plazo vencido\./)
+    assert.match(due.html, /Actualiza el estado o ajusta el plazo\./)
+    // texto de pessoas é escapado
+    const evil = email.renderNotificationEmail({ type: 'comment', taskId: 't3', data: { title: '<b>x</b>', comment: '<script>' } }, { locale: 'es', actorName: 'A', platform: 'Avanza', appUrl: 'https://k.com' })
+    assert.doesNotMatch(evil.html, /<b>x<\/b>|<script>/)
   })
 
-  it('demandas internas (§45): pedido, passagem, conclusão, validação e devolução nos três idiomas', () => {
-    const ctx = (locale) => ({ locale, actorName: 'Jorge', platform: 'KAMBAN', appUrl: 'https://k.com' })
-    const note = (type, data) => ({ type, taskId: 't5', data: Object.assign({ code: 'DEM-4', title: 'Vista DMR' }, data) })
-    assert.equal(email.renderNotificationEmail(note('demand_received'), ctx('pt-BR')).subject, 'Jorge pediu DEM-4 a você')
-    assert.equal(email.renderNotificationEmail(note('demand_passed', { assignee: 'Carlos' }), ctx('es')).subject, 'Jorge pasó DEM-4 a Carlos')
+  it('demandas (§45): pedida por e departamento, "Demanda interna" no lugar do projeto e o próximo passo', () => {
+    const ctx = (locale, details) => ({ locale, actorName: 'Angélica Dávalos', platform: 'Avanza', appUrl: 'https://k.com', details })
+    const note = (type, data) => ({ type, taskId: 't5', data: Object.assign({ code: 'DREPY-18', title: 'Desarrollo de módulo de créditos' }, data) })
+    const details = { demand: true, internal: false, project: 'DRE SOMAX PARAGUAY', priority: { name: 'Alta' }, urgency: 'high', company: 'Somax', requester: 'Angélica Dávalos', requesterArea: 'Desarrollo' }
+    const received = email.renderNotificationEmail(note('demand_received'), ctx('es', details))
+    assert.equal(received.subject, 'Nueva demanda en Avanza | DRE SOMAX PARAGUAY | Alta')
+    assert.doesNotMatch(received.subject + received.html + received.text, /DREPY/)
+    assert.match(received.html, /Angélica Dávalos te envió una nueva demanda\./)
+    assert.match(received.html, /Pedida por<\/td><td[^>]*>Angélica Dávalos · Desarrollo/)
+    assert.match(received.html, /Para avanzar, asígnala a una persona de tu equipo con su plazo\./)
+    assert.match(received.html, />Ver demanda</)
+    const internal = email.renderNotificationEmail(note('demand_received'), ctx('pt-BR', Object.assign({}, details, { internal: true, project: '' })))
+    assert.equal(internal.subject, 'Nova demanda no Avanza | Demanda interna | Alta')
+    assert.equal(email.renderNotificationEmail(note('demand_passed', { assignee: 'Carlos' }), ctx('es')).subject, 'Demanda reasignada en Avanza')
+    assert.match(email.renderNotificationEmail(note('demand_passed', { assignee: 'Carlos' }), ctx('es')).html, /pasó una demanda a Carlos\./)
     const concluded = email.renderNotificationEmail(note('demand_concluded', { comment: 'Publicado.' }), ctx('en'))
-    assert.equal(concluded.subject, 'Jorge completed DEM-4: awaiting validation')
+    assert.equal(concluded.subject, 'Request to validate in Avanza')
     assert.match(concluded.html, /Publicado\./)
-    assert.match(concluded.html, /href="https:\/\/k\.com\/tasks\/t5"/)
-    assert.equal(email.renderNotificationEmail(note('demand_validated'), ctx('pt-BR')).subject, 'Jorge validou DEM-4')
-    assert.equal(email.renderNotificationEmail(note('demand_returned'), ctx('es')).subject, 'Jorge devolvió DEM-4')
+    assert.equal(email.renderNotificationEmail(note('demand_validated'), ctx('pt-BR')).subject, 'Demanda validada no Avanza')
+    assert.equal(email.renderNotificationEmail(note('demand_returned'), ctx('es')).subject, 'Demanda devuelta en Avanza')
   })
-})
 
-describe('domain/auth-token — links de redefinição e convite', () => {
   it('redefinição vale 60 minutos; convite, 7 dias; usado ou vencido não vale', () => {
     const now = new Date('2026-10-01T12:00:00Z')
     assert.equal(authToken.expiresAt('reset', now).toISOString(), '2026-10-01T13:00:00.000Z')

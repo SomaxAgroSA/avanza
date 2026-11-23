@@ -43,6 +43,41 @@ function createNotifier(deps) {
   }
 
   /**
+   * Dados do e-mail da tarefa (ajuste 23/11): projeto pelo nome (a demanda interna não tem), prioridade (com as
+   * traduções), urgência, empresa (a da demanda ou a do projeto), quem pediu e o departamento, e o prazo. Uma
+   * busca que falhe só deixa o dado de fora — o aviso sai do mesmo jeito.
+   */
+  async function emailDetails(task, project) {
+    const find = async (repo, id) => {
+      if (!id || !repo || !repo.findById) return null
+      try {
+        return await repo.findById(id)
+      } catch (_err) {
+        return null
+      }
+    }
+    const internal = demandDomain.isDemandsProject(project)
+    const demand = demandDomain.isDemand(task)
+    const [priority, company, requester, area] = await Promise.all([
+      find(deps.priorityRepository, task.priorityId),
+      find(deps.companyRepository, task.companyId || (project && project.companyId)),
+      demand ? find(deps.userRepository, task.reporterId) : null,
+      demand ? find(deps.areaRepository, task.areaId) : null,
+    ])
+    return {
+      demand,
+      internal,
+      project: !internal && project ? project.name : '',
+      priority: priority ? { name: priority.name, translations: priority.translations } : null,
+      urgency: task.urgency || null,
+      company: company ? company.name : '',
+      requester: requester ? requester.name : '',
+      requesterArea: area ? area.name : '',
+      dueDate: task.dueDate || null,
+    }
+  }
+
+  /**
    * `event`: { task, project, actorId, entries: [{ userId, type }], data?, dedupeKey?(userId, type) }.
    * Retorna quantas notificações foram criadas.
    */
@@ -56,6 +91,7 @@ function createNotifier(deps) {
     })
     const mail = await emailContext(deps)
     const actor = mail && event.actorId ? await deps.userRepository.findById(event.actorId) : null
+    const details = mail && event.task ? await emailDetails(event.task, event.project) : null
     let created = 0
     for (const recipient of list) {
       const user = users[recipient.userId]
@@ -65,7 +101,7 @@ function createNotifier(deps) {
       const notification = Object.assign({ userId: user.id, type: recipient.type, actorId: event.actorId || null, data: Object.assign({}, baseData, event.data || {}), dedupeKey }, target)
       await repos.notificationRepository.create(notification)
       if (mail && user.emailNotifications !== false && user.email) {
-        const message = emailDomain.renderNotificationEmail(notification, { locale: user.locale, actorName: actor ? actor.name : null, platform: mail.platform, appUrl: mail.appUrl })
+        const message = emailDomain.renderNotificationEmail(notification, { locale: user.locale, actorName: actor ? actor.name : null, platform: mail.platform, appUrl: mail.appUrl, details })
         await repos.emailOutboxRepository.enqueue({ to: user.email, kind: 'notification', subject: message.subject, html: message.html, text: message.text })
       }
       created++
