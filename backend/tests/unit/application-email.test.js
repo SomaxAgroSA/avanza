@@ -235,7 +235,10 @@ describe('notificações por e-mail', () => {
     const mails = deps.store.emailOutbox.filter((m) => m.kind === 'notification')
     assert.equal(mails.length, 1)
     assert.equal(mails[0].to, 'ana@example.com')
-    assert.equal(mails[0].subject, 'Admin mencionou você em CRM-12')
+    // sem código: o projeto pelo nome no assunto
+    assert.equal(mails[0].subject, 'Menção no Avanza | CRM')
+    assert.doesNotMatch(mails[0].html, /CRM-12/)
+    assert.match(mails[0].html, /Nova tela/)
     assert.match(mails[0].html, /https:\/\/kamban\.empresa\.com\/tasks\/t1/)
 
     await email.updateSettings(await ctxOf(admin), { enabled: false })

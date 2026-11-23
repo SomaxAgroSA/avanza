@@ -3,6 +3,8 @@
  * das mensagens nos três idiomas. Todo texto vindo de pessoas é escapado no HTML.
  */
 
+const { localize } = require('./content-locale')
+
 const DEFAULT_SETTINGS = Object.freeze({
   enabled: false,
   host: '',
@@ -122,24 +124,6 @@ const TEXTS = {
       button: 'Criar minha senha',
       note: 'O link vale por 7 dias e só pode ser usado uma vez.',
     },
-    notification: { button: 'Abrir', footer: 'Você recebe estes e-mails porque as notificações por e-mail estão ligadas na sua conta. Para desligar, acesse Minha conta.' },
-    types: {
-      mention: '{actor} mencionou você em {code}',
-      assigned: '{actor} atribuiu {code} a você',
-      comment: '{actor} comentou em {code}',
-      status_changed: '{actor} mudou o status de {code} para {status}',
-      due_soon: '{code} vence amanhã',
-      overdue: '{code} está com o prazo vencido',
-      plan_mention: '{actor} mencionou você em “{name}”',
-      plan_reply: '{actor} respondeu sua atualização em “{name}”',
-      demand_received: '{actor} pediu {code} a você',
-      demand_passed: '{actor} passou {code} para {assignee}',
-      demand_concluded: '{actor} concluiu {code}: falta validar',
-      demand_validated: '{actor} validou {code}',
-      demand_returned: '{actor} devolveu {code}',
-    },
-    someone: 'Alguém',
-    planIn: 'Quadro de {project}',
   },
   en: {
     test: { subject: 'Test email — {platform}', intro: 'If you got this message, email delivery from {platform} is working.' },
@@ -155,24 +139,6 @@ const TEXTS = {
       button: 'Create my password',
       note: 'The link is valid for 7 days and can be used only once.',
     },
-    notification: { button: 'Open', footer: 'You get these emails because email notifications are on in your account. To turn them off, go to My account.' },
-    types: {
-      mention: '{actor} mentioned you in {code}',
-      assigned: '{actor} assigned {code} to you',
-      comment: '{actor} commented on {code}',
-      status_changed: '{actor} changed the status of {code} to {status}',
-      due_soon: '{code} is due tomorrow',
-      overdue: '{code} is overdue',
-      plan_mention: '{actor} mentioned you in “{name}”',
-      plan_reply: '{actor} replied to your update in “{name}”',
-      demand_received: '{actor} requested {code} from you',
-      demand_passed: '{actor} passed {code} to {assignee}',
-      demand_concluded: '{actor} completed {code}: awaiting validation',
-      demand_validated: '{actor} validated {code}',
-      demand_returned: '{actor} returned {code}',
-    },
-    someone: 'Someone',
-    planIn: '{project} board',
   },
   es: {
     test: { subject: 'Prueba de correo — {platform}', intro: 'Si recibiste este mensaje, el envío de correos de {platform} funciona.' },
@@ -188,24 +154,149 @@ const TEXTS = {
       button: 'Crear mi contraseña',
       note: 'El enlace vale 7 días y solo se puede usar una vez.',
     },
-    notification: { button: 'Abrir', footer: 'Recibes estos correos porque las notificaciones por correo están activadas en tu cuenta. Para desactivarlas, ve a Mi cuenta.' },
+  },
+}
+
+/**
+ * Avisos por e-mail (ajuste 23/11/2026, aprovado em demonstração): sem códigos de tarefa ou projeto.
+ * Assunto "Rótulo no {platform} | Projeto | Prioridade"; corpo com a frase de quem fez, o título em
+ * destaque, os dados (pedida por, projeto, prioridade, urgência, empresa, prazo), o próximo passo e o botão.
+ */
+const NOTICE = {
+  'pt-BR': {
+    item: { task: 'uma tarefa', demand: 'uma demanda' },
     types: {
-      mention: '{actor} te mencionó en {code}',
-      assigned: '{actor} te asignó {code}',
-      comment: '{actor} comentó en {code}',
-      status_changed: '{actor} cambió el estado de {code} a {status}',
-      due_soon: '{code} vence mañana',
-      overdue: '{code} está vencida',
-      plan_mention: '{actor} te mencionó en “{name}”',
-      plan_reply: '{actor} respondió tu actualización en “{name}”',
-      demand_received: '{actor} te pidió {code}',
-      demand_passed: '{actor} pasó {code} a {assignee}',
-      demand_concluded: '{actor} concluyó {code}: falta validar',
-      demand_validated: '{actor} validó {code}',
-      demand_returned: '{actor} devolvió {code}',
+      mention: '{actor} mencionou você em {item}.',
+      assigned: '{actor} atribuiu {item} a você.',
+      comment: '{actor} comentou em {item}.',
+      status_changed: '{actor} mudou o status de {item} para {status}.',
+      due_soon: 'Você tem {item} que vence amanhã.',
+      overdue: 'Você tem {item} com o prazo vencido.',
+      plan_mention: '{actor} mencionou você na gestão do projeto.',
+      plan_reply: '{actor} respondeu sua atualização na gestão do projeto.',
+      demand_received: '{actor} enviou uma nova demanda para você.',
+      demand_passed: '{actor} passou uma demanda para {assignee}.',
+      demand_concluded: '{actor} concluiu uma demanda e falta validar.',
+      demand_validated: '{actor} validou uma demanda.',
+      demand_returned: '{actor} devolveu uma demanda.',
     },
+    subjects: {
+      mention: 'Menção no {platform}',
+      assigned: 'Nova atribuição no {platform}',
+      comment: 'Novo comentário no {platform}',
+      status_changed: 'Mudança de status no {platform}',
+      due_soon: 'Vence amanhã no {platform}',
+      overdue: 'Prazo vencido no {platform}',
+      plan_mention: 'Menção no {platform}',
+      plan_reply: 'Resposta no {platform}',
+      demand_received: 'Nova demanda no {platform}',
+      demand_passed: 'Demanda repassada no {platform}',
+      demand_concluded: 'Demanda para validar no {platform}',
+      demand_validated: 'Demanda validada no {platform}',
+      demand_returned: 'Demanda devolvida no {platform}',
+    },
+    next: {
+      demand_received: 'Para avançar, atribua a uma pessoa da sua equipe com o prazo.',
+      demand_concluded: 'Revise a entrega e valide, ou devolva com um comentário.',
+      demand_returned: 'Veja o comentário e retome o trabalho.',
+      overdue: 'Atualize o status ou ajuste o prazo.',
+    },
+    labels: { requester: 'Pedida por', project: 'Projeto', priority: 'Prioridade', urgency: 'Urgência', company: 'Empresa', due: 'Prazo' },
+    urgency: { high: 'Alta', medium: 'Média', low: 'Baixa' },
+    internal: 'Demanda interna',
+    button: { task: 'Ver tarefa', demand: 'Ver demanda', plan: 'Ver na gestão', other: 'Abrir' },
+    footer: 'Você recebe este aviso porque as notificações por e-mail estão ligadas. Você pode mudar isso em Minha conta.',
+    someone: 'Alguém',
+  },
+  en: {
+    item: { task: 'a task', demand: 'a request' },
+    types: {
+      mention: '{actor} mentioned you in {item}.',
+      assigned: '{actor} assigned {item} to you.',
+      comment: '{actor} commented on {item}.',
+      status_changed: '{actor} changed the status of {item} to {status}.',
+      due_soon: 'You have {item} due tomorrow.',
+      overdue: 'You have {item} that is overdue.',
+      plan_mention: '{actor} mentioned you in the project management.',
+      plan_reply: '{actor} replied to your update in the project management.',
+      demand_received: '{actor} sent you a new request.',
+      demand_passed: '{actor} passed a request to {assignee}.',
+      demand_concluded: '{actor} completed a request and it awaits validation.',
+      demand_validated: '{actor} validated a request.',
+      demand_returned: '{actor} returned a request.',
+    },
+    subjects: {
+      mention: 'Mention in {platform}',
+      assigned: 'New assignment in {platform}',
+      comment: 'New comment in {platform}',
+      status_changed: 'Status change in {platform}',
+      due_soon: 'Due tomorrow in {platform}',
+      overdue: 'Overdue in {platform}',
+      plan_mention: 'Mention in {platform}',
+      plan_reply: 'Reply in {platform}',
+      demand_received: 'New request in {platform}',
+      demand_passed: 'Request reassigned in {platform}',
+      demand_concluded: 'Request to validate in {platform}',
+      demand_validated: 'Request validated in {platform}',
+      demand_returned: 'Request returned in {platform}',
+    },
+    next: {
+      demand_received: 'To move forward, assign it to someone on your team with a deadline.',
+      demand_concluded: 'Review the delivery and validate it, or return it with a comment.',
+      demand_returned: 'Read the comment and pick the work back up.',
+      overdue: 'Update the status or adjust the deadline.',
+    },
+    labels: { requester: 'Requested by', project: 'Project', priority: 'Priority', urgency: 'Urgency', company: 'Company', due: 'Due' },
+    urgency: { high: 'High', medium: 'Medium', low: 'Low' },
+    internal: 'Internal request',
+    button: { task: 'View task', demand: 'View request', plan: 'View in management', other: 'Open' },
+    footer: 'You get this notice because email notifications are on. You can change this in My account.',
+    someone: 'Someone',
+  },
+  es: {
+    item: { task: 'una tarea', demand: 'una demanda' },
+    types: {
+      mention: '{actor} te mencionó en {item}.',
+      assigned: '{actor} te asignó {item}.',
+      comment: '{actor} comentó en {item}.',
+      status_changed: '{actor} cambió el estado de {item} a {status}.',
+      due_soon: 'Tienes {item} que vence mañana.',
+      overdue: 'Tienes {item} con el plazo vencido.',
+      plan_mention: '{actor} te mencionó en la gestión del proyecto.',
+      plan_reply: '{actor} respondió tu actualización en la gestión del proyecto.',
+      demand_received: '{actor} te envió una nueva demanda.',
+      demand_passed: '{actor} pasó una demanda a {assignee}.',
+      demand_concluded: '{actor} concluyó una demanda y falta validarla.',
+      demand_validated: '{actor} validó una demanda.',
+      demand_returned: '{actor} devolvió una demanda.',
+    },
+    subjects: {
+      mention: 'Mención en {platform}',
+      assigned: 'Nueva asignación en {platform}',
+      comment: 'Nuevo comentario en {platform}',
+      status_changed: 'Cambio de estado en {platform}',
+      due_soon: 'Vence mañana en {platform}',
+      overdue: 'Plazo vencido en {platform}',
+      plan_mention: 'Mención en {platform}',
+      plan_reply: 'Respuesta en {platform}',
+      demand_received: 'Nueva demanda en {platform}',
+      demand_passed: 'Demanda reasignada en {platform}',
+      demand_concluded: 'Demanda para validar en {platform}',
+      demand_validated: 'Demanda validada en {platform}',
+      demand_returned: 'Demanda devuelta en {platform}',
+    },
+    next: {
+      demand_received: 'Para avanzar, asígnala a una persona de tu equipo con su plazo.',
+      demand_concluded: 'Revisa la entrega y valídala, o devuélvela con un comentario.',
+      demand_returned: 'Revisa el comentario y retoma el trabajo.',
+      overdue: 'Actualiza el estado o ajusta el plazo.',
+    },
+    labels: { requester: 'Pedida por', project: 'Proyecto', priority: 'Prioridad', urgency: 'Urgencia', company: 'Empresa', due: 'Plazo' },
+    urgency: { high: 'Alta', medium: 'Media', low: 'Baja' },
+    internal: 'Demanda interna',
+    button: { task: 'Ver tarea', demand: 'Ver demanda', plan: 'Ver en la gestión', other: 'Abrir' },
+    footer: 'Recibes este aviso porque tienes las notificaciones por correo activas. Puedes cambiarlo en Mi cuenta.',
     someone: 'Alguien',
-    planIn: 'Tablero de {project}',
   },
 }
 
@@ -226,32 +317,76 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;')
 }
 
-/** Mensagem simples: título, parágrafos, botão opcional e rodapé; estilos em linha (clientes de e-mail). */
+const FONT = "'Segoe UI',Helvetica,Arial,sans-serif"
+const GREEN = '#038831'
+
+/**
+ * Mensagem (estilos em linha e tabelas: é o que o Outlook respeita). `opts`: { header?, intro?, title,
+ * paragraphs?, rows? [[rótulo, valor]], quote?, next?, link?, button?, note? }. O botão é uma célula de
+ * tabela com fundo (o Outlook ignora o preenchimento de links).
+ */
 function layout(platform, opts) {
+  const td = (style, content) => `<tr><td style="${style}">${content}</td></tr>`
+  const header = td(`padding:22px 32px 0;font-family:${FONT};font-size:12px;color:#6b7280`, escapeHtml(opts.header || platform))
+  const intro = opts.intro ? `<p style="margin:0 0 6px;font-size:14px;line-height:1.5;color:#4b5563">${escapeHtml(opts.intro)}</p>` : ''
+  const title = `<p style="margin:0;font-size:18px;line-height:1.4;font-weight:600;color:#111827">${escapeHtml(opts.title)}</p>`
   const paragraphs = (opts.paragraphs || [])
     .filter(Boolean)
-    .map((p) => `<p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.5">${escapeHtml(p)}</p>`)
+    .map((p) => `<p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#374151">${escapeHtml(p)}</p>`)
     .join('')
+  const rows = (opts.rows || []).filter((r) => r && r[1])
+  const table = rows.length
+    ? td(
+        'padding:22px 32px 0',
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${FONT};font-size:13px;border-top:1px solid #eceef1">` +
+          rows
+            .map(
+              (r) =>
+                `<tr><td style="padding:9px 0;width:130px;color:#6b7280;border-bottom:1px solid #eceef1">${escapeHtml(r[0])}</td>` +
+                `<td style="padding:9px 0;color:#111827;border-bottom:1px solid #eceef1">${escapeHtml(r[1])}</td></tr>`,
+            )
+            .join('') +
+          '</table>',
+      )
+    : ''
   const quote = opts.quote
-    ? `<blockquote style="margin:0 0 16px;padding:8px 12px;border-left:3px solid #6366f1;color:#475569;font-size:14px">${escapeHtml(opts.quote)}</blockquote>`
+    ? td(
+        'padding:18px 32px 0',
+        `<p style="margin:0;padding:8px 12px;border-left:2px solid #d1d5db;font-family:${FONT};font-size:13px;line-height:1.5;color:#4b5563">${escapeHtml(opts.quote)}</p>`,
+      )
     : ''
+  const next = opts.next ? td(`padding:18px 32px 0;font-family:${FONT};font-size:13px;line-height:1.5;color:#4b5563`, escapeHtml(opts.next)) : ''
   const button = opts.link
-    ? `<p style="margin:20px 0"><a href="${escapeHtml(opts.link)}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;font-size:14px">${escapeHtml(opts.button)}</a></p>`
+    ? td(
+        'padding:22px 32px 0',
+        `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="${GREEN}" style="border-radius:4px">` +
+          `<a href="${escapeHtml(opts.link)}" style="display:inline-block;padding:10px 22px;font-family:${FONT};font-size:14px;font-weight:600;color:#ffffff;text-decoration:none">${escapeHtml(opts.button)}</a>` +
+          '</td></tr></table>',
+      )
     : ''
-  const note = opts.note ? `<p style="margin:16px 0 0;color:#64748b;font-size:13px;line-height:1.5">${escapeHtml(opts.note)}</p>` : ''
+  const note = opts.note
+    ? td(`padding:14px 32px;border-top:1px solid #eceef1;font-family:${FONT};font-size:11px;line-height:1.5;color:#9ca3af`, escapeHtml(opts.note))
+    : ''
   const html =
-    '<!doctype html><html><body style="margin:0;padding:24px;background:#f1f5f9;font-family:Segoe UI,Helvetica,Arial,sans-serif">' +
-    '<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px">' +
-    `<p style="margin:0 0 18px;font-weight:700;font-size:16px;color:#4f46e5">${escapeHtml(platform)}</p>` +
-    `<h1 style="margin:0 0 16px;font-size:20px;color:#0f172a">${escapeHtml(opts.title)}</h1>` +
-    paragraphs +
+    `<!doctype html><html><body style="margin:0;padding:0;background:#f6f7f8">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f8"><tr><td align="center" style="padding:32px 16px">` +
+    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e3e6ea;border-top:3px solid ${GREEN}">` +
+    header +
+    td(`padding:18px 32px 0;font-family:${FONT}`, intro + title + paragraphs) +
+    table +
     quote +
+    next +
     button +
+    td('padding:0 0 28px', '') +
     note +
-    '</div></body></html>'
-  const text = [opts.title, '']
+    '</table></td></tr></table></body></html>'
+  const text = []
+    .concat(opts.intro ? [opts.intro] : [])
+    .concat([opts.title])
     .concat((opts.paragraphs || []).filter(Boolean))
+    .concat(rows.length ? [''].concat(rows.map((r) => `${r[0]}: ${r[1]}`)) : [])
     .concat(opts.quote ? ['', `> ${opts.quote}`] : [])
+    .concat(opts.next ? ['', opts.next] : [])
     .concat(opts.link ? ['', `${opts.button}: ${opts.link}`] : [])
     .concat(opts.note ? ['', opts.note] : [])
     .concat(['', `— ${platform}`])
@@ -273,26 +408,54 @@ function notificationLink(notification, appUrl) {
   return `${appUrl}/notifications`
 }
 
+/** Prazo AAAA-MM-DD (texto ou Date) no formato do idioma (dd/mm/aaaa; em inglês mm/dd/yyyy). */
+function formatDay(value, locale) {
+  if (!value) return ''
+  const day = value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10)
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day)
+  if (!m) return ''
+  return locale === 'en' ? `${m[2]}/${m[3]}/${m[1]}` : `${m[3]}/${m[2]}/${m[1]}`
+}
+
 /**
  * E-mail de uma notificação: `notification` { type, taskId?, planItemId?, projectId?, data };
- * `ctx` { locale, actorName, platform, appUrl }.
+ * `ctx` { locale, actorName, platform, appUrl, details? }. `details` (opcional, montado por quem notifica):
+ * { demand, internal, project, priority: { name, translations }, urgency, company, requester, requesterArea, dueDate }.
+ * Sem códigos: o título da tarefa (ou o nome do elemento da gestão) vai em destaque e o projeto pelo nome.
  */
 function renderNotificationEmail(notification, ctx) {
-  const all = textsFor(ctx.locale)
+  const n = NOTICE[LOCALES.indexOf(ctx.locale) >= 0 ? ctx.locale : 'pt-BR']
   const data = notification.data || {}
-  const values = Object.assign({}, data, { actor: ctx.actorName || all.someone })
-  const sentence = fill(all.types[notification.type] || '{code}', values)
-  const context = notification.planItemId ? fill(all.planIn, { project: data.project || '' }) : data.title
-  const quote = data.comment || data.update || ''
+  const d = ctx.details || {}
+  const isPlan = !!notification.planItemId
+  const isDemand = !!d.demand || notification.type.indexOf('demand_') === 0
+  const values = Object.assign({}, data, { actor: ctx.actorName || n.someone, item: isDemand ? n.item.demand : n.item.task })
+  const intro = fill(n.types[notification.type] || '', values)
+  const project = isPlan ? data.project || '' : d.internal ? n.internal : d.project || ''
+  const priority = d.priority ? localize(d.priority, ctx.locale, ['name']).name : ''
+  const subject = [fill(n.subjects[notification.type] || '{platform}', { platform: ctx.platform }), project, priority].filter(Boolean).join(' | ')
+  const rows = isPlan
+    ? [[n.labels.project, project]]
+    : [
+        [n.labels.requester, isDemand && d.requester ? [d.requester, d.requesterArea].filter(Boolean).join(' · ') : ''],
+        [n.labels.project, project],
+        [n.labels.priority, priority],
+        [n.labels.urgency, d.urgency ? n.urgency[d.urgency] : ''],
+        [n.labels.company, d.company || ''],
+        [n.labels.due, formatDay(d.dueDate, ctx.locale)],
+      ]
   const body = layout(ctx.platform, {
-    title: sentence,
-    paragraphs: [context],
-    quote,
+    header: [ctx.platform, d.company].filter(Boolean).join('  ·  '),
+    intro,
+    title: (isPlan ? data.name : data.title) || ctx.platform,
+    rows,
+    quote: data.comment || data.update || '',
+    next: n.next[notification.type] || '',
     link: notificationLink(notification, ctx.appUrl),
-    button: all.notification.button,
-    note: all.notification.footer,
+    button: isPlan ? n.button.plan : notification.taskId ? (isDemand ? n.button.demand : n.button.task) : n.button.other,
+    note: n.footer,
   })
-  return { subject: sentence, html: body.html, text: body.text }
+  return { subject, html: body.html, text: body.text }
 }
 
 module.exports = {
