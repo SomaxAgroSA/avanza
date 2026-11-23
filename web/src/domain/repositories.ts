@@ -483,8 +483,8 @@ export interface CommentRepository {
   create(taskId: string, content: string): Promise<TaskComment>
   update(id: string, content: string): Promise<TaskComment>
   remove(id: string): Promise<void>
-  /** Pessoas que podem ser mencionadas na tarefa. */
-  mentionCandidates(taskId: string): Promise<UserSummary[]>
+  /** Todas as pessoas ativas da plataforma; `outside` = ainda não vê a tarefa (mencionada, passa a ver e comentar). */
+  mentionCandidates(taskId: string): Promise<Array<UserSummary & { outside?: boolean }>>
 }
 
 /** Quadro Kanban do projeto. */

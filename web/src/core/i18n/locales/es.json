@@ -1934,7 +1934,8 @@
     "removeFile": "Quitar {{name}}"
   },
   "mentions": {
-    "listLabel": "Personas para mencionar"
+    "listLabel": "Personas para mencionar",
+    "outside": "podrá ver esta tarea"
   },
   "files": {
     "dropHere": "Arrastre archivos aquí o",

@@ -1404,6 +1404,7 @@ function createFakeRepositories(store) {
   const commentRepository = {
     findById: (id) => store.comments.find((c) => c.id === id) || null,
     listByTask: (taskId) => store.comments.filter((c) => c.taskId === taskId).slice().sort((a, b) => a.createdAt - b.createdAt),
+    hasMention: (taskId, userId) => store.comments.some((c) => c.taskId === taskId && !c.deletedAt && (c.mentions || []).includes(userId)),
     create: (data) => {
       commentClock += 1
       const at = new Date(Date.UTC(2026, 1, 1, 0, 0, commentClock))

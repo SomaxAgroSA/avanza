@@ -1368,7 +1368,8 @@ export function createHttpCommentRepository(api: ApiClient): CommentRepository {
       await api.del(path(id))
     },
     async mentionCandidates(taskId) {
-      return (await api.get<UserSummaryDto[]>(`${taskPath(taskId)}/mention-candidates`)).data.map(toUserSummary)
+      const list = (await api.get<Array<UserSummaryDto & { outside?: boolean }>>(`${taskPath(taskId)}/mention-candidates`)).data
+      return list.map((u) => ({ ...toUserSummary(u), outside: !!u.outside }))
     },
   }
 }

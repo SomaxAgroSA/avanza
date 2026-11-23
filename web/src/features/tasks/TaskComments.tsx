@@ -45,7 +45,7 @@ export function TaskComments({ task, events }: { task: TaskDetail; events?: Time
   const { remove } = useCommentMutations(task.id)
   const attachmentMutations = useAttachmentMutations(task.id)
   const errorMessage = useErrorMessage()
-  const people: MentionPerson[] = (candidates.data ?? []).map((u) => ({ id: u.id, name: u.name }))
+  const people: MentionPerson[] = (candidates.data ?? []).map((u) => ({ id: u.id, name: u.name, outside: !!u.outside }))
 
   const editor = task.capabilities.comment ? (
     <CommentEditor taskId={task.id} people={people} />

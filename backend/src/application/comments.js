@@ -85,7 +85,8 @@ function createCommentService(deps) {
     const ids = taskDomain.extractMentions(content)
     if (ids.length > MAX_MENTIONS) throw invalid('content', 'too_many_mentions')
     if (ids.length === 0) return []
-    const allowed = await participants(project, task, access)
+    // qualquer pessoa ativa da plataforma (ajuste 23/11); quem não enxergava a tarefa passa a vê-la e comentar
+    const allowed = (await deps.userRepository.findManyByIds(ids)).filter((u) => u.status === 'active')
     const found = ids.map((id) => allowed.find((u) => u.id === id))
     if (found.some((u) => !u)) throw invalid('content', 'invalid_mention')
     return found
@@ -150,10 +151,15 @@ function createCommentService(deps) {
     return list.map((c) => present(c, ctx, access, project, users, files))
   }
 
+  /**
+   * Todas as pessoas ativas da plataforma (ajuste 23/11); `outside` = ainda não enxerga a tarefa (ao ser
+   * mencionada, passa a vê-la e comentar — só ela).
+   */
   async function mentionCandidates(ctx, taskId) {
     const { task, project, access } = await loadTask(ctx, taskId)
-    return (await participants(project, task, access))
-      .map(toUserSummary)
+    const inside = new Set((await participants(project, task, access)).map((u) => u.id))
+    return (await deps.userRepository.searchActive({ search: '', excludeIds: [] }))
+      .map((u) => Object.assign(toUserSummary(u), { outside: !inside.has(u.id) }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }
 

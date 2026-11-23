@@ -114,7 +114,7 @@ describe('application/comments', () => {
     assert.deepEqual((await comments.listComments(ctx.lia, task.id)).map((x) => x.capabilities.edit), [false, true])
   })
 
-  it('menções com @: só pessoas com acesso ao projeto; nomes no comentário e no histórico', async () => {
+  it('menções com @: nomes no comentário e no histórico', async () => {
     const { comments, ctx, task, deps } = await setup()
     const gabi = deps.store.users.find((u) => u.name === 'Gabi')
     const lia = deps.store.users.find((u) => u.name === 'Lia')
@@ -123,19 +123,39 @@ describe('application/comments', () => {
     const audit = deps.store.audit.at(-1)
     assert.deepEqual(audit.newValue, { comment: '@Gabi e @Lia, podem revisar?', mentions: 'Gabi, Lia' })
 
-    const outsider = await seedUser(deps, { roleCode: 'MEMBER', name: 'Otto' })
-    assert.equal(
-      await codeOf(() => comments.createComment(ctx.mario, task.id, { content: `oi @[Otto](${outsider.id})` })),
-      'VALIDATION_ERROR:{"content":"invalid_mention"}',
-    )
     // editar e acrescentar uma menção registra quem foi marcado
     await comments.updateComment(ctx.mario, c.id, { content: `@[Gabi](${gabi.id}) pode revisar?` })
     assert.deepEqual(deps.store.audit.at(-1).newValue, { comment: '@Gabi pode revisar?', mentions: 'Gabi' })
   })
 
-  it('lista de quem pode ser mencionado: pessoas ativas com acesso ao projeto (e quem vê todos)', async () => {
-    const { comments, ctx, task } = await setup()
-    assert.deepEqual((await comments.mentionCandidates(ctx.lia, task.id)).map((u) => u.name).sort(), ['Admin', 'Gabi', 'Lia', 'Mário'])
+  it('lista de quem pode ser mencionado: todas as pessoas ativas da plataforma; `outside` = ainda não vê a tarefa', async () => {
+    const { comments, ctx, task, deps } = await setup()
+    await seedUser(deps, { roleCode: 'MEMBER', name: 'Otto' })
+    const off = await seedUser(deps, { roleCode: 'MEMBER', name: 'Inês' })
+    deps.store.users.find((u) => u.id === off.id).status = 'inactive'
+    const list = await comments.mentionCandidates(ctx.lia, task.id)
+    assert.deepEqual(list.map((u) => [u.name, u.outside]), [['Admin', false], ['Gabi', false], ['Lia', false], ['Mário', false], ['Otto', true]])
+  })
+
+  it('mencionar quem não vê a tarefa (ajuste 23/11): recebe o aviso e passa a ver e comentar só ela, sem editar', async () => {
+    const { comments, tasks, ctx, task, deps } = await setup()
+    const outsider = await seedUser(deps, { roleCode: 'MEMBER', name: 'Otto' })
+    const otto = await ctxOf(deps, outsider)
+    assert.equal(await codeOf(() => comments.listComments(otto, task.id)), 'TASK_NOT_FOUND')
+    await comments.createComment(ctx.mario, task.id, { content: `@[Otto](${outsider.id}) pode olhar?` })
+    const notice = deps.store.notifications.find((n) => n.userId === outsider.id)
+    assert.equal(notice.type, 'mention')
+    assert.equal((await comments.listComments(otto, task.id)).length, 1)
+    const reply = await comments.createComment(otto, task.id, { content: 'Olho hoje.' })
+    assert.equal(reply.author.name, 'Otto')
+    const seen = await tasks.getTask(otto, task.id)
+    assert.equal(seen.capabilities.edit, false)
+    assert.equal(seen.capabilities.comment, true)
+    assert.equal(await codeOf(() => tasks.updateTask(otto, task.id, { title: 'x' })), 'FORBIDDEN')
+    // apagada a menção, o acesso acaba
+    const mention = deps.store.comments.find((c) => (c.mentions || []).includes(outsider.id))
+    await comments.deleteComment(ctx.mario, mention.id)
+    assert.equal(await codeOf(() => comments.listComments(otto, task.id)), 'TASK_NOT_FOUND')
   })
 
   it('só o autor edita; autor ou gestor exclui (exclusão lógica)', async () => {

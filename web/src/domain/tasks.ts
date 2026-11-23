@@ -186,6 +186,8 @@ export interface TaskInput {
 export interface MentionPerson {
   id: string
   name: string
+  /** Ainda não vê a tarefa: mencionada, passa a vê-la e comentar (ajuste 23/11). */
+  outside?: boolean
 }
 
 /** Formato salvo: `@[Nome](id)`. */

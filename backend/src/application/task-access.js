@@ -30,7 +30,7 @@ function createTaskAccess(deps) {
   /** Acesso do principal à tarefa (`project` = projeto da tarefa, já carregado). */
   async function forTask(principal, task, project) {
     if (demandDomain.isDemandsProject(project) && demandDomain.isDemand(task)) {
-      return demandDomain.demandAccess(principal, task, await teamOf(task.demandOwnerId))
+      return asGuest(principal, task, demandDomain.demandAccess(principal, task, await teamOf(task.demandOwnerId)))
     }
     const membership = await deps.projectMemberRepository.find(project.id, principal.userId)
     const access = taskDomain.scopedAccess(projectDomain.resolveAccess(principal, project, membership), task)
@@ -39,7 +39,15 @@ function createTaskAccess(deps) {
     if (demandDomain.isDemand(task) && demandDomain.isFlowParticipant(task, principal.userId) && rbac.can(principal, 'tasks.view')) {
       return demandDomain.participantAccess(principal)
     }
-    return access
+    return asGuest(principal, task, access)
+  }
+
+  /** Quem não enxerga a tarefa mas foi mencionado num comentário dela vê e comenta só essa tarefa (ajuste 23/11). */
+  async function asGuest(principal, task, access) {
+    if (access.canView || !principal || !task || !rbac.can(principal, 'tasks.view')) return access
+    const repo = deps.commentRepository
+    if (!repo || !repo.hasMention || !(await repo.hasMention(task.id, principal.userId))) return access
+    return demandDomain.guestAccess(principal)
   }
 
   /**

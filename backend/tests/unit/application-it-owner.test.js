@@ -320,17 +320,19 @@ describe('Responsável TI — colaboração nas tarefas dele', () => {
     assert.equal(await codeOf(() => relations.forkTask(s.ctx.ti, s.mine.id, { project_id: s.sap.id })), 'FORBIDDEN')
   })
 
-  it('menções: ele só menciona quem já aparece na tarefa; a equipe só o menciona onde ele enxerga', async () => {
+  it('menções: todos mencionam qualquer pessoa ativa; mencionado, o Tito vê e comenta só essa tarefa', async () => {
     const s = await setup()
     const comments = createCommentService(s.deps)
-    const names = async (ctx, task) => (await comments.mentionCandidates(ctx, task.id)).map((u) => u.name).sort()
-    // o Tito não recebe a lista da equipe: só a dona do projeto/autora (Gabi) e ele mesmo
-    assert.deepEqual(await names(s.ctx.ti, s.mine), ['Gabi', 'Tito TI'])
-    assert.equal(await codeOf(() => comments.createComment(s.ctx.ti, s.mine.id, { content: `oi @[Mário](${s.users.mario.id})` })), 'VALIDATION_ERROR')
-    // a equipe: o Tito aparece só nas tarefas visíveis a ele
-    assert.ok((await names(s.ctx.gabi, s.mine)).includes('Tito TI'))
-    assert.ok(!(await names(s.ctx.gabi, s.other)).includes('Tito TI'))
-    assert.equal(await codeOf(() => comments.createComment(s.ctx.gabi, s.other.id, { content: `@[Tito](${s.users.tito.id}) veja` })), 'VALIDATION_ERROR')
+    const inside = async (ctx, task) => (await comments.mentionCandidates(ctx, task.id)).filter((u) => !u.outside).map((u) => u.name).sort()
+    // a lista é de todos (ajuste 23/11); para o Tito, "de dentro" são só a dona do projeto/autora (Gabi) e ele mesmo
+    assert.deepEqual(await inside(s.ctx.ti, s.mine), ['Gabi', 'Tito TI'])
+    await comments.createComment(s.ctx.ti, s.mine.id, { content: `oi @[Mário](${s.users.mario.id})` })
+    // a equipe: o Tito está "de dentro" só nas tarefas visíveis a ele; mencioná-lo em outra abre só ela
+    assert.ok((await inside(s.ctx.gabi, s.mine)).includes('Tito TI'))
+    assert.ok(!(await inside(s.ctx.gabi, s.other)).includes('Tito TI'))
+    assert.equal(await codeOf(() => comments.listComments(s.ctx.ti, s.other.id)), 'TASK_NOT_FOUND')
+    await comments.createComment(s.ctx.gabi, s.other.id, { content: `@[Tito](${s.users.tito.id}) veja` })
+    assert.equal((await comments.listComments(s.ctx.ti, s.other.id)).length, 1)
     // na Gestão (fechada a ele), também não
     const plan = createPlanService(s.deps)
     const group = await plan.createGroup(s.ctx.gabi, s.project.id, { name: 'G', color: 'blue' })

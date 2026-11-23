@@ -14,6 +14,7 @@ const people: MentionPerson[] = [
   { id: 'u1', name: 'Carla Mendes' },
   { id: 'u2', name: 'Mário Souza' },
   { id: 'u3', name: 'Ana Carolina' },
+  { id: 'u4', name: 'Otto Brito', outside: true },
 ]
 
 function Harness({ onMention }: { onMention: (p: MentionPerson) => void }) {
@@ -34,6 +35,12 @@ describe('AppMentionTextarea', () => {
     expect(options.map((o) => o.textContent)).toEqual(['CMCarla Mendes', 'ACAna Carolina'])
     await userEvent.type(screen.getByRole('combobox'), 'o')
     expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['ACAna Carolina'])
+  })
+
+  it('quem ainda não vê a tarefa aparece com "passa a ver esta tarefa" (ajuste 23/11)', async () => {
+    render(<Harness onMention={() => {}} />)
+    await userEvent.type(screen.getByRole('combobox', { name: 'Comentário' }), '@ot')
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['OBOtto Britopassa a ver esta tarefa'])
   })
 
   it('setas e Enter escolhem; o texto recebe "@Nome " e a tela é avisada', async () => {

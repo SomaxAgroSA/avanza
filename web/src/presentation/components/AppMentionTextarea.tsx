@@ -221,7 +221,8 @@ export function AppMentionTextarea({
                 )}
               >
                 <AppAvatar name={person.name} size="xs" />
-                {person.name}
+                <span className="min-w-0 truncate">{person.name}</span>
+                {person.outside && <span className="ml-auto shrink-0 text-xs text-muted">{t('mentions.outside')}</span>}
               </li>
             ))}
           </ul>

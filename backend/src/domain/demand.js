@@ -124,6 +124,14 @@ function participantAccess(principal) {
 }
 
 /**
+ * Mencionado numa tarefa que não enxergava (ajuste 23/11): vê essa tarefa e comenta, como leitor — não edita,
+ * não anexa, não atribui nem exclui; as referências ao resto do projeto ficam ocultas (`scoped`).
+ */
+function guestAccess(principal) {
+  return { principal, viewAll: false, isOwner: false, role: 'viewer', isManager: false, limited: false, scoped: true, canView: true, guest: true }
+}
+
+/**
  * Passo de uma tarefa de projeto que ganha responsável agora (`category` = categoria do status atual): sem
  * executor, Sem atribuir; com executor, Atribuída (ou Em andamento, se já está em andamento); encerrada, Concluída.
  */
@@ -282,6 +290,7 @@ module.exports = {
   seesDemand,
   isFlowParticipant,
   participantAccess,
+  guestAccess,
   statusFromTask,
   demandAccess,
   assignsAny,

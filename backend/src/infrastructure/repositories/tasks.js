@@ -715,6 +715,11 @@ function createCommentRepository(db) {
     async listByTask(taskId) {
       return (await db.query('SELECT * FROM comments WHERE task_id = $1 ORDER BY created ASC, id ASC', [taskId])).map(toEntity)
     },
+    /** A pessoa foi mencionada num comentário (não excluído) da tarefa? */
+    async hasMention(taskId, userId) {
+      const rows = await db.query('SELECT 1 FROM comments WHERE task_id = $1 AND deleted_at IS NULL AND mentions @> $2::jsonb LIMIT 1', [taskId, JSON.stringify([userId])])
+      return rows.length > 0
+    },
     async create(data) {
       return toEntity(await insertRow(db, 'comments', columnsOf(data)))
     },
