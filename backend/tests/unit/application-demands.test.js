@@ -391,6 +391,22 @@ describe('application/demands — fluxo', () => {
     assert.deepEqual(entry.newValue, { assignee: 'Jorge', due_at: FUTURE, estimated_hours: 4, demand_status: 'assigned' })
   })
 
+  it('atribuir aceita indicações para quem executa: vão no histórico e no aviso (opcionais)', async () => {
+    const s = await opened()
+    assert.equal(await codeOf(() => s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, comment: 'x'.repeat(5001) })), 'VALIDATION_ERROR:{"comment":"too_long"}')
+    await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, comment: '  Usar a view nova do DMR  ' })
+    const entry = s.deps.store.audit.filter((e) => e.entityId === s.id).at(-1)
+    assert.equal(entry.newValue.note, 'Usar a view nova do DMR')
+    const notice = s.deps.store.notifications.find((n) => n.userId === s.users.jorge.id)
+    assert.equal(notice.data.comment, 'Usar a view nova do DMR')
+    // mesma pessoa, só com indicações novas: ela é avisada de novo
+    await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, comment: 'Prioriza o filtro de data' })
+    assert.equal(s.deps.store.notifications.filter((n) => n.userId === s.users.jorge.id).length, 2)
+    // em branco = sem indicações (nada no histórico)
+    await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, comment: '   ' })
+    assert.equal(s.deps.store.audit.filter((e) => e.entityId === s.id).at(-1).newValue.note, undefined)
+  })
+
   it('reatribuir troca quem executa; quem saiu continua vendo; mesma pessoa só troca o prazo', async () => {
     const s = await opened()
     await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 4 })

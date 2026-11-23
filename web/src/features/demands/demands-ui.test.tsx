@@ -358,9 +358,10 @@ describe('Demandas — caixas (§45)', () => {
     await userEvent.type(within(dialog).getByLabelText(/^Prazo · data/), '21/11/2026')
     await userEvent.type(within(dialog).getByLabelText(/^Hora/), '1700')
     await userEvent.type(within(dialog).getByLabelText(/^Estimativa/), '4')
+    await userEvent.type(within(dialog).getByLabelText(/^Orientações para quem executa/), 'Usar a view nova')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Atribuir' }))
     await waitFor(() => expect(assign).toHaveBeenCalledOnce())
-    expect(assign.mock.calls[0]).toEqual(['d1', { assigneeId: 'u3', dueAt: new Date(2026, 10, 21, 17, 0).toISOString(), estimatedHours: 4 }])
+    expect(assign.mock.calls[0]).toEqual(['d1', { assigneeId: 'u3', dueAt: new Date(2026, 10, 21, 17, 0).toISOString(), estimatedHours: 4, comment: 'Usar a view nova' }])
   })
 
   it('Atribuídas a mim guarda o histórico: "Em validação", Concluídas e Passadas a outra pessoa (recolhidas)', async () => {

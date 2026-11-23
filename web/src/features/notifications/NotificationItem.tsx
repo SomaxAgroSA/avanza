@@ -39,7 +39,8 @@ export function NotificationItem({ notification, onOpen }: { notification: AppNo
     notification.type === 'plan_reply' ||
     notification.type === 'demand_passed' ||
     notification.type === 'demand_concluded' ||
-    notification.type === 'demand_returned'
+    notification.type === 'demand_returned' ||
+    (notification.type === 'assigned' && !!notification.data.comment)
       ? notification.data.comment
       : notification.type === 'status_changed'
         ? t('notifications.newStatus', { status: notification.data.status ?? '' })

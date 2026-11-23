@@ -1436,7 +1436,7 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
       return (await api.get<UserSummaryDto[]>(`${path(id)}/team`)).data.map(toUserSummary)
     },
     async assign(id, input) {
-      const body = { assignee_id: input.assigneeId, due_at: input.dueAt, estimated_hours: input.estimatedHours }
+      const body = { assignee_id: input.assigneeId, due_at: input.dueAt, estimated_hours: input.estimatedHours, comment: input.comment }
       return toTaskDetail((await api.post<TaskDetailDto>(`${path(id)}/assign`, body)).data)
     },
     async start(id) {

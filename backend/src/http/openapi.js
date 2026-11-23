@@ -634,7 +634,7 @@ function build() {
       },
       '/demands/{id}/assign': {
         post: op(
-          'O responsável (ou quem tem projects.view_all, em qualquer demanda) atribui ou reatribui (Sem atribuir, Atribuída ou Em andamento): quem executa (equipe do responsável — fields.assignee_id = not_in_team fora dela), prazo com data e hora (due_at, obrigatório) e estimativa em horas (ausente mantém; null limpa). Trocar a pessoa volta para Atribuída; histórico task.demand_assigned/task.demand_reassigned; notificação assigned para quem recebe',
+          'O responsável (ou quem tem projects.view_all, em qualquer demanda) atribui ou reatribui (Sem atribuir, Atribuída ou Em andamento): quem executa (equipe do responsável — fields.assignee_id = not_in_team fora dela), prazo com data e hora (due_at, obrigatório) e estimativa em horas (ausente mantém; null limpa) e indicações para quem executa (comment, opcional, até 5000 caracteres; vão no histórico como note e no aviso). Trocar a pessoa volta para Atribuída; histórico task.demand_assigned/task.demand_reassigned; notificação assigned para quem recebe',
           ['demands'],
           { 200: ok('Demanda', ref('TaskDetail')), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN'), 409: errorResponse('DEMAND_STATE_CONFLICT') },
           {
@@ -642,7 +642,7 @@ function build() {
             requestBody: jsonBody({
               type: 'object',
               required: ['assignee_id', 'due_at'],
-              properties: { assignee_id: { type: 'string' }, due_at: { type: 'string', format: 'date-time' }, estimated_hours: { type: ['number', 'null'], exclusiveMinimum: 0 } },
+              properties: { assignee_id: { type: 'string' }, due_at: { type: 'string', format: 'date-time' }, estimated_hours: { type: ['number', 'null'], exclusiveMinimum: 0 }, comment: { type: 'string', maxLength: 5000 } },
             }),
           },
         ),
