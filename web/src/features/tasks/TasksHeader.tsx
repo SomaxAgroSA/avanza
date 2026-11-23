@@ -89,8 +89,9 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
 function CreateButton({ full, short, onClick }: { full: string; short: string; onClick: () => void }) {
   return (
     <AppButton size="sm" leftIcon={<Plus />} aria-label={full} title={full} onClick={onClick}>
-      <span className="@max-[1060px]:hidden">{full}</span>
-      <span aria-hidden className="hidden @max-[1060px]:inline">
+      {/* `data-compact='2'`: a linha da Bandeja não coube (InboxFilterBar) */}
+      <span className="@max-[1060px]:hidden [[data-compact='2']_&]:hidden">{full}</span>
+      <span aria-hidden className="hidden @max-[1060px]:inline [[data-compact='2']_&]:inline">
         {short}
       </span>
     </AppButton>

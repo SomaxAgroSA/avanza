@@ -34,8 +34,6 @@ import { useDemandList, useDemandOverview, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
 import { PROJECT_OPTIONS_QUERY, useProjects } from '@/features/projects/queries'
 import { usePriorities } from '@/features/workflow/queries'
-import { TaskPriorityBadge } from '@/features/tasks/task-visuals'
-import { UrgencyLabel } from '@/features/tasks/TaskUrgency'
 import { InboxFilterBar, type InboxFilterOption } from './InboxFilterBar'
 
 const isBox = (value: string | null): value is DemandBox => !!value && (DEMAND_BOXES as readonly string[]).includes(value)
@@ -337,10 +335,10 @@ function DemandRow({ task, box, back, actions, executor = false }: { task: TaskS
       </div>
       <div>{demand && <DemandStatusBadge status={demand.status} executor={executor} />}</div>
       <div className="min-w-0 text-sm" data-testid="demand-urgency">
-        <UrgencyLabel urgency={task.urgency} />
+        <UrgencyDot urgency={task.urgency} />
       </div>
-      <div className="min-w-0" data-testid="demand-priority">
-        <TaskPriorityBadge priority={task.priority} />
+      <div className="min-w-0 truncate text-sm text-fg" data-testid="demand-priority">
+        {task.priority?.name ?? '—'}
       </div>
       <div className="min-w-0 text-xs text-muted">
         {task.assignee ? (
@@ -360,8 +358,26 @@ function DemandRow({ task, box, back, actions, executor = false }: { task: TaskS
   )
 }
 
-/** Colunas da caixa: tarefa, estado, urgência, prioridade, atribuída a e os botões (no celular, uma embaixo da outra). */
-const ROW_GRID = 'items-center gap-x-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_7.5rem_6.5rem_10rem_auto]'
+/**
+ * Colunas da caixa: tarefa, estado, urgência, prioridade, atribuída a e os botões (no celular, uma embaixo da
+ * outra). Proporcionais à largura (ajuste 23/11): numa caixa larga (sem o painel da carga) as colunas acompanham,
+ * em vez de ficarem coladas à direita.
+ */
+const ROW_GRID =
+  'items-center gap-x-4 sm:grid-cols-[minmax(0,2.6fr)_minmax(6.5rem,0.7fr)_minmax(6rem,0.6fr)_minmax(5rem,0.5fr)_minmax(7.5rem,0.9fr)_minmax(6.5rem,max-content)]'
+
+const DOT: Record<string, string> = { high: 'bg-danger', medium: 'bg-warning', low: 'bg-success' }
+
+/** Urgência da linha: um ponto da cor (vazado = sem urgência) e o nome, como na demonstração aprovada. */
+function UrgencyDot({ urgency }: { urgency: TaskSummary['urgency'] }) {
+  const { t } = useTranslation()
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full', urgency ? DOT[urgency] : 'border-[1.5px] border-border-strong')} />
+      <span className={cn('truncate', urgency ? 'text-fg' : 'text-muted')}>{t(`tasks.urgency.${urgency ?? 'none'}`)}</span>
+    </span>
+  )
+}
 
 /**
  * Carga por pessoa: demandas atribuídas e em andamento e as horas estimadas (barra pelas horas). `team` =

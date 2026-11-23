@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
@@ -11,6 +11,36 @@ export interface InboxFilterOption {
   value: string
   label: string
   prefix?: ReactNode
+}
+
+/**
+ * A linha da Bandeja se adapta à largura (ajuste 23/11): mede a linha inteira (AppToolbar) e, enquanto ela não
+ * cabe, compacta um passo — 1: os filtros sem o ": todas" ("Proyecto ▾") e só o valor escolhido; 2: também os
+ * botões de criar encurtam ("＋ Tarefa"). Volta ao completo quando a tela alarga. Sem estado do React: só um
+ * atributo `data-compact` na linha, lido pelas classes `[[data-compact]_&]`.
+ */
+function useFitToolbar() {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const bar = ref.current?.closest<HTMLElement>('[data-toolbar]')
+    if (!bar) return
+    const fit = () => {
+      bar.removeAttribute('data-compact')
+      for (const level of ['1', '2']) {
+        if (bar.scrollWidth <= bar.clientWidth) return
+        bar.setAttribute('data-compact', level)
+      }
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined') return () => bar.removeAttribute('data-compact')
+    const observer = new ResizeObserver(fit)
+    observer.observe(bar)
+    return () => {
+      observer.disconnect()
+      bar.removeAttribute('data-compact')
+    }
+  })
+  return ref
 }
 
 /** Mesmo item do controle segmentado das caixas (altura, cantos e escolhido em branco). */
@@ -48,10 +78,12 @@ export function InboxFilterBar({
   }))
   const projectOptions: InboxFilterOption[] = [{ value: INTERNAL_PROJECT, label: t('demands.chip') }, ...projects]
   const active = hasInboxFilters({ ...filters, search: text })
+  const ref = useFitToolbar()
 
   return (
-    <div role="group" aria-label={t('demands.filters.bar')} className="inline-flex min-w-0 shrink items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5">
-      <label className={cn(ITEM, 'min-w-28 max-w-64 flex-1 cursor-text text-muted focus-within:bg-surface focus-within:shadow-card')}>
+    // ocupa o espaço livre da linha (como as caixas, o mesmo grupo); a busca cresce com ele
+    <div ref={ref} role="group" aria-label={t('demands.filters.bar')} className="flex min-w-0 flex-1 items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5">
+      <label className={cn(ITEM, 'min-w-24 flex-1 cursor-text text-muted focus-within:bg-surface focus-within:shadow-card')}>
         <Search className="size-3.5 shrink-0" aria-hidden />
         <input
           type="search"
@@ -96,8 +128,8 @@ export function InboxFilterBar({
           className={cn(ITEM, 'text-primary hover:text-primary-hover')}
           aria-label={t('demands.filters.clear')}
         >
-          <X className="size-3.5 shrink-0 @min-[961px]:hidden" aria-hidden />
-          <span className="@max-[960px]:hidden">{t('demands.filters.clear')}</span>
+          <X className="hidden size-3.5 shrink-0 [[data-compact='2']_&]:inline" aria-hidden />
+          <span className="[[data-compact='2']_&]:hidden">{t('demands.filters.clear')}</span>
         </button>
       )}
     </div>
@@ -134,14 +166,16 @@ function FilterMenu({
       trigger={
         <button type="button" className={cn(ITEM, on ? 'bg-surface text-fg shadow-card' : 'text-muted hover:text-fg')}>
           {on ? (
-            <>
-              <span className="@max-[1440px]:hidden">{label}:</span>{' '}
-              <span className="max-w-40 truncate font-semibold">{summary}</span>
-            </>
+            <span className="truncate">
+              <span className="[[data-compact]_&]:hidden">{label}: </span>
+              <span className="font-semibold">{summary}</span>
+            </span>
           ) : (
             <>
-              {label}
-              <span className="@max-[1440px]:hidden">: {allLabel}</span>
+              <span className="[[data-compact]_&]:hidden">
+                {label}: {allLabel}
+              </span>
+              <span className="hidden [[data-compact]_&]:inline">{label}</span>
             </>
           )}
           <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden />
