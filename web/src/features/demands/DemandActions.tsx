@@ -88,7 +88,7 @@ function personOption(person: { id: string; name: string; avatarUrl: string | nu
   return { value: person.id, label: person.name, prefix: <AppAvatar name={person.name} src={person.avatarUrl} size="xs" /> }
 }
 
-/** Responsável atribui ou reatribui: alguém da equipe, prazo (data e hora, obrigatório) e estimativa (h). */
+/** Responsável atribui ou reatribui: alguém da equipe, prazo (data e hora, obrigatório), estimativa (h) e indicações (opcional). */
 function AssignDialog({ task, onClose }: { task: TaskSummary; onClose: () => void }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
@@ -99,6 +99,7 @@ function AssignDialog({ task, onClose }: { task: TaskSummary; onClose: () => voi
   const [day, setDay] = useState(initial.day)
   const [time, setTime] = useState(initial.time)
   const [hours, setHours] = useState(task.estimatedHours === null ? '' : String(task.estimatedHours))
+  const [comment, setComment] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const reassign = !!task.assignee
 
@@ -113,7 +114,7 @@ function AssignDialog({ task, onClose }: { task: TaskSummary; onClose: () => voi
     if (Number.isNaN(estimate) || (estimate !== null && estimate <= 0)) found.estimated_hours = 'too_small'
     if (Object.keys(found).length > 0 || !dueAt) return setErrors(found)
     assign.mutate(
-      { id: task.id, input: { assigneeId, dueAt, estimatedHours: estimate } },
+      { id: task.id, input: Object.assign({ assigneeId, dueAt, estimatedHours: estimate }, comment.trim() ? { comment: comment.trim() } : {}) },
       {
         onSuccess: (saved) => {
           notify.success(t('demands.assign.done', { code: saved.code, name: saved.assignee?.name ?? '' }))
@@ -193,6 +194,17 @@ function AssignDialog({ task, onClose }: { task: TaskSummary; onClose: () => voi
           onChange={(event) => {
             setHours(event.target.value)
             setErrors((e) => ({ ...e, estimated_hours: '' }))
+          }}
+        />
+        <AppTextarea
+          label={t('demands.assign.comment')}
+          rows={4}
+          maxLength={5000}
+          value={comment}
+          error={errors.comment}
+          onChange={(event) => {
+            setComment(event.target.value)
+            setErrors((e) => ({ ...e, comment: '' }))
           }}
         />
       </div>

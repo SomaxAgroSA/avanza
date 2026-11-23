@@ -4828,6 +4828,7 @@
       "dueDate": "Plazo · fecha",
       "dueTime": "Hora",
       "estimate": "Estimación (horas)",
+      "comment": "Indicaciones para quien ejecuta",
       "submit": "Asignar",
       "done": "{{code}} asignada a {{name}}"
     },

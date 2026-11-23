@@ -93,6 +93,8 @@ export interface AssignInput {
   dueAt: string
   /** null limpa; ausente mantém. */
   estimatedHours?: number | null
+  /** Indicações para quem executa (opcional; vão no histórico e no aviso). */
+  comment?: string
 }
 
 export const EMPTY_DEMAND_COUNTS: DemandCounts = {

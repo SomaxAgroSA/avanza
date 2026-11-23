@@ -284,7 +284,10 @@ function createDemandService(deps) {
 
   // ---------------------------------------------------------------- fluxo
 
-  /** Responsável (ou quem tem `projects.view_all`) atribui ou reatribui: { assignee_id, due_at (data e hora), estimated_hours? (null limpa) }. */
+  /**
+   * Responsável (ou quem tem `projects.view_all`) atribui ou reatribui: { assignee_id, due_at (data e hora),
+   * estimated_hours? (null limpa), comment? (indicações para quem executa — opcional; vai no histórico e no aviso) }.
+   */
   async function assign(ctx, id, input) {
     const loaded = await load(ctx, id)
     const task = loaded.task
@@ -294,6 +297,9 @@ function createDemandService(deps) {
       { assignee_id: raw.assignee_id, due_at: raw.due_at, estimated_hours: raw.estimated_hours },
       { assignee_id: [rules.required(), idRule], due_at: [rules.required(), rules.isoDate()], estimated_hours: [hoursRule] },
     )
+    // indicações (ajuste 23/11): opcionais; quando vêm, as mesmas regras do comentário de Passar
+    const note = typeof raw.comment === 'string' && raw.comment.trim() ? noteOf(raw) : ''
+    if (raw.comment !== undefined && raw.comment !== null && typeof raw.comment !== 'string') throw invalid({ comment: 'invalid_value' })
     const user = await receiver(task, data.assignee_id)
     const estimate = raw.estimated_hours === null ? null : data.estimated_hours === undefined ? task.estimatedHours || null : round2(data.estimated_hours)
     const first = !task.assigneeId
@@ -308,9 +314,9 @@ function createDemandService(deps) {
       {
         action: first ? 'task.demand_assigned' : 'task.demand_reassigned',
         oldValue: first ? null : { assignee: await nameOf(task.assigneeId), due_at: task.dueDate ? new Date(task.dueDate).toISOString() : null, estimated_hours: task.estimatedHours || null },
-        newValue: { assignee: user.name, due_at: dueAt, estimated_hours: estimate, demand_status: next },
+        newValue: Object.assign({ assignee: user.name, due_at: dueAt, estimated_hours: estimate }, note ? { note } : {}, { demand_status: next }),
       },
-      changedPerson ? [{ entries: [{ userId: user.id, type: 'assigned' }], data: { due_at: dueAt } }] : [],
+      changedPerson || note ? [{ entries: [{ userId: user.id, type: 'assigned' }], data: Object.assign({ due_at: dueAt }, note ? { comment: truncate(note, 200) } : {}) }] : [],
     )
   }
 

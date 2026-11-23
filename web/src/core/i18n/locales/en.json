@@ -4828,6 +4828,7 @@
       "dueDate": "Deadline · date",
       "dueTime": "Time",
       "estimate": "Estimate (hours)",
+      "comment": "Instructions for the assignee",
       "submit": "Assign",
       "done": "{{code}} assigned to {{name}}"
     },
