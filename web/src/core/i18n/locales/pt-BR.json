@@ -4740,14 +4740,18 @@
       "assigned": "Atribuída",
       "in_progress": "Em andamento",
       "to_validate": "Para validar",
-      "done": "Concluída"
+      "done": "Concluída",
+      "inValidation": "Em validação"
     },
     "groups": {
       "unassigned": "Sem atribuir",
       "assigned": "Atribuídas",
       "in_progress": "Em andamento",
       "to_validate": "Para validar",
-      "done": "Concluídas"
+      "done": "Concluídas",
+      "inValidation": "Em validação",
+      "recentDone": "Concluídas · últimos 30 dias",
+      "passed": "Passadas a outra pessoa"
     },
     "form": {
       "createTitle": "Nova demanda interna",
@@ -4787,7 +4791,8 @@
       "due": "prazo {{date}}",
       "priority": "Prioridade {{name}}",
       "noAssignee": "Sem atribuir",
-      "owner": "Responsável: {{name}}"
+      "owner": "Responsável: {{name}}",
+      "awaitingValidation": "Espera validação de {{name}}"
     },
     "load": {
       "title": "Carga da minha equipe",

@@ -767,8 +767,14 @@ function createFakeRepositories(store) {
       if (query.kind === 'demand') items = items.filter((t) => internal(t))
       if (query.mineId) items = items.filter((t) => t.assigneeId === query.mineId || (!!t.demandStatus && (t.reporterId === query.mineId || t.demandOwnerId === query.mineId)))
       if (query.demandBox) {
-        const field = { received: 'demandOwnerId', assigned: 'assigneeId', requested: 'reporterId' }[query.demandBox.box]
-        items = items.filter((t) => !!t.demandStatus && (!field || t[field] === query.demandBox.userId))
+        const box = query.demandBox
+        if (box.box === 'assigned') {
+          items = items.filter((t) => !!t.demandStatus && (t.assigneeId === box.userId || (t.demandPastAssignees || []).includes(box.userId)))
+          if (box.doneSince) items = items.filter((t) => t.demandStatus !== 'done' || !t.completedAt || t.completedAt >= box.doneSince)
+        } else {
+          const field = { received: 'demandOwnerId', requested: 'reporterId' }[box.box]
+          items = items.filter((t) => !!t.demandStatus && (!field || t[field] === box.userId))
+        }
       }
       if (query.demandOwnerId) items = items.filter((t) => t.demandOwnerId === query.demandOwnerId)
       if (query.demandStatuses) items = items.filter((t) => query.demandStatuses.includes(t.demandStatus))

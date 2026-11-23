@@ -224,8 +224,16 @@ function createTaskRepository(db) {
     }
     // caixas da tela Demandas: recebidas por mim, atribuídas a mim, pedidas por mim e Todas (`all`)
     if (query.demandBox) {
-      const column = { received: 'demand_owner_id', assigned: 'assignee_id', requested: 'reporter_id' }[query.demandBox.box]
-      where.push(column ? `tasks.demand_status <> '' AND tasks.${column} = ${param(query.demandBox.userId)}` : `tasks.demand_status <> ''`)
+      const box = query.demandBox
+      if (box.box === 'assigned') {
+        // Atribuídas a mim (ajuste 23/11): as que estão comigo e as que passei a outra pessoa; das concluídas, só as recentes
+        const me = param(box.userId)
+        where.push(`tasks.demand_status <> '' AND (tasks.assignee_id = ${me} OR ${me}::text = ANY(tasks.demand_past_assignees))`)
+        if (box.doneSince) where.push(`(tasks.demand_status <> 'done' OR tasks.completed_at IS NULL OR tasks.completed_at >= ${param(box.doneSince)})`)
+      } else {
+        const column = { received: 'demand_owner_id', requested: 'reporter_id' }[box.box]
+        where.push(column ? `tasks.demand_status <> '' AND tasks.${column} = ${param(box.userId)}` : `tasks.demand_status <> ''`)
+      }
     }
     if (query.demandOwnerId) where.push(`tasks.demand_owner_id = ${param(query.demandOwnerId)}`)
     if (query.demandStatuses) where.push(`tasks.demand_status = ANY(${param(query.demandStatuses)}::text[])`)

@@ -144,6 +144,19 @@ export function projectDisplayName(t: (key: string) => string, project: { name: 
   return project.demands ? t('demands.internalProject') : project.name
 }
 
+/**
+ * Atribuídas a mim (ajuste 23/11): o que está comigo (por passo), as concluídas recentes (o servidor já manda
+ * só as dos últimos 30 dias) e as que passei a outra pessoa (continuam visíveis, sem ações).
+ */
+export function splitAssignedBox<T extends Pick<TaskSummary, 'demand' | 'assignee'>>(list: readonly T[], me: string | undefined): { active: T[]; done: T[]; passed: T[] } {
+  const mine = (task: T) => !!me && task.assignee?.id === me
+  return {
+    active: list.filter((task) => mine(task) && task.demand?.status !== 'done'),
+    done: list.filter((task) => mine(task) && task.demand?.status === 'done'),
+    passed: list.filter((task) => !mine(task)),
+  }
+}
+
 /** Demandas agrupadas por passo, na ordem do fluxo (grupos vazios ficam de fora). */
 export function groupByStatus<T extends Pick<TaskSummary, 'demand'>>(list: readonly T[]): Array<{ status: DemandStatus; items: T[] }> {
   return DEMAND_STATUSES.map((status) => ({ status, items: list.filter((task) => task.demand?.status === status) })).filter((group) => group.items.length > 0)
