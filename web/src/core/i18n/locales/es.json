@@ -4782,6 +4782,12 @@
       "requested": "Pedidas por mí",
       "all": "Todas"
     },
+    "tabsShort": {
+      "received": "Recibidas",
+      "assigned": "Asignadas",
+      "requested": "Pedidas",
+      "all": "Todas"
+    },
     "empty": {
       "received": "Todavía no recibiste demandas.",
       "assigned": "No tienes demandas abiertas.",

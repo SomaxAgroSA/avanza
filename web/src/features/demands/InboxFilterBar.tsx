@@ -14,10 +14,14 @@ export interface InboxFilterOption {
 }
 
 /**
- * A linha da Bandeja se adapta à largura (ajuste 23/11): mede a linha inteira (AppToolbar) e, enquanto ela não
- * cabe, compacta um passo — 1: os filtros sem o ": todas" ("Proyecto ▾") e só o valor escolhido; 2: também os
- * botões de criar encurtam ("＋ Tarefa"). Volta ao completo quando a tela alarga. Sem estado do React: só um
- * atributo `data-compact` na linha, lido pelas classes `[[data-compact]_&]`.
+ * A linha da Bandeja se adapta à largura (ajustes 23/11): mede a linha inteira (AppToolbar) e, enquanto ela não
+ * cabe, compacta mais um passo (os passos se somam): 1 — os filtros sem o ": todas" ("Proyecto ▾"); 2 — os
+ * botões de criar encurtam ("＋ Tarefa"); 3 — as caixas sem os números e os filtros mais justos; 4 — as caixas
+ * com o nome curto ("Recebidas"); 5 — a busca fica só com a lupa (abre ao clicar e, com texto, mostra o começo). Volta ao completo quando a tela alarga. Sem estado do React: só o atributo
+ * `data-compact` na linha ("1 2 3"), lido pelas classes `[[data-compact~='n']_&]`.
+ *
+ * O grupo dos filtros não encolhe abaixo do conteúdo (sem `min-w-0`): se encolhesse, os botões dele passariam
+ * por baixo dos de criar sem a linha "transbordar", e a compactação nunca começaria (erro de 23/11).
  */
 function useFitToolbar() {
   const ref = useRef<HTMLDivElement>(null)
@@ -26,9 +30,11 @@ function useFitToolbar() {
     if (!bar) return
     const fit = () => {
       bar.removeAttribute('data-compact')
-      for (const level of ['1', '2']) {
+      const levels: string[] = []
+      for (const level of ['1', '2', '3', '4', '5']) {
         if (bar.scrollWidth <= bar.clientWidth) return
-        bar.setAttribute('data-compact', level)
+        levels.push(level)
+        bar.setAttribute('data-compact', levels.join(' '))
       }
     }
     fit()
@@ -44,7 +50,7 @@ function useFitToolbar() {
 }
 
 /** Mesmo item do controle segmentado das caixas (altura, cantos e escolhido em branco). */
-const ITEM = 'inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none @max-[960px]:px-2'
+const ITEM = "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none @max-[960px]:px-2 [[data-compact~='3']_&]:px-2"
 
 /**
  * Filtros da Bandeja (ajuste 23/11, aprovado em demonstração): na linha das caixas e com o mesmo botão delas —
@@ -82,8 +88,8 @@ export function InboxFilterBar({
 
   return (
     // ocupa o espaço livre da linha (como as caixas, o mesmo grupo); a busca cresce com ele
-    <div ref={ref} role="group" aria-label={t('demands.filters.bar')} className="flex min-w-0 flex-1 items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5">
-      <label className={cn(ITEM, 'min-w-24 flex-1 cursor-text text-muted focus-within:bg-surface focus-within:shadow-card')}>
+    <div ref={ref} role="group" aria-label={t('demands.filters.bar')} className="flex flex-1 items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5">
+      <label className={cn(ITEM, "min-w-24 flex-1 cursor-text text-muted focus-within:bg-surface focus-within:shadow-card [[data-compact~='5']_&]:min-w-9 [[data-compact~='5']_&]:focus-within:min-w-40 [[data-compact~='5']_&]:not-focus-within:has-[input:not(:placeholder-shown)]:min-w-24")}>
         <Search className="size-3.5 shrink-0" aria-hidden />
         <input
           type="search"
@@ -91,7 +97,7 @@ export function InboxFilterBar({
           onChange={(event) => setText(event.target.value)}
           placeholder={t('demands.filters.search')}
           aria-label={t('demands.filters.search')}
-          className="w-full min-w-0 bg-transparent text-fg outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
+          className="w-full min-w-0 bg-transparent text-fg outline-none placeholder:text-muted [[data-compact~='5']_&]:placeholder:text-transparent [&::-webkit-search-cancel-button]:hidden"
         />
       </label>
       <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-border" />
@@ -128,8 +134,8 @@ export function InboxFilterBar({
           className={cn(ITEM, 'text-primary hover:text-primary-hover')}
           aria-label={t('demands.filters.clear')}
         >
-          <X className="hidden size-3.5 shrink-0 [[data-compact='2']_&]:inline" aria-hidden />
-          <span className="[[data-compact='2']_&]:hidden">{t('demands.filters.clear')}</span>
+          <X className="hidden size-3.5 shrink-0 [[data-compact~='2']_&]:inline" aria-hidden />
+          <span className="[[data-compact~='2']_&]:hidden">{t('demands.filters.clear')}</span>
         </button>
       )}
     </div>
@@ -164,9 +170,10 @@ function FilterMenu({
       label={label}
       className="min-w-52 p-1"
       trigger={
-        <button type="button" className={cn(ITEM, on ? 'bg-surface text-fg shadow-card' : 'text-muted hover:text-fg')}>
+        <button type="button" title={on ? `${label}: ${chosen.map((option) => option.label).join(', ')}` : undefined} className={cn(ITEM, on ? 'bg-surface text-fg shadow-card' : 'text-muted hover:text-fg')}>
           {on ? (
-            <span className="truncate">
+            // a partir do passo 3, um nome longo ("DRE SOMAX PARAGUAY") corta com "…"; o inteiro fica na dica
+            <span className="truncate [[data-compact~='3']_&]:max-w-36">
               <span className="[[data-compact]_&]:hidden">{label}: </span>
               <span className="font-semibold">{summary}</span>
             </span>

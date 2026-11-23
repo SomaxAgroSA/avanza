@@ -339,6 +339,34 @@ describe('Bandeja — filtros, ordem e colunas (ajuste 23/11)', () => {
     await userEvent.click(within(bar).getByRole('button', { name: 'Limpar' }))
     await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('2'))
   })
+
+  it('linha apertada: compacta passo a passo até caber, e o grupo dos filtros não encolhe por baixo dos botões (erro 23/11)', async () => {
+    // a linha "mede" 1000px de conteúdo em 800px de largura; cada passo de compactação libera 100px
+    const steps = (el: HTMLElement) => (el.getAttribute('data-compact') ?? '').split(' ').filter(Boolean).length
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute('data-toolbar') ? 1000 - 100 * steps(this) : 0
+    })
+    const client = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.hasAttribute('data-toolbar') ? 800 : 0
+    })
+    try {
+      renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+        repositories: repos({ me: cesar, demands: { overview: () => Promise.resolve(overview({ unassigned: 2 })), list: () => Promise.resolve(page([])) } }),
+        initialPath: '/tasks/demands',
+      })
+      const bar = await screen.findByRole('group', { name: 'Filtros da Bandeja' })
+      const row = bar.closest<HTMLElement>('[data-toolbar]')!
+      // dois passos bastam: filtros sem ": todas" e os botões de criar curtos; as caixas seguem com o nome inteiro
+      await waitFor(() => expect(row).toHaveAttribute('data-compact', '1 2'))
+      expect(bar).not.toHaveClass('min-w-0')
+      const received = within(screen.getByRole('radiogroup', { name: i18n.t('demands.page.tabsLabel') })).getByRole('radio', { name: /Recebidas por mim/ })
+      expect(within(received).getByText('Recebidas por mim')).toHaveClass("[[data-compact~='4']_&]:sr-only")
+      expect(within(received).getByText('Recebidas')).toHaveClass('hidden', "[[data-compact~='4']_&]:inline")
+    } finally {
+      scroll.mockRestore()
+      client.mockRestore()
+    }
+  })
 })
 
 describe('Demandas — caixas (§45)', () => {
