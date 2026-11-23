@@ -205,7 +205,6 @@ const NOTICE = {
     urgency: { high: 'Alta', medium: 'Média', low: 'Baixa' },
     internal: 'Demanda interna',
     button: { task: 'Ver tarefa', demand: 'Ver demanda', plan: 'Ver na gestão', other: 'Abrir' },
-    footer: 'Você recebe este aviso porque as notificações por e-mail estão ligadas. Você pode mudar isso em Minha conta.',
     someone: 'Alguém',
   },
   en: {
@@ -250,7 +249,6 @@ const NOTICE = {
     urgency: { high: 'High', medium: 'Medium', low: 'Low' },
     internal: 'Internal request',
     button: { task: 'View task', demand: 'View request', plan: 'View in management', other: 'Open' },
-    footer: 'You get this notice because email notifications are on. You can change this in My account.',
     someone: 'Someone',
   },
   es: {
@@ -295,7 +293,6 @@ const NOTICE = {
     urgency: { high: 'Alta', medium: 'Media', low: 'Baja' },
     internal: 'Demanda interna',
     button: { task: 'Ver tarea', demand: 'Ver demanda', plan: 'Ver en la gestión', other: 'Abrir' },
-    footer: 'Recibes este aviso porque tienes las notificaciones por correo activas. Puedes cambiarlo en Mi cuenta.',
     someone: 'Alguien',
   },
 }
@@ -453,7 +450,6 @@ function renderNotificationEmail(notification, ctx) {
     next: n.next[notification.type] || '',
     link: notificationLink(notification, ctx.appUrl),
     button: isPlan ? n.button.plan : notification.taskId ? (isDemand ? n.button.demand : n.button.task) : n.button.other,
-    note: n.footer,
   })
   return { subject, html: body.html, text: body.text }
 }
