@@ -700,7 +700,7 @@ function build() {
         }),
       },
       '/tasks/{id}/mention-candidates': {
-        get: op('Pessoas que podem ser mencionadas (ativas com acesso ao projeto)', ['comments'], { 200: ok('Pessoas', { type: 'array', items: ref('UserSummary') }) }, { parameters: [idParam] }),
+        get: op('Pessoas que podem ser mencionadas: todas as ativas da plataforma; outside = ainda não vê a tarefa (mencionada num comentário, passa a ver e comentar só essa tarefa, sem editar, enquanto o comentário existir)', ['comments'], { 200: ok('Pessoas', { type: 'array', items: { allOf: [ref('UserSummary'), { type: 'object', properties: { outside: { type: 'boolean' } } }] } }) }, { parameters: [idParam] }),
       },
       '/comments/{id}': {
         patch: op('Edita o próprio comentário', ['comments'], { 200: ok('Atualizado', ref('Comment')), 404: errorResponse('COMMENT_NOT_FOUND') }, {

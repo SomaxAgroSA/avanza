@@ -334,9 +334,13 @@ describe('application/demands — visibilidade', () => {
     // quem pediu e o responsável recebem o comentário
     assert.deepEqual(s.deps.store.notifications.map((n) => n.userId).sort(), [s.users.ana.id, s.users.cesar.id].sort())
     assert.equal(await codeOf(() => s.comments.createComment(s.ctx.fabi, created.id, { content: 'x' })), 'TASK_NOT_FOUND')
-    // menções: só quem enxerga a demanda (quem vê todas também)
-    const names = (await s.comments.mentionCandidates(s.ctx.ana, created.id)).map((u) => u.name)
-    assert.deepEqual(names, ['Admin', 'Ana', 'Carlos', 'César', 'Jorge'])
+    // menções: todas as pessoas ativas (ajuste 23/11); `outside` marca quem ainda não enxerga a demanda
+    const list = await s.comments.mentionCandidates(s.ctx.ana, created.id)
+    assert.deepEqual(list.filter((u) => !u.outside).map((u) => u.name), ['Admin', 'Ana', 'Carlos', 'César', 'Jorge'])
+    assert.ok(list.some((u) => u.name === 'Fabi' && u.outside))
+    // mencionada, a Fabi passa a ver e comentar essa demanda
+    await s.comments.createComment(s.ctx.ana, created.id, { content: `@[Fabi](${s.users.fabi.id}) veja` })
+    assert.equal((await s.comments.createComment(s.ctx.fabi, created.id, { content: 'Vi.' })).author.name, 'Fabi')
   })
 
   it('Lista de tarefas: Com projeto · Sem projeto e "Minhas" com as que pedi, recebi ou executo', async () => {

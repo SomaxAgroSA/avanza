@@ -1934,7 +1934,8 @@
     "removeFile": "Remove {{name}}"
   },
   "mentions": {
-    "listLabel": "People to mention"
+    "listLabel": "People to mention",
+    "outside": "will see this task"
   },
   "files": {
     "dropHere": "Drag files here or",

@@ -71,15 +71,13 @@ describe('API tags, checklist e comentários', { timeout: 180000 }, () => {
 
   it('leitora comenta e menciona; histórico mostra comentário e menções', async () => {
     const candidates = (await viewer.client.get(`/tasks/${task.id}/mention-candidates`)).body.data.map((u) => u.name)
-    assert.ok(candidates.includes('Mário') && candidates.includes('Lia'))
-    assert.ok(!candidates.includes('Otto'))
+    // todas as pessoas ativas da plataforma (ajuste 23/11)
+    assert.ok(candidates.includes('Mário') && candidates.includes('Lia') && candidates.includes('Otto'))
 
     const posted = await viewer.client.post(`/tasks/${task.id}/comments`, { content: `@[Mário](${member.user.id}) pode revisar o **manual**?` })
     assert.equal(posted.status, 201, JSON.stringify(posted.body))
     assert.deepEqual(posted.body.data.mentions.map((m) => m.name), ['Mário'])
 
-    const bad = await viewer.client.post(`/tasks/${task.id}/comments`, { content: `oi @[Otto](${outsider.user.id})` })
-    assert.equal(bad.body.error.details.fields.content, 'invalid_mention')
     assert.equal((await outsider.client.post(`/tasks/${task.id}/comments`, { content: 'x' })).body.error.code, 'TASK_NOT_FOUND')
 
     const history = (await member.client.get(`/tasks/${task.id}/history`)).body.data
@@ -88,6 +86,10 @@ describe('API tags, checklist e comentários', { timeout: 180000 }, () => {
     assert.deepEqual(history[0].new_value, { comment: '@Mário pode revisar o manual?', mentions: 'Mário' })
     assert.equal(history[0].user.name, 'Lia')
     assert.equal((await member.client.get('/tasks')).body.data[0].comment_count, 1)
+    // mencionado, o Otto passa a ver e comentar só essa tarefa
+    const invited = await viewer.client.post(`/tasks/${task.id}/comments`, { content: `oi @[Otto](${outsider.user.id})` })
+    assert.equal(invited.status, 201, JSON.stringify(invited.body))
+    assert.equal((await outsider.client.post(`/tasks/${task.id}/comments`, { content: 'Visto' })).status, 201)
   })
 
   it('só o autor edita; autor ou gestor exclui', async () => {

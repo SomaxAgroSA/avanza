@@ -95,7 +95,9 @@ function createNotifier(deps) {
     let created = 0
     for (const recipient of list) {
       const user = users[recipient.userId]
-      if (!user || user.status !== 'active' || !(await hasAccess(event.project, user, event.task || null))) continue
+      // menção em tarefa (ajuste 23/11): a própria menção dá acesso à tarefa, então o aviso sempre chega
+      if (!user || user.status !== 'active') continue
+      if (!(recipient.type === 'mention' && event.task) && !(await hasAccess(event.project, user, event.task || null))) continue
       const dedupeKey = event.dedupeKey ? event.dedupeKey(recipient.type) : ''
       if (dedupeKey && (await repos.notificationRepository.existsKey(user.id, dedupeKey))) continue
       const notification = Object.assign({ userId: user.id, type: recipient.type, actorId: event.actorId || null, data: Object.assign({}, baseData, event.data || {}), dedupeKey }, target)
