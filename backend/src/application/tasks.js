@@ -49,6 +49,37 @@ const MAX_HOURS = 100000
 const MAX_TAGS = 20
 const SEARCHABLE_TYPES = ['text', 'textarea', 'url', 'email', 'phone']
 
+/** Quanto da descrição vai para o histórico (o texto inteiro fica na tarefa). */
+const DESCRIPTION_EXCERPT = 1000
+
+/**
+ * Trechos da descrição para o histórico: do começo ou, quando a mudança está depois dos primeiros 1000
+ * caracteres, a partir de pouco antes dela (com "…" na frente).
+ */
+function descriptionExcerpts(before, after) {
+  let i = 0
+  while (i < before.length && i < after.length && before[i] === after[i]) i++
+  const start = i < DESCRIPTION_EXCERPT ? 0 : i - 200
+  const cut = (text) => (start > 0 ? '…' : '') + truncate(text.slice(start), DESCRIPTION_EXCERPT)
+  return [cut(before), cut(after)]
+}
+
+/**
+ * Correção 23/11: a comparação do histórico usa só os primeiros 1000 caracteres da descrição, então uma
+ * mudança depois deles era descartada sem aviso. Aqui a descrição inteira decide se houve mudança, e o
+ * histórico guarda o trecho em que ela aconteceu.
+ */
+function withDescription(change, beforeText, afterText) {
+  const a = beforeText || ''
+  const b = afterText || ''
+  if (a === b) return change
+  const [oldText, newText] = descriptionExcerpts(a, b)
+  const out = change || { oldValue: {}, newValue: {} }
+  out.oldValue.description = oldText
+  out.newValue.description = newText
+  return out
+}
+
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
 const hoursRule = rules.custom((value) => {
   if (typeof value !== 'number' || !isFinite(value)) return 'invalid_type'
@@ -1062,7 +1093,7 @@ function createTaskService(deps) {
     const stage = stageGroup ? await stageRow(project, stageGroup, next) : null
     const afterSnapshot = await snapshot(next, checked.values, links, auditRefs)
     if (stage) afterSnapshot.plan_item = stage.row.name
-    const change = changes(await snapshot(before, saved, previousLinks, auditRefs), afterSnapshot)
+    const change = withDescription(changes(await snapshot(before, saved, previousLinks, auditRefs), afterSnapshot), task.description, next.description)
     if (!change) return presentDetail(ctx, task, project, access)
 
     const updated = await deps.unitOfWork.run(async (repos) => {
@@ -1151,7 +1182,11 @@ function createTaskService(deps) {
         },
         await customDisplay(fieldLinks, taskValues),
       )
-    const change = changes(await view(task, saved, previousLinks), await view(Object.assign({}, task, patch), checked.values, links))
+    const change = withDescription(
+      changes(await view(task, saved, previousLinks), await view(Object.assign({}, task, patch), checked.values, links)),
+      task.description,
+      patch.description === undefined ? task.description : patch.description,
+    )
     if (!change) return presentDetail(ctx, task, project, access)
     const updated = await deps.unitOfWork.run(async (repos) => {
       const result = await repos.taskRepository.update(task.id, patch)
