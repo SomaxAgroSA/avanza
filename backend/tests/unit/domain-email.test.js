@@ -88,7 +88,7 @@ describe('domain/email — modelos', () => {
     assert.match(task.html, /Pode revisar\?/)
     assert.match(task.html, /Urgência<\/td><td[^>]*>Alta/)
     assert.match(task.html, /Prazo<\/td><td[^>]*>25\/11\/2026/)
-    assert.match(task.html, /Avanza  ·  Somax/)
+    assert.match(task.html, /Avanza {2}· {2}Somax/)
     assert.match(task.html, /href="https:\/\/k\.com\/tasks\/t1"[^>]*>Ver tarefa</)
     assert.match(task.html, /bgcolor="#038831"/)
     assert.match(task.text, /Projeto: DRE SOMAX PARAGUAY/)
