@@ -4782,6 +4782,12 @@
       "requested": "Requested by me",
       "all": "All"
     },
+    "tabsShort": {
+      "received": "Received",
+      "assigned": "Assigned",
+      "requested": "Requested",
+      "all": "All"
+    },
     "empty": {
       "received": "No requests received yet.",
       "assigned": "You have no open requests.",

@@ -73,14 +73,6 @@ export function DemandsPage() {
     return counts?.[b]
   }
 
-  const label = (text: string, total: number | undefined) => (
-    <>
-      {text}
-      {/* numa linha apertada (< 960px) os números somem */}
-      {total !== undefined && <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted @max-[960px]:hidden">{total}</span>}
-    </>
-  )
-
   const setFilter = (key: 'owner' | 'assignee' | 'company', value: string) => {
     const next = new URLSearchParams(params)
     if (value === ANY) next.delete(key)
@@ -97,7 +89,7 @@ export function DemandsPage() {
           value={box}
           // trocar de caixa mantém os filtros da Bandeja (os de pessoa são só da caixa Todas)
           onValueChange={(value) => setParams(writeInboxFilters(value === 'received' ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
-          options={boxes.map((b) => ({ value: b, label: label(t(`demands.tabs.${b}`), open(b)) }))}
+          options={boxes.map((b) => ({ value: b, label: <BoxLabel text={t(`demands.tabs.${b}`)} short={t(`demands.tabsShort.${b}`)} total={open(b)} /> }))}
         />
         <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} />
       </TasksHeader>
@@ -412,5 +404,23 @@ function TeamLoadCard({ team, loading, variant = 'team' }: { team: TeamLoad[]; l
         </ul>
       )}
     </AppCard>
+  )
+}
+
+/**
+ * Nome da caixa com o número de abertas. Numa linha apertada: < 960px ou a partir do passo 3 da Bandeja, os
+ * números somem; no passo 4, o nome curto ("Recebidas"), com o inteiro para o leitor de tela.
+ */
+export function BoxLabel({ text, short, total }: { text: string; short: string; total: number | undefined }) {
+  return (
+    <>
+      <span className="[[data-compact~='4']_&]:sr-only">{text}</span>
+      <span aria-hidden className="hidden [[data-compact~='4']_&]:inline">
+        {short}
+      </span>
+      {total !== undefined && (
+        <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted @max-[960px]:hidden [[data-compact~='3']_&]:hidden">{total}</span>
+      )}
+    </>
   )
 }
