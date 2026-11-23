@@ -92,6 +92,8 @@ describe('domain/email — modelos', () => {
     assert.match(task.html, /href="https:\/\/k\.com\/tasks\/t1"[^>]*>Ver tarefa</)
     assert.match(task.html, /bgcolor="#038831"/)
     assert.match(task.text, /Projeto: DRE SOMAX PARAGUAY/)
+    // sem o rodapé "Você recebe este aviso…" (ajuste 23/11)
+    assert.doesNotMatch(task.html + task.text, /recebe este aviso|Minha conta/)
     // prioridade no idioma de quem recebe; prazo no formato do idioma
     const en = email.renderNotificationEmail(
       { type: 'status_changed', taskId: 't1', data: { code: 'CRM-12', title: 'X', status: 'Em teste' } },
