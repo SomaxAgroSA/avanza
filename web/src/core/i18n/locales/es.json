@@ -4786,7 +4786,8 @@
       "received": "Todavía no recibiste demandas.",
       "assigned": "No tienes demandas abiertas.",
       "requested": "Todavía no pediste ninguna demanda.",
-      "all": "No hay demandas por aquí."
+      "all": "No hay demandas por aquí.",
+      "filtered": "Ninguna demanda con estos filtros"
     },
     "row": {
       "due": "plazo {{date}}",
@@ -4809,7 +4810,15 @@
       "label": "Filtros de las demandas",
       "owner": "Responsable",
       "assignee": "Asignada a",
-      "any": "Todos"
+      "any": "Todos",
+      "bar": "Filtros de la Bandeja",
+      "search": "Buscar",
+      "project": "Proyecto",
+      "projectAll": "todos",
+      "priority": "Prioridad",
+      "urgency": "Urgencia",
+      "all": "todas",
+      "clear": "Limpiar"
     },
     "badge_one": "{{count}} pendiente para ti",
     "badge_other": "{{count}} pendientes para ti",
@@ -4904,6 +4913,13 @@
       "step": "Paso",
       "assignee": "Asignada a",
       "deadline": "Plazo"
+    },
+    "columns": {
+      "task": "Tarea",
+      "status": "Estado",
+      "urgency": "Urgencia",
+      "priority": "Prioridad",
+      "assignee": "Asignada a"
     }
   }
 }

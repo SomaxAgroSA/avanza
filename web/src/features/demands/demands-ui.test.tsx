@@ -305,6 +305,42 @@ describe('Demanda interna — campos do tipo (§45, como na tarefa de projeto)',
   })
 })
 
+describe('Bandeja — filtros, ordem e colunas (ajuste 23/11)', () => {
+  it('filtros na linha das caixas (mesmo botão), ordem por urgência e prioridade, colunas e números pelo filtro', async () => {
+    const calma = demand({ id: 'd1', code: 'DEM-1', title: 'Sem pressa', priority: { id: 'p1', key: 'ALTA', name: 'Alta', color: 'red' }, urgency: null })
+    const urgente = demand({ id: 'd2', code: 'DEM-2', title: 'Urgente de verdade', priority: { id: 'p2', key: 'MEDIA', name: 'Média', color: 'amber' }, urgency: 'high' })
+    const atribuida = demand({ id: 'd3', code: 'DEM-3', title: 'Com o Jorge', step: 'assigned', assignee: jorge, urgency: 'medium' })
+    const list = vi.fn<DemandRepository['list']>((_box, filters) =>
+      Promise.resolve(page([calma, urgente, atribuida].filter((task) => !filters?.urgencies?.length || filters.urgencies.includes(task.urgency ?? 'none')))),
+    )
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({ me: cesar, demands: { overview: () => Promise.resolve(overview({ unassigned: 2, assigned: 1 })), list } }),
+      initialPath: '/tasks/demands',
+    })
+    const group = await screen.findByRole('region', { name: 'Sem atribuir' })
+    // a mais urgente primeiro (mesmo com prioridade menor)
+    expect(within(group).getAllByRole('link').map((a) => a.textContent)).toEqual(['Urgente de verdade', 'Sem pressa'])
+    // colunas separadas: urgência, prioridade e atribuída a
+    expect(within(group).getAllByTestId('demand-urgency').map((c) => c.textContent)).toEqual(['Alta', 'Sem urgência'])
+    expect(within(group).getAllByTestId('demand-priority').map((c) => c.textContent)).toEqual(['Média', 'Alta'])
+    expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('2')
+    // os filtros ficam na linha das caixas
+    const bar = screen.getByRole('group', { name: 'Filtros da Bandeja' })
+    const navRow = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') }).parentElement!
+    expect(navRow).toContainElement(bar)
+    await userEvent.click(within(bar).getByRole('button', { name: /^Urgência/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Alta/, pressed: false }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('received', expect.objectContaining({ urgencies: ['high'] })))
+    // números e lista seguem o filtro
+    await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('1'))
+    expect(screen.getByTestId('kpi-assigned')).toHaveTextContent('0')
+    expect(within(bar).getByRole('button', { name: /Urgência:\s*Alta/ })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(within(bar).getByRole('button', { name: 'Limpar' }))
+    await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('2'))
+  })
+})
+
 describe('Demandas — caixas (§45)', () => {
   const unassigned = demand({ id: 'd1', code: 'DEM-1' })
   const running = demand({ id: 'd2', code: 'DEM-2', title: 'Usuário técnico do Datasphere', step: 'in_progress', assignee: jorge, estimatedHours: 4 })

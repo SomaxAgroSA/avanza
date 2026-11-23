@@ -1408,6 +1408,10 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
           owner_id: options?.ownerId || undefined,
           assignee_id: options?.assigneeId || undefined,
           company_id: options?.companyId || undefined,
+          project_id: options?.projectId || undefined,
+          priority_id: options?.priorityIds?.length ? options.priorityIds.join(',') : undefined,
+          urgency: options?.urgencies?.length ? options.urgencies.join(',') : undefined,
+          search: options?.search || undefined,
           perPage: 100,
         },
       })
