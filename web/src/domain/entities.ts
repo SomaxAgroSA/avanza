@@ -1,4 +1,5 @@
 import type { PermissionCode } from './permissions'
+import type { TaskViews } from './task-views'
 import type { ThemePreference } from '@/core/theme/theme'
 import type { Language } from '@/core/i18n'
 
@@ -26,7 +27,8 @@ export interface User {
 export const ONGOING_VIEWS = ['', 'executive', 'both'] as const
 export type OngoingView = (typeof ONGOING_VIEWS)[number]
 
-export interface Role {
+/** Perfil de acesso; com as Tarefas do perfil (ajuste 23/11: onde o menu abre, a Lista e a caixa Todas). */
+export interface Role extends TaskViews {
   id: string
   code: string
   name: string
@@ -38,7 +40,7 @@ export interface Role {
   userCount: number
 }
 
-export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'ongoingView'>
+export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'ongoingView' | keyof TaskViews>
 
 export interface Permission {
   id: string

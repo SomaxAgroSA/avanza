@@ -34,6 +34,7 @@ import { useDemandList, useDemandOverview, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
 import { PROJECT_OPTIONS_QUERY, useProjects } from '@/features/projects/queries'
 import { usePriorities } from '@/features/workflow/queries'
+import { useTaskViews } from '@/features/tasks/use-task-views'
 import { InboxFilterBar, type InboxFilterOption } from './InboxFilterBar'
 
 const isBox = (value: string | null): value is DemandBox => !!value && (DEMAND_BOXES as readonly string[]).includes(value)
@@ -50,7 +51,8 @@ const ANY = '__any__'
 export function DemandsPage() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
-  const seesAll = useCan('projects.view_all')
+  // a caixa Todas: quem vê todos os projetos, se o perfil não a escondeu (Tarefas do perfil, ajuste 23/11)
+  const seesAll = useTaskViews().allBox
   const boxes = DEMAND_BOXES.filter((b) => b !== 'all' || seesAll)
   const raw = params.get('box')
   const box: DemandBox = isBox(raw) && boxes.includes(raw) ? raw : 'received'

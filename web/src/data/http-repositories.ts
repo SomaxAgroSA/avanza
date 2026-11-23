@@ -9,7 +9,7 @@ import type {
   ProjectFacets,
   ProjectRepository,
   Repositories,
-  RoleData,
+  RoleInputData,
   RoleRepository,
   UpdateUserData,
   UserRepository,
@@ -388,6 +388,17 @@ export function createHttpUserRepository(api: ApiClient): UserRepository {
   }
 }
 
+/** Corpo do perfil na API: os ajustes de tela com o nome do servidor (só os que vieram; sem o campo, não muda). */
+function roleBody(input: Partial<RoleInputData>): Record<string, unknown> {
+  const { ongoingView, tasksStart, tasksList, tasksAllBox, ...rest } = input
+  const body: Record<string, unknown> = { ...rest }
+  if (ongoingView !== undefined) body.ongoing_view = ongoingView
+  if (tasksStart !== undefined) body.tasks_start = tasksStart
+  if (tasksList !== undefined) body.tasks_list = tasksList
+  if (tasksAllBox !== undefined) body.tasks_all_box = tasksAllBox
+  return body
+}
+
 export function createHttpRoleRepository(api: ApiClient): RoleRepository {
   const path = (id: string) => `/roles/${encodeURIComponent(id)}`
   return {
@@ -399,14 +410,12 @@ export function createHttpRoleRepository(api: ApiClient): RoleRepository {
       const { data } = await api.get<PermissionDto[]>('/permissions')
       return data.map(toPermission).filter((p): p is Permission => p !== null)
     },
-    async create(input: RoleData) {
-      const { ongoingView, ...rest } = input
-      const { data } = await api.post<RoleDto>('/roles', ongoingView === undefined ? rest : { ...rest, ongoing_view: ongoingView })
+    async create(input: RoleInputData) {
+      const { data } = await api.post<RoleDto>('/roles', roleBody(input))
       return toRole(data)
     },
     async update(id, input) {
-      const { ongoingView, ...rest } = input
-      const { data } = await api.patch<RoleDto>(path(id), ongoingView === undefined ? rest : { ...rest, ongoing_view: ongoingView })
+      const { data } = await api.patch<RoleDto>(path(id), roleBody(input))
       return toRole(data)
     },
     async updatePermissions(id, permissions) {

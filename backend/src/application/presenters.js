@@ -40,6 +40,10 @@ function toRoleDto(role, extra) {
     is_system: !!role.isSystem,
     // vista de "Em andamento" do perfil (§41); '' = Gestão
     ongoing_view: role.ongoingView || '',
+    // Tarefas do perfil (ajuste 23/11): onde o menu abre, a Lista e a caixa Todas
+    tasks_start: role.tasksStart || '',
+    tasks_list: role.tasksList || '',
+    tasks_all_box: role.tasksAllBox || '',
   }
   if (extra && extra.permissions) dto.permissions = extra.permissions.slice().sort()
   if (extra && typeof extra.userCount === 'number') dto.user_count = extra.userCount

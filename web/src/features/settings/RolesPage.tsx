@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Lock, Plus, ShieldCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import type { Role } from '@/domain/entities'
+import { DEFAULT_TASK_VIEWS, type TasksAllBox, type TasksList, type TasksStart } from '@/domain/task-views'
 import { permissionModule } from '@/domain/permissions'
 import { roleSchema, type RoleInput } from '@/domain/validation'
 import {
@@ -15,6 +16,7 @@ import {
   AppDataTable,
   AppDialog,
   AppDrawer,
+  AppSegmentedControl,
   AppSelect,
   AppTextField,
   notify,
@@ -187,6 +189,16 @@ function RoleDetailsDrawer({ role, onOpenChange }: { role: Role | null; onOpenCh
           <p className="text-sm text-muted">
             {t('roles.ongoingView.label')}: <span className="font-medium text-fg">{t(`roles.ongoingView.${role.ongoingView === 'executive' ? 'executive' : role.ongoingView === 'both' ? 'both' : 'management'}`)}</span>
           </p>
+          <p className="text-sm text-muted">
+            {t('roles.tasks.title')}:{' '}
+            <span className="font-medium text-fg">
+              {[
+                t(`roles.tasks.${role.tasksStart === 'inbox_all' ? 'startInboxAll' : role.tasksStart === 'inbox' ? 'startInbox' : 'startList'}`),
+                `${t('roles.tasks.list')}: ${t(`roles.tasks.${role.tasksList === 'mine' ? 'listMine' : role.tasksList === 'hidden' ? 'listHidden' : 'listAll'}`)}`,
+                `${t('roles.tasks.allBox')}: ${t(`roles.tasks.${role.tasksAllBox === 'hidden' ? 'allBoxHidden' : 'allBoxShown'}`)}`,
+              ].join(' · ')}
+            </span>
+          </p>
           {role.code === 'SUPER_ADMIN' ? (
             <p className="text-sm text-muted">{t('roles.superAdminNote')}</p>
           ) : groups.length === 0 ? (
@@ -220,14 +232,25 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
   const pending = createRole.isPending || updateRole.isPending
   const { register, handleSubmit, reset, setError, setValue, control, formState } = useForm<RoleInput>({
     resolver: zodResolver(roleSchema),
-    defaultValues: { code: '', name: '', description: '', ongoingView: '' },
+    defaultValues: { code: '', name: '', description: '', ongoingView: '', ...DEFAULT_TASK_VIEWS },
   })
 
   useEffect(() => {
-    if (open) reset({ code: role?.code ?? '', name: role?.name ?? '', description: role?.description ?? '', ongoingView: role?.ongoingView ?? '' })
+    if (open)
+      reset({
+        code: role?.code ?? '',
+        name: role?.name ?? '',
+        description: role?.description ?? '',
+        ongoingView: role?.ongoingView ?? '',
+        tasksStart: role?.tasksStart ?? '',
+        tasksList: role?.tasksList ?? '',
+        tasksAllBox: role?.tasksAllBox ?? '',
+      })
   }, [open, role, reset])
   // vista da lista Em andamento de quem tem este perfil (§41); '' = Gestão
   const ongoingView = useWatch({ control, name: 'ongoingView' })
+  // Tarefas do perfil (ajuste 23/11): onde o menu abre, a Lista e a caixa Todas
+  const [tasksStart, tasksList, tasksAllBox] = useWatch({ control, name: ['tasksStart', 'tasksList', 'tasksAllBox'] })
 
   const onSubmit = handleSubmit((values) => {
     const onError = (error: unknown) => {
@@ -241,8 +264,9 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
       notify.success(isEdit ? t('roles.updated') : t('roles.created'))
       onOpenChange(false)
     }
-    if (role) updateRole.mutate({ id: role.id, data: { name: values.name, description: values.description, ongoingView: values.ongoingView } }, { onSuccess, onError })
-    else createRole.mutate({ code: values.code, name: values.name, description: values.description, permissions: [], ongoingView: values.ongoingView }, { onSuccess, onError })
+    const views = { tasksStart: values.tasksStart, tasksList: values.tasksList, tasksAllBox: values.tasksAllBox }
+    if (role) updateRole.mutate({ id: role.id, data: { name: values.name, description: values.description, ongoingView: values.ongoingView, ...views } }, { onSuccess, onError })
+    else createRole.mutate({ code: values.code, name: values.name, description: values.description, permissions: [], ongoingView: values.ongoingView, ...views }, { onSuccess, onError })
   })
 
   return (
@@ -285,7 +309,49 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
             { value: 'both', label: t('roles.ongoingView.both') },
           ]}
         />
+        <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-3">
+          <legend className="px-1 text-sm font-semibold text-fg">{t('roles.tasks.title')}</legend>
+          <ViewChoice<TasksStart>
+            label={t('roles.tasks.start')}
+            value={tasksStart}
+            onChange={(value) => setValue('tasksStart', value, { shouldDirty: true })}
+            options={[
+              { value: 'inbox_all', label: t('roles.tasks.startInboxAll') },
+              { value: 'inbox', label: t('roles.tasks.startInbox') },
+              { value: '', label: t('roles.tasks.startList') },
+            ]}
+          />
+          <ViewChoice<TasksList>
+            label={t('roles.tasks.list')}
+            value={tasksList}
+            onChange={(value) => setValue('tasksList', value, { shouldDirty: true })}
+            options={[
+              { value: '', label: t('roles.tasks.listAll') },
+              { value: 'mine', label: t('roles.tasks.listMine') },
+              { value: 'hidden', label: t('roles.tasks.listHidden') },
+            ]}
+          />
+          <ViewChoice<TasksAllBox>
+            label={t('roles.tasks.allBox')}
+            value={tasksAllBox}
+            onChange={(value) => setValue('tasksAllBox', value, { shouldDirty: true })}
+            options={[
+              { value: '', label: t('roles.tasks.allBoxShown') },
+              { value: 'hidden', label: t('roles.tasks.allBoxHidden') },
+            ]}
+          />
+        </fieldset>
       </form>
     </AppDialog>
+  )
+}
+
+/** Uma escolha das Tarefas do perfil: o nome em cima e as opções num controle segmentado (como na tela). */
+function ViewChoice<V extends string>({ label, value, onChange, options }: { label: string; value: V; onChange: (value: V) => void; options: Array<{ value: V; label: string }> }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-fg">{label}</span>
+      <AppSegmentedControl<V> size="sm" label={label} value={value} onValueChange={onChange} options={options} />
+    </div>
   )
 }

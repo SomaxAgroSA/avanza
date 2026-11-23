@@ -140,6 +140,7 @@ function NavCount({ badge, collapsed }: { badge?: { count: number; label: string
 
 export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = true, badges }: SidebarProps) {
   const { t } = useTranslation()
+  const location = useLocation()
   const toggleSidebar = useUiStore((s) => s.toggleSidebar)
 
   return (
@@ -151,20 +152,25 @@ export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = tru
         <ul className="flex flex-col gap-0.5">
           {items.filter((item) => !item.hidden).map((item) => {
             const Icon = item.icon
+            // com `entry` (Tarefas → Caixa de entrada, ajuste 23/11) o clique vai para lá, mas o item segue marcado
+            // em qualquer tela dele (a Lista inclusive)
+            const to = item.entry ?? item.to
+            const marked = !!item.entry && (location.pathname === item.to || location.pathname.startsWith(`${item.to}/`))
+            const markedClass = marked && 'bg-primary-soft font-semibold text-primary-soft-fg'
             return (
               <li key={item.id}>
                 {item.children ? (
                   <NavGroup item={item} collapsed={collapsed} onNavigate={onNavigate} />
                 ) : collapsed ? (
                   <AppTooltip content={t(item.labelKey)} side="right">
-                    <NavLink to={item.to} onClick={onNavigate} className={cn(linkBase, 'relative justify-center px-0')}>
+                    <NavLink to={to} onClick={onNavigate} className={cn(linkBase, 'relative justify-center px-0', markedClass)}>
                       {Icon && <Icon className="size-[18px]" aria-hidden />}
                       <span className="sr-only">{t(item.labelKey)}</span>
                       <NavCount badge={badges?.[item.id]} collapsed />
                     </NavLink>
                   </AppTooltip>
                 ) : (
-                  <NavLink to={item.to} onClick={onNavigate} className={linkBase}>
+                  <NavLink to={to} onClick={onNavigate} className={cn(linkBase, markedClass)}>
                     {Icon && <Icon className="size-[18px]" aria-hidden />}
                     <span className="truncate">{t(item.labelKey)}</span>
                     <PhaseBadge phase={item.phase} />

@@ -58,7 +58,7 @@ Especificação OpenAPI 3.1 servida em **`GET /api/v1/openapi.json`** (fonte: `b
 | GET | `/roles` | `permissions.manage` ou `users.view/create/edit` | perfis com `permissions` e `user_count` |
 | POST | `/roles` | `permissions.manage` | cria perfil personalizado (aceita `ongoing_view`) |
 | GET | `/roles/{id}` | idem listagem | detalhe (todo perfil traz `ongoing_view`; quem tem o perfil o lê em `GET /auth/me` → `role.ongoing_view`) |
-| PATCH | `/roles/{id}` | `permissions.manage` | nome, descrição e `ongoing_view` (`""` = Gestão, `"executive"` = Direção e gerência; senão `invalid_option`; §41) — omitir o campo não o muda; SUPER_ADMIN imutável |
+| PATCH | `/roles/{id}` | `permissions.manage` | nome, descrição e `ongoing_view` (`""` = Gestão, `"executive"` = Direção e gerência; senão `invalid_option`; §41) — omitir o campo não o muda; SUPER_ADMIN imutável. Tarefas do perfil (23/11): `tasks_start` (`""` Lista, `inbox`, `inbox_all`), `tasks_list` (`""` todas, `mine`, `hidden`), `tasks_all_box` (`""` visível, `hidden`); também em `POST /roles` e em `GET /auth/me` → `role` |
 | PUT | `/roles/{id}/permissions` | `permissions.manage` | substitui as permissões (`{ permissions: [...] }`) |
 | DELETE | `/roles/{id}` | `permissions.manage` | só perfis personalizados sem usuários |
 | GET | `/users` | `users.view` | lista paginada; `search`, `status`, `role_id`, `sort` (`name`, `email`, `status`, `created_at`, `last_login_at`) |

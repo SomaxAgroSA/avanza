@@ -5,7 +5,7 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const { ROLE_CODES, ONGOING_VIEWS } = require('../domain/permissions')
+const { ROLE_CODES, ONGOING_VIEWS, TASK_VIEWS } = require('../domain/permissions')
 const { buildAuditEntry, diff } = require('./audit')
 const { toRoleDto } = require('./presenters')
 
@@ -23,12 +23,18 @@ const CREATE_SCHEMA = {
   description: [rules.maxLength(255)],
   permissions: [rules.stringArray(MAX_PERMISSIONS)],
   ongoing_view: [rules.oneOf(ONGOING_VIEWS)],
+  tasks_start: [rules.oneOf(TASK_VIEWS.tasks_start)],
+  tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
+  tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
 }
 
 const UPDATE_SCHEMA = {
   name: [rules.required(), rules.maxLength(60)],
   description: [rules.maxLength(255)],
   ongoing_view: [rules.oneOf(ONGOING_VIEWS)],
+  tasks_start: [rules.oneOf(TASK_VIEWS.tasks_start)],
+  tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
+  tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
 }
 
 const READ_ROLES_PERMISSIONS = ['permissions.manage', 'users.view', 'users.create', 'users.edit']
@@ -37,13 +43,28 @@ function uniqueSorted(codes) {
   return codes.filter((code, index) => codes.indexOf(code) === index).sort()
 }
 
-/** Na auditoria o campo sai como na API (ongoing_view). */
+/** Ajustes de tela do perfil: o nome na API e o da entidade (vista de Em andamento §41 e Tarefas, 23/11). */
+const SCREEN_FIELDS = Object.freeze({ ongoing_view: 'ongoingView', tasks_start: 'tasksStart', tasks_list: 'tasksList', tasks_all_box: 'tasksAllBox' })
+
+/** Os ajustes vindos da API, com o nome da entidade ('' para os que não vieram, com `fill`). */
+function screenValues(data, fill) {
+  const out = {}
+  Object.keys(SCREEN_FIELDS).forEach((api) => {
+    if (data[api] !== undefined) out[SCREEN_FIELDS[api]] = data[api]
+    else if (fill) out[SCREEN_FIELDS[api]] = ''
+  })
+  return out
+}
+
+/** Na auditoria os campos saem como na API (ongoing_view, tasks_start…). */
 function publicChanges(values) {
   const out = Object.assign({}, values)
-  if (out.ongoingView !== undefined) {
-    out.ongoing_view = out.ongoingView
-    delete out.ongoingView
-  }
+  Object.keys(SCREEN_FIELDS).forEach((api) => {
+    const field = SCREEN_FIELDS[api]
+    if (out[field] === undefined) return
+    out[api] = out[field]
+    delete out[field]
+  })
   return out
 }
 
@@ -91,14 +112,14 @@ function createRoleService(deps) {
     rbac.assertCanUpdateRolePermissions(ctx.principal, { id: null, code }, permissions)
 
     const role = await deps.unitOfWork.run(async (repos) => {
-      const created = await repos.roleRepository.create({ code, name: data.name, description: data.description || '', ongoingView: data.ongoing_view || '' })
+      const created = await repos.roleRepository.create(Object.assign({ code, name: data.name, description: data.description || '' }, screenValues(data, true)))
       await repos.roleRepository.setPermissionCodes(created.id, permissions)
       await repos.auditRepository.record(
         buildAuditEntry(ctx, {
           entityType: 'role',
           entityId: created.id,
           action: 'role.created',
-          newValue: { code, name: data.name, permissions, ongoing_view: data.ongoing_view || '' },
+          newValue: Object.assign({ code, name: data.name, permissions }, publicChanges(screenValues(data, true))),
         }),
       )
       return created
@@ -111,9 +132,14 @@ function createRoleService(deps) {
     const role = await findRoleOrFail(id)
     if (role.code === ROLE_CODES.SUPER_ADMIN) throw appError('ROLE_IMMUTABLE')
     const data = assertValid(input, UPDATE_SCHEMA)
-    // vista de "Em andamento" (§41): na API é ongoing_view; na entidade, ongoingView
-    const current = Object.assign({}, role, { ongoingView: role.ongoingView || '' })
-    const changes = diff(current, { name: data.name, description: data.description, ongoingView: data.ongoing_view }, ['name', 'description', 'ongoingView'])
+    // ajustes de tela (Em andamento §41, Tarefas 23/11): na API ongoing_view…; na entidade ongoingView…
+    const fields = Object.keys(SCREEN_FIELDS).map((api) => SCREEN_FIELDS[api])
+    const current = Object.assign({}, role)
+    fields.forEach((field) => {
+      current[field] = role[field] || ''
+    })
+    const next = Object.assign({ name: data.name, description: data.description }, screenValues(data, false))
+    const changes = diff(current, next, ['name', 'description'].concat(fields))
     if (!changes) return await present(role)
 
     const updated = await deps.unitOfWork.run(async (repos) => {
