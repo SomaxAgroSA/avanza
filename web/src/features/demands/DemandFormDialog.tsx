@@ -5,6 +5,7 @@ import { isAppError } from '@/core/errors/app-error'
 import { formatShortDateTime } from '@/core/utils/format'
 import type { FieldValue, TaskTypeField } from '@/domain/task-config'
 import { customValueIssues, type TaskDetail } from '@/domain/tasks'
+import { isUrgency, NO_URGENCY } from '@/domain/urgency'
 import { AppAvatar, AppButton, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
@@ -16,6 +17,7 @@ import { useProjects } from '@/features/projects/queries'
 import { useTaskAttachments, useTaskMutations } from '@/features/tasks/queries'
 import { PROJECT_OPTIONS_QUERY } from '@/features/tasks/required-fields'
 import { TaskTypeFieldsSection } from '@/features/tasks/TaskTypeFieldsSection'
+import { useUrgencyChoices } from '@/features/tasks/urgency-choices'
 import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from '@/features/tasks/use-attachment-uploader'
 import { useDemandMutations, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
@@ -36,6 +38,8 @@ interface Draft {
   ownerId: string
   areaId: string
   priorityId: string
+  /** Urgência (§31; '' = sem urgência). */
+  urgency: string
   /** Empresa (§46; '' = sem empresa). */
   companyId: string
 }
@@ -62,7 +66,7 @@ export function DemandFormDialog(props: DemandFormDialogProps) {
 
 /**
  * Demanda interna (§45): o formulário curto. Esquerda: Tipo, Título e Descrição; direita: Responsável
- * (qualquer pessoa ativa; quem recebe e distribui), Departamento que pede, Prioridade, Abertura (automática,
+ * (qualquer pessoa ativa; quem recebe e distribui), Departamento que pede, Prioridade, Urgência, Abertura (automática,
  * travada) e Prazo (quem define é o responsável ao atribuir). Na edição o responsável fica fixo.
  */
 function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps) {
@@ -78,12 +82,14 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     ownerId: task?.demand?.owner?.id ?? '',
     areaId: task?.area?.id ?? '',
     priorityId: task?.priority?.id ?? '',
+    urgency: task?.urgency ?? '',
     companyId: task?.company?.id ?? '',
   }))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [openedAt] = useState(() => new Date())
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
+  const urgencyChoices = useUrgencyChoices()
   const areas = useAreas(false)
   // Empresa (§46): obrigatória quando existe empresa ativa (a regra é do servidor; aqui só antecipa)
   const companies = useCompanies(open)
@@ -198,6 +204,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             description: draft.description,
             areaId: draft.areaId,
             ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
+            urgency: isUrgency(draft.urgency) ? draft.urgency : null,
             // só quando mudou: a empresa inativa que a demanda já tem continua valendo
             ...(draft.companyId && draft.companyId !== (task.company?.id ?? '') ? { companyId: draft.companyId } : {}),
             customValues,
@@ -241,6 +248,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
         ownerId: draft.ownerId,
         areaId: draft.areaId,
         ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
+        ...(isUrgency(draft.urgency) ? { urgency: draft.urgency } : {}),
         ...(draft.companyId ? { companyId: draft.companyId } : {}),
         customValues,
       },
@@ -370,6 +378,13 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             onValueChange={(value) => set('priorityId', value)}
             options={priorityOptions}
           />
+          <AppSelect
+            label={t('tasks.fields.urgency')}
+            value={draft.urgency || NO_URGENCY}
+            error={errors.urgency}
+            onValueChange={(value) => set('urgency', value === NO_URGENCY ? '' : value)}
+            options={urgencyChoices}
+          />
           <LockedValue label={t('demands.form.opening')}>
             {t('demands.form.openingAuto', { date: formatShortDateTime(task?.demand?.openedAt ?? openedAt, i18n.language) })}
           </LockedValue>
@@ -384,5 +399,5 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
 
 /** Campo do rascunho → nome do campo na API (erros). */
 function fieldOf(key: keyof Draft): string {
-  return { typeId: 'task_type_id', title: 'title', description: 'description', ownerId: 'demand_owner_id', areaId: 'area_id', priorityId: 'priority_id', companyId: 'company_id' }[key]
+  return { typeId: 'task_type_id', title: 'title', description: 'description', ownerId: 'demand_owner_id', areaId: 'area_id', priorityId: 'priority_id', urgency: 'urgency', companyId: 'company_id' }[key]
 }

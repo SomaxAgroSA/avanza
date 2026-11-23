@@ -1,6 +1,7 @@
 import type { UserSummary } from './projects'
 import type { FieldValue } from './task-config'
 import type { TaskSummary } from './tasks'
+import type { Urgency } from './urgency'
 
 /**
  * Demandas internas (regras de negócio §45): tarefas sem projeto, pedidas a uma pessoa (o responsável),
@@ -78,6 +79,8 @@ export interface DemandInput {
   ownerId: string
   areaId: string
   priorityId?: string
+  /** Urgência (§31, semáforo); sem ela, nasce sem urgência. */
+  urgency?: Urgency
   /** Empresa ativa (§46): obrigatória quando existe alguma ativa. */
   companyId?: string
   /** Campos do tipo, por nome técnico (os mesmos da tarefa de projeto). */

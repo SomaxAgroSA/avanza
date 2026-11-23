@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
 import type { OptionColor } from '@/domain/task-config'
 import type { TaskDetail, TaskInput } from '@/domain/tasks'
+import { isUrgency, NO_URGENCY, type Urgency } from '@/domain/urgency'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
 import { AppSelect, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
@@ -12,6 +13,7 @@ import { usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useTaskMutations } from './queries'
 import { RequiredFieldsDialog, type RequiredFieldsRequest } from './RequiredFieldsDialog'
 import { missingForStatus } from './required-fields'
+import { useUrgencyChoices } from './urgency-choices'
 
 const NONE = '__none__'
 
@@ -26,18 +28,21 @@ const withCurrent = <T extends { id: string }>(list: readonly T[], current: T | 
   current && !list.some((x) => x.id === current.id) ? [...list, current] : [...list]
 
 /**
- * Troca rápida de status, prioridade e responsável (página da tarefa e painel do Kanban),
- * com mensagem e "desfazer". O status lista só as transições permitidas a partir do atual.
- * `split` (página da tarefa, ajuste 20/11): com quem recebe e distribui (§45), quatro campos — Status,
- * Prioridade, Responsável (quem recebe e distribui; só leitura, muda no formulário) e Atribuída a (quem
- * executa; muda pelo fluxo). Na tarefa comum continua um só Responsável.
+ * Troca rápida de status, prioridade, urgência e responsável (página da tarefa e painel do Kanban),
+ * com mensagem e "desfazer". O status lista só as transições permitidas a partir do atual. A urgência
+ * muda como na lista (sem exigir os obrigatórios do status).
+ * `split` (página da tarefa, ajuste 20/11): com quem recebe e distribui (§45), cinco campos — Status,
+ * Prioridade, Urgência, Responsável (quem recebe e distribui; só leitura, muda no formulário) e Atribuída a
+ * (quem executa; muda pelo fluxo). Na tarefa comum continua um só Responsável.
+ * As colunas seguem a largura do painel (container query), não a da tela: no painel lateral ficam 2 × 2.
  */
 export function TaskQuickFields({ task, className, split = false }: { task: TaskDetail; className?: string; split?: boolean }) {
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
-  const { update } = useTaskMutations()
+  const { update, setUrgency } = useTaskMutations()
   const statuses = useStatuses(false)
   const priorities = usePriorities(false)
+  const urgencyChoices = useUrgencyChoices()
   // a lista de pessoas só serve para trocar o responsável (o Responsável TI não reatribui nem vê os membros)
   const members = useProjectMembers(task.capabilities.assign ? task.project?.id : undefined)
   const assignable = (members.data ?? []).filter((m) => m.user.status === 'active' && (m.role !== 'viewer' || m.isOwner))
@@ -72,51 +77,79 @@ export function TaskQuickFields({ task, className, split = false }: { task: Task
     )
   }
 
+  function changeUrgency(next: Urgency | null, undo: Urgency | null) {
+    const label = (u: Urgency | null) => (u ? t(`tasks.urgency.${u}`) : t('tasks.urgency.none'))
+    setUrgency.mutate(
+      { id: task.id, urgency: next },
+      {
+        onSuccess: (saved) =>
+          notify.success(t('tasks.urgency.saved', { code: saved.code, urgency: label(saved.urgency) }), {
+            undo: { label: t('common.undo'), onClick: () => setUrgency.mutate({ id: task.id, urgency: undo }, { onError: (error) => notify.error(errorMessage(error)) }) },
+          }),
+        onError: (error) => notify.error(errorMessage(error)),
+      },
+    )
+  }
+
   const owner = split ? (task.demand?.owner ?? null) : null
+  const busy = update.isPending || setUrgency.isPending
   return (
-    <div className={cn('grid gap-3', owner ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3', className)}>
-      <AppSelect
-        size="sm"
-        label={t('tasks.fields.status')}
-        value={task.status?.id}
-        // com quem recebe e distribui (§45), o status muda pelo fluxo
-        disabled={!task.capabilities.edit || !!task.demand || update.isPending}
-        onValueChange={(statusId) => quickChange({ statusId }, { statusId: task.status?.id })}
-        options={withCurrent<LookupOption>(statusChoices(statuses.data ?? [], task.status?.id), task.status).map((s) => ({ value: s.id, label: <LookupBadge item={s} /> }))}
-      />
-      <AppSelect
-        size="sm"
-        label={t('tasks.fields.priority')}
-        value={task.priority?.id}
-        disabled={!task.capabilities.edit || update.isPending}
-        onValueChange={(priorityId) => quickChange({ priorityId }, { priorityId: task.priority?.id })}
-        options={withCurrent<LookupOption>(priorities.data ?? [], task.priority).map((p) => ({ value: p.id, label: <LookupBadge item={p} /> }))}
-      />
-      {owner && (
+    <div className={cn('@container', className)}>
+      <div className={cn('grid gap-3 @sm:grid-cols-2', owner ? '@4xl:grid-cols-5' : '@3xl:grid-cols-4')}>
         <AppSelect
           size="sm"
-          label={t('tasks.fields.assignee')}
-          value={owner.id}
-          disabled
-          onValueChange={() => undefined}
-          options={[{ value: owner.id, label: owner.name }]}
+          label={t('tasks.fields.status')}
+          value={task.status?.id}
+          // com quem recebe e distribui (§45), o status muda pelo fluxo
+          disabled={!task.capabilities.edit || !!task.demand || busy}
+          onValueChange={(statusId) => quickChange({ statusId }, { statusId: task.status?.id })}
+          options={withCurrent<LookupOption>(statusChoices(statuses.data ?? [], task.status?.id), task.status).map((s) => ({ value: s.id, label: <LookupBadge item={s} /> }))}
         />
-      )}
-      <AppSelect
-        size="sm"
-        label={owner ? t('tasks.fields.assignedTo') : t('tasks.fields.assignee')}
-        value={task.assignee?.id ?? NONE}
-        disabled={!task.capabilities.assign || !!task.demand || update.isPending}
-        onValueChange={(value) => quickChange({ assigneeId: value === NONE ? null : value }, { assigneeId: task.assignee?.id ?? null })}
-        options={[
-          { value: NONE, label: owner ? t('tasks.noAssignee') : t('tasks.unassigned') },
-          ...withCurrent(
-            assignable.map((m) => m.user),
-            task.assignee,
-          ).map((u) => ({ value: u.id, label: u.name })),
-        ]}
-      />
-      <RequiredFieldsDialog request={required} onClose={() => setRequired(null)} />
+        <AppSelect
+          size="sm"
+          label={t('tasks.fields.priority')}
+          value={task.priority?.id}
+          disabled={!task.capabilities.edit || busy}
+          onValueChange={(priorityId) => quickChange({ priorityId }, { priorityId: task.priority?.id })}
+          options={withCurrent<LookupOption>(priorities.data ?? [], task.priority).map((p) => ({ value: p.id, label: <LookupBadge item={p} /> }))}
+        />
+        <AppSelect
+          size="sm"
+          label={t('tasks.fields.urgency')}
+          value={task.urgency ?? NO_URGENCY}
+          disabled={!task.capabilities.edit || busy}
+          onValueChange={(value) => {
+            const next = isUrgency(value) ? value : null
+            if (next !== task.urgency) changeUrgency(next, task.urgency)
+          }}
+          options={urgencyChoices}
+        />
+        {owner && (
+          <AppSelect
+            size="sm"
+            label={t('tasks.fields.assignee')}
+            value={owner.id}
+            disabled
+            onValueChange={() => undefined}
+            options={[{ value: owner.id, label: owner.name }]}
+          />
+        )}
+        <AppSelect
+          size="sm"
+          label={owner ? t('tasks.fields.assignedTo') : t('tasks.fields.assignee')}
+          value={task.assignee?.id ?? NONE}
+          disabled={!task.capabilities.assign || !!task.demand || busy}
+          onValueChange={(value) => quickChange({ assigneeId: value === NONE ? null : value }, { assigneeId: task.assignee?.id ?? null })}
+          options={[
+            { value: NONE, label: owner ? t('tasks.noAssignee') : t('tasks.unassigned') },
+            ...withCurrent(
+              assignable.map((m) => m.user),
+              task.assignee,
+            ).map((u) => ({ value: u.id, label: u.name })),
+          ]}
+        />
+        <RequiredFieldsDialog request={required} onClose={() => setRequired(null)} />
+      </div>
     </div>
   )
 }

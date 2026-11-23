@@ -210,6 +210,18 @@ describe('TaskFormDialog', () => {
     expect(create.mock.calls[0]?.[0]).toMatchObject({ areaId: 'a2' })
   })
 
+  it('urgência ao lado da prioridade: começa "Sem urgência" e vai na criação quando escolhida', async () => {
+    const { create } = setup()
+    await chooseOption(/^Tipo/, 'Bug')
+    await userEvent.type(await screen.findByLabelText(/^Versão/), '2.1')
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Erro ao salvar pedido')
+    expect(screen.getByRole('combobox', { name: /^Urgência/ })).toHaveTextContent('Sem urgência')
+    await chooseOption(/^Urgência/, 'Alta')
+    await userEvent.click(screen.getByRole('button', { name: 'Nova tarefa' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ urgency: 'high' })
+  })
+
   it('leitor do projeto não aparece como responsável; erros do servidor voltam ao campo', async () => {
     const create = vi.fn<TaskRepository['create']>(() =>
       Promise.reject(new AppError({ code: 'VALIDATION_ERROR', message: 'x', status: 400, details: { fields: { 'custom_values.versao': 'too_long' } } })),
@@ -381,10 +393,23 @@ describe('TaskDetailPage', () => {
     await waitFor(() => expect(update).toHaveBeenCalledWith('k1', { statusId: 's2' }))
   })
 
+  it('urgência no topo, ao lado da Prioridade: mostra a atual e troca com um clique, como na lista', async () => {
+    const setUrgency = vi.fn<TaskRepository['setUrgency']>(() => Promise.resolve({ ...detail, urgency: 'high' }))
+    renderRoutes([{ path: '/tasks/:taskId', element: <TaskDetailPage /> }], {
+      repositories: repositories({ get: () => Promise.resolve(detail), setUrgency, history: () => Promise.resolve({ items: [], page: 1, perPage: 100, total: 0, totalPages: 0 }) }),
+      initialPath: '/tasks/k1',
+    })
+    await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
+    expect(screen.getByRole('combobox', { name: /^Urgência/ })).toHaveTextContent('Sem urgência')
+    await chooseOption(/^Urgência/, 'Alta')
+    await waitFor(() => expect(setUrgency).toHaveBeenCalledWith('k1', 'high'))
+  })
+
   it('sem permissão de edição, as trocas rápidas ficam bloqueadas', async () => {
     setup({ ...detail, parent: null, forkedFrom: null, capabilities: { edit: false, delete: false, assign: false, comment: true, link: false, fork: false } })
     await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
     expect(screen.getByRole('combobox', { name: /^Status/ })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: /^Urgência/ })).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
   })
 

@@ -157,6 +157,17 @@ describe('application/demands — abrir', () => {
     assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.leo, newDemand(s))), 'FORBIDDEN')
   })
 
+  it('guarda a urgência escolhida ao abrir (opcional) e a registra no histórico', async () => {
+    const s = await setup()
+    const urgent = await s.demands.createDemand(s.ctx.ana, newDemand(s, { urgency: 'high' }))
+    assert.equal(urgent.urgency, 'high')
+    assert.equal(s.deps.store.audit.find((e) => e.entityId === urgent.id && e.action === 'task.created').newValue.urgency, 'high')
+    const calm = await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'Sem pressa', urgency: null }))
+    assert.equal(calm.urgency, null)
+    assert.equal('urgency' in s.deps.store.audit.find((e) => e.entityId === calm.id && e.action === 'task.created').newValue, false)
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, newDemand(s, { urgency: 'ontem' }))), 'VALIDATION_ERROR:{"urgency":"invalid_option"}')
+  })
+
   it('a caixa de sistema não aparece nas listas de projetos e não abre como projeto (nem para o admin)', async () => {
     const s = await setup()
     await s.demands.createDemand(s.ctx.ana, newDemand(s))
