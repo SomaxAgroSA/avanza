@@ -8,6 +8,7 @@ import { useTask, useTaskAttachments } from './queries'
 import { TaskCustomValues, TaskProperties } from './TaskProperties'
 import { DemandFlowCard } from '@/features/demands/DemandFlowCard'
 import { TaskQuickFields } from './TaskQuickFields'
+import { UrgencyLabel } from './TaskUrgency'
 import { TaskIndicators, TaskPriorityBadge, TaskStatusBadge } from './task-visuals'
 import { TagList } from '@/features/tags/tag-visuals'
 
@@ -90,6 +91,7 @@ export function TaskPreviewDrawer({
           <div className="flex flex-wrap items-center gap-2">
             {!quickFields && <TaskStatusBadge status={data.status} className="text-sm" />}
             {!quickFields && <TaskPriorityBadge priority={data.priority} className="text-sm" />}
+            {!quickFields && data.urgency && <UrgencyLabel urgency={data.urgency} />}
             {data.type && <span className="text-sm text-muted">{data.type.name}</span>}
             <TagList tags={data.tags} max={6} />
             {/* sem comentários; o checklist só enquanto falta algo (ajuste 20/11) */}

@@ -7,6 +7,7 @@ import type { FieldValue, OptionColor, TaskTypeField } from '@/domain/task-confi
 import { customValueIssues, datesIssue, parseHours, type TaskDetail, type TaskInput } from '@/domain/tasks'
 import { planItemStage, planStageChoices } from '@/domain/plan-tasks'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
+import { isUrgency, NO_URGENCY } from '@/domain/urgency'
 import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
@@ -20,6 +21,7 @@ import { useAreas, usePriorities, useStatuses } from '@/features/workflow/querie
 import { useTaskAttachments, useTaskMutations } from './queries'
 import { PROJECT_OPTIONS_QUERY } from './required-fields'
 import { TaskTypeFieldsSection } from './TaskTypeFieldsSection'
+import { useUrgencyChoices } from './urgency-choices'
 import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from './use-attachment-uploader'
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
@@ -66,6 +68,8 @@ interface Draft {
   description: string
   statusId: string
   priorityId: string
+  /** Urgência (§31; '' = sem urgência). */
+  urgency: string
   assigneeId: string
   /** Área responsável ('' = sem área). */
   areaId: string
@@ -95,6 +99,7 @@ function draftFrom(task: TaskDetail | null | undefined, projectId: string | unde
     description: task?.description ?? '',
     statusId: task?.status?.id ?? '',
     priorityId: task?.priority?.id ?? '',
+    urgency: task?.urgency ?? '',
     assigneeId: task?.assignee?.id ?? '',
     areaId: task?.area?.id ?? '',
     startDate: toDayInput(task?.startDate),
@@ -127,6 +132,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const { t } = useTranslation()
   const errorMessage = useErrorMessage()
   const canAssign = useCan('tasks.assign')
+  const urgencyChoices = useUrgencyChoices()
   const isEdit = !!task
   const { create, update } = useTaskMutations()
 
@@ -295,6 +301,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       description: draft.description,
       statusId: flow ? undefined : draft.statusId || undefined,
       priorityId: draft.priorityId || undefined,
+      urgency: isUrgency(draft.urgency) ? draft.urgency : null,
       assigneeId: flow ? undefined : draft.assigneeId || null,
       // só quando mudou: a área inativa que a tarefa já tem continua valendo
       areaId: draft.areaId !== (task?.area?.id ?? '') ? draft.areaId || null : undefined,
@@ -521,6 +528,13 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             error={errors.priority_id}
             onValueChange={(value) => set('priorityId', value)}
             options={lookupOptions(priorities.data ?? [], task?.priority)}
+          />
+          <AppSelect
+            label={t('tasks.fields.urgency')}
+            value={draft.urgency || NO_URGENCY}
+            error={errors.urgency}
+            onValueChange={(value) => set('urgency', value === NO_URGENCY ? '' : value)}
+            options={urgencyChoices}
           />
           <AppSelect
             label={t('tasks.fields.assignee')}

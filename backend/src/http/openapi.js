@@ -604,6 +604,7 @@ function build() {
                 demand_owner_id: { type: 'string', description: 'Responsável: qualquer pessoa ativa (GET /demands/owners); recebe e distribui à equipe dela' },
                 area_id: { type: 'string', description: 'Departamento que pede (área ativa de /areas)' },
                 priority_id: { type: 'string', description: 'sem ela, a prioridade padrão' },
+                urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true, description: 'Urgência (§31, semáforo); sem ela, nasce sem urgência' },
                 company_id: { type: 'string', description: 'Empresa (§46): ativa de /companies; obrigatória quando existe alguma empresa ativa (required)' },
                 custom_values: { type: 'object', description: 'campos do tipo por nome técnico (os mesmos da tarefa de projeto)', additionalProperties: true },
               },

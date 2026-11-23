@@ -170,6 +170,8 @@ export interface TaskInput {
   planGroupId?: string
   /** Área responsável ativa (null limpa). */
   areaId?: string | null
+  /** Urgência (§31, semáforo); null = sem urgência. */
+  urgency?: Urgency | null
   /** Empresa ativa (§46): só na demanda interna (a tarefa de projeto herda a do projeto). */
   companyId?: string | null
   /**

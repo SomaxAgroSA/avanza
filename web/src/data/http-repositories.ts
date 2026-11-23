@@ -676,6 +676,7 @@ function taskBody(data: TaskInput) {
     plan_group_id: data.planGroupId,
     area_id: data.areaId,
     company_id: data.companyId,
+    urgency: data.urgency,
     checklist: data.checklist?.map((item) => ({ id: item.id, text: item.text, done: item.done })),
   }
 }
@@ -1419,6 +1420,7 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
         demand_owner_id: data.ownerId,
         area_id: data.areaId,
         priority_id: data.priorityId,
+        urgency: data.urgency || undefined,
         company_id: data.companyId || undefined,
         custom_values: data.customValues,
       }

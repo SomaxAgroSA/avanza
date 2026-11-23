@@ -173,9 +173,12 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
     await userEvent.type(within(dialog).getByLabelText(/^Título/), 'Vista DMR: agregar Fecha cuenta')
     await chooseOption(/^Responsável/, /César/)
     await chooseOption(/^Departamento que pede/, 'Estratégia')
+    // urgência ao lado da prioridade (opcional; começa sem urgência)
+    expect(within(dialog).getByRole('combobox', { name: /^Urgência/ })).toHaveTextContent('Sem urgência')
+    await chooseOption(/^Urgência/, 'Alta')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
     await waitFor(() => expect(create).toHaveBeenCalledOnce())
-    expect(create.mock.calls[0]?.[0]).toMatchObject({ taskTypeId: 't1', title: 'Vista DMR: agregar Fecha cuenta', ownerId: 'u2', areaId: 'a1' })
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ taskTypeId: 't1', title: 'Vista DMR: agregar Fecha cuenta', ownerId: 'u2', areaId: 'a1', urgency: 'high' })
   })
 
   it('lista: Todas · Com projeto · Sem projeto; a demanda mostra "Demanda interna" no lugar do projeto', async () => {

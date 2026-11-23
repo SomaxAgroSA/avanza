@@ -4,7 +4,7 @@
  *
  * - Abrir: quem tem `tasks.create` — tipo, título, responsável (qualquer pessoa ativa que vê tarefas),
  *   departamento que pede, empresa (§46: obrigatória quando existe empresa ativa; só ativa), descrição,
- *   prioridade e os campos do tipo (`custom_values`, as mesmas regras da tarefa: obrigatórios do status em
+ *   prioridade, urgência (§31, opcional) e os campos do tipo (`custom_values`, as mesmas regras da tarefa: obrigatórios do status em
  *   que nasce). Nasce "Sem atribuir", sem executor e sem prazo (quem
  *   define é o responsável); a abertura (`created_at`) é automática. O responsável é avisado.
  * - Fluxo (domain/demand.js): o responsável atribui/reatribui com prazo (data e hora, obrigatório) e
@@ -56,6 +56,8 @@ const CREATE_SCHEMA = {
   demand_owner_id: [rules.required(), idRule],
   area_id: [rules.required(), idRule],
   priority_id: [idRule],
+  // urgência (§31, semáforo): opcional; sem ela, a demanda nasce sem urgência
+  urgency: [rules.oneOf(taskDomain.URGENCY_LEVELS)],
   // empresa (§46): obrigatória quando existe alguma ativa (verificado no caso de uso)
   company_id: [idRule],
 }
@@ -237,7 +239,7 @@ function createDemandService(deps) {
         forkedFromTaskId: null,
         sprintId: null,
         planItemId: null,
-        urgency: null,
+        urgency: data.urgency || null,
         areaId: area.id,
         companyId: company ? company.id : null,
         startDate: null,
@@ -259,6 +261,7 @@ function createDemandService(deps) {
         description: truncate(task.description || '', 1000),
         task_type: type.name,
         task_priority: priority.name,
+        urgency: data.urgency || null,
         area: area.name,
         company: company ? company.name : null,
         reporter: requester ? requester.name : null,
