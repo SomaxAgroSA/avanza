@@ -306,6 +306,25 @@ describe('application/tasks — tipo traduzido', () => {
 })
 
 describe('application/tasks — listagem', () => {
+  it('Prazo em grupos (24/11): vencidas, hoje, próximos 7 dias, mais adiante e sem prazo, pelo "hoje" de quem consulta', async () => {
+    const s = await setup()
+    const codes = async (ctx, query) => (await s.tasks.listTasks(ctx, query)).items.map((t) => t.code).sort()
+    const none = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Sem prazo' }))
+    const late = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Vencida', due_date: '2026-11-20' }))
+    const now = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Para hoje', due_date: '2026-11-24' }))
+    const soon = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Esta semana', due_date: '2026-12-01' }))
+    const far = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Mais adiante', due_date: '2026-12-02' }))
+    const due = (groups) => codes(s.ctx.mario, { due: groups, due_today: '2026-11-24' })
+    assert.deepEqual(await due('overdue'), [late.code])
+    assert.deepEqual(await due('today'), [now.code])
+    assert.deepEqual(await due('next7'), [soon.code])
+    assert.deepEqual(await due('later'), [far.code])
+    assert.deepEqual(await due('none'), [none.code])
+    assert.deepEqual(await due('overdue,today'), [late.code, now.code].sort())
+    assert.equal(await codeOf(() => s.tasks.listTasks(s.ctx.mario, { due: 'ontem' })), 'VALIDATION_ERROR:{"due":"invalid_option"}')
+    assert.equal(await codeOf(() => s.tasks.listTasks(s.ctx.mario, { due: 'today', due_today: '24/11/2026' })), 'VALIDATION_ERROR:{"due_today":"invalid_date"}')
+  })
+
   it('só lista tarefas de projetos visíveis, com busca, filtros e ordenação', async () => {
     const s = await setup()
     await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Erro no login', priority_id: s.priorities.high.id }))
@@ -320,6 +339,16 @@ describe('application/tasks — listagem', () => {
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { search: 'crm-2' })).items.map((t) => t.code), ['CRM-2'])
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { assignee_id: 'me' })).items.map((t) => t.code), ['CRM-2'])
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { priority_id: s.priorities.high.id })).items.map((t) => t.code), ['CRM-1'])
+    // pessoas (ajuste 24/11): várias ao mesmo tempo, `me` e `none` (sem ninguém); também no Responsável
+    const codes = async (ctx, query) => (await s.tasks.listTasks(ctx, query)).items.map((t) => t.code).sort()
+    assert.deepEqual(await codes(s.ctx.mario, { assignee_id: 'none' }), ['CRM-1'])
+    assert.deepEqual(await codes(s.ctx.mario, { assignee_id: `none,${s.users.mario.id}` }), ['CRM-1', 'CRM-2'])
+    assert.deepEqual(await codes(s.ctx.mario, { assignee_id: `me,${s.users.admin.id}` }), ['CRM-2'])
+    assert.deepEqual(await codes(s.ctx.mario, { responsible_id: 'me' }), ['CRM-2'])
+    assert.deepEqual(await codes(s.ctx.mario, { responsible_id: 'none' }), ['CRM-1'])
+    assert.deepEqual(await codes(s.ctx.mario, { responsible_id: `none,${s.users.mario.id}` }), ['CRM-1', 'CRM-2'])
+    assert.equal(await codeOf(() => s.tasks.listTasks(s.ctx.mario, { assignee_id: 'a b' })), 'VALIDATION_ERROR:{"assignee_id":"invalid_type"}')
+
     assert.deepEqual((await s.tasks.listTasks(s.ctx.admin, { project_id: s.other.id })).items.map((t) => t.code), ['SAP-1'])
     assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { sort: '-code' })).items.map((t) => t.code), ['CRM-2', 'CRM-1'])
     // "minhas tarefas primeiro": as de quem consulta antes, sem esconder as outras; cada grupo na ordem pedida

@@ -19,7 +19,18 @@ export interface DataTableState {
   rowActions: Record<string, boolean>
 }
 
-type Persisted = Omit<DataTableState, 'page'>
+/**
+ * O que fica no navegador. As larguras vão em `columnWidths` (ajuste 24/11/2026): as guardadas antes, em
+ * `columnSizing`, vinham de arrastos que a tabela não respeitava — não valem mais, para ninguém abrir a tela com
+ * colunas espremidas por um arrasto antigo.
+ */
+type Persisted = Omit<DataTableState, 'page' | 'columnSizing'> & { columnWidths: Record<string, number> }
+
+function persist(id: string, state: DataTableState): void {
+  const { page: _page, columnSizing, ...rest } = state
+  const persisted: Persisted = { ...rest, columnWidths: columnSizing }
+  writeJson(storageKey(id), persisted)
+}
 
 export interface DataTableStateDefaults {
   perPage?: number
@@ -75,7 +86,7 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
     search: '',
     filters: defaults.filters ?? {},
     columnVisibility: defaults.columnVisibility ?? {},
-    columnSizing: {},
+    columnWidths: {},
     rowActions: defaults.rowActions ?? {},
   }
   const saved = readJson<Partial<Persisted>>(storageKey(id), {})
@@ -87,7 +98,7 @@ function initialState(id: string, defaults: DataTableStateDefaults): DataTableSt
     filters: saved.filters && typeof saved.filters === 'object' ? saved.filters : base.filters,
     // coluna nova oculta por padrão continua oculta para quem já tinha colunas salvas
     columnVisibility: { ...base.columnVisibility, ...saved.columnVisibility },
-    columnSizing: saved.columnSizing ?? base.columnSizing,
+    columnSizing: saved.columnWidths && typeof saved.columnWidths === 'object' ? saved.columnWidths : base.columnWidths,
     rowActions: { ...base.rowActions, ...saved.rowActions },
   }
 }
@@ -102,8 +113,7 @@ export function useDataTableState(id: string, defaults: DataTableStateDefaults =
     (patch: Partial<DataTableState>) => {
       setState((prev) => {
         const next = { ...prev, ...patch }
-        const { page: _page, ...persisted } = next
-        writeJson(storageKey(id), persisted)
+        persist(id, next)
         return next
       })
     },
@@ -117,8 +127,7 @@ export function useDataTableState(id: string, defaults: DataTableStateDefaults =
         if (value) filters[filterId] = value
         else delete filters[filterId]
         const next = { ...prev, filters, page: 1 }
-        const { page: _page, ...persisted } = next
-        writeJson(storageKey(id), persisted)
+        persist(id, next)
         return next
       })
     },

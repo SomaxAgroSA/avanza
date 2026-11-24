@@ -8,6 +8,7 @@
 
 const { appError } = require('../../core/errors')
 const { newId, ident, direction, likePattern, toDbDate, toJson, insertRow, updateRow, findRow, findRows, deleteRow } = require('../sql')
+const { dueRange } = require('../../domain/task')
 const { storedFileName } = require('../storage')
 const { POSITION_STEP } = require('../../domain/workflow')
 
@@ -241,9 +242,30 @@ function createTaskRepository(db) {
     if (query.typeId) where.push(`tasks.task_type_id = ${param(query.typeId)}`)
     // prioridade e urgência: um valor ou vários (lista = "ou")
     if (query.priorityId) where.push(`tasks.priority_id = ANY(${param([].concat(query.priorityId))}::text[])`)
-    if (query.assigneeId) where.push(`tasks.assignee_id = ${param(query.assigneeId)}`)
+    // pessoas: uma ou várias (lista = "ou"); `none` = sem ninguém
+    const person = (column, value) => {
+      const ids = [].concat(value)
+      const known = ids.filter((id) => id !== 'none')
+      const parts = []
+      if (known.length) parts.push(`${column} = ANY(${param(known)}::text[])`)
+      if (ids.indexOf('none') >= 0) parts.push(`${column} IS NULL`)
+      return `(${parts.join(' OR ')})`
+    }
+    if (query.assigneeId) where.push(person('tasks.assignee_id', query.assigneeId))
     // Responsável (Lista de tarefas): quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída
-    if (query.responsibleId) where.push(`COALESCE(tasks.demand_owner_id, tasks.assignee_id) = ${param(query.responsibleId)}`)
+    if (query.responsibleId) where.push(person('COALESCE(tasks.demand_owner_id, tasks.assignee_id)', query.responsibleId))
+    // Prazo em grupos (vencidas, hoje, próximos 7 dias, mais adiante, sem prazo): vários = "ou"
+    if (query.due && query.due.groups.length) {
+      const parts = query.due.groups.map((group) => {
+        const range = dueRange(group, query.due.today)
+        if (!range) return 'tasks.due_date IS NULL'
+        const bounds = []
+        if (range.from) bounds.push(`tasks.due_date >= ${param(toDbDate(range.from))}`)
+        if (range.before) bounds.push(`tasks.due_date < ${param(toDbDate(range.before))}`)
+        return `(${bounds.join(' AND ')})`
+      })
+      where.push(`(${parts.join(' OR ')})`)
+    }
     if (query.tagId) where.push(`tasks.id IN (SELECT task_id FROM task_tag_relations WHERE tag_id = ${param(query.tagId)})`)
     if (query.sprintId) where.push(query.sprintId === 'none' ? 'tasks.sprint_id IS NULL' : `tasks.sprint_id = ${param(query.sprintId)}`)
     if (query.planItemId) where.push(`tasks.plan_item_id = ${param(query.planItemId)}`)

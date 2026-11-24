@@ -782,8 +782,20 @@ function createFakeRepositories(store) {
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
       if (query.statusIds) items = items.filter((t) => query.statusIds.includes(t.statusId))
       if (query.priorityId) items = items.filter((t) => [].concat(query.priorityId).includes(t.priorityId))
-      if (query.assigneeId) items = items.filter((t) => t.assigneeId === query.assigneeId)
-      if (query.responsibleId) items = items.filter((t) => (t.demandOwnerId || t.assigneeId) === query.responsibleId)
+      const person = (value, id) => [].concat(value).includes(id || 'none')
+      if (query.assigneeId) items = items.filter((t) => person(query.assigneeId, t.assigneeId))
+      if (query.responsibleId) items = items.filter((t) => person(query.responsibleId, t.demandOwnerId || t.assigneeId))
+      if (query.due && query.due.groups.length) {
+        const { dueRange } = require('../../src/domain/task')
+        items = items.filter((t) =>
+          query.due.groups.some((group) => {
+            const range = dueRange(group, query.due.today)
+            if (!range) return !t.dueDate
+            const due = t.dueDate ? new Date(t.dueDate).getTime() : null
+            return due !== null && (!range.from || due >= range.from.getTime()) && (!range.before || due < range.before.getTime())
+          }),
+        )
+      }
       if (query.tagId) items = items.filter((t) => store.taskTags.some((r) => r.taskId === t.id && r.tagId === query.tagId))
       if (query.sprintId) items = items.filter((t) => (query.sprintId === 'none' ? !t.sprintId : t.sprintId === query.sprintId))
       if (query.planItemId) items = items.filter((t) => t.planItemId === query.planItemId)

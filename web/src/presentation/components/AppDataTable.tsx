@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   columnPinningFeature,
@@ -29,7 +29,9 @@ import { AppPagination } from './AppPagination'
 import { AppEmptyState, AppErrorState, AppLoadingBar, AppSkeleton } from './AppStates'
 import { AppFilterBar } from './AppFilterBar'
 import { AppSearch } from './AppSearch'
-import { FilterButtons, FilterSelect, type TableFilterDef } from './data-table/TableFilters'
+import { FilterButtons, FilterMenu, FilterSelect, type TableFilterDef } from './data-table/TableFilters'
+import { ColumnFilterButton, ColumnSearchButton } from './data-table/ColumnFilter'
+import { filterValues } from './data-table/filter-values'
 import { ColumnsMenu, type ColumnsMenuAction, type ColumnsMenuColumn } from './data-table/ColumnsMenu'
 import type { DataTableStateApi } from './data-table/use-data-table-state'
 import { useMediaQuery } from '@/presentation/common/use-media-query'
@@ -52,18 +54,13 @@ export interface DataTableColumn<T> {
   pinned?: boolean
   align?: 'start' | 'end'
   /**
-   * Filtro por coluna, sempre à vista na barra de filtros (não há "Mais filtros"); `addon` fica colado ao
-   * filtro (ex.: engrenagem do configurador).
+   * Filtro da coluna: na barra de filtros (sempre à vista, sem "Mais filtros") e no funil do cabeçalho — os dois
+   * mexem no mesmo valor (ajuste 24/11/2026). `placement: 'column'` deixa só o funil; `addon` fica colado ao
+   * filtro da barra (ex.: engrenagem do configurador).
    */
-  filter?: {
-    label: string
-    options: Array<{ value: string; label: string }>
-    addon?: ReactNode
-    /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
-    variant?: 'select' | 'buttons'
-    /** O que vale sem nada escolhido (ex.: "Abertas"): o seletor parado mostra "Status: Abertas". Padrão: "Todos". */
-    allLabel?: string
-  }
+  filter?: Omit<TableFilterDef, 'id'>
+  /** A coluna do nome: o funil abre "contém", que é a busca da tabela (ajuste 24/11/2026). */
+  searchFilter?: boolean
 }
 
 export interface DataTableRowActions<T> {
@@ -345,8 +342,72 @@ export function AppDataTable<T extends RowData>({
   })
 
   const filterColumns = columns.filter((c) => c.filter)
-  // todos os filtros à vista, na ordem das colunas
   const filterDefs: TableFilterDef[] = filterColumns.map((c) => ({ id: c.id, ...c.filter! }))
+  // na barra (ajuste 24/11): os seletores e menus juntos, um ao lado do outro, e depois os grupos de botões; dentro
+  // de cada parte, `barOrder` e a ordem das colunas. Os de `placement: 'column'` ficam só no funil da coluna
+  const barFilters = filterDefs
+    .map((filter, index) => ({ filter, index }))
+    .filter(({ filter }) => filter.placement !== 'column')
+    .sort((a, b) => Number(a.filter.variant === 'buttons') - Number(b.filter.variant === 'buttons') || (a.filter.barOrder ?? 1000 + a.index) - (b.filter.barOrder ?? 1000 + b.index))
+    .map(({ filter }) => filter)
+
+  /**
+   * Larguras escolhidas pela pessoa (ajuste 24/11/2026). Sem nenhuma, a tabela se arruma sozinha, como sempre
+   * (ocupa a largura e cada coluna cresce com o conteúdo). Ao arrastar o primeiro separador, as larguras que
+   * estão na tela viram as escolhidas — nada pula — e a tabela passa a respeitar exatamente o que se arrasta:
+   * o conteúdo corta ou quebra dentro da coluna, e o espaço que sobra fica numa coluna vazia antes das ações.
+   */
+  const customWidths = Object.keys(state.columnSizing).length > 0
+  const tableRef = useRef<HTMLTableElement>(null)
+  const [resizing, setResizing] = useState<string | null>(null)
+  const minWidthOf = (id: string) => columns.find((c) => c.id === id)?.minSize ?? 80
+  const measuredWidths = (): Record<string, number> => {
+    const widths: Record<string, number> = { ...state.columnSizing }
+    tableRef.current?.querySelectorAll<HTMLElement>('thead th[data-column]').forEach((th) => {
+      const id = th.dataset.column
+      if (!id || id === ACTIONS_ID) return
+      // sem medida (teste sem layout): a largura que a coluna pede
+      widths[id] = Math.round(th.getBoundingClientRect().width) || table.getColumn(id)?.getSize() || minWidthOf(id)
+    })
+    return widths
+  }
+  const startResize = (event: ReactPointerEvent, id: string) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    const base = measuredWidths()
+    const startX = event.clientX
+    const startWidth = base[id] ?? minWidthOf(id)
+    const min = minWidthOf(id)
+    const { userSelect, cursor } = document.body.style
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'col-resize'
+    setResizing(id)
+    tableState.setColumnSizing(base)
+    const move = (e: PointerEvent) => tableState.setColumnSizing({ ...base, [id]: Math.max(min, Math.round(startWidth + e.clientX - startX)) })
+    const stop = () => {
+      setResizing(null)
+      document.body.style.userSelect = userSelect
+      document.body.style.cursor = cursor
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+  }
+  const resizeBy = (id: string, delta: number) => {
+    const base = measuredWidths()
+    tableState.setColumnSizing({ ...base, [id]: Math.max(minWidthOf(id), (base[id] ?? minWidthOf(id)) + delta) })
+  }
+  /** Duplo clique no separador: a coluna volta à largura original (sem nenhuma escolhida, a tabela volta a se arrumar sozinha). */
+  const resetWidth = (id: string) => {
+    const next = { ...state.columnSizing }
+    delete next[id]
+    tableState.setColumnSizing(next)
+  }
+  /** Coluna vazia que fica com o espaço que sobra quando as larguras são as escolhidas. */
+  const filler = (key: string, className: string) => <td key={key} aria-hidden className={cn('p-0', className)} />
   const visibleColumnCount = table.getVisibleLeafColumns().length
   const showSkeleton = loading && data.length === 0
   // Recargas rápidas (ex.: após salvar) não exibem indicador; só as que demoram.
@@ -394,7 +455,7 @@ export function AppDataTable<T extends RowData>({
           trigger={
             // numa barra apertada (AppToolbar < 1150px) fica só o ícone; o nome segue no aria-label e na dica
             <AppButton variant="secondary" leftIcon={<Columns3 />} aria-label={columnsLabel} title={columnsLabel}>
-              <span className="hidden sm:inline @max-[1150px]:hidden">{columnsLabel}</span>
+              <span className="hidden sm:inline @max-[1150px]:hidden [[data-compact~='2']_&]:hidden">{columnsLabel}</span>
             </AppButton>
           }
         />
@@ -404,7 +465,7 @@ export function AppDataTable<T extends RowData>({
   )
 
   // sem busca, filtros, colunas para escolher nem extras: nada de barra vazia acima da tabela
-  const hasToolbar = searchable || filterColumns.length > 0 || menuColumns.length > 0 || !!toolbar || !!toolbarActions
+  const hasToolbar = searchable || barFilters.length > 0 || menuColumns.length > 0 || !!toolbar || !!toolbarActions
 
   return (
     <div className="flex flex-col gap-3">
@@ -418,13 +479,10 @@ export function AppDataTable<T extends RowData>({
           }
           filters={
             <>
-              {filterDefs.map((filter) =>
-                filter.variant === 'buttons' ? (
-                  <FilterButtons key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
-                ) : (
-                  <FilterSelect key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
-                ),
-              )}
+              {barFilters.map((filter) => {
+                const Control = filter.variant === 'buttons' ? FilterButtons : filter.variant === 'menu' ? FilterMenu : FilterSelect
+                return <Control key={filter.id} filter={filter} value={state.filters[filter.id]} onChange={(value) => tableState.setFilter(filter.id, value)} />
+              })}
               {toolbar}
             </>
           }
@@ -440,7 +498,8 @@ export function AppDataTable<T extends RowData>({
         {slowFetch && <AppLoadingBar />}
         <div className="overflow-x-auto">
           <table
-            className="w-full border-separate border-spacing-0 text-sm"
+            ref={tableRef}
+            className={cn('w-full border-separate border-spacing-0 text-sm', customWidths && 'table-fixed')}
             style={{ minWidth: table.getTotalSize() }}
             aria-busy={loading || fetching || undefined}
           >
@@ -452,65 +511,94 @@ export function AppDataTable<T extends RowData>({
                     const column = header.column
                     const sorted = column.getIsSorted()
                     const def = columns.find((c) => c.id === column.id)
-                    return (
+                    const filter = def?.filter
+                    const searchFilter = !!def?.searchFilter && searchable
+                    // coluna filtrando (ajuste 24/11): fundo e traço na cor do botão principal, e o funil cheio
+                    const filtering = searchFilter ? state.search.trim() !== '' : !!filter && filterValues(state.filters[column.id]).length > 0
+                    const end = def?.align === 'end' || column.id === ACTIONS_ID
+                    const cell = (
                       <th
                         key={header.id}
                         scope="col"
+                        data-column={column.id}
+                        data-filtering={filtering || undefined}
                         aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
                         style={pinnedStyle(column as never)}
                         className={cn(
                           'group relative h-10 border-b border-border bg-surface-2 px-3 text-left first:pl-5 last:pr-5 text-xs font-semibold uppercase tracking-wide text-muted',
-                          def?.align === 'end' && 'text-right',
-                          column.id === ACTIONS_ID && 'text-right',
+                          end && 'text-right',
+                          filtering && 'border-b-2 border-b-primary bg-primary-soft text-primary-soft-fg',
                         )}
                       >
-                        {column.getCanSort() ? (
-                          <button
-                            type="button"
-                            onClick={column.getToggleSortingHandler()}
-                            className="inline-flex items-center gap-1 uppercase hover:text-fg"
-                          >
-                            <table.FlexRender header={header} />
-                            {sorted === 'asc' ? (
-                              <ArrowUp className="size-3.5 text-primary-text" aria-hidden />
-                            ) : sorted === 'desc' ? (
-                              <ArrowDown className="size-3.5 text-primary-text" aria-hidden />
-                            ) : (
-                              <ChevronsUpDown className="size-3.5 opacity-40" aria-hidden />
-                            )}
-                          </button>
-                        ) : (
-                          <table.FlexRender header={header} />
-                        )}
+                        <div className={cn('flex min-w-0 items-center gap-1', end && 'justify-end')}>
+                          {column.getCanSort() ? (
+                            <button type="button" onClick={column.getToggleSortingHandler()} className="inline-flex min-w-0 items-center gap-1 uppercase hover:text-fg">
+                              <span className="truncate" title={def?.header}>
+                                <table.FlexRender header={header} />
+                              </span>
+                              {sorted === 'asc' ? (
+                                <ArrowUp className="size-3.5 shrink-0 text-primary-text" aria-hidden />
+                              ) : sorted === 'desc' ? (
+                                <ArrowDown className="size-3.5 shrink-0 text-primary-text" aria-hidden />
+                              ) : (
+                                <ChevronsUpDown className="size-3.5 shrink-0 opacity-40" aria-hidden />
+                              )}
+                            </button>
+                          ) : (
+                            <span className="truncate" title={def?.header}>
+                              <table.FlexRender header={header} />
+                            </span>
+                          )}
+                          {(searchFilter || filter) && (
+                            <span className="ml-auto flex shrink-0 normal-case tracking-normal">
+                              {searchFilter ? (
+                                <ColumnSearchButton label={def?.header ?? ''} value={state.search} onSearch={tableState.setSearch} />
+                              ) : (
+                                filter && <ColumnFilterButton filter={{ id: column.id, ...filter }} value={state.filters[column.id]} onChange={(value) => tableState.setFilter(column.id, value)} />
+                              )}
+                            </span>
+                          )}
+                        </div>
                         {column.getCanResize() && (
-                          // Separador focável (padrão "window splitter"): mouse/touch arrastam, setas redimensionam.
+                          // Separador focável (padrão "window splitter"): arrastar ajusta, as setas também, duplo clique volta
+                          // ao original. A área de pegar é larga (8px); o traço fino aparece sempre e engrossa em verde.
                           /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
                           <div
                             role="separator"
                             aria-orientation="vertical"
                             aria-label={t('table.resizeColumn')}
-                            aria-valuenow={column.getSize()}
+                            aria-valuenow={Math.round(column.getSize())}
+                            title={t('table.resizeHint')}
                             tabIndex={0}
                             onKeyDown={(event) => {
                               if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
                               event.preventDefault()
-                              const delta = event.key === 'ArrowRight' ? 16 : -16
-                              const min = columns.find((c) => c.id === column.id)?.minSize ?? 80
-                              tableState.setColumnSizing({ ...state.columnSizing, [column.id]: Math.max(min, column.getSize() + delta) })
+                              resizeBy(column.id, event.key === 'ArrowRight' ? 16 : -16)
                             }}
-                            onMouseDown={header.getResizeHandler()}
-                            onTouchStart={header.getResizeHandler()}
-                            onDoubleClick={() => column.resetSize()}
+                            onPointerDown={(event) => startResize(event, column.id)}
+                            onDoubleClick={() => resetWidth(column.id)}
                             className={cn(
-                              'absolute right-0 top-1/4 h-1/2 w-1 cursor-col-resize touch-none select-none rounded bg-border opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
-                              column.getIsResizing() && 'bg-primary opacity-100',
+                              'absolute right-0 top-0 z-[2] h-full w-2 cursor-col-resize touch-none select-none focus-visible:outline-none',
+                              "after:absolute after:right-0 after:top-1/4 after:h-1/2 after:w-px after:rounded after:bg-border-strong after:content-['']",
+                              'hover:after:w-[3px] hover:after:bg-primary focus-visible:after:w-[3px] focus-visible:after:bg-primary',
+                              resizing === column.id && 'after:w-[3px] after:bg-primary',
                             )}
                           />
                           /* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
                         )}
                       </th>
                     )
+                    // com larguras escolhidas, a coluna vazia fica antes das ações (que seguem na borda direita)
+                    return column.id === ACTIONS_ID && customWidths ? (
+                      <Fragment key={header.id}>
+                        <th aria-hidden className="border-b border-border bg-surface-2 p-0" />
+                        {cell}
+                      </Fragment>
+                    ) : (
+                      cell
+                    )
                   })}
+                  {customWidths && !hasActionsColumn && <th aria-hidden className="border-b border-border bg-surface-2 p-0" />}
                 </tr>
               ))}
             </thead>
@@ -523,12 +611,13 @@ export function AppDataTable<T extends RowData>({
                         <AppSkeleton className="h-4 w-3/4" />
                       </td>
                     ))}
+                    {customWidths && filler('filler', 'border-b border-border')}
                   </tr>
                 ))}
 
               {!showSkeleton && error && (
                 <tr>
-                  <td colSpan={visibleColumnCount}>
+                  <td colSpan={visibleColumnCount + (customWidths ? 1 : 0)}>
                     <AppErrorState correlationId={error.correlationId} onRetry={onRetry} />
                   </td>
                 </tr>
@@ -536,7 +625,7 @@ export function AppDataTable<T extends RowData>({
 
               {!showSkeleton && !error && data.length === 0 && (
                 <tr>
-                  <td colSpan={visibleColumnCount}>
+                  <td colSpan={visibleColumnCount + (customWidths ? 1 : 0)}>
                     {emptyState ?? (
                       <AppEmptyState
                         title={tableState.hasActiveFilters ? t('table.noMatches') : t('table.empty')}
@@ -579,7 +668,7 @@ export function AppDataTable<T extends RowData>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       const def = columns.find((c) => c.id === cell.column.id)
-                      return (
+                      const content = (
                         <td
                           key={cell.id}
                           style={pinnedStyle(cell.column as never)}
@@ -588,12 +677,23 @@ export function AppDataTable<T extends RowData>({
                             'border-b border-border px-3 py-2.5 align-middle text-fg group-last/row:border-b-0 first:pl-5 last:pr-5',
                             cell.column.getIsPinned() && 'bg-surface group-hover/row:bg-surface-2',
                             (def?.align === 'end' || cell.column.id === ACTIONS_ID) && 'text-right',
+                            // largura escolhida: o que não cabe fica dentro da coluna (corta ou quebra), sem invadir a vizinha
+                            customWidths && 'overflow-hidden',
                           )}
                         >
                           <table.FlexRender cell={cell} />
                         </td>
                       )
+                      return cell.column.id === ACTIONS_ID && customWidths ? (
+                        <Fragment key={cell.id}>
+                          {filler('filler', 'border-b border-border group-last/row:border-b-0')}
+                          {content}
+                        </Fragment>
+                      ) : (
+                        content
+                      )
                     })}
+                    {customWidths && !hasActionsColumn && filler('filler', 'border-b border-border group-last/row:border-b-0')}
                   </tr>
                 ))}
             </tbody>

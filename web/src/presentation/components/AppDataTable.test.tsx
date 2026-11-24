@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import { fakeRepositories, makeCurrentUser, renderWithProviders } from '@/test/utils'
@@ -550,5 +550,189 @@ describe('AppDataTable — nomes das colunas (§44)', () => {
     await userEvent.keyboard('{Escape}')
     expect(screen.getAllByRole('button', { name: 'Desativar' })).toHaveLength(2)
     expect(screen.queryByRole('button', { name: 'Mais ações' })).not.toBeInTheDocument()
+  })
+})
+
+describe('AppDataTable — larguras escolhidas e filtro na coluna (ajuste 24/11)', () => {
+  const wide: DataTableColumn<Row>[] = [
+    { id: 'name', header: 'Nome', sortable: true, hideable: false, pinned: true, size: 300, minSize: 120, searchFilter: true, cell: (r) => r.name },
+    {
+      id: 'status',
+      header: 'Status',
+      size: 160,
+      cell: (r) => r.status,
+      filter: {
+        label: 'Status',
+        options: [
+          { value: 'active', label: 'Ativo' },
+          { value: 'disabled', label: 'Inativo' },
+        ],
+      },
+    },
+    {
+      id: 'level',
+      header: 'Nível',
+      size: 140,
+      cell: () => 'Alta',
+      filter: { label: 'Nível', variant: 'buttons', options: [{ value: 'high', label: 'Alta' }] },
+    },
+    {
+      id: 'owner',
+      header: 'Responsável',
+      size: 200,
+      cell: () => 'Ana',
+      filter: {
+        label: 'Responsável',
+        variant: 'menu',
+        options: [
+          { value: 'u1', label: 'Ana' },
+          { value: 'u2', label: 'Bia' },
+          { value: 'none', label: 'Sem responsável' },
+        ],
+      },
+    },
+    {
+      id: 'due',
+      header: 'Prazo',
+      size: 140,
+      cell: () => '—',
+      filter: { label: 'Prazo', variant: 'menu', placement: 'column', options: [{ value: 'overdue', label: 'Vencidas' }] },
+    },
+  ]
+  function Wide() {
+    const api = useDataTableState('wide-table')
+    useEffect(() => {
+      handle.api = api
+    })
+    return <AppDataTable tableId="wide-table" caption="Larga" columns={wide} data={rows} total={rows.length} getRowId={(r) => r.id} table={api} />
+  }
+  const separatorOf = (name: string) => within(screen.getByRole('columnheader', { name: new RegExp(`^${name}`) })).getByRole('separator')
+  const drag = (name: string, from: number, to: number) => {
+    fireEvent.pointerDown(separatorOf(name), { button: 0, clientX: from })
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: to }))
+      window.dispatchEvent(new MouseEvent('pointerup', { clientX: to }))
+    })
+  }
+
+  it('arrastar o separador: as larguras da tela viram as escolhidas, só a arrastada muda e a tabela passa a respeitá-las', async () => {
+    renderWithProviders(<Wide />)
+    const table = screen.getByRole('table', { name: 'Larga' })
+    // sem larguras escolhidas, a tabela se arruma sozinha (como sempre) e não há coluna vazia
+    expect(table).not.toHaveClass('table-fixed')
+    expect(table.querySelectorAll('thead th')).toHaveLength(5)
+
+    drag('Nome', 300, 200)
+    expect(handle.api!.state.columnSizing).toEqual({ name: 200, status: 160, level: 140, owner: 200, due: 140 })
+    expect(table).toHaveClass('table-fixed')
+    expect(screen.getByRole('columnheader', { name: /^Nome/ }).style.width).toBe('200px')
+    // a coluna vazia fica com o que sobra (fora da leitura de tela)
+    expect(table.querySelectorAll('thead th')).toHaveLength(6)
+    expect(table.querySelectorAll('thead th[aria-hidden]')).toHaveLength(1)
+    expect(table.querySelectorAll('tbody tr:first-child td[aria-hidden]')).toHaveLength(1)
+    // a coluna do nome também se ajusta, até o mínimo dela
+    drag('Nome', 200, -500)
+    expect(handle.api!.state.columnSizing.name).toBe(120)
+    // fica guardado em `columnWidths`
+    const saved = JSON.parse(window.localStorage.getItem('kamban.table.wide-table') ?? '{}') as Record<string, unknown>
+    expect(saved.columnWidths).toMatchObject({ name: 120, status: 160 })
+    expect(saved.columnSizing).toBeUndefined()
+
+    // teclado: as setas ajustam; duplo clique volta a coluna à largura original
+    separatorOf('Status').focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(handle.api!.state.columnSizing.status).toBe(176)
+    await userEvent.dblClick(separatorOf('Nome'))
+    expect(handle.api!.state.columnSizing.name).toBeUndefined()
+    expect(screen.getByRole('columnheader', { name: /^Nome/ }).style.width).toBe('300px')
+  })
+
+  it('larguras guardadas antes do ajuste (`columnSizing`) não valem; as novas (`columnWidths`) voltam ao abrir', () => {
+    window.localStorage.setItem('kamban.table.wide-table', JSON.stringify({ columnSizing: { name: 80 } }))
+    const first = renderWithProviders(<Wide />)
+    expect(handle.api!.state.columnSizing).toEqual({})
+    expect(screen.getByRole('table', { name: 'Larga' })).not.toHaveClass('table-fixed')
+    first.unmount()
+    window.localStorage.setItem('kamban.table.wide-table', JSON.stringify({ columnWidths: { name: 180 } }))
+    renderWithProviders(<Wide />)
+    expect(screen.getByRole('table', { name: 'Larga' })).toHaveClass('table-fixed')
+    expect(screen.getByRole('columnheader', { name: /^Nome/ }).style.width).toBe('180px')
+  })
+
+  it('na barra, os seletores e menus ficam juntos e os grupos de botões depois; o filtro só da coluna fica fora dela', () => {
+    renderWithProviders(<Wide />)
+    const bar = screen.getByRole('searchbox').closest<HTMLElement>('[data-toolbar]')!
+    const status = within(bar).getByRole('combobox', { name: 'Status' })
+    const owner = within(bar).getByRole('button', { name: 'Responsável' })
+    const level = within(bar).getByRole('group', { name: 'Nível' })
+    expect(status.compareDocumentPosition(owner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(owner.compareDocumentPosition(level) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(bar).queryByRole('button', { name: 'Prazo' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Filtrar Prazo' })).toBeInTheDocument()
+  })
+
+  it('o funil da coluna filtra (um valor): marca a coluna e é o mesmo filtro da barra', async () => {
+    renderWithProviders(<Wide />)
+    const funnel = screen.getByRole('button', { name: 'Filtrar Status' })
+    expect(funnel).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(funnel)
+    const panel = await screen.findByRole('dialog', { name: 'Filtrar Status' })
+    expect(within(panel).getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-pressed')])).toEqual([
+      ['Todos', 'true'],
+      ['Ativo', 'false'],
+      ['Inativo', 'false'],
+    ])
+    await userEvent.click(within(panel).getByRole('button', { name: 'Ativo' }))
+    expect(handle.api!.state.filters).toEqual({ status: 'active' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Filtrar Status' })).toBeNull())
+    expect(screen.getByRole('button', { name: 'Filtrar Status' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('columnheader', { name: /^Status/ })).toHaveAttribute('data-filtering', 'true')
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Status: Ativo')
+    // e volta a "Todos" pelo mesmo painel
+    await userEvent.click(screen.getByRole('button', { name: 'Filtrar Status' }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Filtrar Status' })).getByRole('button', { name: 'Todos' }))
+    expect(handle.api!.state.filters).toEqual({})
+    expect(screen.getByRole('columnheader', { name: /^Status/ })).not.toHaveAttribute('data-filtering')
+  })
+
+  it('menu de vários valores: da barra ou da coluna, o mesmo filtro; "Limpar" tira todos', async () => {
+    renderWithProviders(<Wide />)
+    await userEvent.click(screen.getByRole('button', { name: 'Responsável' }))
+    const panel = await screen.findByRole('dialog', { name: 'Responsável' })
+    await userEvent.click(within(panel).getByRole('button', { name: 'Ana' }))
+    await userEvent.click(within(panel).getByRole('button', { name: 'Sem responsável' }))
+    expect(handle.api!.state.filters).toEqual({ owner: 'u1,none' })
+    // continua aberto para marcar mais de um
+    expect(within(panel).getByRole('button', { name: 'Ana' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(panel).getByText('2 marcadas')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Responsável' })).toHaveTextContent('Responsável: Ana +1')
+    expect(screen.getByRole('button', { name: 'Filtrar Responsável' })).toHaveAttribute('aria-pressed', 'true')
+    // pelo funil da coluna: os mesmos marcados; "Limpar" tira todos
+    await userEvent.click(screen.getByRole('button', { name: 'Filtrar Responsável' }))
+    const column = await screen.findByRole('dialog', { name: 'Filtrar Responsável' })
+    expect(within(column).getByRole('button', { name: 'Sem responsável' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(within(column).getByRole('button', { name: 'Limpar' }))
+    expect(handle.api!.state.filters).toEqual({})
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Responsável' })).toHaveTextContent(/^Responsável$/)
+  })
+
+  it('filtro só da coluna (Prazo) e a coluna do nome, cujo funil é a busca ("contém")', async () => {
+    renderWithProviders(<Wide />)
+    await userEvent.click(screen.getByRole('button', { name: 'Filtrar Prazo' }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Filtrar Prazo' })).getByRole('button', { name: 'Vencidas' }))
+    expect(handle.api!.state.filters).toEqual({ due: 'overdue' })
+    await userEvent.keyboard('{Escape}')
+    // conta em "Limpar (n)" como os da barra
+    expect(screen.getByRole('button', { name: 'Limpar 1 filtro' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Filtrar Nome' }))
+    const panel = await screen.findByRole('dialog', { name: 'Filtrar Nome' })
+    await userEvent.type(within(panel).getByRole('searchbox', { name: 'Nome: contém' }), 'alf')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Aplicar' }))
+    expect(handle.api!.state.search).toBe('alf')
+    expect(screen.getByRole('columnheader', { name: /^Nome/ })).toHaveAttribute('data-filtering', 'true')
+    await waitFor(() => expect(screen.getAllByRole('searchbox')[0]).toHaveValue('alf'))
   })
 })

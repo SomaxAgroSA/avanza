@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { INTERNAL_PROJECT, hasInboxFilters, type InboxFilters } from '@/domain/demands'
 import { URGENCY_FILTER_VALUES, isUrgency } from '@/domain/urgency'
 import { AppPopover } from '@/presentation/components'
+import { useFitToolbar } from '@/presentation/common/use-fit-toolbar'
 import { UrgencyLight } from '@/features/tasks/TaskUrgency'
 
 export interface InboxFilterOption {
@@ -14,40 +15,15 @@ export interface InboxFilterOption {
 }
 
 /**
- * A linha da Bandeja se adapta à largura (ajustes 23/11): mede a linha inteira (AppToolbar) e, enquanto ela não
- * cabe, compacta mais um passo (os passos se somam): 1 — os filtros sem o ": todas" ("Proyecto ▾"); 2 — os
- * botões de criar encurtam ("＋ Tarefa"); 3 — as caixas sem os números e os filtros mais justos; 4 — as caixas
- * com o nome curto ("Recebidas"); 5 — a busca fica só com a lupa (abre ao clicar e, com texto, mostra o começo). Volta ao completo quando a tela alarga. Sem estado do React: só o atributo
- * `data-compact` na linha ("1 2 3"), lido pelas classes `[[data-compact~='n']_&]`.
+ * A linha da Bandeja se adapta à largura (ajustes 23/11; `useFitToolbar`): 1 — os filtros sem o ": todas"
+ * ("Proyecto ▾"); 2 — os botões de criar encurtam ("＋ Tarefa"); 3 — as caixas sem os números e os filtros mais
+ * justos; 4 — as caixas com o nome curto ("Recebidas"); 5 — a busca fica só com a lupa (abre ao clicar e, com
+ * texto, mostra o começo).
  *
  * O grupo dos filtros não encolhe abaixo do conteúdo (sem `min-w-0`): se encolhesse, os botões dele passariam
  * por baixo dos de criar sem a linha "transbordar", e a compactação nunca começaria (erro de 23/11).
  */
-function useFitToolbar() {
-  const ref = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    const bar = ref.current?.closest<HTMLElement>('[data-toolbar]')
-    if (!bar) return
-    const fit = () => {
-      bar.removeAttribute('data-compact')
-      const levels: string[] = []
-      for (const level of ['1', '2', '3', '4', '5']) {
-        if (bar.scrollWidth <= bar.clientWidth) return
-        levels.push(level)
-        bar.setAttribute('data-compact', levels.join(' '))
-      }
-    }
-    fit()
-    if (typeof ResizeObserver === 'undefined') return () => bar.removeAttribute('data-compact')
-    const observer = new ResizeObserver(fit)
-    observer.observe(bar)
-    return () => {
-      observer.disconnect()
-      bar.removeAttribute('data-compact')
-    }
-  })
-  return ref
-}
+const INBOX_LEVELS = ['1', '2', '3', '4', '5'] as const
 
 /** Mesmo item do controle segmentado das caixas (altura, cantos e escolhido em branco). */
 const ITEM = "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring motion-reduce:transition-none @max-[960px]:px-2 [[data-compact~='3']_&]:px-2"
@@ -84,7 +60,7 @@ export function InboxFilterBar({
   }))
   const projectOptions: InboxFilterOption[] = [{ value: INTERNAL_PROJECT, label: t('demands.chip') }, ...projects]
   const active = hasInboxFilters({ ...filters, search: text })
-  const ref = useFitToolbar()
+  const ref = useFitToolbar(INBOX_LEVELS)
 
   return (
     // ocupa o espaço livre da linha (como as caixas, o mesmo grupo); a busca cresce com ele

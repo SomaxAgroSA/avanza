@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
+import { AppPopover } from '../AppPopover'
 import { AppSelect, SELECT_ALL } from '../AppSelect'
+import { FilterOptionsPanel } from './ColumnFilter'
+import { filterValues } from './filter-values'
 import { filterTriggerClass } from './filter-styles'
 
 export interface TableFilterDef {
@@ -11,10 +14,17 @@ export interface TableFilterDef {
   options: Array<{ value: string; label: string }>
   /** Fica colado ao filtro (ex.: engrenagem do configurador do filtro de projetos). */
   addon?: ReactNode
-  /** `buttons`: um botão por valor, vários ao mesmo tempo (§37). Padrão: seletor. */
-  variant?: 'select' | 'buttons'
+  /**
+   * `buttons`: um botão por valor, vários ao mesmo tempo (§37). `menu`: um menu com vários ao mesmo tempo e
+   * busca (pessoas; ajuste 24/11). Padrão: seletor de um valor.
+   */
+  variant?: 'select' | 'buttons' | 'menu'
   /** O que vale sem nada escolhido (ex.: "Abertas"): parado mostra "Status: Abertas" e é o rótulo da opção sem filtro. */
   allLabel?: string
+  /** `column`: só no funil da coluna, fora da barra (ex.: Projeto, Prazo). Padrão: na barra e na coluna. */
+  placement?: 'both' | 'column'
+  /** Posição entre os filtros da barra (menor primeiro); sem ela, a ordem das colunas. */
+  barOrder?: number
 }
 
 interface FilterProps {
@@ -66,6 +76,47 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
 }
 
 /**
+ * Filtro em menu (ajuste 24/11): vários valores ao mesmo tempo, com busca quando são muitos — para pessoas
+ * (Responsável, Atribuída a). Parado mostra o nome; ativo, "Responsável: Ana +1" em verde suave, como o seletor.
+ */
+export function FilterMenu({ filter, value, onChange }: FilterProps) {
+  const chosen = filterValues(value)
+  const active = chosen.length > 0
+  const first = active ? (optionLabel(filter, chosen[0]) ?? chosen[0]) : null
+  return (
+    <AppPopover
+      label={filter.label}
+      trigger={
+        <button
+          type="button"
+          aria-label={filter.label}
+          // o tamanho do seletor ao lado (nunca abaixo de ~132px, nem mais largo que 240px) e as mesmas cores
+          className={cn(
+            'inline-flex h-9 min-w-[8.25rem] max-w-60 shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium shadow-xs transition-colors duration-150',
+            'hover:border-border-strong focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring',
+            active ? 'border-primary-border bg-primary-soft text-primary-soft-fg hover:border-primary' : 'text-fg',
+          )}
+        >
+          <span className="truncate">
+            {active ? (
+              <>
+                {filter.label}: <strong className="font-semibold">{first}</strong>
+                {chosen.length > 1 && ` +${chosen.length - 1}`}
+              </>
+            ) : (
+              filter.label
+            )}
+          </span>
+          <ChevronDown className="size-4 shrink-0 text-subtle" aria-hidden />
+        </button>
+      }
+    >
+      {(close) => <FilterOptionsPanel filter={filter} value={value} onChange={onChange} close={close} />}
+    </AppPopover>
+  )
+}
+
+/**
  * Filtro em botões (§37): o nome ao lado, na mesma linha, e um botão por valor, que liga e desliga; vários ao mesmo tempo
  * (o valor do filtro são os escolhidos unidos por vírgula). Cada grupo tem um traço à esquerda e não quebra por dentro.
  * Estados distintos: parado neutro; mouse em cima, fundo cinza (sem verde — o `hover:` do Tailwind 4 só vale em aparelho
@@ -111,7 +162,7 @@ function CompactFilterSelect({ filter, value, onChange }: FilterProps) {
           </>
         )
       }
-      className="hidden w-auto min-w-[8.25rem] @max-[1440px]:flex"
+      className="hidden w-auto min-w-[8.25rem] @max-[1440px]:flex [[data-compact~='1']_&]:flex"
       triggerClassName={filterTriggerClass(selected.length > 0)}
     />
   )
@@ -124,7 +175,7 @@ function FilterButtonGroup({ filter, value, onChange }: FilterProps) {
     onChange(next.length ? next.join(',') : undefined)
   }
   return (
-    <div role="group" aria-label={filter.label} className="ml-1 flex shrink-0 flex-nowrap items-center gap-2 border-l border-border pl-3 @max-[1440px]:hidden">
+    <div role="group" aria-label={filter.label} className="ml-1 flex shrink-0 flex-nowrap items-center gap-2 border-l border-border pl-3 @max-[1440px]:hidden [[data-compact~='1']_&]:hidden">
       <span aria-hidden className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted">
         {filter.label}
       </span>

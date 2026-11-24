@@ -1,9 +1,17 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/core/utils/cn'
+import { useFitToolbar } from '@/presentation/common/use-fit-toolbar'
 
 export interface AppToolbarProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
+  /**
+   * Passos de compactação pela medida (ajuste 24/11): além das larguras fixas abaixo, enquanto o conteúdo não
+   * cabe a linha marca mais um passo em `data-compact` ("1 2"), que os itens leem com `[[data-compact~='n']_&]`.
+   */
+  fitLevels?: readonly string[]
 }
+
+const NO_LEVELS: readonly string[] = []
 
 /**
  * Linha de ferramentas (regra da coordenação, 22/11/2026, para todos os módulos): se adapta à largura,
@@ -22,11 +30,13 @@ export interface AppToolbarProps extends HTMLAttributes<HTMLDivElement> {
  * classes de cada etapa ficam nos próprios componentes (`@max-[1440px]:…`), escritas por extenso para o
  * Tailwind encontrá-las.
  */
-export function AppToolbar({ children, className, ...rest }: AppToolbarProps) {
+export function AppToolbar({ children, className, fitLevels = NO_LEVELS, ...rest }: AppToolbarProps) {
+  const ref = useFitToolbar(fitLevels)
   return (
     <div className="@container min-w-0">
       <div
         {...rest}
+        ref={ref}
         data-toolbar=""
         // o respiro em volta (compensado pela margem) evita cortar o contorno do foco quando a linha rola
         className={cn('-m-1 flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto @max-[960px]:gap-1.5 whitespace-nowrap p-1 [scrollbar-width:thin]', className)}
