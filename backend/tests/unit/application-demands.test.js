@@ -161,7 +161,7 @@ describe('application/demands — abrir', () => {
     assert.match(copies[0].text, /Ana abriu uma demanda e colocou você em cópia\./)
     assert.match(copies[0].text, /Responsável: César/)
     assert.match(copies[0].text, /> Publicar o portal\./)
-    assert.match(copies[0].text, new RegExp(`https://avanza\.empresa\.com/tasks/${created.id}`))
+    assert.ok(copies[0].text.includes(`https://avanza.empresa.com/tasks/${created.id}`), 'o botão leva à tarefa')
     assert.equal(s.deps.store.audit.find((e) => e.entityId === created.id && e.action === 'task.created').newValue.copy_to, 'suporte@empresa.com, mesa@empresa.com')
     // o responsável segue recebendo o aviso dele; quem está em cópia não vira notificação da plataforma
     assert.equal(s.deps.store.notifications.filter((n) => n.taskId === created.id).length, 1)
