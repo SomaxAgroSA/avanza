@@ -140,6 +140,8 @@ export interface TaskDetail extends TaskSummary {
 
 export interface TaskInput {
   projectId?: string
+  /** "Com cópia" (ajuste 24/11): e-mails que recebem o aviso da tarefa nova, uma vez; só na criação. */
+  ccEmails?: string[]
   taskTypeId?: string
   title?: string
   description?: string

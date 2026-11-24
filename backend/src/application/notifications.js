@@ -120,7 +120,32 @@ function createNotifier(deps) {
     return deliver(repos, event, { planItemId: event.item.id, projectId: event.project.id }, { name: event.item.name, project: event.project.name })
   }
 
-  return { notify, notifyItem }
+  /**
+   * Cópia por e-mail de uma tarefa nova (ajuste 24/11/2026): um e-mail por endereço, na fila, no idioma de quem
+   * abriu. `event`: { task, project, actorId, emails, responsibleName? }. Retorna os endereços enfileirados —
+   * nenhum com o envio de e-mails desligado (a tarefa nasce do mesmo jeito).
+   */
+  async function copy(repos, event) {
+    const emails = event.emails || []
+    if (emails.length === 0) return []
+    const mail = await emailContext(deps)
+    if (!mail) return []
+    const actor = event.actorId ? await deps.userRepository.findById(event.actorId) : null
+    const message = emailDomain.renderTaskCopyEmail(event.task, {
+      locale: actor ? actor.locale : null,
+      actorName: actor ? actor.name : null,
+      platform: mail.platform,
+      appUrl: mail.appUrl,
+      details: await emailDetails(event.task, event.project),
+      responsible: event.responsibleName || '',
+    })
+    for (const to of emails) {
+      await repos.emailOutboxRepository.enqueue({ to, kind: 'notification', subject: message.subject, html: message.html, text: message.text })
+    }
+    return emails
+  }
+
+  return { notify, notifyItem, copy }
 }
 
 function createNotificationService(deps) {

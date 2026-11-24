@@ -27,6 +27,8 @@ import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 import { usePlan } from '@/features/plan/queries'
 import { DemandFormDialog, LockedValue } from '@/features/demands/DemandFormDialog'
+import { CopyEmailsField } from './CopyEmailsField'
+import { useRecentCopyEmails } from './use-recent-copy-emails'
 import { useDemandOwners } from '@/features/demands/queries'
 
 export interface TaskFormDialogProps {
@@ -137,6 +139,9 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const { create, update } = useTaskMutations()
 
   const [draft, setDraft] = useState<Draft>(() => draftFrom(task, projectId, initial))
+  // "Com cópia" (ajuste 24/11): só na criação; os endereços usados ficam lembrados neste navegador
+  const [ccEmails, setCcEmails] = useState<string[]>([])
+  const copy = useRecentCopyEmails()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [valueErrors, setValueErrors] = useState<Record<string, string>>({})
 
@@ -360,8 +365,15 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
           parentTaskId: draft.parentTaskId || undefined,
           // criada pelo painel do elemento: já nasce ligada a ele
           planItemId: draft.planItemId || undefined,
+          ccEmails,
         },
-        { onSuccess: (saved) => void onCreated(saved), onError },
+        {
+          onSuccess: (saved) => {
+            copy.remember(ccEmails)
+            void onCreated(saved)
+          },
+          onError,
+        },
       )
   }
 
@@ -512,6 +524,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                 : []),
             ]}
           />
+          {!isEdit && <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />}
           <AppSelect
             label={t('tasks.fields.status')}
             value={draft.statusId || undefined}

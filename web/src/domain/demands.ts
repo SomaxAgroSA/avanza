@@ -152,6 +152,8 @@ export interface DemandOverview {
 }
 
 export interface DemandInput {
+  /** "Com cópia" (ajuste 24/11): e-mails que recebem o aviso da demanda nova, uma vez. */
+  ccEmails?: string[]
   taskTypeId: string
   title: string
   description?: string
