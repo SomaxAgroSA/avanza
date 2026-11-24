@@ -21,6 +21,8 @@ import { useUrgencyChoices } from '@/features/tasks/urgency-choices'
 import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from '@/features/tasks/use-attachment-uploader'
 import { useDemandMutations, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
+import { CopyEmailsField } from '@/features/tasks/CopyEmailsField'
+import { useRecentCopyEmails } from '@/features/tasks/use-recent-copy-emails'
 import { companyRequired } from '@/domain/companies'
 
 export interface DemandFormDialogProps {
@@ -86,6 +88,9 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     companyId: task?.company?.id ?? '',
   }))
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // "Com cópia" (ajuste 24/11): só na abertura; os endereços usados ficam lembrados neste navegador
+  const [ccEmails, setCcEmails] = useState<string[]>([])
+  const copy = useRecentCopyEmails()
   const [openedAt] = useState(() => new Date())
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
@@ -251,8 +256,15 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
         ...(isUrgency(draft.urgency) ? { urgency: draft.urgency } : {}),
         ...(draft.companyId ? { companyId: draft.companyId } : {}),
         customValues,
+        ccEmails,
       },
-      { onSuccess: (saved) => void onCreated(saved), onError },
+      {
+        onSuccess: (saved) => {
+          copy.remember(ccEmails)
+          void onCreated(saved)
+        },
+        onError,
+      },
     )
   }
 
@@ -361,6 +373,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
               options={ownerOptions}
             />
           )}
+          {!isEdit && <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />}
           <AppSelect
             label={t('demands.form.department')}
             required

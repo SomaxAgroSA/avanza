@@ -41,6 +41,7 @@ const { buildAuditEntry, truncate } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createCustomFieldService } = require('./custom-fields')
 const { createNotifier } = require('./notifications')
+const emailDomain = require('../domain/email')
 const { createPlanSupport } = require('./plan-support')
 const { createTaskAccess } = require('./task-access')
 const { companyRef } = require('./companies')
@@ -845,6 +846,9 @@ function createTaskService(deps) {
     const projectId = typeof raw.project_id === 'string' ? raw.project_id : ''
     if (!projectId) throw invalid({ project_id: 'required' })
     if (!data.task_type_id) throw invalid({ task_type_id: 'required' })
+    // "Com cópia" (ajuste 24/11): endereços que recebem o aviso da tarefa nova, uma vez
+    const copyTo = emailDomain.parseCopyEmails(raw.cc_emails)
+    if (copyTo.error) throw invalid({ cc_emails: copyTo.error })
 
     const { project, access } = await projectAccess(ctx.principal, projectId)
     if (!project) throw appError('PROJECT_NOT_FOUND')
@@ -941,7 +945,16 @@ function createTaskService(deps) {
       const withTags = Object.assign({}, task, { tagIds: parsed.tagIds || [] })
       const auditRefs = await refsFor([withTags], userIdsInValues(links, checked.values))
       const after = await snapshot(withTags, checked.values, links, auditRefs)
-      await audit(repos, ctx, task, 'task.created', null, Object.assign({ code: task.code }, forkedFrom ? { forked_from: taskLabel(forkedFrom) } : {}, compact(after)))
+      // a cópia sai na mesma transação; o histórico guarda para quem foi (só o que entrou na fila)
+      const copied = await notifier.copy(repos, { task, project, actorId: ctx.principal.userId, emails: copyTo.emails, responsibleName: owner ? owner.name : '' })
+      await audit(
+        repos,
+        ctx,
+        task,
+        'task.created',
+        null,
+        Object.assign({ code: task.code }, forkedFrom ? { forked_from: taskLabel(forkedFrom) } : {}, compact(after), copied.length ? { copy_to: copied.join(', ') } : {}),
+      )
       await notifier.notify(repos, { task, project, actorId: ctx.principal.userId, entries: [{ userId: task.assigneeId, type: 'assigned' }] })
       if (owner) await notifier.notify(repos, { task, project, actorId: ctx.principal.userId, entries: [{ userId: owner.id, type: 'demand_received' }] })
       // fork: cópia de anexos/relações e histórico da origem, na mesma transação

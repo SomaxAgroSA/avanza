@@ -666,6 +666,8 @@ export function createHttpRepositories(api: ApiClient): Repositories {
 function taskBody(data: TaskInput) {
   return {
     project_id: data.projectId,
+    // só na criação e só com algum endereço (a edição nunca manda)
+    cc_emails: data.ccEmails && data.ccEmails.length > 0 ? data.ccEmails : undefined,
     demand_owner_id: data.demandOwnerId,
     task_type_id: data.taskTypeId,
     title: data.title,
@@ -1433,6 +1435,7 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
         title: data.title,
         description: data.description,
         demand_owner_id: data.ownerId,
+        cc_emails: data.ccEmails && data.ccEmails.length > 0 ? data.ccEmails : undefined,
         area_id: data.areaId,
         priority_id: data.priorityId,
         urgency: data.urgency || undefined,

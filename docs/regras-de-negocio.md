@@ -855,6 +855,15 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
 
 - **Ambas (19/11/2026):** o perfil pode ter `ongoing_view = both`. Em Em andamento aparece no topo o seletor **Gestão | Direção e gerência**; abre em Direção e o navegador lembra a última escolha de cada pessoa. Perfil Admin (Angelica e Douglas) usa essa opção.
 
+### "Com cópia" na tarefa nova (ajuste 24/11/2026)
+
+Ao abrir uma tarefa de projeto ou uma demanda interna, logo abaixo do responsável há o campo **Com cópia**: um ou mais e-mails (até 5), opcional. Serve para avisar quem não usa o Avanza — o caso que motivou: a caixa do suporte de TI, cujo sistema de chamados abre o chamado a partir do e-mail.
+- Cada endereço recebe **um e-mail só, na criação**: assunto `[código] título` (o sistema de chamados usa o assunto como nome), quem abriu, o responsável, projeto, prioridade, urgência, empresa, prazo, a **descrição** (até 2000 caracteres) e o botão da tarefa. Não recebe comentários nem mudanças depois, e não vira usuário nem notificação da plataforma.
+- No idioma de quem abriu. Sai pela fila de e-mails, na mesma transação da criação; com o envio de e-mails desligado, a tarefa nasce igual e nada é enviado.
+- O histórico da tarefa guarda para quem foi (`task.created` → **Com cópia**).
+- O campo só existe na criação. Os endereços usados ficam lembrados no navegador de cada pessoa ("Usados antes") para não digitar de novo.
+- API: `cc_emails` em `POST /tasks` e `POST /demands`.
+
 ### Tarefas por perfil (ajustes 23 e 24/11/2026)
 
 Em Controle de acesso → Perfis, cada perfil tem o bloco **Tarefas** — só a tela, para a pessoa ver o que precisa sem se perder (o acesso continua nas permissões):

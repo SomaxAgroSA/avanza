@@ -201,7 +201,8 @@ const NOTICE = {
       demand_returned: 'Veja o comentário e retome o trabalho.',
       overdue: 'Atualize o status ou ajuste o prazo.',
     },
-    labels: { requester: 'Pedida por', project: 'Projeto', priority: 'Prioridade', urgency: 'Urgência', company: 'Empresa', due: 'Prazo' },
+    labels: { requester: 'Pedida por', project: 'Projeto', priority: 'Prioridade', urgency: 'Urgência', company: 'Empresa', due: 'Prazo', responsible: 'Responsável' },
+    copy: { task: '{actor} abriu uma tarefa e colocou você em cópia.', demand: '{actor} abriu uma demanda e colocou você em cópia.' },
     urgency: { high: 'Alta', medium: 'Média', low: 'Baixa' },
     internal: 'Demanda interna',
     button: { task: 'Ver tarefa', demand: 'Ver demanda', plan: 'Ver na gestão', other: 'Abrir' },
@@ -245,7 +246,8 @@ const NOTICE = {
       demand_returned: 'Read the comment and pick the work back up.',
       overdue: 'Update the status or adjust the deadline.',
     },
-    labels: { requester: 'Requested by', project: 'Project', priority: 'Priority', urgency: 'Urgency', company: 'Company', due: 'Due' },
+    labels: { requester: 'Requested by', project: 'Project', priority: 'Priority', urgency: 'Urgency', company: 'Company', due: 'Due', responsible: 'Owner' },
+    copy: { task: '{actor} opened a task and copied you.', demand: '{actor} opened a request and copied you.' },
     urgency: { high: 'High', medium: 'Medium', low: 'Low' },
     internal: 'Internal request',
     button: { task: 'View task', demand: 'View request', plan: 'View in management', other: 'Open' },
@@ -289,7 +291,8 @@ const NOTICE = {
       demand_returned: 'Revisa el comentario y retoma el trabajo.',
       overdue: 'Actualiza el estado o ajusta el plazo.',
     },
-    labels: { requester: 'Pedida por', project: 'Proyecto', priority: 'Prioridad', urgency: 'Urgencia', company: 'Empresa', due: 'Plazo' },
+    labels: { requester: 'Pedida por', project: 'Proyecto', priority: 'Prioridad', urgency: 'Urgencia', company: 'Empresa', due: 'Plazo', responsible: 'Responsable' },
+    copy: { task: '{actor} abrió una tarea y te puso en copia.', demand: '{actor} abrió una demanda y te puso en copia.' },
     urgency: { high: 'Alta', medium: 'Media', low: 'Baja' },
     internal: 'Demanda interna',
     button: { task: 'Ver tarea', demand: 'Ver demanda', plan: 'Ver en la gestión', other: 'Abrir' },
@@ -454,8 +457,66 @@ function renderNotificationEmail(notification, ctx) {
   return { subject, html: body.html, text: body.text }
 }
 
+/** Cópia por e-mail da tarefa nova (ajuste 24/11/2026): quantos endereços cabem em "Com cópia". */
+const MAX_COPY_EMAILS = 5
+/** Quanto da descrição vai no e-mail da cópia (o resto fica na tarefa). */
+const COPY_DESCRIPTION = 2000
+
+/**
+ * Lê `cc_emails` do corpo de `POST /tasks` e `POST /demands`: ausente = sem cópia. Devolve `{ emails }` (sem
+ * espaços, em minúsculas, sem repetidos) ou `{ error }` com o código de validação.
+ */
+function parseCopyEmails(value) {
+  if (value === undefined || value === null) return { emails: [] }
+  if (!Array.isArray(value)) return { error: 'invalid_type' }
+  if (value.length > MAX_COPY_EMAILS) return { error: 'too_many' }
+  const emails = []
+  for (let i = 0; i < value.length; i++) {
+    if (typeof value[i] !== 'string') return { error: 'invalid_type' }
+    const email = value[i].trim().toLowerCase()
+    if (!EMAIL_PATTERN.test(email) || email.length > 254) return { error: 'invalid_email' }
+    if (emails.indexOf(email) < 0) emails.push(email)
+  }
+  return { emails }
+}
+
+/**
+ * E-mail de quem está em cópia numa tarefa nova (ajuste 24/11/2026): um aviso só, na abertura. O assunto leva o
+ * código e o título — quem recebe costuma ser a caixa de um sistema de chamados, que abre o chamado com o assunto
+ * e o corpo; por isso a descrição vai junto (o aviso de quem recebe a tarefa não a leva).
+ * `task` { id, code, title, description }; `ctx` { locale, actorName, platform, appUrl, details, responsible }.
+ */
+function renderTaskCopyEmail(task, ctx) {
+  const n = NOTICE[LOCALES.indexOf(ctx.locale) >= 0 ? ctx.locale : 'pt-BR']
+  const d = ctx.details || {}
+  const actor = ctx.actorName || n.someone
+  const priority = d.priority ? localize(d.priority, ctx.locale, ['name']).name : ''
+  const description = String(task.description || '').trim()
+  const body = layout(ctx.platform, {
+    header: [ctx.platform, d.company].filter(Boolean).join('  ·  '),
+    intro: fill(d.internal ? n.copy.demand : n.copy.task, { actor }),
+    title: task.title,
+    rows: [
+      [n.labels.requester, actor],
+      [n.labels.responsible, ctx.responsible || ''],
+      [n.labels.project, d.internal ? n.internal : d.project || ''],
+      [n.labels.priority, priority],
+      [n.labels.urgency, d.urgency ? n.urgency[d.urgency] : ''],
+      [n.labels.company, d.company || ''],
+      [n.labels.due, formatDay(d.dueDate, ctx.locale)],
+    ],
+    quote: description.length > COPY_DESCRIPTION ? `${description.slice(0, COPY_DESCRIPTION)}…` : description,
+    link: `${ctx.appUrl}/tasks/${encodeURIComponent(task.id)}`,
+    button: d.internal ? n.button.demand : n.button.task,
+  })
+  return { subject: `[${task.code}] ${task.title}`, html: body.html, text: body.text }
+}
+
 module.exports = {
   DEFAULT_SETTINGS,
+  MAX_COPY_EMAILS,
+  parseCopyEmails,
+  renderTaskCopyEmail,
   MAX_ATTEMPTS,
   validateEmailSettings,
   nextAttemptAt,

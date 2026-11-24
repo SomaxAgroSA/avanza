@@ -141,6 +141,47 @@ describe('application/demands — abrir', () => {
     assert.equal(entry.newValue.area, 'Estratégia')
   })
 
+  it('"Com cópia" (24/11): cada endereço recebe um e-mail só, com código e título no assunto e a descrição; fica no histórico', async () => {
+    const s = await setup()
+    const { createEmailService } = require('../../src/application/email')
+    const mailOn = () =>
+      createEmailService(s.deps).updateSettings(s.ctx.admin, { enabled: true, host: 'smtp.empresa.com', port: 587, sender_name: 'Avanza', sender_address: 'avanza@empresa.com', app_url: 'https://avanza.empresa.com' })
+    const copiesOf = (task) => s.deps.store.emailOutbox.filter((m) => m.subject.indexOf(`[${task.code}]`) === 0)
+
+    // envio de e-mails desligado: a demanda nasce, sem cópia e sem registro
+    const off = await s.demands.createDemand(s.ctx.ana, newDemand(s, { cc_emails: ['suporte@empresa.com'] }))
+    assert.equal(copiesOf(off).length, 0)
+    assert.equal(s.deps.store.audit.find((e) => e.entityId === off.id && e.action === 'task.created').newValue.copy_to, undefined)
+
+    await mailOn()
+    const created = await s.demands.createDemand(s.ctx.ana, newDemand(s, { description: 'Publicar o portal.', cc_emails: [' Suporte@Empresa.com ', 'suporte@empresa.com', 'mesa@empresa.com'] }))
+    const copies = copiesOf(created)
+    assert.deepEqual(copies.map((m) => m.to), ['suporte@empresa.com', 'mesa@empresa.com'], 'sem espaços, em minúsculas e sem repetir')
+    assert.equal(copies[0].subject, `[${created.code}] Vista DMR: agregar Fecha cuenta`)
+    assert.match(copies[0].text, /Ana abriu uma demanda e colocou você em cópia\./)
+    assert.match(copies[0].text, /Responsável: César/)
+    assert.match(copies[0].text, /> Publicar o portal\./)
+    assert.ok(copies[0].text.includes(`https://avanza.empresa.com/tasks/${created.id}`), 'o botão leva à tarefa')
+    assert.equal(s.deps.store.audit.find((e) => e.entityId === created.id && e.action === 'task.created').newValue.copy_to, 'suporte@empresa.com, mesa@empresa.com')
+    // o responsável segue recebendo o aviso dele; quem está em cópia não vira notificação da plataforma
+    assert.equal(s.deps.store.notifications.filter((n) => n.taskId === created.id).length, 1)
+
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, newDemand(s, { cc_emails: ['não-é-e-mail'] }))), 'VALIDATION_ERROR:{"cc_emails":"invalid_email"}')
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, newDemand(s, { cc_emails: 'suporte@empresa.com' }))), 'VALIDATION_ERROR:{"cc_emails":"invalid_type"}')
+    const six = ['a', 'b', 'c', 'd', 'e', 'f'].map((n) => `${n}@empresa.com`)
+    assert.equal(await codeOf(() => s.demands.createDemand(s.ctx.ana, newDemand(s, { cc_emails: six }))), 'VALIDATION_ERROR:{"cc_emails":"too_many"}')
+
+    // tarefa de projeto: a mesma cópia, com o projeto e sem responsável quando não há quem distribua
+    const task = await s.tasks.createTask(s.ctx.cesar, { project_id: s.project.id, task_type_id: s.types.dev.id, title: 'Subir o portal', custom_values: { versao: '1' }, cc_emails: ['suporte@empresa.com'] })
+    const [copy] = copiesOf(task)
+    assert.equal(copy.subject, `[${task.code}] Subir o portal`)
+    assert.match(copy.text, /César abriu uma tarefa e colocou você em cópia\./)
+    assert.match(copy.text, /Projeto: CRM/)
+    assert.doesNotMatch(copy.text, /Responsável:/)
+    assert.equal(s.deps.store.audit.find((e) => e.entityId === task.id && e.action === 'task.created').newValue.copy_to, 'suporte@empresa.com')
+    assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.cesar, { project_id: s.project.id, task_type_id: s.types.dev.id, title: 'X', custom_values: { versao: '1' }, cc_emails: ['x'] })), 'VALIDATION_ERROR:{"cc_emails":"invalid_email"}')
+  })
+
   it('exige tipo, título, responsável e departamento; responsável ativo que vê tarefas', async () => {
     const s = await setup()
     assert.equal(

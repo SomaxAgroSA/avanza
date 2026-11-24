@@ -36,6 +36,7 @@ const companyDomain = require('../domain/company')
 const { createTaskService, customValuesInput, typesOf } = require('./tasks')
 const { createTaskAccess } = require('./task-access')
 const { createNotifier } = require('./notifications')
+const emailDomain = require('../domain/email')
 
 /** A caixa das demandas: a primeira chave livre da lista (a migration 0031 usa a mesma). */
 const INBOX = Object.freeze({ name: 'Demandas internas', keys: ['DEM', 'DEMINT', 'DEMANDAS', 'DEMANDA', 'DEMSYS'], icon: 'inbox', cover: 'slate' })
@@ -204,6 +205,9 @@ function createDemandService(deps) {
       source[key] = raw[key]
     })
     const data = assertValid(source, CREATE_SCHEMA)
+    // "Com cópia" (ajuste 24/11): endereços que recebem o aviso da demanda nova, uma vez
+    const copyTo = emailDomain.parseCopyEmails(raw.cc_emails)
+    if (copyTo.error) throw invalid({ cc_emails: copyTo.error })
 
     const active = (item, field) => {
       if (!item || item.isActive === false) throw invalid({ [field]: 'invalid_option' })
@@ -283,6 +287,8 @@ function createDemandService(deps) {
       Object.keys(values).forEach((key) => {
         if (values[key] === null || values[key] === '') delete values[key]
       })
+      const copied = await notifier.copy(repos, { task, project, actorId: ctx.principal.userId, emails: copyTo.emails, responsibleName: owner.name })
+      if (copied.length) values.copy_to = copied.join(', ')
       await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'task', entityId: task.id, action: 'task.created', oldValue: null, newValue: values }))
       await notifier.notify(repos, { task, project, actorId: ctx.principal.userId, entries: [{ userId: owner.id, type: 'demand_received' }] })
       return task

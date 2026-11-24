@@ -6,6 +6,14 @@
 const { HOME_PAGES } = require('../domain/user')
 const { ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES } = require('../domain/permissions')
 
+/** "Com cópia" (ajuste 24/11): e-mails que recebem o aviso da tarefa ou demanda nova, uma vez. */
+const COPY_EMAILS = {
+  type: 'array',
+  maxItems: 5,
+  items: { type: 'string', format: 'email' },
+  description: 'e-mails em cópia: cada um recebe um e-mail com o código e o título no assunto e a descrição (só na criação; sem envio de e-mails configurado, nada sai)',
+}
+
 /** Tarefas do perfil (ajuste 23/11): só a tela de quem tem o perfil; o acesso segue as permissões. */
 const TASK_VIEW_PROPS = {
   tasks_start: { type: 'string', enum: TASK_VIEWS.tasks_start, description: 'onde o menu Tarefas abre: "" = Lista; inbox = Caixa de entrada (Recebidas); inbox_assigned, inbox_requested e inbox_all = as caixas Atribuídas a mim, Pedidas por mim e Todas' },
@@ -619,6 +627,7 @@ function build() {
                 title: { type: 'string', maxLength: 200 },
                 description: { type: 'string', maxLength: 50000, description: 'Markdown simples' },
                 demand_owner_id: { type: 'string', description: 'Responsável: qualquer pessoa ativa (GET /demands/owners); recebe e distribui à equipe dela' },
+                cc_emails: COPY_EMAILS,
                 area_id: { type: 'string', description: 'Departamento que pede (área ativa de /areas)' },
                 priority_id: { type: 'string', description: 'sem ela, a prioridade padrão' },
                 urgency: { type: 'string', enum: ['high', 'medium', 'low'], nullable: true, description: 'Urgência (§31, semáforo); sem ela, nasce sem urgência' },
@@ -2000,6 +2009,7 @@ function build() {
           type: 'object',
           properties: {
             project_id: { type: 'string', description: 'Só na criação' },
+            cc_emails: COPY_EMAILS,
             demand_owner_id: {
               type: ['string', 'null'],
               description:

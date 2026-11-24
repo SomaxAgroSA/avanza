@@ -190,6 +190,30 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
     expect(create.mock.calls[0]?.[0]).toMatchObject({ taskTypeId: 't1', title: 'Vista DMR: agregar Fecha cuenta', ownerId: 'u2', areaId: 'a1', urgency: 'high' })
   })
 
+  it('"Com cópia" (24/11): abaixo do responsável; os e-mails vão na criação e ficam lembrados para a próxima', async () => {
+    const create = vi.fn<DemandRepository['create']>(() => Promise.resolve(demand()))
+    renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos({ demands: { create } }), initialPath: '/tasks' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Demanda interna' }))
+    const dialog = await screen.findByRole('dialog')
+    await chooseOption(/^Tipo/, 'Desenvolvimento')
+    await userEvent.type(within(dialog).getByLabelText(/^Título/), 'Subir o portal')
+    await chooseOption(/^Responsável/, /César/)
+    await chooseOption(/^Departamento que pede/, 'Estratégia')
+    const copy = within(dialog).getByLabelText('Com cópia')
+    // logo depois do responsável
+    const owner = within(dialog).getByRole('combobox', { name: /^Responsável/ })
+    expect(owner.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await userEvent.type(copy, 'suporte@empresa.com{Enter}')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    expect(create.mock.calls[0]?.[0]).toMatchObject({ title: 'Subir o portal', ccEmails: ['suporte@empresa.com'] })
+    // na próxima demanda, o endereço é oferecido a um clique
+    await userEvent.click(await screen.findByRole('button', { name: 'Demanda interna' }))
+    const again = await screen.findByRole('dialog')
+    expect(within(again).getByText('Usados antes:')).toBeInTheDocument()
+    expect(within(again).getByRole('button', { name: '+ suporte@empresa.com' })).toBeInTheDocument()
+  })
+
   it('lista: Todas · Com projeto · Sem projeto; a demanda mostra "Demanda interna" no lugar do projeto', async () => {
     // a tarefa de projeto com quem distribui continua mostrando o projeto
     const withOwner = demand({ id: 'k7', code: 'FIN-7', title: 'Publicar o dashboard', project: { id: 'p9', key: 'FIN', name: 'Finanças' } })
