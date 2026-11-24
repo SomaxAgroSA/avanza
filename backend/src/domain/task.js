@@ -285,7 +285,30 @@ function tagNameIssue(name) {
   return value.length > 40 ? 'too_long' : null
 }
 
+/**
+ * Grupos do filtro Prazo da Lista de tarefas (ajuste 24/11/2026), em relação a "hoje" (o dia de quem consulta):
+ * vencidas (antes de hoje), hoje, os próximos 7 dias (de amanhã em diante), mais adiante e sem prazo.
+ */
+const DUE_GROUPS = Object.freeze(['overdue', 'today', 'next7', 'later', 'none'])
+
+/**
+ * Intervalo de cada grupo do prazo: `{ from?, before? }` (do instante `from`, inclusive, até `before`, exclusive)
+ * ou `null` para "sem prazo". `today` = 'AAAA-MM-DD'; os dias contam a partir da meia-noite UTC, como o resto dos
+ * prazos (lembretes e o "vencida" da tela).
+ */
+function dueRange(group, today) {
+  const start = new Date(`${today}T00:00:00.000Z`).getTime()
+  const day = (n) => new Date(start + n * 86400000)
+  if (group === 'overdue') return { before: day(0) }
+  if (group === 'today') return { from: day(0), before: day(1) }
+  if (group === 'next7') return { from: day(1), before: day(8) }
+  if (group === 'later') return { from: day(8) }
+  return null
+}
+
 module.exports = {
+  DUE_GROUPS,
+  dueRange,
   URGENCY_LEVELS,
   normalizeChecklist,
   checklistSummary,

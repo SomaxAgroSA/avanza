@@ -5,6 +5,9 @@ import { cn } from '@/core/utils/cn'
 import { AppButton } from './AppButton'
 import { AppToolbar } from './AppToolbar'
 
+/** Passos de compactação da barra pela medida: 1 — grupos de botões viram seletores; 2 — "Colunas e ações" só com o ícone; 3 — "Limpar" só com o número. */
+const FIT_LEVELS = ['1', '2', '3'] as const
+
 export interface AppFilterBarProps {
   search?: ReactNode
   filters?: ReactNode
@@ -31,7 +34,9 @@ export function AppFilterBar({ search, filters, actions, hasActiveFilters, activ
   const showReset = !!onReset && (active || counted)
   return (
     // os filtros em botões levam o nome ao lado, na mesma linha (§37); a busca é a primeira a ceder espaço
-    <AppToolbar>
+    // além das larguras fixas, a barra mede a si mesma (ajuste 24/11): com mais filtros (Responsável, Atribuída a)
+    // ela compacta um passo de cada vez em vez de cortar o que fica à direita
+    <AppToolbar fitLevels={FIT_LEVELS}>
       {search && <div className="min-w-[110px] max-w-64 flex-[1_1_150px]">{search}</div>}
       {filters}
       {(showReset || actions) && (
@@ -48,9 +53,9 @@ export function AppFilterBar({ search, filters, actions, hasActiveFilters, activ
               title={active ? (counted ? t('table.clearCountLabel', { count: activeFilterCount }) : t('table.clearFilters')) : undefined}
               className={cn('px-2.5 font-semibold text-primary-text hover:bg-primary-soft hover:text-primary-text', !active && 'invisible')}
             >
-              <span className="@max-[960px]:hidden">{counted ? t('table.clearCount', { count: activeFilterCount }) : t('table.clearFilters')}</span>
+              <span className="@max-[960px]:hidden [[data-compact~='3']_&]:hidden">{counted ? t('table.clearCount', { count: activeFilterCount }) : t('table.clearFilters')}</span>
               {counted && (
-                <span aria-hidden className="hidden tabular-nums @max-[960px]:inline">
+                <span aria-hidden className="hidden tabular-nums @max-[960px]:inline [[data-compact~='3']_&]:inline">
                   {activeFilterCount}
                 </span>
               )}

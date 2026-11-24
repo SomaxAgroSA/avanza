@@ -115,6 +115,24 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.deepEqual((await member.client.get('/tasks?search=100%25')).body.data, [])
     assert.equal((await outsider.client.get('/tasks')).body.meta.total, 0)
     assert.deepEqual((await admin.get('/tasks?sort=due_date')).body.data.map((t) => t.code), ['CRM-1', 'CRM-2'])
+    // pessoas (ajuste 24/11): várias, `me` e `none`; e o Prazo em grupos pelo "hoje" de quem consulta
+    const codes = async (query) => {
+      const res = await member.client.get(`/tasks?sort=code&${query}`)
+      assert.equal(res.status, 200, JSON.stringify(res.body))
+      return res.body.data.map((t) => t.code)
+    }
+    assert.deepEqual(await codes('assignee_id=none'), ['CRM-2'])
+    assert.deepEqual(await codes('assignee_id=me,none'), ['CRM-1', 'CRM-2'])
+    assert.deepEqual(await codes(`responsible_id=${member.user.id}`), ['CRM-1'])
+    assert.deepEqual(await codes('responsible_id=none'), ['CRM-2'])
+    assert.deepEqual(await codes('due=overdue&due_today=2026-10-16'), ['CRM-1'])
+    assert.deepEqual(await codes('due=today&due_today=2026-10-15'), ['CRM-1'])
+    assert.deepEqual(await codes('due=next7&due_today=2026-10-10'), ['CRM-1'])
+    assert.deepEqual(await codes('due=later&due_today=2026-10-01'), ['CRM-1'])
+    assert.deepEqual(await codes('due=today&due_today=2026-10-16'), [])
+    assert.deepEqual(await codes('due=none'), ['CRM-2'])
+    assert.deepEqual(await codes('due=overdue,none&due_today=2026-10-16'), ['CRM-1', 'CRM-2'])
+    assert.equal((await member.client.get('/tasks?due=ontem')).status, 400)
   })
 
   it('edita status, registra conclusão e histórico legível', async () => {

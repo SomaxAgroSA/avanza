@@ -855,6 +855,14 @@ Ajuste da coordenação de 18/11/2026: menos filtros, todos à vista.
 
 - **Ambas (19/11/2026):** o perfil pode ter `ongoing_view = both`. Em Em andamento aparece no topo o seletor **Gestão | Direção e gerência**; abre em Direção e o navegador lembra a última escolha de cada pessoa. Perfil Admin (Angelica e Douglas) usa essa opção.
 
+### Tabelas: larguras ajustáveis e filtro em cada coluna (ajuste 24/11/2026)
+
+Vale para todas as listagens (o componente de tabela é um só):
+- **Larguras:** arrastar o separador do cabeçalho ajusta a coluna — todas, também a do nome (antes ela nunca ficava mais estreita que o título mais longo, e a largura que sobrava era repartida entre as colunas, então o arrasto não valia). Sem nenhuma largura escolhida, a tabela se arruma sozinha, como sempre. Ao arrastar pela primeira vez, as larguras que estão na tela viram as escolhidas (nada pula) e a tabela passa a respeitá-las exatamente: o que não cabe corta ou quebra dentro da coluna, e o espaço que sobra fica numa coluna vazia antes das ações. Setas do teclado ajustam de 16 em 16 px; **duplo clique** devolve a coluna à largura original. Ficam guardadas no navegador, por tabela (as guardadas antes deste ajuste não valem).
+- **Filtro na coluna:** toda coluna com filtro tem um **funil** no cabeçalho, que abre as opções (com busca quando são muitas). É o mesmo filtro da barra — o que se marca num aparece no outro — e conta em "Limpar (n)". A coluna filtrando fica marcada (fundo e traço na cor do botão principal, funil cheio). A coluna do nome filtra pela busca ("contém"). Alguns filtros ficam só na coluna (ex.: Projeto e Prazo na Lista de tarefas).
+- **Barra:** os seletores e menus ficam juntos, um ao lado do outro, e depois os grupos de botões. Além das larguras fixas do AppToolbar, a barra mede a si mesma: quando não cabe, os grupos de botões viram seletores, depois "Colunas e ações" fica só com o ícone e "Limpar" só com o número — nunca corta o que está à direita.
+- **Lista de tarefas do menu:** filtros novos **Responsável** e **Atribuída a** na barra (várias pessoas ao mesmo tempo, com "Sem responsável" / "Sem atribuir"), ao lado de Status e Empresa; no funil da coluna, **Projeto** e **Prazo** em grupos (Vencidas, Hoje, Próximos 7 dias, Mais adiante, Sem prazo — pelo "hoje" de quem olha). O nome da tarefa quebra em até duas linhas e depois corta com "…" (inteiro na dica).
+
 ### "Com cópia" na tarefa nova (ajuste 24/11/2026)
 
 Ao abrir uma tarefa de projeto ou uma demanda interna, logo abaixo do responsável há o campo **Com cópia**: um ou mais e-mails (até 5), opcional. Serve para avisar quem não usa o Avanza — o caso que motivou: a caixa do suporte de TI, cujo sistema de chamados abre o chamado a partir do e-mail.

@@ -160,16 +160,37 @@ describe('Lista de tarefas do menu (§44)', () => {
     expect(screen.getByText(`· ${i18n.t('taskList.overdue')}`)).toBeInTheDocument()
   })
 
-  it('barra como a das listas de projetos: Status (seletor), Prioridade e Urgência em botões, Empresa (§46); sem Responsável', async () => {
+  it('barra (ajuste 24/11): os seletores juntos — Status, Empresa, Responsável e Atribuída a — e depois Prioridade e Urgência em botões', async () => {
     const { tableCalls } = setup()
     await screen.findByText(mine.title)
     // Prioridade e Urgência também têm o seletor compacto, que só aparece com a barra apertada (AppToolbar)
-    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Prioridade', 'Urgência', 'Empresa', 'Por página'])
+    expect(screen.getAllByRole('combobox').map((c) => c.getAttribute('aria-label'))).toEqual(['Status', 'Empresa', 'Prioridade', 'Urgência', 'Por página'])
+    // os dois filtros de pessoa são menus (várias ao mesmo tempo), logo depois de Status e Empresa
+    const bar = screen.getByRole('searchbox').closest<HTMLElement>('[data-toolbar]')!
+    const names = within(bar).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
+    expect(names.indexOf('Responsável')).toBeGreaterThan(-1)
+    expect(names.indexOf('Atribuída a')).toBe(names.indexOf('Responsável') + 1)
     expect(screen.getByRole('combobox', { name: 'Prioridade' }).parentElement).toHaveClass('hidden')
     const priority = screen.getByRole('group', { name: 'Prioridade' })
     await userEvent.click(within(priority).getByRole('button', { name: 'Alta' }))
     await userEvent.click(within(screen.getByRole('group', { name: 'Urgência' })).getByRole('button', { name: 'Sem urgência' }))
     await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ priority: 'p1', urgency: 'none', mine: 'true', category: OPEN_TASK_CATEGORIES }))
+  })
+
+  it('filtros novos (24/11): Atribuída a na barra (com "Sem atribuir") e o Prazo em grupos no funil da coluna; o nome quebra em duas linhas', async () => {
+    const { tableCalls } = setup()
+    await screen.findByText(mine.title)
+    await userEvent.click(screen.getByRole('button', { name: 'Atribuída a' }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Atribuída a' })).getByRole('button', { name: 'Sem atribuir' }))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: 'Filtrar Prazo' }))
+    const due = await screen.findByRole('dialog', { name: 'Filtrar Prazo' })
+    expect(within(due).getAllByRole('button', { pressed: false }).map((b) => b.textContent)).toEqual(['Vencidas', 'Hoje', 'Próximos 7 dias', 'Mais adiante', 'Sem prazo'])
+    await userEvent.click(within(due).getByRole('button', { name: 'Vencidas' }))
+    await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ assignee: 'none', due_date: 'overdue', mine: 'true', category: OPEN_TASK_CATEGORIES }))
+    // o funil da coluna Tarefa é a busca; o nome quebra em até duas linhas (a coluna se ajusta)
+    expect(screen.getByRole('button', { name: 'Filtrar Tarefa' })).toBeInTheDocument()
+    expect(screen.getByText(mine.title)).toHaveClass('line-clamp-2')
   })
 
   it('escolher um Status mostra esse status (inclusive encerrado): sai o "só abertas"', async () => {
@@ -180,8 +201,8 @@ describe('Lista de tarefas do menu (§44)', () => {
     await waitFor(() => expect(tableCalls().at(-1)![0].filters).toEqual({ status: 's9', mine: 'true' }))
   })
 
-  it('um Responsável (ou Área) guardado no navegador não filtra escondido', async () => {
-    window.localStorage.setItem('kamban.table.task-list', JSON.stringify({ filters: { assignee: 'u9', area: 'a1', urgency: 'high' } }))
+  it('um filtro que não é da Lista (Área, Tipo) guardado no navegador não filtra escondido', async () => {
+    window.localStorage.setItem('kamban.table.task-list', JSON.stringify({ filters: { type: 't1', area: 'a1', urgency: 'high' } }))
     const { tableCalls } = setup()
     await screen.findByText(mine.title)
     tableCalls().forEach(([query]) => expect(query.filters).toEqual({ urgency: 'high', mine: 'true', category: OPEN_TASK_CATEGORIES }))

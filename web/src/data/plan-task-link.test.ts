@@ -76,6 +76,18 @@ describe('vínculo tarefa ↔ elemento da Gestão (dados)', () => {
     expect(patch).toHaveBeenCalledWith('/tasks/t1', expect.objectContaining({ plan_item_id: null }))
   })
 
+  it('repositório: filtros de pessoas e Prazo em grupos (ajuste 24/11); o Prazo leva o "hoje" de quem olha', async () => {
+    const get = vi.fn(() => Promise.resolve({ data: [taskDto], meta: { page: 1, perPage: 20, total: 1, totalPages: 1 } }))
+    const repo = createHttpTaskRepository({ get } as unknown as ApiClient)
+    await repo.list({ page: 1, perPage: 20, sort: null, search: '', filters: { responsible: 'u2,none', assignee: 'u9', due_date: 'overdue,today' } })
+    expect(get).toHaveBeenLastCalledWith('/tasks', {
+      query: expect.objectContaining({ responsible_id: 'u2,none', assignee_id: 'u9', due: 'overdue,today', due_today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }),
+    })
+    // sem o filtro Prazo, o "hoje" não vai
+    await repo.list({ page: 1, perPage: 20, sort: null, search: '', filters: { assignee: 'u9' } })
+    expect((get.mock.calls.at(-1) as unknown as [string, { query: Record<string, unknown> }])[1].query.due_today).toBeUndefined()
+  })
+
   it('repositório: etapa da Gestão vai como plan_group_id na criação e na edição', async () => {
     const post = vi.fn(() => Promise.resolve({ data: detailDto, meta: {} }))
     const patch = vi.fn(() => Promise.resolve({ data: detailDto, meta: {} }))

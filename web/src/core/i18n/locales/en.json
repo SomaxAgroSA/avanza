@@ -59,7 +59,15 @@
     "columnName": "Column name {{name}}",
     "namesForAll": "Use these names for everyone",
     "resetNames": "Reset names",
-    "compactAll": "all"
+    "compactAll": "all",
+    "filterColumn": "Filter {{column}}",
+    "clearFilter": "Clear",
+    "applyFilter": "Apply",
+    "contains": "{{column}}: contains",
+    "noOptions": "No results",
+    "chosenCount_one": "{{count}} selected",
+    "chosenCount_other": "{{count}} selected",
+    "resizeHint": "Drag to resize · double-click: original width"
   },
   "validation": {
     "required": "Required field",
@@ -1843,7 +1851,15 @@
       "placeholder": "email@company.com",
       "recent": "Used before:",
       "remove": "Remove {{email}}"
-    }
+    },
+    "due": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "next7": "Next 7 days",
+      "later": "Later",
+      "none": "No due date"
+    },
+    "noResponsible": "No owner"
   },
   "taskList": {
     "scopeLabel": "Which tasks to show",

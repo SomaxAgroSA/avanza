@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { OPEN_TASK_CATEGORIES, TASK_SCOPE_SORT, isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, scopeCountFilters, scopedTaskFilters, taskListFilters } from './tasks'
+import {
+  localDay, OPEN_TASK_CATEGORIES, TASK_SCOPE_SORT, isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, scopeCountFilters, scopedTaskFilters, taskListFilters } from './tasks'
 
 describe('domain/tasks — menções', () => {
   const carla = { id: 'u7', name: 'Carla Mendes' }
@@ -53,9 +54,15 @@ describe('domain/tasks — filtros da lista (ajuste 18/11)', () => {
 })
 
 describe('domain/tasks — Lista de tarefas do menu (§44)', () => {
-  it('Minhas = atribuídas a quem olha e as demandas que pediu ou recebeu (§45); Todas = sem responsável fixo; Responsável sai da barra', () => {
-    expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'mine')).toEqual({ priority: 'p1,p2', mine: 'true', category: OPEN_TASK_CATEGORIES })
-    expect(scopedTaskFilters({ priority: 'p1,p2', assignee: 'u9', area: 'a1' }, 'all')).toEqual({ priority: 'p1,p2', category: OPEN_TASK_CATEGORIES })
+  it('Minhas = atribuídas a quem olha e as demandas que pediu ou recebeu (§45); Todas = sem responsável fixo; a Área não é filtro da Lista', () => {
+    expect(scopedTaskFilters({ priority: 'p1,p2', area: 'a1' }, 'mine')).toEqual({ priority: 'p1,p2', mine: 'true', category: OPEN_TASK_CATEGORIES })
+    expect(scopedTaskFilters({ priority: 'p1,p2', area: 'a1' }, 'all')).toEqual({ priority: 'p1,p2', category: OPEN_TASK_CATEGORIES })
+  })
+
+  it('filtros da Lista (ajuste 24/11): Responsável e Atribuída a (várias pessoas), Projeto e Prazo em grupos', () => {
+    const filters = { responsible: 'u2,none', assignee: 'u9', project: 'p1', due_date: 'overdue,today', type: 't1' }
+    expect(scopedTaskFilters(filters, 'all')).toEqual({ responsible: 'u2,none', assignee: 'u9', project: 'p1', due_date: 'overdue,today', category: OPEN_TASK_CATEGORIES })
+    expect(localDay(new Date(2026, 10, 4, 23, 30))).toBe('2026-11-04')
   })
 
   it('Com projeto · Sem projeto (§45): kind só quando escolhido', () => {

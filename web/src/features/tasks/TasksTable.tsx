@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { cn } from '@/core/utils/cn'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { ExternalLink, FileCheck2, FileX2, Laptop, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import {
+  DUE_GROUPS,
   TASK_SCOPE_SORT,
   awaitingAssignment,
   isClosed,
@@ -31,6 +33,8 @@ import { useCan, useSession } from '@/features/auth/session'
 import { managementLink } from '@/features/plan/paths'
 import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useCompanies } from '@/features/companies/queries'
+import { useDemandOwners } from '@/features/demands/queries'
+import { PROJECT_OPTIONS_QUERY, useProjects } from '@/features/projects/queries'
 import { CompanyChip } from '@/features/companies/company-visuals'
 import { useTaskMutations, useTasksList } from './queries'
 import { TaskEditDialog } from './TaskEditDialog'
@@ -75,7 +79,9 @@ export interface TasksTableProps {
  * Largura das colunas de pessoa (Responsável e Atribuída a): a mesma nas duas, com mínimo — nome e
  * sobrenome cabem inteiros, e uma largura menor guardada no navegador não as estreita.
  */
-const PERSON_COLUMN = { size: 200, minSize: 200 }
+const PERSON_COLUMN = { size: 200, minSize: 120 }
+/** O nome da tarefa na coluna (ajuste 24/11): quebra em até duas linhas e depois corta com "…"; inteiro na dica. */
+const TITLE_CLASS = 'line-clamp-2 break-words font-medium'
 /** Ordem das colunas na Lista de tarefas do menu (§44); as que não estão aqui ficam no fim. */
 const SCOPE_COLUMN_ORDER = ['code', 'project', 'status', 'responsible', 'assignee', 'priority', 'urgency', 'due_date']
 /** Ações de cada linha ("Colunas e ações"): Excluir desligado por padrão (fica no "⋯" e na página da tarefa). */
@@ -137,6 +143,12 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const areas = useAreas(false)
   // empresas ativas (§46): opções do filtro Empresa
   const companies = useCompanies()
+  // Lista de tarefas do menu (ajuste 24/11): pessoas dos filtros Responsável e Atribuída a, projetos e grupos do prazo
+  const people = useDemandOwners(!!scope)
+  const projects = useProjects(PROJECT_OPTIONS_QUERY, !!scope)
+  const peopleOptions = useMemo(() => (people.data ?? []).map((person) => ({ value: person.id, label: person.name })), [people.data])
+  const projectOptions = useMemo(() => (projects.data?.items ?? []).map((project) => ({ value: project.id, label: project.name })), [projects.data])
+  const dueOptions = useMemo(() => DUE_GROUPS.map((group) => ({ value: group, label: t(`tasks.due.${group}`) })), [t])
 
   const [viewing, setViewing] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -151,7 +163,10 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         hideable: false,
         pinned: true,
         size: 360,
-        minSize: 240,
+        // ajustável (ajuste 24/11): o nome quebra em até duas linhas e depois corta com "…"
+        minSize: 120,
+        // o funil desta coluna é a busca ("contém")
+        searchFilter: true,
         cell: (task) =>
           scope ? (
             // Lista de tarefas do menu (§44): o ícone do tipo e o título, sem o código (ajuste 20/11: fica na
@@ -159,7 +174,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
             <div className="flex min-w-0 items-start gap-2">
               <TaskTypeMark task={task} className="mt-px" />
               <div className="min-w-0">
-                <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
+                <p title={task.title} className={cn(TITLE_CLASS, isClosed(task) ? 'text-muted line-through decoration-subtle' : 'text-fg')}>
+                  {task.title}
+                </p>
                 <TaskIndicators task={task} lean />
               </div>
             </div>
@@ -173,7 +190,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
                   </AppBadge>
                 )}
               </span>
-              <p className={isClosed(task) ? 'truncate font-medium text-muted line-through decoration-subtle' : 'truncate font-medium text-fg'}>{task.title}</p>
+              <p title={task.title} className={cn(TITLE_CLASS, isClosed(task) ? 'text-muted line-through decoration-subtle' : 'text-fg')}>
+                {task.title}
+              </p>
               <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <TagList tags={task.tags} max={3} className="mt-0.5" />
                 <TaskIndicators task={task} lean />
@@ -191,8 +210,9 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         filter: {
           label: t('tasks.fields.status'),
           options: (statuses.data ?? []).map((s) => ({ value: s.id, label: s.name })),
-          // na Lista de tarefas do menu, sem Status escolhido só vêm as abertas: o filtro diz isso
-          ...(scope ? { allLabel: t('taskList.openStatuses') } : {}),
+          // na Lista de tarefas do menu, sem Status escolhido só vêm as abertas: o filtro diz isso; e, na barra
+          // dela (ajuste 24/11), Status, Empresa, Responsável e Atribuída a ficam juntos, nessa ordem
+          ...(scope ? { allLabel: t('taskList.openStatuses'), barOrder: 1 } : {}),
         },
       },
       {
@@ -220,9 +240,11 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         header: t('tasks.fields.assignee'),
         ...PERSON_COLUMN,
         cell: (task) => <PersonCell person={responsibleOf(task)} />,
-        // na Lista de tarefas do menu o escopo (Minhas / Todas) faz o papel deste filtro; na aba do projeto,
-        // "Responsável: Eu" segue a mesma regra da coluna (`responsible_id=me`)
-        ...(scope ? {} : { filter: { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.responsibleMe') }] } }),
+        // na Lista de tarefas do menu (ajuste 24/11), várias pessoas ao mesmo tempo e "Sem responsável"; na aba do
+        // projeto, "Responsável: Eu" — os dois seguem a regra da coluna (`responsible_id`)
+        filter: scope
+          ? { label: t('tasks.fields.assignee'), variant: 'menu' as const, barOrder: 3, options: [...peopleOptions, { value: 'none', label: t('tasks.noResponsible') }] }
+          : { label: t('tasks.fields.assignee'), options: [{ value: 'me', label: t('tasks.responsibleMe') }] },
       },
       {
         // Atribuída a: quem executa; "Sem atribuir" enquanto quem recebe e distribui não passou a ninguém
@@ -237,6 +259,10 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
           ) : (
             <span className="text-subtle">—</span>
           ),
+        // quem executa (ajuste 24/11; só na Lista de tarefas do menu): várias pessoas e "Sem atribuir"
+        ...(scope
+          ? { filter: { label: t('tasks.fields.assignedTo'), variant: 'menu' as const, barOrder: 4, options: [...peopleOptions, { value: 'none', label: t('tasks.noAssignee') }] } }
+          : {}),
       },
       {
         // área responsável: quem edita troca com um clique, sem abrir a tarefa
@@ -254,6 +280,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         filter: {
           label: t('companies.field'),
           options: [{ value: 'none', label: t('companies.none') }, ...(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))],
+          ...(scope ? { barOrder: 2 } : {}),
         },
       },
       {
@@ -270,7 +297,16 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
               header: t('tasks.fields.project'),
               size: 170,
               // demanda interna (sem projeto): o chip; tarefa de projeto, com ou sem quem distribui: o projeto
-              cell: (task: TaskSummary) => (task.demand && !task.project ? <DemandChip /> : <span className="truncate text-muted">{task.project?.name ?? '—'}</span>),
+              cell: (task: TaskSummary) =>
+                task.demand && !task.project ? (
+                  <DemandChip />
+                ) : (
+                  <span title={task.project?.name} className="block truncate text-muted">
+                    {task.project?.name ?? '—'}
+                  </span>
+                ),
+              // só no funil da coluna (ajuste 24/11): um projeto
+              ...(scope ? { filter: { label: t('tasks.fields.project'), options: projectOptions, placement: 'column' as const } } : {}),
             } satisfies DataTableColumn<TaskSummary>,
           ]),
       {
@@ -280,6 +316,8 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         size: 130,
         // demanda interna: prazo com data e hora
         cell: (task) => (task.demand ? <DemandDateTime date={task.demand.dueAt} className="text-muted" /> : <DueDate task={task} showLabel={!!scope} />),
+        // só no funil da coluna (ajuste 24/11): vencidas, hoje, próximos 7 dias, mais adiante, sem prazo
+        ...(scope ? { filter: { label: t('tasks.fields.dueDate'), variant: 'menu' as const, placement: 'column' as const, options: dueOptions } } : {}),
       },
       // elemento da Gestão que a tarefa executa (quem vê a Gestão); oculta por padrão
       ...(canViewPlan
@@ -340,7 +378,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         ),
       },
     ],
-    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, companies.data, mineFirst, me, scope],
+    [t, locale, statuses.data, priorities.data, projectId, canViewPlan, canEdit, urgencyOptions, areas.data, companies.data, mineFirst, me, scope, peopleOptions, projectOptions, dueOptions],
   )
   const ordered = useMemo(() => {
     if (!scope) return columns

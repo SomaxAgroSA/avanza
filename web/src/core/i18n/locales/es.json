@@ -59,7 +59,15 @@
     "columnName": "Nombre de la columna {{name}}",
     "namesForAll": "Usar estos nombres para todos",
     "resetNames": "Restablecer nombres",
-    "compactAll": "todas"
+    "compactAll": "todas",
+    "filterColumn": "Filtrar {{column}}",
+    "clearFilter": "Limpiar",
+    "applyFilter": "Aplicar",
+    "contains": "{{column}}: contiene",
+    "noOptions": "Sin resultados",
+    "chosenCount_one": "{{count}} marcada",
+    "chosenCount_other": "{{count}} marcadas",
+    "resizeHint": "Arrastra para ajustar · doble clic: ancho original"
   },
   "validation": {
     "required": "Campo obligatorio",
@@ -1843,7 +1851,15 @@
       "placeholder": "correo@empresa.com",
       "recent": "Usados antes:",
       "remove": "Quitar {{email}}"
-    }
+    },
+    "due": {
+      "overdue": "Vencidas",
+      "today": "Hoy",
+      "next7": "Próximos 7 días",
+      "later": "Más adelante",
+      "none": "Sin plazo"
+    },
+    "noResponsible": "Sin responsable"
   },
   "taskList": {
     "scopeLabel": "Qué tareas ver",

@@ -278,7 +278,19 @@ export function initialTaskScope(stored: unknown, seesAll: boolean): TaskScope {
   if (stored === 'mine' || stored === 'all') return stored
   return seesAll ? 'all' : 'mine'
 }
-export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency', 'company'] as const
+export const TASK_SCOPE_FILTERS = ['status', 'priority', 'urgency', 'company', 'responsible', 'assignee', 'project', 'due_date'] as const
+
+/**
+ * Grupos do filtro Prazo (ajuste 24/11/2026), em relação a hoje: vencidas, hoje, os próximos 7 dias, mais
+ * adiante e sem prazo — os mesmos do servidor (backend/src/domain/task.js#DUE_GROUPS).
+ */
+export const DUE_GROUPS = ['overdue', 'today', 'next7', 'later', 'none'] as const
+
+/** O dia de quem olha (AAAA-MM-DD), para o servidor saber o que é "hoje" no filtro Prazo. */
+export function localDay(date: Date = new Date()): string {
+  const two = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`
+}
 
 /** Com projeto · Sem projeto (§45): tarefas de projeto, demandas internas ou as duas. */
 export type TaskKind = 'all' | 'project' | 'demand'

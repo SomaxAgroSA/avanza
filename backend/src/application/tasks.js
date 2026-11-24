@@ -134,15 +134,23 @@ const SORTABLE = {
 /** "a,b,a" → ['a', 'b']; vazio → undefined (sem filtro). */
 const toList = (value) => (value ? Array.from(new Set(value.split(','))) : undefined)
 
+/** Pessoas num filtro: ids separados por vírgula, com `me` (quem consulta) e `none` (sem ninguém). */
+const peopleRule = rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type'))
+
 const LIST_SCHEMA = {
   project_id: [idRule],
   task_type_id: [idRule],
   status_id: [idRule],
   // vários separados por vírgula (botões da Lista de tarefas, §44)
   priority_id: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type'))],
-  assignee_id: [rules.custom((value) => (value === 'me' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  // pessoas (ajuste 24/11): uma ou várias separadas por vírgula; `me` = quem consulta; `none` = sem ninguém
+  assignee_id: [peopleRule],
   // Responsável da Lista de tarefas: quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída
-  responsible_id: [rules.custom((value) => (value === 'me' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
+  responsible_id: [peopleRule],
+  // Prazo em grupos (ajuste 24/11): vencidas, hoje, próximos 7 dias, mais adiante, sem prazo; vários = "ou"
+  due: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => taskDomain.DUE_GROUPS.indexOf(v) >= 0) ? null : 'invalid_option'))],
+  // o "hoje" de quem consulta (AAAA-MM-DD); sem ele, o dia do servidor (UTC)
+  due_today: [rules.custom((value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(new Date(`${value}T00:00:00Z`).getTime()) ? null : 'invalid_date'))],
   search: [rules.maxLength(100)],
   tag_id: [idRule],
   // `none` = sem sprint
@@ -764,6 +772,8 @@ function createTaskService(deps) {
         company_id: pick('company_id'),
         kind: pick('kind'),
         mine: pick('mine'),
+        due: pick('due'),
+        due_today: pick('due_today'),
       },
       LIST_SCHEMA,
     )
@@ -788,6 +798,13 @@ function createTaskService(deps) {
     }
 
     const viewAll = rbac.can(ctx.principal, 'projects.view_all')
+    // `me` vira quem consulta; uma pessoa só segue como texto (o repositório aceita os dois)
+    const people = (value) => {
+      const list = toList(value)
+      if (!list) return undefined
+      const ids = Array.from(new Set(list.map((id) => (id === 'me' ? ctx.principal.userId : id))))
+      return ids.length === 1 ? ids[0] : ids
+    }
     const result = await tasks.list({
       // demandas internas (§45): também as dos responsáveis da mesma área de quem consulta
       scope: { userId: ctx.principal.userId, viewAll, areaMates: viewAll ? [] : demandDomain.areaMatesOf(await taskAccess.areas(), ctx.principal.userId) },
@@ -797,8 +814,9 @@ function createTaskService(deps) {
       typeId: filters.task_type_id,
       statusIds,
       priorityId: toList(filters.priority_id),
-      assigneeId: filters.assignee_id === 'me' ? ctx.principal.userId : filters.assignee_id,
-      responsibleId: filters.responsible_id === 'me' ? ctx.principal.userId : filters.responsible_id,
+      assigneeId: people(filters.assignee_id),
+      responsibleId: people(filters.responsible_id),
+      due: filters.due ? { groups: toList(filters.due), today: filters.due_today || deps.clock.now().toISOString().slice(0, 10) } : undefined,
       tagId: filters.tag_id,
       sprintId: filters.sprint_id,
       planItemId: filters.plan_item_id,

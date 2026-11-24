@@ -105,6 +105,7 @@ import type {
   UserDto,
   UserSummaryDto,
 } from './dtos'
+import { localDay } from '@/domain/tasks'
 import {
   toAuditEntry,
   toCurrentUser,
@@ -1403,6 +1404,8 @@ const TASK_FILTERS: Record<string, string> = {
   urgency: 'urgency',
   // empresa (§46): a do projeto ou, na demanda interna, a dela
   company: 'company_id',
+  // Prazo em grupos (vencidas, hoje, próximos 7 dias…; ajuste 24/11)
+  due_date: 'due',
   // Lista de tarefas do menu (§45): "Minhas" (atribuídas + demandas pedidas ou recebidas) e Com/Sem projeto
   mine: 'mine',
   kind: 'kind',
@@ -1485,6 +1488,8 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
       })
       if (options?.projectId) filters.project_id = options.projectId
       if (options?.planItemId) filters.plan_item_id = options.planItemId
+      // o Prazo em grupos conta a partir do "hoje" de quem olha
+      if (filters.due) filters.due_today = localDay()
       if (options?.mineFirst) filters.mine_first = 'true'
       const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/tasks', {
         query: { page: query.page, perPage: query.perPage, sort: toSortParam(query.sort), search: query.search.trim() || undefined, ...filters },
