@@ -11,7 +11,7 @@ const COPY_EMAILS = {
   type: 'array',
   maxItems: 5,
   items: { type: 'string', format: 'email' },
-  description: 'e-mails em cópia: cada um recebe um e-mail com o código e o título no assunto e a descrição (só na criação; sem envio de e-mails configurado, nada sai)',
+  description: 'e-mails em cópia: cada um recebe um e-mail com o código e o título no assunto e a descrição, uma vez (sem envio de e-mails configurado, nada sai)',
 }
 
 /** Tarefas do perfil (ajuste 23/11): só a tela de quem tem o perfil; o acesso segue as permissões. */
@@ -593,6 +593,22 @@ function build() {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({ type: 'object', required: ['area_id'], properties: { area_id: { type: ['string', 'null'], description: 'área ativa de /areas' } } }),
         }),
+      },
+      '/tasks/{id}/copy': {
+        post: op(
+          '"Com cópia" numa tarefa que já existe (tarefa de projeto ou demanda interna): manda o aviso da tarefa aos endereços, uma vez — o mesmo e-mail da abertura (código e título no assunto, a descrição no corpo); quem edita a tarefa; não exige os obrigatórios do status; o histórico guarda para quem foi. Devolve copy_to = endereços que entraram na fila (vazio com o envio de e-mails desligado). Erros em fields.cc_emails: required, invalid_type, invalid_email, too_many',
+          ['tasks'],
+          {
+            200: ok('Endereços que receberam', { type: 'object', properties: { copy_to: { type: 'array', items: { type: 'string', format: 'email' } } } }),
+            400: errorResponse('VALIDATION_ERROR'),
+            403: errorResponse('FORBIDDEN'),
+            404: errorResponse('TASK_NOT_FOUND'),
+          },
+          {
+            parameters: [idParam, csrfHeader],
+            requestBody: jsonBody({ type: 'object', required: ['cc_emails'], properties: { cc_emails: COPY_EMAILS } }),
+          },
+        ),
       },
       '/demands': {
         get: op(

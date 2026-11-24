@@ -183,5 +183,10 @@ export function useTaskMutations() {
         invalidate()
       },
     }),
+    /** "Com cópia" numa tarefa que já existe (ajuste 24/11): só o e-mail sai; o histórico da tarefa recarrega. */
+    sendCopy: useMutation({
+      mutationFn: ({ id, emails }: { id: string; emails: string[] }) => tasks.sendCopy(id, emails),
+      onSuccess: (_sent, { id }) => void queryClient.invalidateQueries({ queryKey: taskKeys.history(id) }),
+    }),
   }
 }

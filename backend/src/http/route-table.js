@@ -96,6 +96,7 @@ const ROUTES = [
   ['PUT', '/api/v1/tasks/:id/it-visible', 'setTaskItVisible', JSON_LIMIT],
   ['PUT', '/api/v1/tasks/:id/urgency', 'setTaskUrgency', JSON_LIMIT],
   ['PUT', '/api/v1/tasks/:id/area', 'setTaskArea', JSON_LIMIT],
+  ['POST', '/api/v1/tasks/:id/copy', 'sendTaskCopy', JSON_LIMIT],
   ['DELETE', '/api/v1/tasks/:id', 'deleteTask'],
   // demandas internas (§45): tarefas sem projeto, pedidas a uma pessoa
   ['GET', '/api/v1/demands', 'listDemands'],

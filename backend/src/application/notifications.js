@@ -121,9 +121,10 @@ function createNotifier(deps) {
   }
 
   /**
-   * Cópia por e-mail de uma tarefa nova (ajuste 24/11/2026): um e-mail por endereço, na fila, no idioma de quem
-   * abriu. `event`: { task, project, actorId, emails, responsibleName? }. Retorna os endereços enfileirados —
-   * nenhum com o envio de e-mails desligado (a tarefa nasce do mesmo jeito).
+   * Cópia por e-mail de uma tarefa (ajuste 24/11/2026): um e-mail por endereço, na fila, no idioma de quem
+   * manda. `event`: { task, project, actorId, emails, responsibleName?, later?, requesterName? } — `later` é a
+   * cópia de uma tarefa que já existia (o texto muda e quem pediu é `requesterName`). Retorna os endereços
+   * enfileirados — nenhum com o envio de e-mails desligado (a tarefa nasce do mesmo jeito).
    */
   async function copy(repos, event) {
     const emails = event.emails || []
@@ -138,6 +139,8 @@ function createNotifier(deps) {
       appUrl: mail.appUrl,
       details: await emailDetails(event.task, event.project),
       responsible: event.responsibleName || '',
+      later: !!event.later,
+      requester: event.requesterName || '',
     })
     for (const to of emails) {
       await repos.emailOutboxRepository.enqueue({ to, kind: 'notification', subject: message.subject, html: message.html, text: message.text })

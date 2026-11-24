@@ -1306,6 +1306,33 @@ function createTaskService(deps) {
     return presentDetail(ctx, updated, project, access)
   }
 
+  /**
+   * "Com cópia" numa tarefa que já existe (ajuste 24/11/2026): manda o aviso da tarefa aos endereços, uma vez —
+   * o mesmo e-mail da abertura (código e título no assunto, a descrição no corpo). De quem edita a tarefa; como
+   * as outras ações diretas, não passa pela edição completa (não exige os obrigatórios do status) e grava no
+   * histórico para quem foi. Devolve `{ copy_to }`: os endereços que entraram na fila — vazio com o envio de
+   * e-mails desligado.
+   */
+  async function sendTaskCopy(ctx, id, input) {
+    const { task, project, access } = await loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    const raw = (input || {}).cc_emails
+    const copyTo = emailDomain.parseCopyEmails(raw)
+    if (copyTo.error) throw invalid({ cc_emails: copyTo.error })
+    if (copyTo.emails.length === 0) throw invalid({ cc_emails: 'required' })
+    const nameOf = async (userId) => {
+      const user = userId ? await deps.userRepository.findById(userId) : null
+      return user ? user.name : ''
+    }
+    const [responsibleName, requesterName] = await Promise.all([nameOf(task.demandOwnerId), nameOf(task.reporterId || task.creatorId)])
+    const copied = await deps.unitOfWork.run(async (repos) => {
+      const sent = await notifier.copy(repos, { task, project, actorId: ctx.principal.userId, emails: copyTo.emails, responsibleName, requesterName, later: true })
+      if (sent.length > 0) await audit(repos, ctx, task, 'task.updated', { copy_to: null }, { copy_to: sent.join(', ') })
+      return sent
+    })
+    return { copy_to: copied }
+  }
+
   async function deleteTask(ctx, id) {
     const { task, project, access } = await loadTask(ctx, id)
     taskDomain.assertTaskAccess(access, project, 'delete', task)
@@ -1372,7 +1399,7 @@ function createTaskService(deps) {
   }
 
   // typeLinks, checkCustomValues e customDisplay: os campos do tipo na demanda interna (application/demands.js, §45)
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, deleteTask, moveTask, summarize, typeLinks, checkCustomValues, customDisplay }
+  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, sendTaskCopy, deleteTask, moveTask, summarize, typeLinks, checkCustomValues, customDisplay }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

@@ -9,6 +9,7 @@ import type { DemandRepository, TaskRepository, TaskTypeRepository } from '@/dom
 import type { CustomField, TaskType, TaskTypeDetail, TaskTypeField } from '@/domain/task-config'
 import type { TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import type { Area, TaskPriority, TaskStatus } from '@/domain/workflow'
+import { notify } from '@/presentation/components'
 import { AppShell } from '@/presentation/layouts/AppShell'
 import { RequireAuth } from '@/features/auth/guards'
 import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/test/utils'
@@ -762,6 +763,93 @@ describe('Tarefa de projeto com quem recebe e distribui (§45)', () => {
     expect(body.assigneeId).toBeUndefined()
     expect(body.dueDate).toBeUndefined()
     expect(body.estimatedHours).toBeUndefined()
+  })
+})
+
+describe('"Com cópia" numa tarefa que já existe (ajuste 24/11)', () => {
+  const editRepos = (tasks: Partial<TaskRepository>) =>
+    fakeRepositories({
+      auth: { me: async () => makeCurrentUser(['tasks.view', 'tasks.edit', 'tasks.assign', 'projects.view']) },
+      taskTypes: { list: () => Promise.resolve([devType]), get: () => Promise.resolve({ ...devType, fields: [] }) },
+      statuses: { list: () => Promise.resolve([backlog]) },
+      priorities: { list: () => Promise.resolve([alta, media]) },
+      areas: { list: () => Promise.resolve([estrategia]) },
+      demands: { owners: () => Promise.resolve([cesar, jorge]) },
+      attachments: { list: () => Promise.resolve([]) },
+      tasks,
+    })
+
+  it('editar a demanda: o campo fica abaixo do responsável; salvar manda a cópia, diz para quem foi e lembra o endereço', async () => {
+    const task = demand()
+    const update = vi.fn<TaskRepository['update']>(() => Promise.resolve(task))
+    const sendCopy = vi.fn<TaskRepository['sendCopy']>((_id, emails) => Promise.resolve(emails))
+    const onOpenChange = vi.fn()
+    const success = vi.spyOn(notify, 'success')
+    renderRoutes([{ path: '/', element: <TaskFormDialog open task={task} onOpenChange={onOpenChange} /> }], { repositories: editRepos({ update, sendCopy }), initialPath: '/' })
+    const dialog = await screen.findByRole('dialog')
+    const copy = within(dialog).getByLabelText('Com cópia')
+    // logo depois do responsável (fixo na edição)
+    expect(within(dialog).getByText('César').compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await userEvent.type(copy, 'suporte@empresa.com{Enter}')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(sendCopy).toHaveBeenCalledOnce())
+    // primeiro salva, depois manda a cópia
+    expect(update).toHaveBeenCalledOnce()
+    expect(update.mock.invocationCallOrder[0]!).toBeLessThan(sendCopy.mock.invocationCallOrder[0]!)
+    expect(sendCopy.mock.calls[0]).toEqual(['d1', ['suporte@empresa.com']])
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    // um aviso só: para quem a cópia foi
+    expect(success.mock.calls.map(([message]) => message)).toEqual(['DEM-1: cópia enviada para suporte@empresa.com'])
+    expect(JSON.parse(window.localStorage.getItem('avanza.taskCopy.recent.u1') ?? '[]')).toContain('suporte@empresa.com')
+    success.mockRestore()
+  })
+
+  it('sem ninguém em cópia, editar só salva; o endereço recusado pelo servidor aparece no campo e a janela continua aberta', async () => {
+    const task = demand()
+    const update = vi.fn<TaskRepository['update']>(() => Promise.resolve(task))
+    const sendCopy = vi.fn<TaskRepository['sendCopy']>(() =>
+      Promise.reject(new AppError({ code: 'VALIDATION_ERROR', message: 'x', status: 400, details: { fields: { cc_emails: 'invalid_email' } } })),
+    )
+    const onOpenChange = vi.fn()
+    const success = vi.spyOn(notify, 'success')
+    renderRoutes([{ path: '/', element: <TaskFormDialog open task={task} onOpenChange={onOpenChange} /> }], { repositories: editRepos({ update, sendCopy }), initialPath: '/' })
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(sendCopy).not.toHaveBeenCalled()
+    expect(success.mock.calls.map(([message]) => message)).toEqual([i18n.t('demands.saved', { code: 'DEM-1' })])
+
+    onOpenChange.mockClear()
+    await userEvent.type(within(dialog).getByLabelText('Com cópia'), 'suporte@empresa.com{Enter}')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(sendCopy).toHaveBeenCalledOnce())
+    expect(await within(dialog).findByText(i18n.t('validation.invalid_email'))).toBeInTheDocument()
+    expect(onOpenChange).not.toHaveBeenCalled()
+    success.mockRestore()
+  })
+
+  it('tarefa de projeto: o mesmo campo na edição; com o envio de e-mails desligado, a tela avisa que a cópia não saiu', async () => {
+    const task = demand({ id: 'k7', code: 'FIN-7', title: 'Publicar o dashboard', project: { id: 'p9', key: 'FIN', name: 'Finanças' } })
+    const update = vi.fn<TaskRepository['update']>(() => Promise.resolve(task))
+    const sendCopy = vi.fn<TaskRepository['sendCopy']>(() => Promise.resolve([]))
+    const onOpenChange = vi.fn()
+    const warning = vi.spyOn(notify, 'warning')
+    const success = vi.spyOn(notify, 'success')
+    renderRoutes([{ path: '/', element: <TaskFormDialog open task={task} onOpenChange={onOpenChange} /> }], { repositories: editRepos({ update, sendCopy }), initialPath: '/' })
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: i18n.t('tasks.editTitle', { code: 'FIN-7' }) })).toBeInTheDocument()
+    const copy = within(dialog).getByLabelText('Com cópia')
+    const owner = within(dialog).getByRole('combobox', { name: /^Responsável \(recebe e distribui\)/ })
+    expect(owner.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await userEvent.type(copy, 'suporte@empresa.com{Enter}')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(sendCopy).toHaveBeenCalledOnce())
+    expect(sendCopy.mock.calls[0]).toEqual(['k7', ['suporte@empresa.com']])
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(warning).toHaveBeenCalledWith('A cópia não foi enviada: o envio de e-mails está desligado')
+    expect(success).not.toHaveBeenCalled()
+    warning.mockRestore()
+    success.mockRestore()
   })
 })
 

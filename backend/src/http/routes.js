@@ -315,6 +315,7 @@ const setTaskReport = taskAction((s, ctx, r) => s.setTaskReport(ctx, r.id, r.bod
 const setTaskItVisible = taskAction((s, ctx, r) => s.setTaskItVisible(ctx, r.id, r.body()))
 const setTaskUrgency = taskAction((s, ctx, r) => s.setTaskUrgency(ctx, r.id, r.body()))
 const setTaskArea = taskAction((s, ctx, r) => s.setTaskArea(ctx, r.id, r.body()))
+const sendTaskCopy = taskAction((s, ctx, r) => s.sendTaskCopy(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
 
 // ---------------------------------------------------------------- demandas internas (§45)
@@ -783,6 +784,7 @@ module.exports = {
   setTaskItVisible,
   setTaskUrgency,
   setTaskArea,
+  sendTaskCopy,
   deleteTask,
   listDemands,
   createDemand,

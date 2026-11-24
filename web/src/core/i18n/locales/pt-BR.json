@@ -1850,7 +1850,9 @@
       "label": "Com cópia",
       "placeholder": "email@empresa.com",
       "recent": "Usados antes:",
-      "remove": "Tirar {{email}}"
+      "remove": "Tirar {{email}}",
+      "sent": "{{code}}: cópia enviada para {{emails}}",
+      "notSent": "A cópia não foi enviada: o envio de e-mails está desligado"
     },
     "due": {
       "overdue": "Vencidas",
