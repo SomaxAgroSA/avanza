@@ -23,6 +23,7 @@ import { useDemandMutations, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
 import { CopyEmailsField } from '@/features/tasks/CopyEmailsField'
 import { useRecentCopyEmails } from '@/features/tasks/use-recent-copy-emails'
+import { useSendCopy } from '@/features/tasks/use-send-copy'
 import { companyRequired } from '@/domain/companies'
 
 export interface DemandFormDialogProps {
@@ -88,9 +89,11 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     companyId: task?.company?.id ?? '',
   }))
   const [errors, setErrors] = useState<Record<string, string>>({})
-  // "Com cópia" (ajuste 24/11): só na abertura; os endereços usados ficam lembrados neste navegador
+  // "Com cópia" (ajuste 24/11): na abertura vai junto; na edição, o aviso sai logo depois de salvar. Os
+  // endereços usados ficam lembrados neste navegador
   const [ccEmails, setCcEmails] = useState<string[]>([])
   const copy = useRecentCopyEmails()
+  const copySender = useSendCopy()
   const [openedAt] = useState(() => new Date())
   const types = useTaskTypes(false)
   const priorities = usePriorities(false)
@@ -149,7 +152,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
     })
     setValues(next)
   }
-  const pending = create.isPending || update.isPending || sendingFiles
+  const pending = create.isPending || update.isPending || copySender.pending || sendingFiles
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -217,9 +220,24 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
         },
         {
           onSuccess: (saved) => {
-            notify.success(t('demands.saved', { code: saved.code }))
-            onOpenChange(false)
-            onSaved?.(saved)
+            const done = () => {
+              onOpenChange(false)
+              onSaved?.(saved)
+            }
+            if (ccEmails.length === 0) {
+              notify.success(t('demands.saved', { code: saved.code }))
+              return done()
+            }
+            // alguém em cópia: a demanda já está salva; o aviso sai em seguida e a tela diz para quem foi
+            copySender.send(
+              saved,
+              ccEmails,
+              () => {
+                copy.remember(ccEmails)
+                done()
+              },
+              onError,
+            )
           },
           onError,
         },
@@ -373,7 +391,7 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
               options={ownerOptions}
             />
           )}
-          {!isEdit && <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />}
+          <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />
           <AppSelect
             label={t('demands.form.department')}
             required

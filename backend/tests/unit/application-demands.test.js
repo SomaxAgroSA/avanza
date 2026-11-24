@@ -182,6 +182,69 @@ describe('application/demands — abrir', () => {
     assert.equal(await codeOf(() => s.tasks.createTask(s.ctx.cesar, { project_id: s.project.id, task_type_id: s.types.dev.id, title: 'X', custom_values: { versao: '1' }, cc_emails: ['x'] })), 'VALIDATION_ERROR:{"cc_emails":"invalid_email"}')
   })
 
+  it('"Com cópia" numa tarefa que já existe (24/11): manda o aviso uma vez, de quem edita, sem exigir os obrigatórios; fica no histórico', async () => {
+    const s = await setup()
+    const { createEmailService } = require('../../src/application/email')
+    const copiesOf = (task) => s.deps.store.emailOutbox.filter((m) => m.subject.indexOf(`[${task.code}]`) === 0)
+    const updatesOf = (task) => s.deps.store.audit.filter((e) => e.entityId === task.id && e.action === 'task.updated')
+    const demand = await s.demands.createDemand(s.ctx.ana, newDemand(s, { description: 'Publicar o portal.' }))
+
+    // envio de e-mails desligado: nada sai e nada fica no histórico
+    assert.deepEqual(await s.tasks.sendTaskCopy(s.ctx.ana, demand.id, { cc_emails: ['suporte@empresa.com'] }), { copy_to: [] })
+    assert.equal(copiesOf(demand).length, 0)
+    assert.equal(updatesOf(demand).length, 0)
+
+    await createEmailService(s.deps).updateSettings(s.ctx.admin, { enabled: true, host: 'smtp.empresa.com', port: 587, sender_name: 'Avanza', sender_address: 'avanza@empresa.com', app_url: 'https://avanza.empresa.com' })
+    const notices = s.deps.store.notifications.length
+    // o responsável (César) coloca o suporte em cópia: quem pediu continua sendo a Ana
+    const sent = await s.tasks.sendTaskCopy(s.ctx.cesar, demand.id, { cc_emails: [' Suporte@Empresa.com ', 'suporte@empresa.com', 'mesa@empresa.com'] })
+    assert.deepEqual(sent, { copy_to: ['suporte@empresa.com', 'mesa@empresa.com'] })
+    const copies = copiesOf(demand)
+    assert.deepEqual(copies.map((m) => m.to), ['suporte@empresa.com', 'mesa@empresa.com'])
+    assert.equal(copies[0].subject, `[${demand.code}] Vista DMR: agregar Fecha cuenta`)
+    assert.match(copies[0].text, /César colocou você em cópia nesta demanda\./)
+    assert.match(copies[0].text, /Pedida por: Ana/)
+    assert.match(copies[0].text, /Responsável: César/)
+    assert.match(copies[0].text, /> Publicar o portal\./)
+    assert.ok(copies[0].text.includes(`https://avanza.empresa.com/tasks/${demand.id}`), 'o botão leva à tarefa')
+    const [entry] = updatesOf(demand)
+    assert.deepEqual(entry.oldValue, { copy_to: null })
+    assert.deepEqual(entry.newValue, { copy_to: 'suporte@empresa.com, mesa@empresa.com' })
+    assert.equal(entry.userId, s.users.cesar.id)
+    // é só o e-mail: a demanda não muda e ninguém ganha notificação da plataforma
+    assert.equal(s.deps.store.notifications.length, notices)
+    assert.equal((await s.tasks.getTask(s.ctx.ana, demand.id)).demand.status, 'unassigned')
+
+    // endereços: obrigatório, válidos e até 5
+    const code = (body) => codeOf(() => s.tasks.sendTaskCopy(s.ctx.cesar, demand.id, body))
+    assert.equal(await code({}), 'VALIDATION_ERROR:{"cc_emails":"required"}')
+    assert.equal(await code({ cc_emails: [] }), 'VALIDATION_ERROR:{"cc_emails":"required"}')
+    assert.equal(await code({ cc_emails: ['não-é-e-mail'] }), 'VALIDATION_ERROR:{"cc_emails":"invalid_email"}')
+    assert.equal(await code({ cc_emails: 'suporte@empresa.com' }), 'VALIDATION_ERROR:{"cc_emails":"invalid_type"}')
+    assert.equal(await code({ cc_emails: ['a', 'b', 'c', 'd', 'e', 'f'].map((n) => `${n}@empresa.com`) }), 'VALIDATION_ERROR:{"cc_emails":"too_many"}')
+    // quem não vê a demanda não manda cópia dela (nem descobre que existe)
+    assert.equal(await codeOf(() => s.tasks.sendTaskCopy(s.ctx.otto, demand.id, { cc_emails: ['x@empresa.com'] })), 'TASK_NOT_FOUND')
+    assert.equal(copiesOf(demand).length, 2)
+
+    // tarefa de projeto: a mesma cópia, mesmo com um obrigatório do tipo faltando (a edição completa exigiria)
+    const task = await s.tasks.createTask(s.ctx.cesar, { project_id: s.project.id, task_type_id: s.types.dev.id, title: 'Subir o portal', custom_values: { versao: '1' } })
+    const ambiente = await createCustomFieldService(s.deps).createField(s.ctx.admin, { label: 'Ambiente', type: 'text' })
+    const links = (await createTaskTypeService(s.deps).getType(s.ctx.admin, s.types.dev.id)).fields.map((link) => ({ field_id: link.field.id, required: link.required }))
+    await createTaskTypeService(s.deps).setTypeFields(s.ctx.admin, s.types.dev.id, links.concat([{ field_id: ambiente.id, required: true }]))
+    assert.equal(await codeOf(() => s.tasks.updateTask(s.ctx.cesar, task.id, { title: 'Subir o portal já' })), 'VALIDATION_ERROR:{"custom_values.ambiente":"required"}')
+    assert.deepEqual(await s.tasks.sendTaskCopy(s.ctx.cesar, task.id, { cc_emails: ['suporte@empresa.com'] }), { copy_to: ['suporte@empresa.com'] })
+    const [copy] = copiesOf(task)
+    assert.match(copy.text, /César colocou você em cópia nesta tarefa\./)
+    assert.match(copy.text, /Pedida por: César/)
+    assert.match(copy.text, /Projeto: CRM/)
+    assert.doesNotMatch(copy.text, /Responsável:/)
+    assert.deepEqual(updatesOf(task).at(-1).newValue, { copy_to: 'suporte@empresa.com' })
+    // quem só vê o projeto não manda
+    await s.deps.projectMemberRepository.add({ projectId: s.project.id, userId: s.users.leo.id, role: 'viewer' })
+    assert.equal(await codeOf(() => s.tasks.sendTaskCopy(s.ctx.leo, task.id, { cc_emails: ['x@empresa.com'] })), 'FORBIDDEN')
+    assert.equal(copiesOf(task).length, 1)
+  })
+
   it('exige tipo, título, responsável e departamento; responsável ativo que vê tarefas', async () => {
     const s = await setup()
     assert.equal(

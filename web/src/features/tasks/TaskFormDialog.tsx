@@ -29,6 +29,7 @@ import { usePlan } from '@/features/plan/queries'
 import { DemandFormDialog, LockedValue } from '@/features/demands/DemandFormDialog'
 import { CopyEmailsField } from './CopyEmailsField'
 import { useRecentCopyEmails } from './use-recent-copy-emails'
+import { useSendCopy } from './use-send-copy'
 import { useDemandOwners } from '@/features/demands/queries'
 
 export interface TaskFormDialogProps {
@@ -139,9 +140,11 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const { create, update } = useTaskMutations()
 
   const [draft, setDraft] = useState<Draft>(() => draftFrom(task, projectId, initial))
-  // "Com cópia" (ajuste 24/11): só na criação; os endereços usados ficam lembrados neste navegador
+  // "Com cópia" (ajuste 24/11): na criação vai junto; na edição, o aviso sai logo depois de salvar. Os endereços
+  // usados ficam lembrados neste navegador
   const [ccEmails, setCcEmails] = useState<string[]>([])
   const copy = useRecentCopyEmails()
+  const copySender = useSendCopy()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [valueErrors, setValueErrors] = useState<Record<string, string>>({})
 
@@ -254,7 +257,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       label: <LookupBadge item={item} />,
     }))
 
-  const pending = create.isPending || update.isPending || sendingFiles
+  const pending = create.isPending || update.isPending || copySender.pending || sendingFiles
 
   /** Depois de criar: envia os arquivos escolhidos nos campos. A tarefa já existe — falha não a desfaz. */
   async function sendHeldFiles(saved: TaskDetail): Promise<string[]> {
@@ -336,10 +339,26 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       }
       notify.error(errorMessage(error))
     }
-    const onSuccess = (saved: TaskDetail) => {
-      notify.success(isEdit ? t('tasks.updated', { code: saved.code }) : t('tasks.created', { code: saved.code }))
+    const done = (saved: TaskDetail) => {
       onSaved?.(saved)
       onOpenChange(false)
+    }
+    const onSuccess = (saved: TaskDetail) => {
+      notify.success(isEdit ? t('tasks.updated', { code: saved.code }) : t('tasks.created', { code: saved.code }))
+      done(saved)
+    }
+    // edição com alguém em cópia: a tarefa já está salva; o aviso sai em seguida e a tela diz para quem foi
+    const onUpdated = (saved: TaskDetail) => {
+      if (ccEmails.length === 0) return onSuccess(saved)
+      copySender.send(
+        saved,
+        ccEmails,
+        () => {
+          copy.remember(ccEmails)
+          done(saved)
+        },
+        onError,
+      )
     }
     const onCreated = async (saved: TaskDetail) => {
       setSendingFiles(true)
@@ -352,7 +371,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
       onSuccess(saved)
       if (failed.length > 0) notify.warning(t('tasks.filesNotSent', { count: failed.length, code: saved.code, names: failed.join(', ') }))
     }
-    if (task) update.mutate({ id: task.id, data }, { onSuccess, onError })
+    if (task) update.mutate({ id: task.id, data }, { onSuccess: onUpdated, onError })
     else
       create.mutate(
         {
@@ -524,7 +543,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
                 : []),
             ]}
           />
-          {!isEdit && <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />}
+          <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />
           <AppSelect
             label={t('tasks.fields.status')}
             value={draft.statusId || undefined}

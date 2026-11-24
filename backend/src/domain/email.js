@@ -202,7 +202,12 @@ const NOTICE = {
       overdue: 'Atualize o status ou ajuste o prazo.',
     },
     labels: { requester: 'Pedida por', project: 'Projeto', priority: 'Prioridade', urgency: 'Urgência', company: 'Empresa', due: 'Prazo', responsible: 'Responsável' },
-    copy: { task: '{actor} abriu uma tarefa e colocou você em cópia.', demand: '{actor} abriu uma demanda e colocou você em cópia.' },
+    copy: {
+      task: '{actor} abriu uma tarefa e colocou você em cópia.',
+      demand: '{actor} abriu uma demanda e colocou você em cópia.',
+      taskLater: '{actor} colocou você em cópia nesta tarefa.',
+      demandLater: '{actor} colocou você em cópia nesta demanda.',
+    },
     urgency: { high: 'Alta', medium: 'Média', low: 'Baixa' },
     internal: 'Demanda interna',
     button: { task: 'Ver tarefa', demand: 'Ver demanda', plan: 'Ver na gestão', other: 'Abrir' },
@@ -247,7 +252,12 @@ const NOTICE = {
       overdue: 'Update the status or adjust the deadline.',
     },
     labels: { requester: 'Requested by', project: 'Project', priority: 'Priority', urgency: 'Urgency', company: 'Company', due: 'Due', responsible: 'Owner' },
-    copy: { task: '{actor} opened a task and copied you.', demand: '{actor} opened a request and copied you.' },
+    copy: {
+      task: '{actor} opened a task and copied you.',
+      demand: '{actor} opened a request and copied you.',
+      taskLater: '{actor} copied you on this task.',
+      demandLater: '{actor} copied you on this request.',
+    },
     urgency: { high: 'High', medium: 'Medium', low: 'Low' },
     internal: 'Internal request',
     button: { task: 'View task', demand: 'View request', plan: 'View in management', other: 'Open' },
@@ -292,7 +302,12 @@ const NOTICE = {
       overdue: 'Actualiza el estado o ajusta el plazo.',
     },
     labels: { requester: 'Pedida por', project: 'Proyecto', priority: 'Prioridad', urgency: 'Urgencia', company: 'Empresa', due: 'Plazo', responsible: 'Responsable' },
-    copy: { task: '{actor} abrió una tarea y te puso en copia.', demand: '{actor} abrió una demanda y te puso en copia.' },
+    copy: {
+      task: '{actor} abrió una tarea y te puso en copia.',
+      demand: '{actor} abrió una demanda y te puso en copia.',
+      taskLater: '{actor} te puso en copia en esta tarea.',
+      demandLater: '{actor} te puso en copia en esta demanda.',
+    },
     urgency: { high: 'Alta', medium: 'Media', low: 'Baja' },
     internal: 'Demanda interna',
     button: { task: 'Ver tarea', demand: 'Ver demanda', plan: 'Ver en la gestión', other: 'Abrir' },
@@ -463,7 +478,7 @@ const MAX_COPY_EMAILS = 5
 const COPY_DESCRIPTION = 2000
 
 /**
- * Lê `cc_emails` do corpo de `POST /tasks` e `POST /demands`: ausente = sem cópia. Devolve `{ emails }` (sem
+ * Lê `cc_emails` do corpo de `POST /tasks`, `POST /demands` e `POST /tasks/{id}/copy`: ausente = sem cópia. Devolve `{ emails }` (sem
  * espaços, em minúsculas, sem repetidos) ou `{ error }` com o código de validação.
  */
 function parseCopyEmails(value) {
@@ -485,6 +500,8 @@ function parseCopyEmails(value) {
  * código e o título — quem recebe costuma ser a caixa de um sistema de chamados, que abre o chamado com o assunto
  * e o corpo; por isso a descrição vai junto (o aviso de quem recebe a tarefa não a leva).
  * `task` { id, code, title, description }; `ctx` { locale, actorName, platform, appUrl, details, responsible }.
+ * Tarefa que já existia (`ctx.later`, ajuste 24/11): o texto diz "colocou você em cópia nesta tarefa" e quem pediu
+ * é `ctx.requester` (quem abriu a tarefa, que pode não ser quem manda a cópia agora).
  */
 function renderTaskCopyEmail(task, ctx) {
   const n = NOTICE[LOCALES.indexOf(ctx.locale) >= 0 ? ctx.locale : 'pt-BR']
@@ -494,10 +511,10 @@ function renderTaskCopyEmail(task, ctx) {
   const description = String(task.description || '').trim()
   const body = layout(ctx.platform, {
     header: [ctx.platform, d.company].filter(Boolean).join('  ·  '),
-    intro: fill(d.internal ? n.copy.demand : n.copy.task, { actor }),
+    intro: fill(ctx.later ? (d.internal ? n.copy.demandLater : n.copy.taskLater) : d.internal ? n.copy.demand : n.copy.task, { actor }),
     title: task.title,
     rows: [
-      [n.labels.requester, actor],
+      [n.labels.requester, ctx.later ? ctx.requester || '' : actor],
       [n.labels.responsible, ctx.responsible || ''],
       [n.labels.project, d.internal ? n.internal : d.project || ''],
       [n.labels.priority, priority],

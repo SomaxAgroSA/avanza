@@ -1517,6 +1517,9 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     async setArea(id, areaId: string | null) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/area`, { area_id: areaId })).data)
     },
+    async sendCopy(id, emails) {
+      return (await api.post<{ copy_to: string[] }>(`${path(id)}/copy`, { cc_emails: emails })).data.copy_to
+    },
     async remove(id) {
       await api.del(path(id))
     },

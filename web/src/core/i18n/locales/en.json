@@ -1850,7 +1850,9 @@
       "label": "Copy to",
       "placeholder": "email@company.com",
       "recent": "Used before:",
-      "remove": "Remove {{email}}"
+      "remove": "Remove {{email}}",
+      "sent": "{{code}}: copy sent to {{emails}}",
+      "notSent": "The copy was not sent: email sending is off"
     },
     "due": {
       "overdue": "Overdue",

@@ -863,14 +863,15 @@ Vale para todas as listagens (o componente de tabela é um só):
 - **Barra:** os seletores e menus ficam juntos, um ao lado do outro, e depois os grupos de botões. Além das larguras fixas do AppToolbar, a barra mede a si mesma: quando não cabe, os grupos de botões viram seletores, depois "Colunas e ações" fica só com o ícone e "Limpar" só com o número — nunca corta o que está à direita.
 - **Lista de tarefas do menu:** filtros novos **Responsável** e **Atribuída a** na barra (várias pessoas ao mesmo tempo, com "Sem responsável" / "Sem atribuir"), ao lado de Status e Empresa; no funil da coluna, **Projeto** e **Prazo** em grupos (Vencidas, Hoje, Próximos 7 dias, Mais adiante, Sem prazo — pelo "hoje" de quem olha). O nome da tarefa quebra em até duas linhas e depois corta com "…" (inteiro na dica).
 
-### "Com cópia" na tarefa nova (ajuste 24/11/2026)
+### "Com cópia" na tarefa (ajustes de 24/11/2026)
 
 Ao abrir uma tarefa de projeto ou uma demanda interna, logo abaixo do responsável há o campo **Com cópia**: um ou mais e-mails (até 5), opcional. Serve para avisar quem não usa o Avanza — o caso que motivou: a caixa do suporte de TI, cujo sistema de chamados abre o chamado a partir do e-mail.
 - Cada endereço recebe **um e-mail só, na criação**: assunto `[código] título` (o sistema de chamados usa o assunto como nome), quem abriu, o responsável, projeto, prioridade, urgência, empresa, prazo, a **descrição** (até 2000 caracteres) e o botão da tarefa. Não recebe comentários nem mudanças depois, e não vira usuário nem notificação da plataforma.
 - No idioma de quem abriu. Sai pela fila de e-mails, na mesma transação da criação; com o envio de e-mails desligado, a tarefa nasce igual e nada é enviado.
 - O histórico da tarefa guarda para quem foi (`task.created` → **Com cópia**).
-- O campo só existe na criação. Os endereços usados ficam lembrados no navegador de cada pessoa ("Usados antes") para não digitar de novo.
-- API: `cc_emails` em `POST /tasks` e `POST /demands`.
+- Os endereços usados ficam lembrados no navegador de cada pessoa ("Usados antes") para não digitar de novo.
+- **Tarefa que já existe:** o mesmo campo aparece ao **editar** a tarefa ou a demanda, no mesmo lugar, sempre vazio (a cópia é um envio, não fica guardada na tarefa). Ao salvar, a tarefa é gravada e, em seguida, cada endereço recebe o mesmo e-mail da abertura, uma vez — o texto diz "colocou você em cópia nesta tarefa" e "Pedida por" continua sendo quem abriu. A tela diz para quem foi; com o envio de e-mails desligado, avisa que a cópia não saiu. De quem edita a tarefa; não exige os obrigatórios do status; o histórico guarda para quem foi (`task.updated` → **Com cópia**). Mandar de novo para o mesmo endereço manda outro e-mail (num sistema de chamados, abre outro chamado).
+- API: `cc_emails` em `POST /tasks` e `POST /demands`; `POST /tasks/{id}/copy` para a tarefa que já existe.
 
 ### Tarefas por perfil (ajustes 23 e 24/11/2026)
 
