@@ -1,6 +1,7 @@
 import { DEPENDENCY_RULES, PLAN_STATUS_CATEGORIES, PROGRESS_SOURCES, type Plan, type PlanLink, type PlanGroup, type PlanGroupSummary, type PlanItem, type PlanResource, type PlanStatus } from '@/domain/plan'
 import type { PlanFile, PlanUpdate } from '@/domain/plan-updates'
 import { toTaskViews } from '@/domain/task-views'
+import { toProjectLists } from '@/domain/project-lists'
 import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanReportDto, PlanReportItemDto, PlanUpdateDto } from './dtos'
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
@@ -108,6 +109,7 @@ export function toRoleSummary(dto: RoleDto): RoleSummary {
     description: dto.description,
     isSystem: dto.is_system,
     ongoingView: dto.ongoing_view === 'executive' || dto.ongoing_view === 'both' ? dto.ongoing_view : '',
+    projectsLists: toProjectLists(dto.projects_lists),
     ...toTaskViews({ tasksStart: dto.tasks_start, tasksList: dto.tasks_list, tasksAllBox: dto.tasks_all_box, tasksHiddenBoxes: dto.tasks_hidden_boxes }),
   }
 }

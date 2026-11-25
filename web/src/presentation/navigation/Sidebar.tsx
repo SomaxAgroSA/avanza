@@ -157,22 +157,24 @@ export function Sidebar({ items, collapsed, onNavigate, showCollapseToggle = tru
             const to = item.entry ?? item.to
             const marked = !!item.entry && (location.pathname === item.to || location.pathname.startsWith(`${item.to}/`))
             const markedClass = marked && 'bg-primary-soft font-semibold text-primary-soft-fg'
+            // grupo de uma lista só (Projetos do perfil, ajuste 25/11): "Projetos · Em andamento"
+            const label = item.detailKey ? `${t(item.labelKey)} · ${t(item.detailKey)}` : t(item.labelKey)
             return (
               <li key={item.id}>
                 {item.children ? (
                   <NavGroup item={item} collapsed={collapsed} onNavigate={onNavigate} />
                 ) : collapsed ? (
-                  <AppTooltip content={t(item.labelKey)} side="right">
+                  <AppTooltip content={label} side="right">
                     <NavLink to={to} onClick={onNavigate} className={cn(linkBase, 'relative justify-center px-0', markedClass)}>
                       {Icon && <Icon className="size-[18px]" aria-hidden />}
-                      <span className="sr-only">{t(item.labelKey)}</span>
+                      <span className="sr-only">{label}</span>
                       <NavCount badge={badges?.[item.id]} collapsed />
                     </NavLink>
                   </AppTooltip>
                 ) : (
                   <NavLink to={to} onClick={onNavigate} className={cn(linkBase, markedClass)}>
                     {Icon && <Icon className="size-[18px]" aria-hidden />}
-                    <span className="truncate">{t(item.labelKey)}</span>
+                    <span className="truncate">{label}</span>
                     <PhaseBadge phase={item.phase} />
                     <NavCount badge={badges?.[item.id]} collapsed={false} />
                   </NavLink>

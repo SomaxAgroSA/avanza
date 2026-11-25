@@ -28,6 +28,8 @@ export interface RoleDto {
   tasks_list?: string
   tasks_all_box?: string
   tasks_hidden_boxes?: string[]
+  /** Listas do menu Projetos (ajuste 25/11). */
+  projects_lists?: string[]
   permissions?: string[]
   user_count?: number
 }

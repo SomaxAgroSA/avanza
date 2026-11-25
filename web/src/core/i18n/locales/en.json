@@ -577,6 +577,11 @@
       "title": "Tasks",
       "show": "What shows",
       "start": "Tasks opens on"
+    },
+    "projects": {
+      "title": "Projects",
+      "lists": "Lists in the menu",
+      "hint": "At least one always stays. With only one, Projects opens straight on that list. Only the screen changes: the role permissions stay the same."
     }
   },
   "permissions": {
@@ -4736,7 +4741,7 @@
       "title": "Execution status",
       "count_one": "{{count}} project",
       "count_other": "{{count}} projects",
-      "bar": "Projects by execution status",
+      "chart": "Chart of projects by execution status",
       "segment": "{{label}}: {{count}} ({{percent}} %) · click to filter"
     },
     "team": {

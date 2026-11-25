@@ -577,6 +577,11 @@
       "title": "Tareas",
       "show": "Qué aparece",
       "start": "Al entrar en Tareas abre"
+    },
+    "projects": {
+      "title": "Proyectos",
+      "lists": "Listas en el menú",
+      "hint": "Siempre queda al menos una. Con una sola, Proyectos abre directo esa lista. Solo cambia la pantalla: los permisos del perfil siguen iguales."
     }
   },
   "permissions": {
@@ -4736,7 +4741,7 @@
       "title": "Estado de ejecución",
       "count_one": "{{count}} proyecto",
       "count_other": "{{count}} proyectos",
-      "bar": "Proyectos por estado de ejecución",
+      "chart": "Gráfico de proyectos por estado de ejecución",
       "segment": "{{label}}: {{count}} ({{percent}} %) · clic para filtrar"
     },
     "team": {
