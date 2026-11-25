@@ -57,11 +57,12 @@ export function TasksPage() {
   const search = params.get('search')
   const urlScope = params.get('scope')
   const [chosenScope, setScope] = useTaskListScope(urlScope === 'all' || urlScope === 'mine' ? urlScope : null)
-  // Tarefas do perfil (ajuste 23/11): "Só as suas tarefas" fica sem o "Ver todas"; sem a Lista, a Caixa de entrada
+  // "O que aparece" do perfil (§48): só "Minhas tarefas" ou só "Ver todas"; sem a Lista, a Caixa de entrada
   const { views, inbox } = useTaskViews()
   const onlyMine = views.tasksList === 'mine'
-  const scope: TaskScope = onlyMine ? 'mine' : chosenScope
-  const mineTotal = useTasksList(countQuery('mine')).data?.total
+  const onlyAll = views.tasksList === 'all'
+  const scope: TaskScope = onlyMine ? 'mine' : onlyAll ? 'all' : chosenScope
+  const mineTotal = useTasksList(countQuery('mine'), undefined, !onlyAll).data?.total
   const allTotal = useTasksList(countQuery('all'), undefined, !onlyMine).data?.total
   useEffect(() => {
     if (!urlScope) return
@@ -92,16 +93,23 @@ export function TasksPage() {
   return (
     <>
       <TasksHeader>
-        <AppSegmentedControl<TaskScope>
-          className="shrink-0"
-          label={t('taskList.scopeLabel')}
-          value={scope}
-          onValueChange={setScope}
-          options={[
-            { value: 'mine', label: label(t('taskList.mine'), mineTotal) },
-            ...(onlyMine ? [] : [{ value: 'all' as const, label: label(t('taskList.all'), allTotal) }]),
-          ]}
-        />
+        {onlyMine || onlyAll ? (
+          // um alcance só (§48): sem botões, o nome com o número
+          <h2 className="inline-flex shrink-0 items-baseline gap-1.5 px-1 text-sm font-bold text-fg" data-testid="task-scope-title">
+            {label(t(onlyMine ? 'taskList.mine' : 'taskList.all'), onlyMine ? mineTotal : allTotal)}
+          </h2>
+        ) : (
+          <AppSegmentedControl<TaskScope>
+            className="shrink-0"
+            label={t('taskList.scopeLabel')}
+            value={scope}
+            onValueChange={setScope}
+            options={[
+              { value: 'mine', label: label(t('taskList.mine'), mineTotal) },
+              { value: 'all', label: label(t('taskList.all'), allTotal) },
+            ]}
+          />
+        )}
       </TasksHeader>
       <TasksTable
         tableId="task-list"

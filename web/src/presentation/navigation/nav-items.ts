@@ -11,6 +11,7 @@ import {
 import type { PlatformFeatures } from '@/domain/entities'
 import { canAny, type PermissionCode } from '@/domain/permissions'
 import { PROJECT_LIST_PATHS, type ProjectList } from '@/domain/project-lists'
+import { shows, type ScreenKey, type ScreenSettings } from '@/domain/screens'
 
 export interface NavItem {
   id: string
@@ -112,11 +113,24 @@ export function withProjectLists(items: NavItem[], lists: readonly ProjectList[]
     const paths = lists.map((list) => PROJECT_LIST_PATHS[list])
     const children = item.children.filter((child) => child.hidden || paths.includes(child.to))
     const shown = children.filter((child) => !child.hidden)
-    if (shown.length !== 1) return { ...item, children }
+    // várias: o grupo leva à lista de entrada ("Abre em", a primeira de `lists`, §48) quando não é a primeira do menu
+    if (shown.length !== 1) return { ...item, children, ...(paths[0] && paths[0] !== shown[0]?.to ? { entry: paths[0] } : {}) }
     const only = shown[0]!
     const { children: _children, ...rest } = item
     return { ...rest, detailKey: only.labelKey, ...(only.to !== item.to ? { entry: only.to } : {}) }
   })
+}
+
+/**
+ * "O que aparece" do perfil (§48): sem os submenus de Configurações que o perfil esconde (`settings.menu.<item>`,
+ * o id do item com "_" no lugar de "-"). Só o menu: a tela segue abrindo pelo endereço para quem tem a permissão.
+ */
+export function withScreens(items: NavItem[], screens: ScreenSettings): NavItem[] {
+  return items.map((item) =>
+    item.id === 'settings' && item.children
+      ? { ...item, children: item.children.filter((child) => shows(screens, `settings.menu.${child.id.replace(/-/g, '_')}` as ScreenKey)) }
+      : item,
+  )
 }
 
 /** Filtra a navegação pelas permissões do usuário (itens sem filhos visíveis somem). */

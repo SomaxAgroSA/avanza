@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry, withProjectLists } from './nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry, withProjectLists, withScreens } from './nav-items'
 
 describe('navegação', () => {
   it('Panorama desligado na plataforma (§26.2): some do menu de todos, mesmo com executive.view; ligado, fica', () => {
@@ -106,5 +106,14 @@ describe('Projetos por perfil: listas do menu (ajuste 25/11)', () => {
     expect([all.to, all.entry, all.detailKey, all.children]).toEqual(['/projects', undefined, 'nav.projectsAll', undefined])
     // os outros itens não mudam
     expect(withProjectLists(items, ['ongoing']).find((item) => item.id === 'tasks')).toEqual(items.find((item) => item.id === 'tasks'))
+  })
+})
+
+describe('submenus de Configurações escondidos pelo perfil (§48)', () => {
+  it('saem do menu; os outros grupos não mudam', () => {
+    const items = withScreens(visibleNavItems(['settings.manage', 'audit.view', 'projects.view']), { hidden: ['settings.menu.icons', 'settings.menu.dependency_areas'], starts: {} })
+    const settings = items.find((item) => item.id === 'settings')!
+    expect(settings.children!.map((child) => child.id)).toEqual(['task-types', 'custom-fields', 'statuses', 'priorities', 'areas', 'tags', 'audit'])
+    expect(items.find((item) => item.id === 'projects')!.children!.length).toBeGreaterThan(1)
   })
 })

@@ -1,9 +1,9 @@
 /**
- * Tarefas por perfil (ajustes 23 e 24/11/2026), escolhido em Controle de acesso → Perfis — só a tela: cada
- * perfil vê o que precisa, sem se perder (o que a pessoa pode fazer continua nas permissões). No perfil marca-se
- * o que aparece (a Lista e cada caixa da Caixa de entrada) e onde o menu Tarefas abre. As listas fechadas são as
- * do servidor (backend/src/domain/permissions.js#TASK_VIEWS e #TASK_HIDDEN_BOXES).
+ * Tarefas por perfil (ajustes 23 e 24/11/2026), hoje parte do "O que aparece" do perfil (§48, domain/screens.ts):
+ * a Lista, o alcance dela, as caixas da Caixa de entrada e onde o menu Tarefas abre. Só a tela: o que a pessoa pode
+ * fazer continua nas permissões. `taskViewsOf` traduz o "O que aparece" para as regras desta tela.
  */
+import { screenKey, shows, startItem, type ScreenSettings } from './screens'
 
 /** Caixas da Caixa de entrada, na ordem da tela. */
 export const INBOX_BOXES = ['received', 'assigned', 'requested', 'all'] as const
@@ -14,8 +14,11 @@ export type PersonalBox = (typeof PERSONAL_BOXES)[number]
 
 /** Onde o menu Tarefas abre: '' = Lista (como antes); 'inbox' = Recebidas; os demais, a caixa do nome. */
 export type TasksStart = '' | 'inbox' | 'inbox_assigned' | 'inbox_requested' | 'inbox_all'
-/** A Lista: '' = todas as que a pessoa pode ver (como antes); 'mine' = só "Minhas tarefas"; 'hidden' = sem a Lista. */
-export type TasksList = '' | 'mine' | 'hidden'
+/**
+ * A Lista: '' = "Minhas tarefas" e "Ver todas" (como antes); 'mine' = só "Minhas tarefas"; 'all' = só "Ver todas";
+ * 'hidden' = sem a Lista.
+ */
+export type TasksList = '' | 'mine' | 'all' | 'hidden'
 /** A caixa Todas da Caixa de entrada (que exige `projects.view_all`): '' = visível; 'hidden' = escondida. */
 export type TasksAllBox = '' | 'hidden'
 
@@ -27,10 +30,6 @@ export interface TaskViews {
   tasksHiddenBoxes: PersonalBox[]
 }
 
-export const TASKS_START_VALUES: readonly TasksStart[] = ['', 'inbox', 'inbox_assigned', 'inbox_requested', 'inbox_all']
-export const TASKS_LIST_VALUES: readonly TasksList[] = ['', 'mine', 'hidden']
-export const TASKS_ALL_BOX_VALUES: readonly TasksAllBox[] = ['', 'hidden']
-
 /** Como antes dos ajustes (perfil sem escolha). */
 export const DEFAULT_TASK_VIEWS: TaskViews = { tasksStart: '', tasksList: '', tasksAllBox: '', tasksHiddenBoxes: [] }
 
@@ -39,16 +38,21 @@ export const START_BOX: Record<Exclude<TasksStart, ''>, InboxBox> = { inbox: 're
 /** A entrada de cada caixa. */
 export const BOX_START: Record<InboxBox, Exclude<TasksStart, ''>> = { received: 'inbox', assigned: 'inbox_assigned', requested: 'inbox_requested', all: 'inbox_all' }
 
-const pick = <T extends string>(values: readonly T[], value: unknown): T => (values.includes(value as T) ? (value as T) : values[0]!)
-
-/** Os ajustes de um perfil (da API ou da sessão), com o padrão para o que faltar ou vier desconhecido. */
-export function toTaskViews(source: { tasksStart?: unknown; tasksList?: unknown; tasksAllBox?: unknown; tasksHiddenBoxes?: unknown } | null | undefined): TaskViews {
-  const hidden = Array.isArray(source?.tasksHiddenBoxes) ? source.tasksHiddenBoxes : []
+/**
+ * As Tarefas do "O que aparece" do perfil (§48): `tasks.screens` (Lista, Caixa de entrada), `tasks.scopes`
+ * (Minhas, Ver todas), `tasks.boxes` e o "Abre em" de `tasks.screens` e `tasks.boxes`. Sem a Caixa de entrada,
+ * nenhuma caixa.
+ */
+export function taskViewsOf(screens: ScreenSettings): TaskViews {
+  const list = shows(screens, 'tasks.screens.list')
+  const inbox = shows(screens, 'tasks.screens.inbox')
+  const tasksList: TasksList = !list ? 'hidden' : !shows(screens, 'tasks.scopes.all') ? 'mine' : !shows(screens, 'tasks.scopes.mine') ? 'all' : ''
+  const box = startItem(screens, 'tasks.boxes') ?? 'received'
   return {
-    tasksStart: pick(TASKS_START_VALUES, source?.tasksStart),
-    tasksList: pick(TASKS_LIST_VALUES, source?.tasksList),
-    tasksAllBox: pick(TASKS_ALL_BOX_VALUES, source?.tasksAllBox),
-    tasksHiddenBoxes: PERSONAL_BOXES.filter((box) => hidden.includes(box)),
+    tasksStart: startItem(screens, 'tasks.screens') === 'inbox' ? BOX_START[box] : '',
+    tasksList,
+    tasksAllBox: inbox && shows(screens, 'tasks.boxes.all') ? '' : 'hidden',
+    tasksHiddenBoxes: PERSONAL_BOXES.filter((b) => !inbox || !shows(screens, screenKey('tasks.boxes', b))),
   }
 }
 
@@ -90,37 +94,6 @@ export function inboxPath(views: TaskViews, seesAll: boolean): string {
 export function tasksEntryPath(views: TaskViews, seesAll: boolean): string {
   if (views.tasksStart === '' && views.tasksList !== 'hidden') return '/tasks'
   return inboxPath(views, seesAll)
-}
-
-/** As telas de Tarefas que o perfil marca em "O que aparece": a Lista e cada caixa, na ordem da tela. */
-export const TASK_SCREENS = ['list', ...INBOX_BOXES] as const
-export type TaskScreen = (typeof TASK_SCREENS)[number]
-
-export const screenStart = (screen: TaskScreen): TasksStart => (screen === 'list' ? '' : BOX_START[screen])
-export const startScreen = (start: TasksStart): TaskScreen => (start === '' ? 'list' : START_BOX[start])
-
-/** As telas marcadas no perfil (o que ele escolheu; ver de fato a Todas ainda exige `projects.view_all`). */
-export function shownScreens(views: TaskViews): TaskScreen[] {
-  return TASK_SCREENS.filter((screen) =>
-    screen === 'list' ? views.tasksList !== 'hidden' : screen === 'all' ? views.tasksAllBox !== 'hidden' : !views.tasksHiddenBoxes.includes(screen),
-  )
-}
-
-/**
- * Marca ou desmarca uma tela no perfil. Sempre fica ao menos uma (desmarcar a última não muda nada) e a
- * entrada acompanha: se a tela em que o menu abria saiu, passa a abrir na primeira marcada.
- */
-export function toggleScreen(views: TaskViews, screen: TaskScreen, on: boolean): TaskViews {
-  const shown = shownScreens(views)
-  if (shown.includes(screen) === on || (!on && shown.length === 1)) return views
-  const next: TaskViews =
-    screen === 'list'
-      ? { ...views, tasksList: on ? '' : 'hidden' }
-      : screen === 'all'
-        ? { ...views, tasksAllBox: on ? '' : 'hidden' }
-        : { ...views, tasksHiddenBoxes: PERSONAL_BOXES.filter((box) => (box === screen ? !on : views.tasksHiddenBoxes.includes(box))) }
-  const left = shownScreens(next)
-  return left.includes(startScreen(next.tasksStart)) ? next : { ...next, tasksStart: screenStart(left[0]!) }
 }
 
 /**

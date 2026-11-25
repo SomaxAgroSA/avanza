@@ -5,6 +5,7 @@ import { Archive, ArchiveRestore, ArrowLeft, Copy, ExternalLink, FolderSearch, F
 import { isAppError } from '@/core/errors/app-error'
 import {
   canOpenSection,
+  firstProjectSection,
   legacyProjectTab,
   projectPath,
   sectionFromPath,
@@ -22,6 +23,7 @@ import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCopy } from '@/presentation/common/use-copy'
 import { useSession } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 import { PROJECT_ICON_COMPONENTS, coverHeroStyle } from './project-theme'
 import { ProjectAvatar, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
@@ -109,7 +111,9 @@ function ProjectDetail({ project }: { project: Project }) {
   const permissions = current?.permissions ?? []
   // Responsável TI (§33): só o resumo e, se o perfil liberar, a Ficha; os demais, as seções do perfil (§35)
   const it = isItRole(project)
-  const access = { manage: caps.transfer || caps.archive || caps.delete, sections: caps.sections, it }
+  // as abas e as visões que o perfil esconde ("O que aparece" §48) também saem
+  const screens = useScreens().settings
+  const access = { manage: caps.transfer || caps.archive || caps.delete, sections: caps.sections, it, screens }
   const section = sectionFromPath(pathname, project.id) ?? 'overview'
   const label = sectionLabel(section, project, t)
   useDocumentTitle(label ? `${label} · ${project.name}` : project.name)
@@ -128,16 +132,19 @@ function ProjectDetail({ project }: { project: Project }) {
   // endereços antigos com a aba na query (?tab=plan, ?tab=members…): vão para a aba nova, com o resto da query
   if (params.has('tab')) {
     const legacy = legacyProjectTab(params.get('tab'))
-    const target = legacy && canOpenSection(legacy.section, permissions, access) ? legacy : { section: 'overview' as const, params: {} }
+    const target = legacy && canOpenSection(legacy.section, permissions, access) ? legacy : { section: firstProjectSection(permissions, access), params: {} }
     const next = new URLSearchParams(params)
     next.delete('tab')
     Object.entries(target.params).forEach(([key, value]) => next.set(key, value))
     return <Navigate to={projectPath(project.id, target.section, next)} replace />
   }
-  // aba que a pessoa não pode abrir (link antigo, permissão retirada): fica na visão geral
-  if (!canOpenSection(section, permissions, access)) return <Navigate to={projectPath(project.id)} replace />
+  // aba que a pessoa não pode abrir (link antigo, permissão retirada, aba escondida no perfil): vai para a primeira que vê
+  if (!canOpenSection(section, permissions, access)) {
+    const first = firstProjectSection(permissions, access)
+    if (first !== section) return <Navigate to={projectPath(project.id, first)} replace />
+  }
 
-  const taskViews = visibleTaskViews(permissions)
+  const taskViews = visibleTaskViews(permissions, screens)
   const tabPath: Record<ProjectTab, string> = {
     overview: projectPath(project.id),
     charter: projectPath(project.id, 'charter'),

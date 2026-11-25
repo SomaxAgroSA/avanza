@@ -66,117 +66,65 @@ describe('application/roles', () => {
     })
   })
 
-  it('§41: vista de Em andamento do perfil: padrão Gestão, muda com permissions.manage e fica no histórico', async () => {
-    const deps = createFakeDeps()
-    const roles = createRoleService(deps)
-    const admin = await ctxFor(deps, 'ADMIN')
-    const viewer = await deps.roleRepository.findByCode('VIEWER')
-    assert.equal((await roles.getRole(admin, viewer.id)).ongoing_view, '')
-
-    const saved = await roles.updateRole(admin, viewer.id, { name: viewer.name, ongoing_view: 'executive' })
-    assert.equal(saved.ongoing_view, 'executive')
-    const entry = deps.store.audit.at(-1)
-    assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['role.updated', { ongoing_view: '' }, { ongoing_view: 'executive' }])
-    assert.equal((await roles.getRole(admin, viewer.id)).ongoing_view, 'executive')
-
-    // sem mudança: não grava nada no histórico
-    const count = deps.store.audit.length
-    await roles.updateRole(admin, viewer.id, { name: viewer.name, ongoing_view: 'executive' })
-    assert.equal(deps.store.audit.length, count)
-
-    // omitir o campo não o apaga
-    assert.equal((await roles.updateRole(admin, viewer.id, { name: 'Consulta' })).ongoing_view, 'executive')
-    assert.equal((await roles.updateRole(admin, viewer.id, { name: 'Consulta', ongoing_view: '' })).ongoing_view, '')
-
-    await assert.rejects(() => roles.updateRole(admin, viewer.id, { name: 'Consulta', ongoing_view: 'tudo' }), { code: 'VALIDATION_ERROR' })
-    await assert.rejects(async () => roles.updateRole(await ctxFor(deps, 'MANAGER'), viewer.id, { name: 'X', ongoing_view: 'executive' }), { code: 'FORBIDDEN' })
-  })
-
-  it('Tarefas do perfil (23/11): onde o menu abre, a Lista e a caixa Todas; padrão como antes, auditados', async () => {
+  it('§48 "O que aparece": padrão tudo visível; escondidas e "Abre em" mudam com permissions.manage e ficam no histórico', async () => {
     const deps = createFakeDeps()
     const roles = createRoleService(deps)
     const admin = await ctxFor(deps, 'ADMIN')
     const manager = await deps.roleRepository.findByCode('MANAGER')
     const before = await roles.getRole(admin, manager.id)
-    assert.deepEqual([before.tasks_start, before.tasks_list, before.tasks_all_box], ['', '', ''])
+    assert.deepEqual([before.hidden_screens, before.screen_starts], [[], {}])
 
-    const saved = await roles.updateRole(admin, manager.id, { name: manager.name, tasks_start: 'inbox_all', tasks_list: 'mine' })
-    assert.deepEqual([saved.tasks_start, saved.tasks_list, saved.tasks_all_box], ['inbox_all', 'mine', ''])
+    // escondidas na ordem do catálogo e sem repetidas; no histórico, como na API
+    const saved = await roles.updateRole(admin, manager.id, {
+      name: manager.name,
+      hidden_screens: ['tasks.views.timeline', 'projects.lists.all', 'projects.lists.all'],
+      screen_starts: { 'projects.lists': 'ongoing' },
+    })
+    assert.deepEqual([saved.hidden_screens, saved.screen_starts], [['projects.lists.all', 'tasks.views.timeline'], { 'projects.lists': 'ongoing' }])
     const entry = deps.store.audit.at(-1)
-    assert.deepEqual([entry.oldValue, entry.newValue], [{ tasks_start: '', tasks_list: '' }, { tasks_start: 'inbox_all', tasks_list: 'mine' }])
+    assert.deepEqual(
+      [entry.action, entry.oldValue, entry.newValue],
+      ['role.updated', { hidden_screens: [], screen_starts: {} }, { hidden_screens: ['projects.lists.all', 'tasks.views.timeline'], screen_starts: { 'projects.lists': 'ongoing' } }],
+    )
 
-    // omitir não apaga; cada um aceita só a lista fechada
-    const kept = await roles.updateRole(admin, manager.id, { name: manager.name, tasks_all_box: 'hidden' })
-    assert.deepEqual([kept.tasks_start, kept.tasks_list, kept.tasks_all_box], ['inbox_all', 'mine', 'hidden'])
-    for (const bad of [{ tasks_start: 'kanban' }, { tasks_list: 'all' }, { tasks_all_box: 'on' }]) {
-      await assert.rejects(() => roles.updateRole(admin, manager.id, Object.assign({ name: manager.name }, bad)), { code: 'VALIDATION_ERROR' })
-    }
-
-    const created = await roles.createRole(admin, { code: 'diretorio', name: 'Diretório', tasks_start: 'inbox_all', tasks_list: 'hidden' })
-    assert.deepEqual([created.tasks_start, created.tasks_list, created.tasks_all_box], ['inbox_all', 'hidden', ''])
-    assert.equal(deps.store.audit.at(-1).newValue.tasks_list, 'hidden')
-
-    // caixas da Caixa de entrada (24/11): o perfil esconde as pessoais e pode abrir em qualquer uma
-    assert.deepEqual(before.tasks_hidden_boxes, [])
-    const boxes = await roles.updateRole(admin, manager.id, { name: manager.name, tasks_start: 'inbox_requested', tasks_hidden_boxes: ['assigned', 'received', 'assigned'] })
-    assert.deepEqual([boxes.tasks_start, boxes.tasks_hidden_boxes], ['inbox_requested', ['received', 'assigned']])
-    assert.deepEqual(deps.store.audit.at(-1).newValue, { tasks_start: 'inbox_requested', tasks_hidden_boxes: 'received,assigned' })
+    // sem mudança, nada no histórico; omitir não apaga
     const count = deps.store.audit.length
-    await roles.updateRole(admin, manager.id, { name: manager.name, tasks_hidden_boxes: ['received', 'assigned'] })
-    assert.equal(deps.store.audit.length, count, 'sem mudança, nada no histórico')
-    assert.deepEqual((await roles.updateRole(admin, manager.id, { name: manager.name, tasks_hidden_boxes: [] })).tasks_hidden_boxes, [])
-    for (const bad of [{ tasks_hidden_boxes: ['all'] }, { tasks_hidden_boxes: 'received' }]) {
-      await assert.rejects(() => roles.updateRole(admin, manager.id, Object.assign({ name: manager.name }, bad)), { code: 'VALIDATION_ERROR' })
-    }
-  })
-
-  it('Projetos do perfil (25/11): listas do menu; padrão todas, sempre ao menos uma, auditadas', async () => {
-    const deps = createFakeDeps()
-    const roles = createRoleService(deps)
-    const admin = await ctxFor(deps, 'ADMIN')
-    const manager = await deps.roleRepository.findByCode('MANAGER')
-    const all = ['all', 'ongoing', 'finished', 'archived']
-    assert.deepEqual((await roles.getRole(admin, manager.id)).projects_lists, all, 'sem escolha: as quatro, como antes')
-
-    // na ordem do menu e sem repetidas; no histórico, como na API
-    const saved = await roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: ['archived', 'ongoing', 'ongoing'] })
-    assert.deepEqual(saved.projects_lists, ['ongoing', 'archived'])
-    const entry = deps.store.audit.at(-1)
-    assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['role.updated', { projects_lists: all }, { projects_lists: ['ongoing', 'archived'] }])
-
-    // sem mudança, nada no histórico; omitir não muda
-    const count = deps.store.audit.length
-    await roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: ['ongoing', 'archived'] })
-    assert.equal((await roles.updateRole(admin, manager.id, { name: manager.name })).projects_lists.length, 2)
+    await roles.updateRole(admin, manager.id, { name: manager.name, hidden_screens: ['tasks.views.timeline', 'projects.lists.all'] })
+    assert.deepEqual((await roles.updateRole(admin, manager.id, { name: manager.name })).screen_starts, { 'projects.lists': 'ongoing' })
     assert.equal(deps.store.audit.length, count)
 
-    // marcar as quatro volta ao padrão
-    assert.deepEqual((await roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: all.slice().reverse() })).projects_lists, all)
-    assert.equal((await deps.roleRepository.findById(manager.id)).projectsLists, '')
+    // esconder o item do "Abre em" tira a entrada (abre no primeiro visível)
+    const hidden = await roles.updateRole(admin, manager.id, { name: manager.name, hidden_screens: ['projects.lists.ongoing'] })
+    assert.deepEqual([hidden.hidden_screens, hidden.screen_starts], [['projects.lists.ongoing'], {}])
+    assert.deepEqual(deps.store.audit.at(-1).newValue, { hidden_screens: ['projects.lists.ongoing'], screen_starts: {} })
 
-    // nenhuma, desconhecida ou fora de lista: recusado
-    for (const bad of [[], ['mine'], ['ongoing', 'kanban'], 'ongoing']) {
-      await assert.rejects(() => roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: bad }), { code: 'VALIDATION_ERROR' })
+    // recusados: chave desconhecida, grupo todo escondido, "Abre em" fora do grupo ou num item escondido
+    for (const bad of [
+      { hidden_screens: ['projects.lists.mine'] },
+      { hidden_screens: ['tasks.views.list', 'tasks.views.timeline'] },
+      { hidden_screens: 'projects.lists.all' },
+      { screen_starts: { 'docs.actions': 'pdf' } },
+      { screen_starts: { 'projects.lists': 'ongoing' } },
+      { screen_starts: [] },
+    ]) {
+      await assert.rejects(() => roles.updateRole(admin, manager.id, Object.assign({ name: manager.name }, bad)), { code: 'VALIDATION_ERROR' }, JSON.stringify(bad))
     }
-
-    const created = await roles.createRole(admin, { code: 'CHEFIA', name: 'Chefia', projects_lists: ['ongoing'] })
-    assert.deepEqual(created.projects_lists, ['ongoing'])
-    assert.deepEqual(deps.store.audit.at(-1).newValue.projects_lists, ['ongoing'])
-    assert.deepEqual((await roles.createRole(admin, { code: 'OUTRO', name: 'Outro' })).projects_lists, all)
+    await assert.rejects(async () => roles.updateRole(await ctxFor(deps, 'MANAGER'), manager.id, { name: 'X', hidden_screens: [] }), { code: 'FORBIDDEN' })
   })
 
-  it('§41: SUPER_ADMIN continua imutável (fica em Gestão) e o perfil novo aceita a vista', async () => {
+  it('§48: SUPER_ADMIN continua imutável e o perfil novo vê tudo ou já vem com o que esconder (auditado)', async () => {
     const deps = createFakeDeps()
     const roles = createRoleService(deps)
     const admin = await ctxFor(deps, 'ADMIN')
     const sa = await deps.roleRepository.findByCode('SUPER_ADMIN')
-    await assert.rejects(() => roles.updateRole(admin, sa.id, { name: sa.name, ongoing_view: 'executive' }), { code: 'ROLE_IMMUTABLE' })
-    assert.equal((await roles.getRole(admin, sa.id)).ongoing_view, '')
+    await assert.rejects(() => roles.updateRole(admin, sa.id, { name: sa.name, hidden_screens: ['docs.actions.pdf'] }), { code: 'ROLE_IMMUTABLE' })
+    assert.deepEqual((await roles.getRole(admin, sa.id)).hidden_screens, [])
 
-    const created = await roles.createRole(admin, { code: 'DIRETORIA', name: 'Diretoria', ongoing_view: 'executive' })
-    assert.equal(created.ongoing_view, 'executive')
-    assert.equal((await roles.createRole(admin, { code: 'OUTRA', name: 'Outra' })).ongoing_view, '')
-    await assert.rejects(() => roles.createRole(admin, { code: 'RUIM', name: 'Ruim', ongoing_view: 'x' }), { code: 'VALIDATION_ERROR' })
+    assert.deepEqual((await roles.createRole(admin, { code: 'OUTRO', name: 'Outro' })).hidden_screens, [])
+    const created = await roles.createRole(admin, { code: 'diretoria', name: 'Diretoria', hidden_screens: ['projects.ongoing_views.management'], screen_starts: { 'tasks.screens': 'inbox' } })
+    assert.deepEqual([created.hidden_screens, created.screen_starts], [['projects.ongoing_views.management'], { 'tasks.screens': 'inbox' }])
+    assert.deepEqual(deps.store.audit.at(-1).newValue.hidden_screens, ['projects.ongoing_views.management'])
+    await assert.rejects(() => roles.createRole(admin, { code: 'RUIM', name: 'Ruim', screen_starts: { 'tasks.screens': 'inbox' }, hidden_screens: ['tasks.screens.inbox'] }), { code: 'VALIDATION_ERROR' })
   })
 
   it('não exclui perfil de sistema nem perfil em uso', async () => {

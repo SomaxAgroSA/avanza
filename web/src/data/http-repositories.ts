@@ -389,16 +389,14 @@ export function createHttpUserRepository(api: ApiClient): UserRepository {
   }
 }
 
-/** Corpo do perfil na API: os ajustes de tela com o nome do servidor (só os que vieram; sem o campo, não muda). */
+/** Corpo do perfil na API: o "O que aparece" com o nome do servidor (só se veio; sem o campo, não muda). */
 function roleBody(input: Partial<RoleInputData>): Record<string, unknown> {
-  const { ongoingView, tasksStart, tasksList, tasksAllBox, tasksHiddenBoxes, projectsLists, ...rest } = input
+  const { screens, ...rest } = input
   const body: Record<string, unknown> = { ...rest }
-  if (ongoingView !== undefined) body.ongoing_view = ongoingView
-  if (tasksStart !== undefined) body.tasks_start = tasksStart
-  if (tasksList !== undefined) body.tasks_list = tasksList
-  if (tasksAllBox !== undefined) body.tasks_all_box = tasksAllBox
-  if (tasksHiddenBoxes !== undefined) body.tasks_hidden_boxes = tasksHiddenBoxes
-  if (projectsLists !== undefined) body.projects_lists = projectsLists
+  if (screens !== undefined) {
+    body.hidden_screens = screens.hidden
+    body.screen_starts = screens.starts
+  }
   return body
 }
 

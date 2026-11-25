@@ -6,7 +6,7 @@ import type { TaskRepository } from '@/domain/repositories'
 import { OPEN_TASK_CATEGORIES, type TaskSummary } from '@/domain/tasks'
 import type { TaskPriority, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
-import type { TaskViews } from '@/domain/task-views'
+import type { ScreenKey } from '@/domain/screens'
 import { TasksPage } from './TasksPage'
 
 beforeAll(async () => {
@@ -80,7 +80,7 @@ function setup(permissions = ['tasks.view', 'tasks.list', 'tasks.create', 'tasks
 }
 
 describe('Lista — Tarefas do perfil (ajuste 23/11)', () => {
-  function setupViews(views: Partial<TaskViews>, initialPath = '/tasks') {
+  function setupViews(hidden: ScreenKey[], initialPath = '/tasks') {
     const list = vi.fn<TaskRepository['list']>((query) => Promise.resolve({ items: query.perPage === 1 ? [] : [mine], page: 1, perPage: 20, total: 1, totalPages: 1 }))
     const current = makeCurrentUser(['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'])
     renderRoutes(
@@ -90,7 +90,7 @@ describe('Lista — Tarefas do perfil (ajuste 23/11)', () => {
       ],
       {
         repositories: fakeRepositories({
-          auth: { me: async () => ({ ...current, role: current.role && { ...current.role, ...views } }) },
+          auth: { me: async () => ({ ...current, role: current.role && { ...current.role, screens: { hidden, starts: {} } } }) },
           statuses: { list: () => Promise.resolve([backlog, done]) },
           priorities: { list: () => Promise.resolve([alta, media]) },
           areas: { list: () => Promise.resolve([]) },
@@ -102,18 +102,17 @@ describe('Lista — Tarefas do perfil (ajuste 23/11)', () => {
     return { list }
   }
 
-  it('"Só as suas tarefas": sem "Ver todas" (nem por ?scope=all), mesmo vendo todos os projetos; só pede mine=true', async () => {
-    const { list } = setupViews({ tasksList: 'mine' }, '/tasks?scope=all')
-    // a sessão (com o perfil) chega depois da primeira pintura
-    await waitFor(() =>
-      expect(within(screen.getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).getAllByRole('radio').map((r) => r.textContent?.replace(/\d+$/, ''))).toEqual(['Minhas tarefas']),
-    )
+  it('"Só as suas tarefas" (§48, tasks.scopes.all escondido): sem "Ver todas" (nem por ?scope=all), mesmo vendo todos os projetos; só pede mine=true', async () => {
+    const { list } = setupViews(['tasks.scopes.all'], '/tasks?scope=all')
+    // a sessão (com o perfil) chega depois da primeira pintura; com um alcance só, sem botões: o nome com o número
+    await waitFor(() => expect(screen.getByTestId('task-scope-title').textContent?.replace(/\d+$/, '')).toBe('Minhas tarefas'))
+    expect(screen.queryByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).toBeNull()
     // a tabela, já com o perfil, pede só as dela
     await waitFor(() => expect(list.mock.calls.filter(([query]) => query.perPage !== 1).at(-1)?.[0].filters.mine).toBe('true'))
   })
 
   it('Lista oculta: /tasks leva à Caixa de entrada', async () => {
-    setupViews({ tasksList: 'hidden' })
+    setupViews(['tasks.screens.list'])
     expect(await screen.findByText('Caixa de entrada aberta')).toBeInTheDocument()
   })
 })

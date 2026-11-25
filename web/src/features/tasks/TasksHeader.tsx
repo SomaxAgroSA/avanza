@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { AppButton, AppNavTabs, AppToolbar } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useCan } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 import { useDemandBadge } from '@/features/demands/queries'
 import { useTaskViews } from './use-task-views'
 import { TaskFormDialog, type TaskKindChoice } from './TaskFormDialog'
@@ -34,6 +35,10 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
   // duas (com uma só, não há o que escolher); a aba Caixa de entrada abre na caixa do perfil
   const { views, boxes, inbox } = useTaskViews()
   const showTabs = views.tasksList !== 'hidden' && boxes.length > 0
+  // botões de criar do perfil (§48): só a tela — a paleta de comandos (`?new=`) continua abrindo o formulário
+  const screens = useScreens()
+  const createProject = canCreate && screens.shows('tasks.create.project_task')
+  const createDemand = canCreate && screens.shows('tasks.create.internal_demand')
 
   return (
     <>
@@ -69,10 +74,10 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
           />
         )}
         {children}
-        {canCreate && (
+        {(createProject || createDemand) && (
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <CreateButton full={t('demands.newProjectTask')} short={t('demands.newProjectTaskShort')} onClick={() => setCreating('project')} />
-            <CreateButton full={t('demands.newDemand')} short={t('demands.newDemandShort')} onClick={() => setCreating('demand')} />
+            {createProject && <CreateButton full={t('demands.newProjectTask')} short={t('demands.newProjectTaskShort')} onClick={() => setCreating('project')} />}
+            {createDemand && <CreateButton full={t('demands.newDemand')} short={t('demands.newDemandShort')} onClick={() => setCreating('demand')} />}
           </div>
         )}
       </AppToolbar>

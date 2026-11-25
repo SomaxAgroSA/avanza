@@ -30,7 +30,8 @@ import {
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCopy } from '@/presentation/common/use-copy'
-import { useCan, useSession } from '@/features/auth/session'
+import { useCan } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 import { ProjectAvatar, ProjectPriorityLabel, ProjectStatusBadge } from './project-visuals'
 import { ProjectFormDialog } from './ProjectFormDialog'
 import { DeleteProjectDialog } from './DeleteProjectDialog'
@@ -70,18 +71,21 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
   const errorMessage = useErrorMessage()
   const copy = useCopy()
   const canCreate = useCan('projects.create')
-  // Vista de En marcha do perfil (§41): Direção e gerência = painel de consulta; senão, a lista de gestão de sempre
-  const { current: session } = useSession()
-  const roleView = session?.role?.ongoingView
-  // perfil com as duas vistas: seletor na tela; abre em Direção e lembra a última escolha neste navegador
-  const canChoose = view === 'ongoing' && roleView === 'both'
-  const [chosen, setChosen] = useState<'executive' | 'management'>(() => {
+  // Vistas de Em andamento do perfil ("O que aparece" §48, antes §41): Gestão e/ou Direção e gerência (painel de consulta)
+  const screens = useScreens()
+  const ongoingViews = screens.visible('projects.ongoing_views')
+  // perfil com as duas vistas: seletor na tela; abre no "Abre em" do perfil e lembra a última escolha neste navegador
+  const canChoose = view === 'ongoing' && ongoingViews.length > 1
+  const [stored, setChosen] = useState<'executive' | 'management' | null>(() => {
     try {
-      return window.localStorage.getItem(ONGOING_VIEW_KEY) === 'management' ? 'management' : 'executive'
+      const value = window.localStorage.getItem(ONGOING_VIEW_KEY)
+      return value === 'management' || value === 'executive' ? value : null
     } catch {
-      return 'executive'
+      return null
     }
   })
+  // sem escolha guardada: o "Abre em" do perfil
+  const chosen = stored ?? screens.start('projects.ongoing_views') ?? 'management'
   const choose = (next: 'executive' | 'management') => {
     setChosen(next)
     try {
@@ -90,10 +94,11 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
       /* sem armazenamento: vale só nesta visita */
     }
   }
-  const direction = view === 'ongoing' && (roleView === 'executive' || (canChoose && chosen === 'executive'))
+  const direction = view === 'ongoing' && (canChoose ? chosen === 'executive' : ongoingViews[0] === 'executive')
   const [panel, setPanel] = useState<PanelFilter>(DEFAULT_PANEL)
   // Equipo ahora: quién está trabajando en cada proyecto (solo en las listas de proyectos en marcha)
-  const showActivity = useCan('tasks.view') && view !== 'archived' && view !== 'finished'
+  // em Em andamento, só se o perfil mostra o bloco "Equipe agora" (§48)
+  const showActivity = useCan('tasks.view') && view !== 'archived' && view !== 'finished' && (view !== 'ongoing' || screens.shows('projects.blocks.team'))
   const team = useTeamActivity(showActivity)
   const activity = useMemo(() => activityByProject(team.data), [team.data])
   const [teamOpen, setTeamOpen] = useState(false)
@@ -342,55 +347,59 @@ export function ProjectsPage({ view }: { view: ProjectView }) {
             onFilter={setPanel}
             taskCounts={canSeeTasks ? taskCounts.data : undefined}
             dependencies={canSeeTasks ? dependencies.data : undefined}
+            shows={screens.shows}
             team={showActivity ? { data: team.data, pending: team.isPending, error: team.isError, retry: () => void team.refetch() } : null}
           />
         ))}
 
-      <AppDataTable
-        tableId="projects"
-        caption={t(TITLES[view])}
-        columns={columns}
-        data={rows}
-        total={merged?.empty ? 0 : (projects.data?.total ?? 0)}
-        getRowId={(project) => project.id}
-        table={table}
-        loading={projects.isPending && !merged?.empty}
-        fetching={projects.isFetching}
-        error={projects.isError ? { correlationId: isAppError(projects.error) ? projects.error.correlationId : undefined } : null}
-        onRetry={() => void projects.refetch()}
-        searchPlaceholder={t('projects.searchPlaceholder')}
-        emptyState={emptyState}
-        // Direção e gerência: só consulta (o olho); o resto das ações some. As permissões reais continuam as do perfil
-        actions={
-          direction
-            ? { onView: setViewing, hideMore: true }
-            : {
-              onView: setViewing,
-              onOpen: (project) => navigate(`/projects/${project.id}`),
-              onEdit: setEditing,
-              canEdit: (project) => project.capabilities.edit,
-              onDelete: (project) => (project.archivedAt ? setDeleting(project) : archive(project)),
-              canDelete: (project) => (project.archivedAt ? project.capabilities.delete : project.capabilities.archive),
-              deleteLabel: (project) => (project.archivedAt ? t('common.delete') : t('projects.archive')),
-              deleteIcon: (project) => (project.archivedAt ? undefined : <Archive />),
-              deleteTone: (project) => (project.archivedAt ? 'danger' : 'ghost'),
-              deleteName: view === 'archived' ? undefined : t('projects.archive'),
-              more: (project) => [
-                { key: 'open', label: t('projects.open'), icon: <ExternalLink />, onSelect: () => navigate(`/projects/${project.id}`) },
-                {
-                  key: 'copy',
-                  label: t('projects.copyKey'),
-                  icon: <Copy />,
-                  onSelect: () => void copy(project.key),
-                },
-                ...(project.archivedAt && project.capabilities.archive
-                  ? [{ key: 'unarchive', label: t('projects.unarchive'), icon: <ArchiveRestore />, onSelect: () => unarchive(project) }]
-                  : []),
-                // Arquivar é a ação "Excluir" da linha: desligada em "Colunas e ações" (o padrão), vem para cá
-              ],
-            }
-        }
-      />
+      {/* Direção e gerência: a tabela é um dos blocos do painel (§48) */}
+      {!(direction && !screens.shows('projects.blocks.table')) && (
+        <AppDataTable
+          tableId="projects"
+          caption={t(TITLES[view])}
+          columns={columns}
+          data={rows}
+          total={merged?.empty ? 0 : (projects.data?.total ?? 0)}
+          getRowId={(project) => project.id}
+          table={table}
+          loading={projects.isPending && !merged?.empty}
+          fetching={projects.isFetching}
+          error={projects.isError ? { correlationId: isAppError(projects.error) ? projects.error.correlationId : undefined } : null}
+          onRetry={() => void projects.refetch()}
+          searchPlaceholder={t('projects.searchPlaceholder')}
+          emptyState={emptyState}
+          // Direção e gerência: só consulta (o olho); o resto das ações some. As permissões reais continuam as do perfil
+          actions={
+            direction
+              ? { onView: setViewing, hideMore: true }
+              : {
+                onView: setViewing,
+                onOpen: (project) => navigate(`/projects/${project.id}`),
+                onEdit: setEditing,
+                canEdit: (project) => project.capabilities.edit,
+                onDelete: (project) => (project.archivedAt ? setDeleting(project) : archive(project)),
+                canDelete: (project) => (project.archivedAt ? project.capabilities.delete : project.capabilities.archive),
+                deleteLabel: (project) => (project.archivedAt ? t('common.delete') : t('projects.archive')),
+                deleteIcon: (project) => (project.archivedAt ? undefined : <Archive />),
+                deleteTone: (project) => (project.archivedAt ? 'danger' : 'ghost'),
+                deleteName: view === 'archived' ? undefined : t('projects.archive'),
+                more: (project) => [
+                  { key: 'open', label: t('projects.open'), icon: <ExternalLink />, onSelect: () => navigate(`/projects/${project.id}`) },
+                  {
+                    key: 'copy',
+                    label: t('projects.copyKey'),
+                    icon: <Copy />,
+                    onSelect: () => void copy(project.key),
+                  },
+                  ...(project.archivedAt && project.capabilities.archive
+                    ? [{ key: 'unarchive', label: t('projects.unarchive'), icon: <ArchiveRestore />, onSelect: () => unarchive(project) }]
+                    : []),
+                  // Arquivar é a ação "Excluir" da linha: desligada em "Colunas e ações" (o padrão), vem para cá
+                ],
+              }
+          }
+        />
+      )}
 
       <ProjectPreviewDrawer
         project={viewing}

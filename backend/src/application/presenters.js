@@ -3,7 +3,7 @@
  * Campos sensíveis (hash de token, senha) nunca passam por aqui.
  */
 
-const { projectListsFromText } = require('../domain/permissions')
+const { normalizeHidden, normalizeStarts } = require('../domain/screens')
 
 function iso(date) {
   return date ? new Date(date).toISOString() : null
@@ -40,16 +40,9 @@ function toRoleDto(role, extra) {
     name: role.name,
     description: role.description || '',
     is_system: !!role.isSystem,
-    // vista de "Em andamento" do perfil (§41); '' = Gestão
-    ongoing_view: role.ongoingView || '',
-    // Tarefas do perfil (ajuste 23/11): onde o menu abre, a Lista e a caixa Todas
-    tasks_start: role.tasksStart || '',
-    tasks_list: role.tasksList || '',
-    tasks_all_box: role.tasksAllBox || '',
-    // caixas pessoais escondidas (ajuste 24/11): na API, uma lista
-    tasks_hidden_boxes: (role.tasksHiddenBoxes || '').split(',').filter(Boolean),
-    // listas do menu Projetos (ajuste 25/11): na API, as visíveis (gravado '' = as quatro)
-    projects_lists: projectListsFromText(role.projectsLists),
+    // "O que aparece" do perfil (§48): as partes escondidas (na ordem do catálogo) e onde cada módulo abre
+    hidden_screens: normalizeHidden(role.hiddenScreens),
+    screen_starts: normalizeStarts(role.screenStarts, role.hiddenScreens),
   }
   if (extra && extra.permissions) dto.permissions = extra.permissions.slice().sort()
   if (extra && typeof extra.userCount === 'number') dto.user_count = extra.userCount

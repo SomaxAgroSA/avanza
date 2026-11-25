@@ -40,12 +40,15 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { useCan, useSession } from '@/features/auth/session'
 import { automaticHomePath, homePageOptions } from '@/presentation/navigation/home-page'
-import { toProjectLists } from '@/domain/project-lists'
+import { projectListsOf } from '@/domain/project-lists'
+import { DEFAULT_SCREENS } from '@/domain/screens'
 import { projectKeys, useMemberMutations, useProjects } from '@/features/projects/queries'
 import { useUpdateUser, useUsersList } from '@/features/users/queries'
 import { useCreateRole, useRoles, useUpdateRolePermissions } from './queries'
 import { RolesPage } from './RolesPage'
 import { PermissionsPage } from './PermissionsPage'
+import { RoleScreensPage } from './RoleScreensPage'
+import { roleScreensPath } from './role-screens-path'
 
 const USERS_QUERY = { page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
 const PROJECTS_QUERY = { view: 'all' as const, page: 1, perPage: 100, sort: { id: 'name', direction: 'asc' as const }, search: '', filters: {} }
@@ -71,6 +74,8 @@ export function AccessControlPage() {
   const current = params.get('tab')
   const tab: AccessTab = current === 'matrix' ? 'roles' : (ACCESS_TABS.find((value) => value === current) ?? 'person')
   const showMatrix = tab === 'roles' && (current === 'matrix' || params.has('role'))
+  // "O que aparece" de um perfil (§48): `?tab=roles&screens=<id>`
+  const screensOf = tab === 'roles' ? params.get('screens') : null
   // lugar das ações da aba aberta (Novo perfil, Salvar…), à direita da linha das abas
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
   const pathOf = (value: AccessTab) => (value === 'person' ? '/settings/access' : `/settings/access?tab=${value}`)
@@ -86,7 +91,9 @@ export function AccessControlPage() {
       />
       <TabActionsSlotContext.Provider value={actionsSlot}>
         {tab === 'roles' ? (
-          showMatrix ? (
+          screensOf ? (
+            <RoleScreensPage roleId={screensOf} />
+          ) : showMatrix ? (
             <>
               <Link to="/settings/access?tab=roles" className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-primary-text hover:underline">
                 <ArrowLeft className="size-4" aria-hidden /> {t('access.backToRoles')}
@@ -178,10 +185,13 @@ function UserHeader({ user, roles }: { user: User; roles: Role[] }) {
         options={roles.map((r) => ({ value: r.id, label: r.name }))}
       />
       <HomePageSelect user={user} role={role} />
-      {/* a vista de Em andamento é do perfil (§41): aqui só se mostra, muda-se em Perfis */}
+      {/* o "O que aparece" é do perfil (§48): aqui só se mostra, muda-se em Perfis */}
       {role && (
         <p className="basis-full text-xs text-muted">
-          {t('roles.ongoingView.inherited', { view: t(`roles.ongoingView.${role.ongoingView === 'executive' ? 'executive' : role.ongoingView === 'both' ? 'both' : 'management'}`) })}
+          {t('roles.screens.summary')}: {role.screens.hidden.length ? t('roles.screens.summaryHidden', { count: role.screens.hidden.length }) : t('roles.screens.summaryAll')} ·{' '}
+          <Link to={roleScreensPath(role.id)} className="font-medium text-primary-text hover:underline">
+            {t('roles.screens.open')}
+          </Link>
         </p>
       )}
     </div>
@@ -203,8 +213,8 @@ function HomePageSelect({ user, role }: { user: User; role: Role | undefined }) 
   const perms: PermissionCode[] = role?.code === SUPER_ADMIN_ROLE ? [...PERMISSION_CODES] : (role?.permissions ?? [])
   // Panorama desligado na plataforma (§26.2): não é oferecido; quem já o tinha aparece na automática
   const platform = useSession().current?.platform
-  // das listas de Projetos, só as que o perfil dela mostra (ajuste 25/11)
-  const projectLists = toProjectLists(role?.projectsLists)
+  // das listas de Projetos, só as que o perfil dela mostra (§48)
+  const projectLists = projectListsOf(role?.screens ?? DEFAULT_SCREENS)
   const options = homePageOptions(perms, platform, projectLists)
   const labelOf = (path: string) => {
     const option = options.find((o) => o.path === path) ?? homePageOptions([...PERMISSION_CODES]).find((o) => o.path === path)
@@ -317,7 +327,7 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
     if (!pending || !role) return
     const code = personalRoleCode(user.name, roles.map((r) => r.code))
     createRole.mutate(
-      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, ongoingView: role.ongoingView, tasksStart: role.tasksStart, tasksList: role.tasksList, tasksAllBox: role.tasksAllBox, tasksHiddenBoxes: role.tasksHiddenBoxes, projectsLists: role.projectsLists },
+      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, screens: role.screens },
       {
         onSuccess: (created) =>
           updateUser.mutate(

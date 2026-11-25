@@ -134,3 +134,76 @@ describe('transações', () => {
     assert.equal(await t.db.one("SELECT id FROM tags WHERE id = 'tagddddddddddd1'"), null)
   })
 })
+
+describe('migration 0038 — "O que aparece" por perfil (§48)', () => {
+  const fs = require('node:fs')
+  const os = require('node:os')
+  const path = require('node:path')
+  const { MIGRATIONS_DIR } = require('../../src/infrastructure/migrate')
+  const { hiddenScreensIssue } = require('../../src/domain/screens')
+  let t
+  let before0038
+  before(async () => {
+    t = await createTestDatabase({ migrate: false })
+    // o banco como estava antes da 0038, com perfis gravados pelos ajustes de tela antigos
+    before0038 = fs.mkdtempSync(path.join(os.tmpdir(), 'avanza-0038-'))
+    fs.readdirSync(MIGRATIONS_DIR)
+      .filter((name) => name.endsWith('.sql') && name < '0038')
+      .forEach((name) => fs.copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(before0038, name)))
+    await migrate(t.db, { dir: before0038 })
+    const roles = [
+      ['r_default0000001', 'PADRAO', '', '', '', '', '', ''],
+      ['r_director00001', 'DIRETOR', 'executive', 'inbox_all', 'hidden', '', '', 'ongoing'],
+      ['r_both000000001', 'AMBAS', 'both', 'inbox_assigned', 'mine', 'hidden', 'received', 'ongoing,archived'],
+      ['r_nobox00000001', 'SEMCAIXA', '', '', '', 'hidden', 'received,assigned,requested', 'nada'],
+      ['r_nobox00000002', 'SOCAIXA', '', 'inbox', 'hidden', 'hidden', 'received,assigned,requested', ''],
+    ]
+    for (const [id, code, ongoing, start, list, allBox, boxes, lists] of roles) {
+      await t.db.exec(
+        'INSERT INTO roles (id, code, name, ongoing_view, tasks_start, tasks_list, tasks_all_box, tasks_hidden_boxes, projects_lists) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8)',
+        [id, code, ongoing, start, list, allBox, boxes, lists],
+      )
+    }
+    assert.deepEqual(await migrate(t.db), ['0038_role_hidden_screens.sql'])
+  })
+  after(async () => {
+    fs.rmSync(before0038, { recursive: true, force: true })
+    await t.drop()
+  })
+
+  const screensOf = async (code) => t.db.one('SELECT hidden_screens AS hidden, screen_starts AS starts FROM roles WHERE code = $1', [code])
+
+  it('convertem o que estava gravado: cada perfil continua vendo o mesmo', async () => {
+    assert.deepEqual(await screensOf('PADRAO'), { hidden: ['projects.ongoing_views.executive'], starts: {} })
+    assert.deepEqual(await screensOf('DIRETOR'), {
+      hidden: ['projects.lists.all', 'projects.lists.finished', 'projects.lists.archived', 'projects.ongoing_views.management', 'tasks.screens.list'],
+      starts: { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' },
+    })
+    assert.deepEqual(await screensOf('AMBAS'), {
+      hidden: ['projects.lists.all', 'projects.lists.finished', 'tasks.scopes.all', 'tasks.boxes.received', 'tasks.boxes.all'],
+      starts: { 'projects.ongoing_views': 'executive', 'tasks.screens': 'inbox', 'tasks.boxes': 'assigned' },
+    })
+    // sem caixa nenhuma e com a Lista: sem a Caixa de entrada (lista gravada desconhecida = as quatro)
+    assert.deepEqual(await screensOf('SEMCAIXA'), { hidden: ['projects.ongoing_views.executive', 'tasks.screens.inbox'], starts: {} })
+    // sem caixa nenhuma e sem a Lista: só Recebidas, como a tela já fazia
+    assert.deepEqual(await screensOf('SOCAIXA'), {
+      hidden: ['projects.ongoing_views.executive', 'tasks.screens.list', 'tasks.boxes.assigned', 'tasks.boxes.requested', 'tasks.boxes.all'],
+      starts: { 'tasks.screens': 'inbox', 'tasks.boxes': 'received' },
+    })
+  })
+
+  it('o resultado passa na validação do domínio (ao menos uma visível por grupo) e os perfis do sistema ficam como antes', async () => {
+    const rows = await t.db.query('SELECT code, hidden_screens FROM roles')
+    rows.forEach((row) => assert.equal(hiddenScreensIssue(row.hidden_screens), null, row.code))
+    const system = await t.db.query("SELECT code, hidden_screens FROM roles WHERE is_system ORDER BY code")
+    system.forEach((row) => assert.deepEqual(row.hidden_screens, ['projects.ongoing_views.executive'], row.code))
+  })
+
+  it('é idempotente: rodar de novo não muda nada (nem o que foi escolhido depois)', async () => {
+    await t.db.exec("UPDATE roles SET hidden_screens = '[\"docs.actions.pdf\"]'::jsonb WHERE code = 'PADRAO'")
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, '0038_role_hidden_screens.sql'), 'utf8')
+    await t.db.exec(sql)
+    assert.deepEqual(await screensOf('PADRAO'), { hidden: ['docs.actions.pdf'], starts: {} })
+    assert.deepEqual((await screensOf('DIRETOR')).starts, { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' })
+  })
+})

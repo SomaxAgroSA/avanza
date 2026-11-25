@@ -22,14 +22,9 @@ export interface RoleDto {
   name: string
   description: string
   is_system: boolean
-  ongoing_view?: string
-  /** Tarefas do perfil (ajuste 23/11). */
-  tasks_start?: string
-  tasks_list?: string
-  tasks_all_box?: string
-  tasks_hidden_boxes?: string[]
-  /** Listas do menu Projetos (ajuste 25/11). */
-  projects_lists?: string[]
+  /** O que aparece (§48): chaves escondidas e "Abre em" { grupo: item }. */
+  hidden_screens?: string[]
+  screen_starts?: Record<string, string>
   permissions?: string[]
   user_count?: number
 }

@@ -4,6 +4,7 @@ import { ChartGantt, KanbanSquare, List, ListTodo } from 'lucide-react'
 import { projectPath, visibleTaskViews, type ProjectTaskView } from '@/domain/project-routes'
 import { AppNavTabs } from '@/presentation/components'
 import { useSession } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 
 const ICONS: Record<ProjectTaskView, ReactNode> = {
   list: <List />,
@@ -14,12 +15,13 @@ const ICONS: Record<ProjectTaskView, ReactNode> = {
 
 /**
  * Visões da aba Tarefas do projeto (Lista, Kanban, Planejamento e Cronograma), cada uma com o seu
- * endereço; só as que a pessoa pode abrir. Com uma visão só, não há o que trocar.
+ * endereço; só as que a pessoa pode abrir e o perfil mostra (§48). Com uma visão só, não há o que trocar.
  */
 export function ProjectTaskViewsNav({ projectId, current }: { projectId: string; current: ProjectTaskView }) {
   const { t } = useTranslation()
   const { current: session } = useSession()
-  const views = visibleTaskViews(session?.permissions ?? [])
+  const screens = useScreens().settings
+  const views = visibleTaskViews(session?.permissions ?? [], screens)
   if (views.length < 2) return null
   return (
     <AppNavTabs

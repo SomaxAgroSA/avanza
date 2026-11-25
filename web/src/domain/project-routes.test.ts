@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canOpenSection, itProjectTabs, legacyProjectTab, projectPath, sectionFromPath, tabOfSection, visibleProjectTabs, visibleTaskViews, type ProjectTabAccess } from './project-routes'
+import { canOpenSection, firstProjectSection, itProjectTabs, legacyProjectTab, projectPath, sectionFromPath, tabOfSection, visibleProjectTabs, visibleTaskViews, type ProjectTabAccess } from './project-routes'
 import { PROJECT_PROFILE_SECTIONS } from './projects'
 
 const ALL = [...PROJECT_PROFILE_SECTIONS]
@@ -106,5 +106,29 @@ describe('domain/project-routes — endereços da página do projeto', () => {
     expect(visibleTaskViews(['tasks.view'])).toEqual(['list', 'planning', 'timeline'])
     expect(visibleTaskViews(['kanban.view'])).toEqual(['kanban'])
     expect(visibleTaskViews([])).toEqual([])
+  })
+})
+
+describe('abas e visões escondidas pelo perfil ("O que aparece" §48)', () => {
+  const perms = ['tasks.view', 'kanban.view', 'plan.view', 'docs.view']
+  const access = (hidden: ProjectTabAccess['screens']): ProjectTabAccess => ({ manage: true, sections: ALL, screens: hidden })
+
+  it('a aba escondida sai e fecha pelo endereço; a primeira seção passa a ser a primeira visível', () => {
+    const hidden = access({ hidden: ['projects.tabs.overview', 'projects.tabs.history'], starts: {} })
+    expect(visibleProjectTabs(perms, hidden)).toEqual(['charter', 'management', 'tasks', 'report', 'files', 'docs', 'members', 'settings'])
+    expect(canOpenSection('history', perms, hidden)).toBe(false)
+    expect(canOpenSection('overview', perms, hidden)).toBe(false)
+    expect(firstProjectSection(perms, hidden)).toBe('charter')
+  })
+
+  it('visões das tarefas escondidas; sem nenhuma que a pessoa possa abrir, ficam as permitidas', () => {
+    expect(visibleTaskViews(perms, { hidden: ['projects.task_views.kanban', 'projects.task_views.timeline'], starts: {} })).toEqual(['list', 'planning'])
+    expect(visibleTaskViews(['kanban.view'], { hidden: ['projects.task_views.kanban'], starts: {} })).toEqual(['kanban'])
+    expect(canOpenSection('kanban', perms, access({ hidden: ['projects.task_views.kanban'], starts: {} }))).toBe(false)
+  })
+
+  it('se o perfil esconde todas as abas que a pessoa pode abrir, ficam as permitidas', () => {
+    const only = access({ hidden: ['projects.tabs.overview', 'projects.tabs.files'], starts: {} })
+    expect(visibleProjectTabs([], { ...only, manage: false, sections: [] })).toEqual(['overview', 'files'])
   })
 })

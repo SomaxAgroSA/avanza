@@ -3,7 +3,8 @@ import { projectPath, type ProjectSection } from '@/domain/project-routes'
 import { useSession } from '@/features/auth/session'
 import { useProjectLists } from '@/features/projects/use-project-lists'
 import { resolveHomePath } from '@/presentation/navigation/home-page'
-import { visibleNavItems } from '@/presentation/navigation/nav-items'
+import { visibleNavItems, withScreens } from '@/presentation/navigation/nav-items'
+import { DEFAULT_SCREENS } from '@/domain/screens'
 
 /**
  * Endereço antigo de uma visão por projeto (`/project-management/:id`, `/planning/:id`, `/backlog/:id`,
@@ -30,7 +31,8 @@ export function HomeRedirect() {
 /** /settings → a primeira tela de Configurações que a pessoa pode abrir (na ordem do menu). */
 export function SettingsIndexRedirect() {
   const { current } = useSession()
-  const settings = visibleNavItems(current?.permissions ?? []).find((item) => item.id === 'settings')
+  // a primeira do menu dela: sem os submenus que o perfil esconde (§48)
+  const settings = withScreens(visibleNavItems(current?.permissions ?? []), current?.role?.screens ?? DEFAULT_SCREENS).find((item) => item.id === 'settings')
   return <Navigate to={settings?.children?.[0]?.to ?? '/'} replace />
 }
 

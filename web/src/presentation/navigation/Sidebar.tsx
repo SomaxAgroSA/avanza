@@ -75,7 +75,7 @@ function NavGroup({ item, collapsed, onNavigate }: { item: NavItem; collapsed: b
   if (collapsed) {
     return (
       <AppTooltip content={t(item.labelKey)} side="right">
-        <NavLink to={item.children?.[0]?.to ?? item.to} onClick={onNavigate} className={cn(linkBase, 'justify-center px-0', active && 'bg-primary-soft text-primary-soft-fg')}>
+        <NavLink to={item.entry ?? item.children?.[0]?.to ?? item.to} onClick={onNavigate} className={cn(linkBase, 'justify-center px-0', active && 'bg-primary-soft text-primary-soft-fg')}>
           {Icon && <Icon className="size-[18px]" aria-hidden />}
           <span className="sr-only">{t(item.labelKey)}</span>
         </NavLink>

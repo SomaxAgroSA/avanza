@@ -24,7 +24,7 @@ Os tipos abaixo são os lógicos, herdados das collections: `select` é `text` v
 Índices: `role_id`, `status`, `name` (+ índice único em `lower(email)`).
 
 ### `roles`
-`code` (text, único, `^[A-Z][A-Z0-9_]{1,31}$`), `name`, `description`, `is_system` (bool), `ongoing_view` (text, `''` = Gestão; `'executive'` = Direção e gerência — vista da lista Em andamento, §41; migration 0028), `tasks_start` / `tasks_list` / `tasks_all_box` (text, `''` = como antes — Tarefas do perfil: onde o menu abre, a Lista e a caixa Todas; migration 0034), `tasks_hidden_boxes` (text, caixas pessoais escondidas separadas por vírgula — `received`, `assigned`, `requested`; `''` = todas visíveis; migration 0035), `projects_lists` (text, listas do menu Projetos visíveis separadas por vírgula — `all`, `ongoing`, `finished`, `archived`; `''` = as quatro; migration 0037), `created`, `updated`. Perfis de sistema: SUPER_ADMIN, ADMIN, MANAGER, MEMBER, VIEWER.
+`code` (text, único, `^[A-Z][A-Z0-9_]{1,31}$`), `name`, `description`, `is_system` (bool), `hidden_screens` (jsonb, lista de chaves `<grupo>.<item>` escondidas — "O que aparece" §48; `[]` = tudo visível; migration 0038), `screen_starts` (jsonb, "Abre em" `{ grupo: item }`; migration 0038), `ongoing_view` / `tasks_start` / `tasks_list` / `tasks_all_box` / `tasks_hidden_boxes` / `projects_lists` (text, **sem uso desde a 0038**, que os converteu para `hidden_screens`/`screen_starts`; ficam para voltar atrás), `created`, `updated`. Perfis de sistema: SUPER_ADMIN, ADMIN, MANAGER, MEMBER, VIEWER.
 
 ### `permissions`
 `code` (único, ex.: `tasks.edit`), `module`, `description`. Populada pelo seed a partir de `src/domain/permissions.js`.

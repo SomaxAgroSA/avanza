@@ -24,6 +24,8 @@ import {
 import { AppButton, AppDatePicker, AppEmptyState, AppErrorState, AppIconButton, AppLoading, AppSegmentedControl, AppSelect } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { SESSION_QUERY_KEY, useCan, useSession } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
+import { cn } from '@/core/utils/cn'
 import { panoramaOffPath } from '@/presentation/navigation/home-page'
 import { useExecutiveDashboard } from '@/features/executive/queries'
 import { AttentionTable, ExecutionCard, HealthCard, KpiRow, MilestonesList, ProjectSummaryDrawer, SynthesisCard } from './panorama-sections'
@@ -215,16 +217,22 @@ function PanoramaContent({
     onFilter(filter === next ? 'attention' : next)
     scrollToTable()
   }
+  // blocos que o perfil mostra ("O que aparece" §48, `tracking.blocks.*`)
+  const { shows } = useScreens()
+  const health = shows('tracking.blocks.health')
+  const execution = shows('tracking.blocks.execution')
   return (
     <>
-      <SynthesisCard synthesis={synthesis} />
-      <KpiRow kpis={kpis} filter={filter} onFilter={pick} />
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <HealthCard kpis={kpis} filter={filter} onFilter={onFilter} />
-        <ExecutionCard kpis={kpis} data={data} />
-      </div>
-      <AttentionTable rows={panoramaRows(rows, today, filter)} filter={filter} today={today} onClear={() => onFilter('attention')} onOpen={onOpen} />
-      <MilestonesList data={data} rows={rows} today={today} />
+      {shows('tracking.blocks.synthesis') && <SynthesisCard synthesis={synthesis} />}
+      {shows('tracking.blocks.kpis') && <KpiRow kpis={kpis} filter={filter} onFilter={pick} />}
+      {(health || execution) && (
+        <div className={cn('grid grid-cols-1 gap-3', health && execution && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]')}>
+          {health && <HealthCard kpis={kpis} filter={filter} onFilter={onFilter} />}
+          {execution && <ExecutionCard kpis={kpis} data={data} />}
+        </div>
+      )}
+      {shows('tracking.blocks.attention') && <AttentionTable rows={panoramaRows(rows, today, filter)} filter={filter} today={today} onClear={() => onFilter('attention')} onOpen={onOpen} />}
+      {shows('tracking.blocks.milestones') && <MilestonesList data={data} rows={rows} today={today} />}
     </>
   )
 }

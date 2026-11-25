@@ -4,7 +4,7 @@
  */
 
 const { HOME_PAGES } = require('../domain/user')
-const { ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES, PROJECT_LISTS } = require('../domain/permissions')
+const { SCREEN_KEYS, SCREEN_GROUPS } = require('../domain/screens')
 
 /** "Com cópia" (ajuste 24/11): e-mails que recebem o aviso da tarefa ou demanda nova, uma vez. */
 const COPY_EMAILS = {
@@ -14,21 +14,21 @@ const COPY_EMAILS = {
   description: 'e-mails em cópia: cada um recebe um e-mail com o código e o título no assunto e a descrição, uma vez (sem envio de e-mails configurado, nada sai)',
 }
 
-/** Tarefas do perfil (ajuste 23/11): só a tela de quem tem o perfil; o acesso segue as permissões. */
-const TASK_VIEW_PROPS = {
-  tasks_start: { type: 'string', enum: TASK_VIEWS.tasks_start, description: 'onde o menu Tarefas abre: "" = Lista; inbox = Caixa de entrada (Recebidas); inbox_assigned, inbox_requested e inbox_all = as caixas Atribuídas a mim, Pedidas por mim e Todas' },
-  tasks_list: { type: 'string', enum: TASK_VIEWS.tasks_list, description: 'a Lista: "" = todas as que a pessoa pode ver; mine = só Minhas tarefas; hidden = sem a Lista' },
-  tasks_hidden_boxes: { type: 'array', items: { type: 'string', enum: TASK_HIDDEN_BOXES }, description: 'caixas pessoais da Caixa de entrada escondidas para o perfil ([] = todas visíveis)' },
-  tasks_all_box: { type: 'string', enum: TASK_VIEWS.tasks_all_box, description: 'a caixa Todas da Caixa de entrada (exige projects.view_all): "" = visível; hidden = escondida' },
-}
-
-/** Projetos do perfil (ajuste 25/11): as listas do menu Projetos; só a tela, a API das listas não muda. */
-const PROJECT_LIST_PROPS = {
-  projects_lists: {
+/**
+ * "O que aparece" do perfil (§48): só a tela de quem tem o perfil — as partes escondidas e onde cada módulo abre.
+ * Não muda permissão: a API continua validando tudo como antes.
+ */
+const SCREEN_PROPS = {
+  hidden_screens: {
     type: 'array',
-    minItems: 1,
-    items: { type: 'string', enum: PROJECT_LISTS },
-    description: 'listas do menu Projetos visíveis para o perfil, na ordem do menu (padrão: as quatro); com uma só, Projetos abre direto nela',
+    items: { type: 'string', enum: SCREEN_KEYS },
+    description:
+      'partes da tela escondidas para o perfil, chaves <grupo>.<item> (ex.: projects.lists.finished, tasks.views.timeline, settings.menu.icons); [] = tudo visível (padrão). Em cada grupo fica ao menos uma visível (senão VALIDATION_ERROR required)',
+  },
+  screen_starts: {
+    type: 'object',
+    description: `"Abre em": { grupo: item } para os grupos ${SCREEN_GROUPS.filter((g) => g.start).map((g) => g.id).join(', ')}; sem escolha, o primeiro visível. Item escondido = VALIDATION_ERROR invalid_option`,
+    additionalProperties: { type: 'string' },
   },
 }
 
@@ -249,16 +249,14 @@ function build() {
       },
       '/roles/{id}': {
         get: op('Detalhe do perfil', ['rbac'], { 200: ok('Perfil', ref('Role')), 404: errorResponse('ROLE_NOT_FOUND') }, { parameters: [idParam] }),
-        patch: op('Atualiza nome, descrição e os ajustes de tela do perfil (Em andamento, Tarefas, Projetos; permissions.manage)', ['rbac'], { 200: ok('Atualizado', ref('Role')) }, {
+        patch: op('Atualiza nome, descrição e o que aparece na tela do perfil (hidden_screens, screen_starts — §48; permissions.manage)', ['rbac'], { 200: ok('Atualizado', ref('Role')) }, {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({
             type: 'object',
             properties: {
               name: { type: 'string' },
               description: { type: 'string' },
-              ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista de Em andamento do perfil (§41); "" = Gestão' },
-              ...TASK_VIEW_PROPS,
-              ...PROJECT_LIST_PROPS,
+              ...SCREEN_PROPS,
             },
           }),
         }),
@@ -1605,9 +1603,7 @@ function build() {
             name: { type: 'string' },
             description: { type: 'string' },
             is_system: { type: 'boolean' },
-            ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "both" = as duas, com seletor na tela; "executive" = Direção e gerência' },
-            ...TASK_VIEW_PROPS,
-            ...PROJECT_LIST_PROPS,
+            ...SCREEN_PROPS,
             permissions: { type: 'array', items: { type: 'string' } },
             user_count: { type: 'integer' },
           },
@@ -1620,9 +1616,7 @@ function build() {
             name: { type: 'string' },
             description: { type: 'string' },
             permissions: { type: 'array', items: { type: 'string' } },
-            ongoing_view: { type: 'string', enum: ONGOING_VIEWS },
-            ...TASK_VIEW_PROPS,
-            ...PROJECT_LIST_PROPS,
+            ...SCREEN_PROPS,
           },
         },
         Permission: { type: 'object', properties: { id: { type: 'string' }, code: { type: 'string' }, module: { type: 'string' } } },
