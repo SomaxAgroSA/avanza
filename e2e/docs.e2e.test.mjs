@@ -102,6 +102,8 @@ describe('E2E — Documentação', { timeout: 300000 }, () => {
 
     await page.getByRole('button', { name: 'Publicar', exact: true }).click()
     await page.waitForURL(`**/docs/MDC/${pageId}`)
+    // ao publicar, a janela "Avisar" (§47) abre sozinha; "Agora não" fecha sem avisar
+    await page.getByRole('dialog', { name: 'Avisar sobre esta página' }).getByRole('button', { name: 'Agora não' }).click()
     await page.getByRole('heading', { level: 1, name: 'Cadastro de clientes' }).waitFor()
     await page.getByRole('heading', { level: 2, name: 'Regras' }).waitFor()
     await page.getByRole('note', { name: 'Atenção' }).getByText('Não salve sem o CNPJ.').waitFor()
@@ -129,6 +131,7 @@ describe('E2E — Documentação', { timeout: 300000 }, () => {
     await page.waitForURL('**/edit')
     await page.getByRole('textbox', { name: 'Título da página' }).fill('Cadastro de clientes (revisado)')
     await page.getByRole('button', { name: 'Publicar alterações' }).click()
+    await page.getByRole('dialog', { name: 'Avisar sobre esta página' }).getByRole('button', { name: 'Agora não' }).click()
     await page.getByRole('heading', { level: 1, name: 'Cadastro de clientes (revisado)' }).waitFor()
     await page.getByText(/Versão 2 · publicada por/).waitFor()
     await toastsGone(page)
