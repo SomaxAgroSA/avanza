@@ -15,6 +15,9 @@ export const docsKeys = {
   search: (q: string) => ['docs', 'search', q] as const,
   recent: ['docs', 'recent'] as const,
   pageTasks: (id: string) => ['docs', 'page-tasks', id] as const,
+  /** Avisar sobre a página (§47): quem foi avisado e quem pode ser. */
+  notices: (id: string) => ['docs', 'notices', id] as const,
+  noticeCandidates: (id: string) => ['docs', 'notice-candidates', id] as const,
   /** Exportar em PDF: o espaço ou o módulo inteiro (a janela e a vista de impressão usam a mesma busca). */
   export: (target: DocExportTarget) => ['docs', 'export', 'module' in target ? `module:${target.module}` : `space:${target.space}`] as const,
   taskDocs: (taskId: string) => ['docs', 'task-docs', taskId] as const,
@@ -96,6 +99,28 @@ export function useDocRecent() {
 export function usePageTasks(pageId: string | undefined) {
   const { docs } = useRepositories()
   return useQuery({ queryKey: docsKeys.pageTasks(pageId ?? ''), queryFn: () => docs.listPageTasks(pageId as string), enabled: !!pageId })
+}
+
+/** Quem foi avisado sobre a página e quando abriu (só quem edita pergunta). */
+export function usePageNotices(pageId: string, enabled: boolean) {
+  const { docs } = useRepositories()
+  return useQuery({ queryKey: docsKeys.notices(pageId), queryFn: () => docs.listNotices(pageId), enabled })
+}
+
+/** Quem pode ser avisado sobre a página (busca ao abrir a janela "Avisar"). */
+export function useNoticeCandidates(pageId: string, enabled: boolean) {
+  const { docs } = useRepositories()
+  return useQuery({ queryKey: docsKeys.noticeCandidates(pageId), queryFn: () => docs.listNoticeCandidates(pageId), enabled })
+}
+
+/** Avisar sobre a página: guarda a lista nova de avisos. */
+export function useNotifyPage() {
+  const { docs } = useRepositories()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ pageId, userIds, note }: { pageId: string; userIds: string[]; note: string }) => docs.notifyPage(pageId, { userIds, note }),
+    onSuccess: (notices, input) => queryClient.setQueryData(docsKeys.notices(input.pageId), notices),
+  })
 }
 
 /** Páginas vinculadas à tarefa (aba Documentação da tarefa). */

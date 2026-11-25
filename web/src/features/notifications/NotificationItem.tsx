@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import { AtSign, BellRing, CalendarClock, CircleCheckBig, CircleDot, ClipboardCheck, Inbox, MessageSquare, Repeat, Reply, Undo2, UserCheck, type LucideIcon } from 'lucide-react'
+import { AtSign, BellRing, BookOpen, CalendarClock, CircleCheckBig, CircleDot, ClipboardCheck, Inbox, MessageSquare, Repeat, Reply, Undo2, UserCheck, type LucideIcon } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatDateTime, formatDay, formatRelative } from '@/core/utils/format'
 import { notificationLink, type AppNotification, type NotificationType } from '@/domain/notifications'
@@ -21,6 +21,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   demand_concluded: ClipboardCheck,
   demand_validated: CircleCheckBig,
   demand_returned: Undo2,
+  doc_shared: BookOpen,
 }
 
 /** Linha de notificação: quem, o quê, em qual tarefa e quando. Clicar abre a tarefa e marca como lida. */
@@ -40,6 +41,7 @@ export function NotificationItem({ notification, onOpen }: { notification: AppNo
     notification.type === 'demand_passed' ||
     notification.type === 'demand_concluded' ||
     notification.type === 'demand_returned' ||
+    notification.type === 'doc_shared' ||
     (notification.type === 'assigned' && !!notification.data.comment)
       ? notification.data.comment
       : notification.type === 'status_changed'
@@ -80,9 +82,21 @@ export function NotificationItem({ notification, onOpen }: { notification: AppNo
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm text-fg">
-          {t(`notifications.types.${notification.type}`, { actor, code: notification.task?.code ?? '', name: notification.planItem?.name ?? '', assignee: notification.data.assignee ?? '' })}
+          {t(`notifications.types.${notification.type}`, {
+            actor,
+            code: notification.task?.code ?? '',
+            name: notification.planItem?.name ?? '',
+            title: notification.docPage?.title ?? '',
+            assignee: notification.data.assignee ?? '',
+          })}
         </span>
-        <span className="block truncate text-xs text-muted">{notification.task ? notification.task.title : t('notifications.planItemIn', { project: notification.planItem?.projectName ?? '' })}</span>
+        <span className="block truncate text-xs text-muted">{notification.task
+            ? notification.task.title
+            : notification.docPage
+              ? notification.docPage.projectName
+                ? t('notifications.docPageIn', { project: notification.docPage.projectName })
+                : t('notifications.docSpaceIn', { space: notification.docPage.spaceName })
+              : t('notifications.planItemIn', { project: notification.planItem?.projectName ?? '' })}</span>
         {detail && <span className="mt-0.5 line-clamp-2 block text-xs text-subtle">{detail}</span>}
         <time className="mt-0.5 block text-[11px] text-subtle" dateTime={notification.createdAt?.toISOString()} title={formatDateTime(notification.createdAt, locale)}>
           {formatRelative(notification.createdAt, locale)}

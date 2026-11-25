@@ -229,6 +229,7 @@
     "DOC_PAGE_CYCLE": "A page cannot be placed inside one of its own subpages.",
     "DOC_PAGE_TOO_DEEP": "The 8-level page limit was reached.",
     "DOC_PAGE_IS_HOME": "The space home page cannot be moved or deleted.",
+    "DOC_PAGE_NOT_PUBLISHED": "Publish the page before notifying anyone.",
     "DOC_MODULE_NOT_FOUND": "Module not found.",
     "DOC_MODULE_NAME_IN_USE": "A module with this name already exists.",
     "GROUP_NOT_FOUND": "Group not found.",
@@ -946,6 +947,7 @@
       "doc_module.deleted": "Documentation module deleted",
       "doc_page.created": "Documentation page created",
       "doc_page.published": "Documentation page published",
+      "doc_page.notified": "Notice about a documentation page",
       "doc_page.moved": "Documentation page moved",
       "doc_page.deleted": "Documentation page deleted",
       "doc_page.restored": "Page version restored",
@@ -2043,9 +2045,12 @@
       "demand_passed": "{{actor}} passed {{code}} to {{assignee}}",
       "demand_concluded": "{{actor}} completed {{code}}: awaiting validation",
       "demand_validated": "{{actor}} validated {{code}}",
-      "demand_returned": "{{actor}} returned {{code}}"
+      "demand_returned": "{{actor}} returned {{code}}",
+      "doc_shared": "{{actor}} asked you to look at “{{title}}”"
     },
-    "planItemIn": "{{project}} board"
+    "planItemIn": "{{project}} board",
+    "docPageIn": "Documentation for {{project}}",
+    "docSpaceIn": "Documentation: {{space}}"
   },
   "kanban": {
     "title": "Kanban",
@@ -2922,6 +2927,28 @@
       "openFull": "Open full page",
       "unlinkPage": "Unlink",
       "pageUnlinked": "Unlinked."
+    },
+    "notices": {
+      "button": "Notify",
+      "dialogTitle": "Notify people about this page",
+      "dialogDescription": "{{page}}, in the {{project}} project",
+      "who": "Who should look at it?",
+      "addPerson": "Add person…",
+      "suggestedHint": "{{name}} is selected because they lead Development on the project.",
+      "onlyReaders": "Only people who can see this documentation are listed.",
+      "nobody": "Nobody else can see this documentation yet.",
+      "note": "What to look at",
+      "optional": "(optional)",
+      "notePlaceholder": "E.g.: review section 2 and send me your estimate.",
+      "howItArrives": "They get it in the bell and by email, with a link to this page.",
+      "notNow": "Not now",
+      "send": "Notify",
+      "sent_one": "Notice sent to {{names}}.",
+      "sent_other": "Notice sent to {{names}}.",
+      "notified": "Notified:",
+      "opened": "opened it {{when}}",
+      "notOpened": "not opened yet",
+      "sentAt": "Notified by {{who}} on {{when}}"
     },
     "project": {
       "emptyTitle": "This project has no documentation yet",

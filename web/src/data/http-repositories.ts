@@ -27,7 +27,7 @@ import { toProjectTaskCounts, toTeamActivity } from './mappers'
 import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
 import { toDependencies, toDependencyAreas } from './mappers'
 import type { DependenciesDto, DependencyAreasDto } from './dtos'
-import { toDocExport, toDocModule, toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
+import { toDocExport, toDocModule, toDocNotice, toDocNoticeCandidate, toDocPage, toDocSpace, toDocTreePage, toTaskDocLink, toMilestone, toPlan, toPlanFile, toPlanGroup, toPlanItem, toPlanLink, toPlanResource, toPlanStatus, toPlanUpdate, toTimeline } from './mappers'
 import type { JournalEntryDto, PlanColumnDto, PlanDto, PlanFileDto, PlanGroupDto, PlanIssueDto, PlanItemDto, PlanLinkDto, PlanReportDto, PlanResourceDto, PlanStatusDto, PlanUpdateDto } from './dtos'
 import { toJournalEntry, toPlanColumn, toPlanIssue, toPlanReport } from './mappers'
 import type { ColumnTypePreview } from '@/domain/plan-columns'
@@ -45,7 +45,7 @@ import { fromEmailPatch, toEmailSettings, toOutboxSummary, toResetTokenCheck } f
 import type { FlushResult } from '@/domain/email'
 import type { IssueInput, JournalInput } from '@/domain/plan-management'
 import type { PlanBulkInput, PlanBulkResult, PlanGroupInput, PlanImportResult, PlanImportRow, PlanItemInput } from '@/domain/plan'
-import type { DocExportDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
+import type { DocExportDto, DocModuleDto, DocNoticeCandidateDto, DocNoticeDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto } from './dtos'
 import type { DocFile, DocModuleInput, DocSpaceInput, RichContent } from '@/domain/docs'
 import type { SprintInput } from '@/domain/sprints'
 import type { TaskRelation } from '@/domain/relations'
@@ -1299,6 +1299,15 @@ export function createHttpDocsRepository(api: ApiClient): DocsRepository {
     },
     async unlinkTask(pageId, taskId) {
       await api.del(`${page(pageId)}/tasks/${encodeURIComponent(taskId)}`)
+    },
+    async listNoticeCandidates(pageId) {
+      return (await api.get<DocNoticeCandidateDto[]>(`${page(pageId)}/notices/candidates`)).data.map(toDocNoticeCandidate)
+    },
+    async listNotices(pageId) {
+      return (await api.get<DocNoticeDto[]>(`${page(pageId)}/notices`)).data.map(toDocNotice)
+    },
+    async notifyPage(pageId, input) {
+      return (await api.post<{ notified: number; notices: DocNoticeDto[] }>(`${page(pageId)}/notices`, { user_ids: input.userIds, note: input.note })).data.notices.map(toDocNotice)
     },
     async listTaskDocs(taskId) {
       return (await api.get<TaskDocLinkDto[]>(`/tasks/${encodeURIComponent(taskId)}/docs`)).data.map(toTaskDocLink)

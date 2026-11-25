@@ -353,6 +353,8 @@ export interface NotificationDto {
   type: string
   task: { id: string; code: string; title: string } | null
   plan_item?: { id: string; project_id: string | null; name: string; project_name: string } | null
+  /** Aviso sobre uma página da Documentação (§47). */
+  doc_page?: { id: string; space_key: string; space_name: string; title: string; project_name: string } | null
   actor: UserSummaryDto | null
   data: Record<string, unknown>
   read: boolean
@@ -410,6 +412,20 @@ export interface DocTreePageDto {
   is_home: boolean
   updated_at: string | null
   tasks?: Array<{ id: string; code: string; title: string }>
+}
+
+/** Avisar sobre uma página (§47). */
+export interface DocNoticeCandidateDto extends UserSummaryDto {
+  suggested: boolean
+}
+
+export interface DocNoticeDto {
+  id: string
+  user: UserSummaryDto
+  actor: UserSummaryDto | null
+  note: string
+  created_at: string | null
+  opened_at: string | null
 }
 
 export interface TaskDocLinkDto {
