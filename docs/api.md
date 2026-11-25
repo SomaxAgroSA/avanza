@@ -318,6 +318,8 @@ Regra `block`: trocar o status (edição, massa) para uma etiqueta que **inicia*
 | POST | `/docs/pages/{id}/versions/{n}/restore` | publica o conteúdo da versão `n` como a próxima |
 | GET/POST | `/docs/pages/{id}/tasks` | tarefas vinculadas à página (só as visíveis; formato da lista de tarefas) / vincular `{ task_ids: [...] }` (até 50; quem edita o espaço e vê as tarefas; par repetido é ignorado; histórico `task.doc_linked` na tarefa) |
 | DELETE | `/docs/pages/{id}/tasks/{taskId}` | desvincular (quem edita o espaço; histórico `task.doc_unlinked`) → `{ deleted }` |
+| GET | `/docs/pages/{id}/notices/candidates` | quem pode ser avisado sobre a página (§47; quem edita o espaço; página publicada): pessoas ativas que a leem, fora quem pergunta; `suggested` = responsável de Desenvolvimento do projeto (vem primeiro) |
+| GET/POST | `/docs/pages/{id}/notices` | avisos (o mais recente de cada pessoa: `user`, `actor`, `note`, `created_at`, `opened_at`) / avisar `{ user_ids: [...], note? }` (até 20 pessoas que leem a página, senão `user_ids: no_access`; `note` até 500; notificação `doc_shared` no sino e por e-mail; histórico `doc_page.notified`; rascunho → `409 DOC_PAGE_NOT_PUBLISHED`) → `{ notified, notices }` |
 | POST | `/docs/pages/{id}/files` | multipart `files` (até 10, 20 MB cada, tipo conferido pelo conteúdo) → `{ id, name, kind: image\|document, mime, size, url }` |
 | GET | `/docs/files/{id}` | arquivo para quem vê a página: imagens em linha, demais como anexo; `nosniff` + CSP sandbox |
 | GET | `/docs/search?q=` | título e conteúdo publicado dos espaços visíveis, sem acento/maiúsculas (2–100 caracteres; até 30) com `snippet` |

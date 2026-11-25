@@ -869,6 +869,7 @@ function createNotificationRepository(db) {
       type: row.type,
       taskId: row.task_id || null,
       planItemId: row.plan_item_id || null,
+      docPageId: row.doc_page_id || null,
       projectId: row.project_id || null,
       actorId: row.actor_id || null,
       data: row.data || {},
@@ -887,11 +888,11 @@ function createNotificationRepository(db) {
       const userId = data.userId
       const dedupeKey = data.dedupeKey || ''
       const row = await db.one(
-        `INSERT INTO notifications (id, user_id, type, task_id, plan_item_id, project_id, actor_id, data, dedupe_key)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO notifications (id, user_id, type, task_id, plan_item_id, doc_page_id, project_id, actor_id, data, dedupe_key)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (user_id, dedupe_key) WHERE dedupe_key != '' DO NOTHING
          RETURNING *`,
-        [newId(), userId, data.type || '', data.taskId || null, data.planItemId || null, data.projectId || null, data.actorId || null, toJson(data.data || {}), dedupeKey],
+        [newId(), userId, data.type || '', data.taskId || null, data.planItemId || null, data.docPageId || null, data.projectId || null, data.actorId || null, toJson(data.data || {}), dedupeKey],
       )
       if (row) return toEntity(row)
       return toEntity(await db.one('SELECT * FROM notifications WHERE user_id = $1 AND dedupe_key = $2', [userId, dedupeKey]))
@@ -919,6 +920,10 @@ function createNotificationRepository(db) {
     },
     async markRead(id, at) {
       await db.exec('UPDATE notifications SET read_at = $2 WHERE id = $1', [id, toDbDate(at)])
+    },
+    /** Lê as notificações da pessoa sobre uma página da Documentação (ela abriu a página). */
+    async markReadByDocPage(userId, pageId, at) {
+      return db.exec('UPDATE notifications SET read_at = $3 WHERE user_id = $1 AND doc_page_id = $2 AND read_at IS NULL', [userId, pageId, toDbDate(at)])
     },
     /** Quantas foram marcadas. */
     async markAllRead(userId, at) {

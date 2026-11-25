@@ -13,7 +13,7 @@ import type { Report, ReportMetric, ReportQuery, ReportTask } from './reports'
 import type { ExecutiveDashboard, ExecutiveQuery } from './executive'
 import type { Milestone, MilestoneInput, Timeline } from './timeline'
 import type { DocExport, DocExportTarget } from './doc-export'
-import type { DocDraft, DocFile, DocModule, DocModuleInput, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink } from './docs'
+import type { DocDraft, DocFile, DocModule, DocModuleInput, DocMoveTarget, DocPage, DocRecent, DocSearchResult, DocSpace, DocSpaceDetail, DocSpaceInput, DocVersion, DocVersionDetail, RichContent, TaskDocLink, DocNotice, DocNoticeCandidate } from './docs'
 import type { Sprint, SprintInput } from './sprints'
 import type { LibraryIcon } from './icons'
 import type { Dependencies, DependencyArea, DependencyAreasConfig } from './dependencies'
@@ -629,6 +629,12 @@ export interface DocsRepository {
   unlinkTask(pageId: string, taskId: string): Promise<void>
   /** Páginas vinculadas à tarefa (só as dos espaços que a pessoa lê). */
   listTaskDocs(taskId: string): Promise<TaskDocLink[]>
+  /** Avisar sobre a página (§47): quem pode ser avisado (pessoas ativas que leem a página). */
+  listNoticeCandidates(pageId: string): Promise<DocNoticeCandidate[]>
+  /** Quem foi avisado sobre a página e quando abriu (quem edita). */
+  listNotices(pageId: string): Promise<DocNotice[]>
+  /** Avisa as pessoas (sino + e-mail); devolve os avisos atualizados. */
+  notifyPage(pageId: string, input: { userIds: string[]; note: string }): Promise<DocNotice[]>
   /** Módulos da tela inicial (§43), na ordem da lista. */
   listModules(): Promise<DocModule[]>
   createModule(input: DocModuleInput): Promise<DocModule>

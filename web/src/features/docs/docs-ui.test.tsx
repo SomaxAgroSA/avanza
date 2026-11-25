@@ -238,6 +238,9 @@ describe('Documentação — editor', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Publicar alterações' }))
     await waitFor(() => expect(publish).toHaveBeenCalledWith('agenda', { title: 'Agenda nova', content: CONTENT }))
     await waitFor(() => expect(success).toHaveBeenCalledWith('Página publicada (versão 3).'))
+    // na página publicada, a janela "Avisar" (§47) abre sozinha; "Agora não" fecha sem avisar
+    const notice = await screen.findByRole('dialog', { name: 'Avisar sobre esta página' })
+    await userEvent.click(within(notice).getByRole('button', { name: 'Agora não' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Agenda nova' })).toBeInTheDocument()
   })
 })

@@ -141,7 +141,8 @@ function PageEditor({ page, draft }: { page: DocPage; draft: DocDraft }) {
         onSuccess: (published) => {
           setSave('saved')
           notify.success(t('docs.editor.published', { version: published.version }))
-          void navigate(pagePath(page.space.key, page.id))
+          // na página publicada, a janela "Avisar" (§47) abre sozinha
+          void navigate(pagePath(page.space.key, page.id), { state: { notify: true } })
         },
         onError: (error) => notify.error(errorMessage(error)),
       },
