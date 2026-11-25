@@ -214,7 +214,8 @@ describe('Listas: coluna e filtro Empresa (§46)', () => {
     expect(await within(filters).findByRole('button', { name: /^Responsável/ })).toBeInTheDocument()
     expect(within(filters).getByRole('button', { name: /^Atribuída a/ })).toBeInTheDocument()
     const company = within(filters).getByRole('button', { name: /^Empresa/ })
-    expect(company).toHaveTextContent('Empresa: todas')
+    // padrão da grade (ajuste 25/11): parado mostra só o nome
+    expect(company).toHaveTextContent(/^Empresa$/)
     await userEvent.click(company)
     await userEvent.click(await screen.findByRole('button', { name: 'Somax Paraguay', pressed: false }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { companyId: 'c1' }))
