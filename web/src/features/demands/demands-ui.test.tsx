@@ -341,7 +341,7 @@ describe('Demanda interna — campos do tipo (§45, como na tarefa de projeto)',
 })
 
 describe('Bandeja — filtros, ordem e colunas (ajuste 23/11)', () => {
-  it('filtros na linha das caixas (mesmo botão), ordem por urgência e prioridade, colunas e números pelo filtro', async () => {
+  it('filtros na linha das caixas (botão padrão da grade), ordem por urgência e prioridade, colunas e números pelo filtro', async () => {
     const calma = demand({ id: 'd1', code: 'DEM-1', title: 'Sem pressa', priority: { id: 'p1', key: 'ALTA', name: 'Alta', color: 'red' }, urgency: null })
     const urgente = demand({ id: 'd2', code: 'DEM-2', title: 'Urgente de verdade', priority: { id: 'p2', key: 'MEDIA', name: 'Média', color: 'amber' }, urgency: 'high' })
     const atribuida = demand({ id: 'd3', code: 'DEM-3', title: 'Com o Jorge', step: 'assigned', assignee: jorge, urgency: 'medium' })
@@ -369,7 +369,8 @@ describe('Bandeja — filtros, ordem e colunas (ajuste 23/11)', () => {
     // números e lista seguem o filtro
     await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('1'))
     expect(screen.getByTestId('kpi-assigned')).toHaveTextContent('0')
-    expect(within(bar).getByRole('button', { name: /Urgência:\s*Alta/ })).toBeInTheDocument()
+    // o nome acessível é o do filtro (como na grade); o valor escolhido aparece no botão
+    expect(within(bar).getByRole('button', { name: /^Urgência/ })).toHaveTextContent(/^Urgência:\s*Alta$/)
     await userEvent.keyboard('{Escape}')
     await userEvent.click(within(bar).getByRole('button', { name: 'Limpar' }))
     await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('2'))
@@ -391,12 +392,24 @@ describe('Bandeja — filtros, ordem e colunas (ajuste 23/11)', () => {
       })
       const bar = await screen.findByRole('group', { name: 'Filtros da Bandeja' })
       const row = bar.closest<HTMLElement>('[data-toolbar]')!
-      // dois passos bastam: filtros sem ": todas" e os botões de criar curtos; as caixas seguem com o nome inteiro
+      // dois passos bastam (ajuste 25/11): segmentados só com o ícone e botões de criar curtos; depois as caixas sem
+      // os números. As caixas seguem com o nome inteiro, a busca inteira e os filtros sem cortar o nome
       await waitFor(() => expect(row).toHaveAttribute('data-compact', '1 2'))
       expect(bar).not.toHaveClass('min-w-0')
+      expect(bar).not.toHaveClass('flex-wrap')
       const received = within(screen.getByRole('radiogroup', { name: i18n.t('demands.page.tabsLabel') })).getByRole('radio', { name: /Recebidas por mim/ })
-      expect(within(received).getByText('Recebidas por mim')).toHaveClass("[[data-compact~='4']_&]:sr-only")
-      expect(within(received).getByText('Recebidas')).toHaveClass('hidden', "[[data-compact~='4']_&]:inline")
+      expect(within(received).getByText('Recebidas por mim')).toHaveClass("[[data-compact~='3']_&]:sr-only")
+      expect(within(received).getByText('Recebidas')).toHaveClass('hidden', "[[data-compact~='3']_&]:inline")
+      // passo 1: "Lista | Caixa de entrada" só com o ícone (o nome segue para o leitor de tela)
+      const views = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
+      expect(within(views).getByText('Lista')).toHaveClass("[[data-compact~='1']_&]:sr-only")
+      // passo 5: a busca só com a lupa; passo 6: as caixas viram seletor; passo 8, o último: os nomes dos filtros
+      // cortam com "…", numa grade com um mínimo por filtro (nunca se sobrepõem)
+      expect(within(bar).getByRole('searchbox', { name: 'Buscar' }).closest('div')).toHaveClass("[[data-compact~='5']_&]:w-9")
+      expect(screen.getByRole('radiogroup', { name: i18n.t('demands.page.tabsLabel') })).toHaveClass("[[data-compact~='6']_&]:hidden")
+      const priority = within(bar).getByRole('button', { name: /^Prioridade/ })
+      expect(priority).toHaveClass("[[data-compact~='8']_&]:w-full")
+      expect(priority.parentElement).toHaveClass("[[data-compact~='8']_&]:grid", "[[data-compact~='8']_&]:auto-cols-[minmax(4rem,max-content)]")
     } finally {
       scroll.mockRestore()
       client.mockRestore()
@@ -690,7 +703,7 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
     await userEvent.click(within(bar).getByRole('button', { name: /^Responsável/ }))
     await userEvent.click(await screen.findByRole('button', { name: /César/, pressed: false }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerId: 'u2' }))
-    expect(within(bar).getByRole('button', { name: /Responsável:\s*César/ })).toBeInTheDocument()
+    expect(within(bar).getByRole('button', { name: /^Responsável/ })).toHaveTextContent(/^Responsável:\s*César$/)
     await userEvent.click(within(bar).getByRole('button', { name: /^Atribuída a/ }))
     await userEvent.click(await screen.findByRole('button', { name: /Jorge/, pressed: false }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerId: 'u2', assigneeId: 'u3' }))

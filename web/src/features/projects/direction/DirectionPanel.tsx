@@ -11,6 +11,7 @@ import {
   DEFAULT_PANEL,
   KPI_IDS,
   NO_AREA,
+  OTHER_AREAS,
   STATUS_COLORS,
   departmentScope,
   departmentSlices,
@@ -22,11 +23,12 @@ import {
   statusScope,
   statusSlices,
   teamInScope,
+  type DepartmentSlice,
   type KpiId,
   type PanelFilter,
 } from './direction-data'
 import { DirectionTeam } from './DirectionTeam'
-import { PieChart } from './PieChart'
+import { PieChart, type PieItem } from './PieChart'
 import { DepDrawer, DepFlag, DepStrip } from './Dependencies'
 import { depAffected, depInScope } from './dependency-data'
 
@@ -54,7 +56,9 @@ export interface DirectionPanelProps {
 /** Painel da vista "Direção e gerência" de Em andamento (regras §41): indicadores, linha do tempo, gráficos e equipe. */
 export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, dependencies, shows = () => true }: DirectionPanelProps) {
   const scope = useMemo(() => panelScope(projects, filter), [projects, filter])
-  const set = (patch: Partial<PanelFilter>) => onFilter({ ...filter, ...patch })
+  // os em andamento, sem filtro: decidem a cor de cada departamento (a cor não muda ao filtrar)
+  const ongoing = useMemo(() => panelScope(projects, DEFAULT_PANEL), [projects])
+  const set =(patch: Partial<PanelFilter>) => onFilter({ ...filter, ...patch })
   // painel lateral das Dependências: null = fechado; only = projeto do ⚠ (null = todos do recorte)
   const [depView, setDepView] = useState<{ only: string | null } | null>(null)
   const depScope = useMemo(() => depInScope(dependencies, scope), [dependencies, scope])
@@ -73,7 +77,9 @@ export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, d
       {/* departamentos e estado de execução lado a lado (o bloco "Tarefas por projeto" saiu a pedido da coordenação) */}
       {(shows('projects.blocks.areas') || shows('projects.blocks.status')) && (
         <div className={cn('mb-4 grid gap-3', shows('projects.blocks.areas') && shows('projects.blocks.status') && 'lg:grid-cols-2')}>
-          {shows('projects.blocks.areas') && <Departments projects={departmentScope(projects, filter)} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />}
+          {shows('projects.blocks.areas') && (
+            <Departments projects={departmentScope(projects, filter)} reference={ongoing} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />
+          )}
           {shows('projects.blocks.status') && <StatusStrip projects={statusScope(projects, filter)} status={filter.status} onSelect={(status) => set({ status: filter.status === status ? null : status })} />}
         </div>
       )}
@@ -257,12 +263,21 @@ function Timeline({ projects, affected, onDependencies }: { projects: Project[];
 
 /* ------------------------------------------------------------------ departamentos */
 
-function Departments({ projects, area, onSelect }: { projects: Project[]; area: string | null; onSelect: (key: string) => void }) {
+function Departments({ projects, reference, area, onSelect }: { projects: Project[]; reference: Project[]; area: string | null; onSelect: (key: string) => void }) {
   const { t } = useTranslation()
-  const slices = useMemo(() => departmentSlices(projects), [projects])
-  const items = slices.map((slice) => ({ ...slice, label: slice.key === NO_AREA ? t('direction.departments.none') : slice.name }))
+  const slices = useMemo(() => departmentSlices(projects, reference), [projects, reference])
+  const label = (slice: DepartmentSlice) =>
+    slice.key === NO_AREA ? t('direction.departments.none') : slice.key === OTHER_AREAS ? t('direction.departments.others', { count: slice.children?.length ?? 0 }) : slice.name
+  const items: PieItem[] = slices.map((slice) => ({
+    key: slice.key,
+    label: label(slice),
+    count: slice.count,
+    percent: slice.percent,
+    color: slice.color,
+    children: slice.children?.map((child) => ({ key: child.key, label: child.name, count: child.count, percent: child.percent })),
+  }))
   return (
-    <Card title={t('direction.departments.title')} className="mb-0">
+    <Card title={t('direction.departments.title')} className="mb-0 flex h-full flex-col">
       {items.length === 0 ? (
         <p className="py-2 text-sm text-muted">{t('direction.departments.empty')}</p>
       ) : (
@@ -272,6 +287,7 @@ function Departments({ projects, area, onSelect }: { projects: Project[]; area: 
           onSelect={onSelect}
           chartLabel={t('direction.departments.chart')}
           sliceTitle={(item) => t('direction.departments.slice', { name: item.label, count: item.count, percent: item.percent })}
+          unit={(count) => t('direction.departments.unit', { count })}
         />
       )}
     </Card>
@@ -287,7 +303,11 @@ function StatusStrip({ projects, status, onSelect }: { projects: Project[]; stat
   const items = slices.map((slice) => ({ key: slice.status, label: t(`projects.status.${slice.status}`), count: slice.count, percent: slice.percent, color: STATUS_COLORS[slice.status] }))
   const byKey = new Map(slices.map((slice) => [slice.status as string, slice.status]))
   return (
-    <Card title={t('direction.status.title')} aside={<span className="text-xs text-muted">{t('direction.status.count', { count: projects.length })}</span>} className="mb-0">
+    <Card
+      title={t('direction.status.title')}
+      aside={<span className="text-xs text-muted">{t('direction.status.count', { count: projects.length })}</span>}
+      className="mb-0 flex h-full flex-col"
+    >
       <PieChart
         items={items}
         selected={status}
@@ -297,6 +317,7 @@ function StatusStrip({ projects, status, onSelect }: { projects: Project[]; stat
         }}
         chartLabel={t('direction.status.chart')}
         sliceTitle={(item) => t('direction.status.segment', { label: item.label, count: item.count, percent: item.percent })}
+        unit={(count) => t('direction.status.unit', { count })}
       />
     </Card>
   )

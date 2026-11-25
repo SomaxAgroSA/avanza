@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Plus, Users } from 'lucide-react'
+import { ArrowRight, Users } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatRelative } from '@/core/utils/format'
 import type { Project, ProjectTaskCount, TeamActivity, TeamActivityProject, TeamActivityState } from '@/domain/projects'
 import { projectDisplayName } from '@/domain/demands'
 import { AppAvatar, AppBadge, AppButton, AppDrawer, AppEmptyState, AppErrorState, AppSkeleton, AppTabs } from '@/presentation/components'
 import { ProjectAvatar, ProjectStatusBadge } from '../project-visuals'
-import { ActedPreview, ActedTaskList } from '../team-activity'
+import { ActedPreview, ActedTaskList, TasksToggle, TeamGroupRows } from '../team-activity'
 import { actedCount, firstName, teamMetric } from '../team-activity-data'
 import { percentOf, recentTasksOf, workersOf, type ProjectWorker } from './direction-data'
 import { TaskBar } from './TaskBar'
@@ -37,8 +37,8 @@ interface DrawerTarget {
 }
 
 /**
- * "Equipo ahora" da vista de Direção: um cartão por pessoa, lado a lado, com as tarefas em que ela agiu embaixo
- * de cada projeto; o "+" (ou "+N más") abre o painel "<Nome> en <Projeto>".
+ * "Equipo ahora" da vista de Direção: um cartão por pessoa, lado a lado, com uma linha fechada por projeto; o "+"
+ * mostra embaixo as tarefas em que ela agiu e o "+N más" abre o painel "<Nome> en <Projeto>".
  */
 export function DirectionTeam({ team, projects, counts, pending, error, onRetry }: DirectionTeamProps) {
   const { t } = useTranslation()
@@ -71,7 +71,7 @@ export function DirectionTeam({ team, projects, counts, pending, error, onRetry 
 }
 
 function PersonCard({ user, projects, onOpen }: { user: TeamActivity['people'][number]['user']; projects: TeamActivityProject[]; onOpen: (projectId: string) => void }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const acted = actedCount(projects)
   return (
     <article aria-labelledby={`dir-team-${user.id}`} className="min-w-0 rounded-xl border border-border bg-surface px-4 pb-2.5 pt-4">
@@ -90,34 +90,40 @@ function PersonCard({ user, projects, onOpen }: { user: TeamActivity['people'][n
         return (
           <div key={key} className="mt-2.5">
             <p className={cn('mb-0.5 text-xs font-extrabold uppercase tracking-wide', tone)}>{t(label)}</p>
-            <ul>
-              {rows.map((row) => (
-                <li key={row.project.id} className="py-1.5">
-                  <div className="grid grid-cols-[22px_24px_minmax(0,1fr)_auto] items-center gap-2.5 text-[13.5px]">
-                    <button
-                      type="button"
-                      onClick={() => onOpen(row.project.id)}
-                      aria-haspopup="dialog"
-                      aria-label={t('direction.team.detail', { project: projectDisplayName(t, row.project), name: user.name })}
-                      className="flex size-[22px] items-center justify-center rounded-md border border-border-strong text-muted hover:border-fg hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      <Plus aria-hidden className="size-3" />
-                    </button>
-                    <ProjectAvatar icon={row.project.icon} cover={row.project.cover} size="sm" className="size-6 rounded-md [&_svg]:size-3.5" />
-                    <Link to={row.project.demands ? '/tasks/demands' : `/projects/${row.project.id}`} className="truncate text-fg hover:text-primary-text hover:underline">
-                      {projectDisplayName(t, row.project)}
-                    </Link>
-                    <span className={cn('whitespace-nowrap text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{teamMetric(t, row, i18n.language)}</span>
-                  </div>
-                  {/* as tarefas em que a pessoa agiu, alinhadas com o nome do projeto */}
-                  <ActedPreview row={row} userName={user.name} onMore={() => onOpen(row.project.id)} className="ml-[66px] mt-1" />
-                </li>
-              ))}
-            </ul>
+            <TeamGroupRows
+              rows={rows}
+              moreClassName="pl-8"
+              renderRow={(row) => <ProjectRow key={row.project.id} row={row} userName={user.name} onMore={() => onOpen(row.project.id)} />}
+            />
           </div>
         )
       })}
     </article>
+  )
+}
+
+/**
+ * Um projeto no cartão, fechado como sempre: [+] avatar nome … métrica. O "+" abre embaixo as tarefas em que a
+ * pessoa agiu (até 3); "+N más" abre o painel "<Nome> en <Projeto>".
+ */
+function ProjectRow({ row, userName, onMore }: { row: TeamActivityProject; userName: string; onMore: () => void }) {
+  const { t, i18n } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  const name = projectDisplayName(t, row.project)
+  return (
+    <li className="py-1.5">
+      <div className="grid grid-cols-[22px_24px_minmax(0,1fr)_auto] items-center gap-2.5 text-[13.5px]">
+        <TasksToggle open={open} controls={panelId} label={t('team.showTasks', { project: name, name: userName })} onToggle={() => setOpen((v) => !v)} className="size-[22px] rounded-md" />
+        <ProjectAvatar icon={row.project.icon} cover={row.project.cover} size="sm" className="size-6 rounded-md [&_svg]:size-3.5" />
+        <Link to={row.project.demands ? '/tasks/demands' : `/projects/${row.project.id}`} title={name} className="truncate text-fg hover:text-primary-text hover:underline">
+          {name}
+        </Link>
+        <span className={cn('whitespace-nowrap text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{teamMetric(t, row, i18n.language)}</span>
+      </div>
+      {/* as tarefas em que a pessoa agiu, alinhadas com o nome do projeto */}
+      {open && <ActedPreview id={panelId} row={row} userName={userName} onMore={onMore} opensDialog className="ml-[66px] mt-1" />}
+    </li>
   )
 }
 
@@ -160,12 +166,8 @@ function ProjectDrawer({ target, projects, team, counts, onClose }: { target: Dr
             {
               value: 'person',
               label: personTab,
-              content:
-                person.row.actedTasks.length > 0 ? (
-                  <ActedTaskList tasks={person.row.actedTasks} label={personTab} />
-                ) : (
-                  <p className="text-sm text-muted">{t('direction.drawer.noActed', { name: first })}</p>
-                ),
+              // só se chega aqui pelo "+N más", que aparece quando há tarefas em que a pessoa agiu
+              content: <ActedTaskList tasks={person.row.actedTasks} label={personTab} />,
             },
             { value: 'project', label: t('direction.drawer.tabProject'), content: overview },
           ]}

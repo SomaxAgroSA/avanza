@@ -18,6 +18,7 @@ import type { Dependencies } from '@/domain/dependencies'
 import type { TaskDetail } from '@/domain/tasks'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ProjectsPage } from '../ProjectsPage'
+import { DirectionTeam } from './DirectionTeam'
 import { STATUS_COLORS } from './direction-data'
 
 beforeAll(async () => {
@@ -169,13 +170,23 @@ function setup({
   relations = {},
   tasks = {},
   hidden = [],
-}: { hidden?: ScreenKey[]; view?: OngoingView; counts?: boolean; perms?: typeof PERMS; deps?: Dependencies; relations?: Record<string, unknown>; tasks?: Record<string, unknown> } = {}) {
+  projects = ALL,
+}: {
+  hidden?: ScreenKey[]
+  view?: OngoingView
+  counts?: boolean
+  perms?: typeof PERMS
+  deps?: Dependencies
+  relations?: Record<string, unknown>
+  tasks?: Record<string, unknown>
+  projects?: Project[]
+} = {}) {
   const list = vi.fn((query: ProjectListQuery): Promise<ProjectPage> => {
     // simula el servidor: estado, prioridad y departamento de la tabla; la lista completa del panel no filtra
     const csv = (value?: string) => (value ? value.split(',') : null)
     const statuses = csv(query.filters.status)
     const priorities = csv(query.filters.priority)
-    const items = ALL.filter(
+    const items = projects.filter(
       (p) =>
         (!statuses || statuses.includes(p.status)) &&
         (!priorities || priorities.includes(p.priority)) &&
@@ -353,6 +364,45 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'active' }))
   })
 
+  it('departamentos en rosca (25/11): 10 departamentos → 7 colores + «Otros (3)»; la porción abre la lista y elegir uno de ahí filtra y la deja abierta', async () => {
+    // 10 departamentos con 10, 9, …, 1 proyectos en curso (55 en total)
+    const many = Array.from({ length: 10 }, (_, i) => area(`d${i}`, `Depto ${i}`)).flatMap((a, i) =>
+      Array.from({ length: 10 - i }, (_, n) => project(`${a.id}-${n}`, `${a.name} · ${n}`, 'active', 'medium', { area: a })),
+    )
+    const { list } = setup({ projects: many })
+    const panel = await screen.findByTestId('direction-panel')
+    const card = within(panel).getByRole('region', { name: 'Proyectos por departamento' })
+    const chart = within(card).getByRole('img', { name: 'Gráfico de proyectos por departamento' })
+    const fills = [...chart.querySelectorAll('path')].map((p) => p.getAttribute('fill'))
+    expect(fills).toHaveLength(8)
+    expect(new Set(fills).size).toBe(8) // ningún color repetido
+    // total en el centro
+    expect(within(card).getByTestId('pie-center')).toHaveTextContent('55proyectos')
+    const others = within(card).getByRole('button', { name: /^Otros \(3\)/ })
+    expect(others).toHaveAttribute('aria-expanded', 'false')
+    expect(within(card).queryByRole('button', { name: /^Depto 8/ })).toBeNull()
+    // tocar la porción «Otros» abre la lista
+    await userEvent.click(chart.querySelector('[data-slice="__other"]')!)
+    expect(others).toHaveAttribute('aria-expanded', 'true')
+    expect(['Depto 7', 'Depto 8', 'Depto 9'].map((name) => within(card).getByRole('button', { name: new RegExp(`^${name}`) }).textContent)).toEqual([
+      'Depto 735 %',
+      'Depto 824 %',
+      'Depto 912 %',
+    ])
+    await userEvent.click(within(card).getByRole('button', { name: /^Depto 8/ }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Filtrando todo el panel: En marcha · Depto 8 (2 proyectos)')
+    await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'planning,active,paused', area: 'd8' }))
+    // la lista queda abierta, «Otros» resaltado, los demás atenuados y el centro muestra lo elegido
+    expect(others).toHaveAttribute('aria-expanded', 'true')
+    expect(within(card).getByRole('button', { name: /^Depto 8/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(chart.querySelector('[data-slice="__other"]')).toHaveAttribute('opacity', '1')
+    expect(chart.querySelector('[data-slice="d0"]')).toHaveAttribute('opacity', '0.3')
+    expect(within(card).getByTestId('pie-center')).toHaveTextContent('2Depto 8')
+    // de nuevo, se quita
+    await userEvent.click(within(card).getByRole('button', { name: /^Depto 8/ }))
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  })
+
   it('línea de tiempo: solo con fechas reales, colores por estado (con nombre en la leyenda), vencidas marcadas y sin lista de "sin fecha"', async () => {
     setup()
     const panel = await screen.findByTestId('direction-panel')
@@ -409,11 +459,20 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(within(screen.getByTestId('direction-team')).getByRole('heading', { name: 'Angelica Davalos' })).toBeInTheDocument()
   })
 
-  it('bajo cada proyecto, hasta 3 tareas en que la persona actuó, con la acción y cuándo; "+N más" abre el panel', async () => {
+  it('cada proyecto es una fila cerrada; el + abre debajo hasta 3 tareas en que la persona actuó (acción y cuándo) y "+N más" abre el panel', async () => {
     setup()
     const team = await screen.findByTestId('direction-team')
     const card = within(team).getAllByRole('article')[0]!
-    const preview = within(card).getByRole('list', { name: 'Lo que hizo Angelica Davalos en Alfa' })
+    // al cargar, cerrado: [+] Alfa … métrica, sin las tareas
+    expect(card).toHaveTextContent('2 en curso')
+    expect(card).not.toHaveTextContent('Portal de acceso')
+    expect(within(card).queryByRole('list', { name: /^Tareas de/ })).toBeNull()
+    const toggle = within(card).getByRole('button', { name: 'Ver las tareas de Angelica Davalos en Alfa' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const preview = within(card).getByRole('list', { name: 'Tareas de Angelica Davalos en Alfa' })
+    expect(toggle).toHaveAttribute('aria-controls', preview.id)
     expect(within(preview).getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Portal de acceso · subir el portal de login al servidor',
       'Entregar las vistas de Libro Mayor (S/4)',
@@ -423,17 +482,30 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(preview).toHaveTextContent('comentó · hace 5 horas')
     expect(preview).toHaveTextContent('editó · ayer')
     expect(within(preview).getByRole('link', { name: 'Entregar las vistas de Libro Mayor (S/4)' })).toHaveAttribute('href', '/tasks/a2')
+    expect(within(preview).getByRole('link', { name: 'Entregar las vistas de Libro Mayor (S/4)' })).toHaveAttribute('title', 'Entregar las vistas de Libro Mayor (S/4)')
+    // varias filas abiertas a la vez; Beta sin acciones propias: una línea corta y sin "+N más"
+    await userEvent.click(within(card).getByRole('button', { name: 'Ver las tareas de Angelica Davalos en Beta' }))
+    const beta = within(card).getByRole('list', { name: 'Tareas de Angelica Davalos en Beta' })
+    expect(beta).toHaveTextContent('Sin acciones esta semana')
+    expect(within(beta).queryByRole('button')).toBeNull()
+    expect(within(card).getByRole('list', { name: 'Tareas de Angelica Davalos en Alfa' })).toBeInTheDocument()
     await userEvent.click(within(preview).getByRole('button', { name: 'Ver todas las tareas de Angelica Davalos en Alfa' }))
     const drawer = await screen.findByRole('dialog', { name: 'Angelica en Alfa' })
     expect(within(drawer).getByRole('tab', { name: 'Tareas de Angelica · 4' })).toHaveAttribute('aria-selected', 'true')
     expect(within(drawer).getAllByRole('listitem')).toHaveLength(4)
     expect(drawer).toHaveTextContent('Adjuntó 1 archivo')
+    // el − cierra la fila
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(card).not.toHaveTextContent('Portal de acceso')
   })
 
-  it('el "+" de la persona abre "<Nombre> en <Proyecto>": sus tareas con la acción y, en "Todo el proyecto", el panel de siempre', async () => {
+  it('"+N más" abre "<Nombre> en <Proyecto>": sus tareas con la acción y, en "Todo el proyecto", el panel de siempre', async () => {
     setup()
     const team = await screen.findByTestId('direction-team')
-    await userEvent.click(within(team).getByRole('button', { name: 'Ver el detalle de Alfa (Angelica Davalos)' }))
+    await userEvent.click(within(team).getByRole('button', { name: 'Ver las tareas de Angelica Davalos en Alfa' }))
+    await userEvent.click(within(team).getByRole('button', { name: 'Ver todas las tareas de Angelica Davalos en Alfa' }))
     const drawer = await screen.findByRole('dialog', { name: 'Angelica en Alfa' })
     expect(drawer).toHaveTextContent('Lo que hizo en los últimos 7 días')
     // por defecto, solo las tareas de ella: la acción con el detalle, cuándo y el estado
@@ -459,14 +531,20 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(who).toHaveTextContent('Angelica Davalos')
     expect(who).toHaveTextContent('Trabajando ahora')
     expect(within(drawer).queryByText(/Responsables|Fechas/)).toBeNull()
-    // Douglas en Beta: sin acciones propias en la lista de él, el aviso; "Todo el proyecto" con sus tareas
-    await userEvent.keyboard('{Escape}')
-    await userEvent.click(within(team).getByRole('button', { name: 'Ver el detalle de Beta (Douglas Martins)' }))
-    const beta = await screen.findByRole('dialog', { name: 'Douglas en Beta' })
-    expect(beta).toHaveTextContent('Douglas no actuó en tareas de este proyecto en los últimos 7 días.')
-    await userEvent.click(within(beta).getByRole('tab', { name: 'Todo el proyecto' }))
-    expect(within(beta).getByText('Revisar el simulador')).toBeInTheDocument()
-    expect(within(beta).getByRole('region', { name: 'Quién está trabajando' })).toHaveTextContent('Douglas Martins')
+  })
+
+  it('Equipo ahora: con más de 4 proyectos en un grupo se ven 4 y "Ver N proyectos más" muestra el resto', async () => {
+    const many = [ALFA, BETA, GAMA, DELTA, EPSILON]
+    const busy: TeamActivity = { windowDays: 7, people: [{ user: douglas, projects: many.map((p) => row(p, 'active', 2)) }] }
+    renderRoutes([{ path: '/', element: <DirectionTeam team={busy} projects={many} counts={[]} pending={false} error={false} onRetry={() => {}} /> }], { repositories: fakeRepositories(), initialPath: '/' })
+    const card = within(screen.getByTestId('direction-team')).getByRole('article')
+    expect(within(card).getAllByRole('button', { name: /^Ver las tareas de/ })).toHaveLength(4)
+    expect(card).not.toHaveTextContent('Épsilon')
+    await userEvent.click(within(card).getByRole('button', { name: 'Ver 1 proyecto más' }))
+    expect(within(card).getAllByRole('button', { name: /^Ver las tareas de/ })).toHaveLength(5)
+    expect(card).toHaveTextContent('Épsilon')
+    expect(within(card).queryByRole('button', { name: /proyectos? más/ })).toBeNull()
+    expect(within(card).getByRole('button', { name: 'Ver las tareas de Douglas Martins en Épsilon' })).toHaveFocus()
   })
 
   it('solo consulta: la tabla ofrece solo "Ver" (sin editar, archivar ni eliminar) y la urgencia no se cambia con un clic', async () => {

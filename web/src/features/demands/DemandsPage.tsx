@@ -32,7 +32,7 @@ import {
 import { inboxHeader } from '@/domain/task-views'
 import type { UserSummary } from '@/domain/projects'
 import type { TaskSummary } from '@/domain/tasks'
-import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSkeleton } from '@/presentation/components'
+import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSelect, AppSkeleton } from '@/presentation/components'
 import { formatNumber, formatShortDateTime } from '@/core/utils/format'
 import { cn } from '@/core/utils/cn'
 import { useCan, useSession } from '@/features/auth/session'
@@ -92,6 +92,8 @@ export function DemandsPage() {
   const priorityOptions: InboxFilterOption[] = (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name }))
   const setInbox = useCallback((next: InboxFilters) => setParams(writeInboxFilters(params, next), { replace: true }), [params, setParams])
   const setPeople = useCallback((next: PersonFilters) => setParams(writePersonFilters(params, next), { replace: true }), [params, setParams])
+  // trocar de caixa mantém os filtros da Caixa de entrada (os de pessoa são só da caixa Todas)
+  const chooseBox = (value: DemandBox) => setParams(writeInboxFilters(value === boxes[0] ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })
   const clearAll = useCallback(() => setParams(writePersonFilters(writeInboxFilters(params, NO_INBOX_FILTERS), NO_PERSON_FILTERS), { replace: true }), [params, setParams])
   const peopleFilters = usePeopleFilters(box === 'all', people, setPeople, clearAll, overview.data?.allTeam ?? [])
   // com filtro, os números contam o que a lista mostra (enquanto ela vem inteira); sem filtro, os da caixa
@@ -116,20 +118,31 @@ export function DemandsPage() {
       <TasksHeader>
         {inboxViews.length > 1 && <ViewSwitch value={view} onChange={setView} />}
         {header.boxSwitch && (
-          <AppSegmentedControl<DemandBox>
-            className="shrink-0"
-            label={t('demands.page.tabsLabel')}
-            value={box}
-            // trocar de caixa mantém os filtros da Bandeja (os de pessoa são só da caixa Todas)
-            onValueChange={(value) => setParams(writeInboxFilters(value === boxes[0] ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
-            options={boxes.map((b) => ({ value: b, label: <BoxLabel text={t(`demands.tabs.${b}`)} short={t(`demands.tabsShort.${b}`)} total={open(b)} /> }))}
-          />
+          <>
+            <AppSegmentedControl<DemandBox>
+              className="shrink-0 [[data-compact~='6']_&]:hidden"
+              label={t('demands.page.tabsLabel')}
+              value={box}
+              onValueChange={chooseBox}
+              options={boxes.map((b) => ({ value: b, label: <BoxLabel text={t(`demands.tabs.${b}`)} short={t(`demands.tabsShort.${b}`)} total={open(b)} /> }))}
+            />
+            {/* passo 6 da linha (InboxFilterBar): as caixas viram um seletor, como os grupos de botões da grade */}
+            <AppSelect
+              aria-label={t('demands.page.tabsLabel')}
+              value={box}
+              onValueChange={(value) => chooseBox(value as DemandBox)}
+              options={boxes.map((b) => ({ value: b, label: t(`demands.tabs.${b}`) }))}
+              renderValue={t(`demands.tabsShort.${box}`)}
+              className="hidden w-auto shrink-0 [[data-compact~='6']_&]:flex"
+              triggerClassName="font-medium"
+            />
+          </>
         )}
         {header.title && (
           // uma caixa só (ajuste 25/11): a tela se chama "Caixa de entrada", com o número das abertas
           <h2 className="inline-flex shrink-0 items-baseline gap-1.5 px-1 text-sm font-bold text-fg" data-testid="inbox-title">
             {t('taskList.viewDemands')}
-            {open(box) !== undefined && <span className="text-sm font-normal text-muted tabular-nums [[data-compact~='3']_&]:hidden">{open(box)}</span>}
+            {open(box) !== undefined && <span className="text-sm font-normal text-muted tabular-nums [[data-compact~='2']_&]:hidden">{open(box)}</span>}
           </h2>
         )}
         <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} people={peopleFilters} shows={screens.shows} />
@@ -161,15 +174,15 @@ export function DemandsPage() {
 }
 
 /**
- * "Lista | Linha do tempo" (ajuste 25/11, opção B): no começo da linha dos filtros. Numa linha apertada (passo 4
- * da Bandeja), só os ícones; o nome fica para o leitor de tela.
+ * "Lista | Linha do tempo" (ajuste 25/11, opção B): no começo da linha dos filtros. Numa linha apertada (passo 1
+ * da Caixa de entrada, o primeiro a ceder), só os ícones; o nome fica para o leitor de tela.
  */
 function ViewSwitch({ value, onChange }: { value: InboxView; onChange: (view: InboxView) => void }) {
   const { t } = useTranslation()
   const label = (icon: ReactNode, text: string) => (
     <>
       {icon}
-      <span className="[[data-compact~='4']_&]:sr-only">{text}</span>
+      <span className="[[data-compact~='1']_&]:sr-only">{text}</span>
     </>
   )
   return (
@@ -196,9 +209,7 @@ function usePeopleFilters(on: boolean, filters: PersonFilters, onChange: (next: 
   if (!on) return undefined
   const byId = new Map<string, UserSummary>()
   ;[...(owners.data ?? []), ...team.map((member) => member.user)].forEach((person) => byId.set(person.id, person))
-  const people = [...byId.values()]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((person) => ({ value: person.id, label: person.name, prefix: <AppAvatar name={person.name} src={person.avatarUrl} size="xs" /> }))
+  const people = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name)).map((person) => ({ value: person.id, label: person.name }))
   return { filters, onChange, onClear, people, companies: (companies.data ?? []).map((c) => ({ value: c.id, label: c.name })) }
 }
 
@@ -429,18 +440,18 @@ function TeamLoadCard({ team, loading, variant = 'team' }: { team: TeamLoad[]; l
 }
 
 /**
- * Nome da caixa com o número de abertas. Numa linha apertada: < 960px ou a partir do passo 3 da Bandeja, os
- * números somem; no passo 4, o nome curto ("Recebidas"), com o inteiro para o leitor de tela.
+ * Nome da caixa com o número de abertas. Numa linha apertada: < 960px ou a partir do passo 2 da Caixa de entrada,
+ * os números somem; no passo 3, o nome curto ("Recebidas"), com o inteiro para o leitor de tela.
  */
 export function BoxLabel({ text, short, total }: { text: string; short: string; total: number | undefined }) {
   return (
     <>
-      <span className="[[data-compact~='4']_&]:sr-only">{text}</span>
-      <span aria-hidden className="hidden [[data-compact~='4']_&]:inline">
+      <span className="[[data-compact~='3']_&]:sr-only">{text}</span>
+      <span aria-hidden className="hidden [[data-compact~='3']_&]:inline">
         {short}
       </span>
       {total !== undefined && (
-        <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted @max-[960px]:hidden [[data-compact~='3']_&]:hidden">{total}</span>
+        <span className="rounded-full bg-surface px-1.5 text-xs font-semibold tabular-nums text-muted @max-[960px]:hidden [[data-compact~='2']_&]:hidden">{total}</span>
       )}
     </>
   )

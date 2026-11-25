@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { Project, ProjectPriority, ProjectStatus, TeamActivity, TeamActivityProject } from '@/domain/projects'
 import {
   DEFAULT_PANEL,
+  OTHER_AREAS,
   PIE_NONE,
+  PIE_OTHER,
+  PIE_PALETTE,
   departmentScope,
   departmentSlices,
   ganttModel,
@@ -98,6 +101,70 @@ describe('direction-data: departamentos e estados', () => {
     expect(pieSlicePaths(one, 80, 80, 70)[0]!.d).toContain('a70,70')
     expect(pieSlicePaths(departmentSlices(PROJECTS), 80, 80, 70)).toHaveLength(3)
     expect(pieSlicePaths([], 80, 80, 70)).toEqual([])
+  })
+
+  /** 10 departamentos com 10, 9, …, 1 projetos (d0 é o maior) e um sem departamento. */
+  const TEN = Array.from({ length: 10 }, (_, i) => area(`d${i}`, `Depto ${i}`))
+  const MANY = [
+    ...TEN.flatMap((a, i) => Array.from({ length: 10 - i }, (_, n) => make(`${a.id}-${n}`, 'active', { area: a }))),
+    make('sem', 'active'),
+  ]
+
+  it('paleta de 8 cores sem repetição; com 10 departamentos, 7 com cor + "Outros" (3) cinza e "Sem departamento" por último', () => {
+    expect(new Set(PIE_PALETTE).size).toBe(8)
+    const slices = departmentSlices(MANY)
+    expect(slices.map((s) => s.key)).toEqual(['d0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', OTHER_AREAS, 'none'])
+    expect(slices.slice(0, 7).map((s) => s.color)).toEqual(PIE_PALETTE.slice(0, 7))
+    expect(new Set(slices.map((s) => s.color)).size).toBe(slices.length) // nenhuma cor repetida
+    const other = slices[7]!
+    expect(other).toMatchObject({ color: PIE_OTHER, count: 3 + 2 + 1 })
+    expect(other.children!.map((c) => [c.key, c.count])).toEqual([
+      ['d7', 3],
+      ['d8', 2],
+      ['d9', 1],
+    ])
+    expect(slices[8]!.color).toBe(PIE_NONE)
+    expect(PIE_OTHER).not.toBe(PIE_NONE)
+  })
+
+  it('até 8 departamentos não há "Outros": cada um tem a sua cor, e "Sem departamento" não gasta cor', () => {
+    const eight = MANY.filter((p) => !['d8', 'd9'].includes(p.area?.id ?? ''))
+    const slices = departmentSlices(eight)
+    expect(slices.some((s) => s.key === OTHER_AREAS)).toBe(false)
+    expect(slices.slice(0, 8).map((s) => s.color)).toEqual([...PIE_PALETTE])
+    expect(slices[8]!.color).toBe(PIE_NONE)
+  })
+
+  it('a cor segue o departamento: no recorte filtrado, cada um mantém a cor (e o grupo) da referência', () => {
+    // só os projetos de d1, d6 e d8: d1 mantém a 2ª cor, d6 a 7ª e d8 continua em "Outros"
+    const subset = MANY.filter((p) => ['d1', 'd6', 'd8'].includes(p.area?.id ?? ''))
+    const slices = departmentSlices(subset, MANY)
+    expect(slices.map((s) => [s.key, s.color])).toEqual([
+      ['d1', PIE_PALETTE[1]],
+      ['d6', PIE_PALETTE[6]],
+      [OTHER_AREAS, PIE_OTHER],
+    ])
+    expect(slices[2]!.children!.map((c) => c.key)).toEqual(['d8'])
+  })
+
+  it('rosca: furo no meio e, com uma fatia só, o anel inteiro (círculo de fora + furo no sentido contrário)', () => {
+    const ring = pieSlicePaths([{ key: 'a', count: 4 }], 100, 100, 96, 58)[0]!.d
+    expect(ring).toContain('a96,96 0 1 0')
+    expect(ring).toContain('a58,58 0 1 1')
+    expect(ring.match(/M/g)).toHaveLength(2)
+    const two = pieSlicePaths(
+      [
+        { key: 'a', count: 3 },
+        { key: 'b', count: 1 },
+      ],
+      100,
+      100,
+      96,
+      58,
+    )
+    // fatia: arco de fora, linha até o furo e arco de dentro voltando
+    expect(two[0]!.d).toMatch(/^M100\.00,4\.00 A96,96 0 1 1 .+ L.+ A58,58 0 1 0 100\.00,42\.00 Z$/)
+    expect(two[1]!.d).toMatch(/A96,96 0 0 1 100\.00,4\.00 L100\.00,42\.00 A58,58 0 0 0/)
   })
 
   it('faixa de estado: Concluído só aparece com projetos', () => {

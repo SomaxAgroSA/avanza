@@ -5,6 +5,9 @@ import type { TeamActivity, TeamActivityAction, TeamActivityProject, UserSummary
 /** Quantas tarefas em que a pessoa agiu aparecem embaixo de cada projeto (o resto fica no "+N más"). */
 export const ACTED_PREVIEW = 3
 
+/** Quantos projetos cada grupo (Trabalhando agora, Ativo…) mostra antes do "Ver mais N projetos". */
+export const TEAM_VISIBLE_PROJECTS = 4
+
 /** O primeiro nome ("Victor" de "Victor Martinetti"). */
 export const firstName = (name: string) => name.split(' ')[0] ?? name
 

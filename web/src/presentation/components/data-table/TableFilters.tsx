@@ -78,8 +78,10 @@ export function FilterSelect({ filter, value, onChange }: FilterProps) {
 /**
  * Filtro em menu (ajuste 24/11): vários valores ao mesmo tempo, com busca quando são muitos — para pessoas
  * (Responsável, Atribuída a). Parado mostra o nome; ativo, "Responsável: Ana +1" em verde suave, como o seletor.
+ * Sem `variant: 'menu'`, o mesmo botão com um valor só (o painel fecha ao escolher). `className` vai no botão
+ * (ex.: etapas de compactação de uma barra que mede a si mesma).
  */
-export function FilterMenu({ filter, value, onChange }: FilterProps) {
+export function FilterMenu({ filter, value, onChange, className }: FilterProps & { className?: string }) {
   const chosen = filterValues(value)
   const active = chosen.length > 0
   const first = active ? (optionLabel(filter, chosen[0]) ?? chosen[0]) : null
@@ -90,11 +92,14 @@ export function FilterMenu({ filter, value, onChange }: FilterProps) {
         <button
           type="button"
           aria-label={filter.label}
+          // numa barra apertada o texto corta com "…": a dica mostra o nome e tudo o que está escolhido
+          title={active ? `${filter.label}: ${chosen.map((item) => optionLabel(filter, item) ?? item).join(', ')}` : filter.label}
           // o tamanho do seletor ao lado (nunca abaixo de ~132px, nem mais largo que 240px) e as mesmas cores
           className={cn(
             'inline-flex h-9 min-w-[8.25rem] max-w-60 shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium shadow-xs transition-colors duration-150',
             'hover:border-border-strong focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring',
             active ? 'border-primary-border bg-primary-soft text-primary-soft-fg hover:border-primary' : 'text-fg',
+            className,
           )}
         >
           <span className="truncate">

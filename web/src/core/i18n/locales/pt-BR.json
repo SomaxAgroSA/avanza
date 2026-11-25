@@ -4823,13 +4823,13 @@
       "activeTitle_other": "{{name}}: agiu em {{count}} tarefas nesta semana · {{when}}"
     },
     "showTasks": "Ver as tarefas de {{name}} em {{project}}",
-    "hideTasks": "Ocultar as tarefas de {{name}} em {{project}}",
     "tasksOf": "Tarefas de {{name}} em {{project}}",
     "acted_one": "Agiu em {{count}} tarefa nesta semana",
     "acted_other": "Agiu em {{count}} tarefas nesta semana",
     "actedNone": "Sem ações nesta semana",
-    "actedOf": "O que {{name}} fez em {{project}}",
     "more": "+{{count}} mais",
+    "moreProjects_one": "Ver mais {{count}} projeto",
+    "moreProjects_other": "Ver mais {{count}} projetos",
     "moreAria": "Ver todas as tarefas de {{name}} em {{project}}",
     "action": {
       "status_changed": "passou para {{to}}",
@@ -4902,6 +4902,9 @@
       "title": "Projetos por departamento",
       "none": "Sem departamento",
       "chart": "Gráfico de projetos por departamento",
+      "others": "Outros ({{count}})",
+      "unit_one": "projeto",
+      "unit_other": "projetos",
       "slice_one": "{{name}}: {{count}} projeto ({{percent}} %)",
       "slice_other": "{{name}}: {{count}} projetos ({{percent}} %)",
       "empty": "Não há projetos neste filtro."
@@ -4918,11 +4921,12 @@
       "count_one": "{{count}} projeto",
       "count_other": "{{count}} projetos",
       "segment": "{{label}}: {{count}} ({{percent}} %) · clique para filtrar",
-      "chart": "Gráfico de projetos por estado de execução"
+      "chart": "Gráfico de projetos por estado de execução",
+      "unit_one": "projeto",
+      "unit_other": "projetos"
     },
     "team": {
-      "idle": "Com tarefas abertas sem movimento",
-      "detail": "Ver o detalhe de {{project}} ({{name}})"
+      "idle": "Com tarefas abertas sem movimento"
     },
     "drawer": {
       "title": "Detalhe do projeto",
@@ -4940,8 +4944,7 @@
       "personHint": "O que fez nos últimos 7 dias",
       "tabPerson": "Tarefas de {{name}} · {{count}}",
       "tabProject": "Todo o projeto",
-      "tabsAria": "Quais tarefas ver",
-      "noActed": "{{name}} não agiu em tarefas deste projeto nos últimos 7 dias."
+      "tabsAria": "Quais tarefas ver"
     },
     "viewSwitch": {
       "label": "Visão de Em andamento",
