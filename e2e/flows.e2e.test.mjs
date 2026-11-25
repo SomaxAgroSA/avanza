@@ -281,9 +281,10 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     await page.getByRole('button', { name: 'Comentar' }).click()
     await page.getByRole('list', { name: 'Comentários' }).getByText('Planilha validada com o time comercial.').waitFor()
 
+    // página da tarefa no módulo Tarefas (25/11): ?tab=relations abre o painel das Relações ao lado
     await page.goto(`${app.baseUrl}/tasks/${a.id}?tab=relations`)
-    await page.getByRole('button', { name: 'Adicionar relação' }).first().click()
-    const dialog = page.getByRole('dialog')
+    await page.getByRole('dialog', { name: /^Relações/ }).getByRole('button', { name: 'Adicionar relação' }).first().click()
+    const dialog = page.getByRole('dialog', { name: /^Relacionar/ })
     await dialog.getByRole('combobox').first().click()
     await page.getByRole('option', { name: 'bloqueia…' }).click()
     await dialog.getByPlaceholder('Buscar tarefa por código ou título').fill('Desligar')

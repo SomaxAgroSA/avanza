@@ -575,7 +575,8 @@
     "tasks": {
       "title": "Tarefas",
       "show": "O que aparece",
-      "start": "Ao entrar em Tarefas abre"
+      "start": "Ao entrar em Tarefas abre",
+      "hint": "Com uma só marcada, a tela se chama \"Caixa de entrada\", sem botões, e abre direto com esses dados."
     }
   },
   "permissions": {
@@ -1869,10 +1870,6 @@
     "all": "Ver todas",
     "overdue": "vencida",
     "moduleHint": "Menu \"Tarefas\": abre em \"Minhas tarefas\" (quem vê todos os projetos, em \"Ver todas\") e depois lembra a última escolha; com \"Ver todas\", as dos projetos a que a pessoa tem acesso. Precisa de \"Tarefas\" ligado; desligado, as tarefas continuam dentro de cada projeto.",
-    "kindLabel": "Com ou sem projeto",
-    "kindAll": "Todas",
-    "kindProject": "Com projeto",
-    "kindDemand": "Sem projeto",
     "viewLabel": "Visão",
     "viewList": "Lista",
     "viewDemands": "Caixa de entrada",
@@ -4854,7 +4851,8 @@
       "priority": "Prioridade",
       "urgency": "Urgência",
       "all": "todas",
-      "clear": "Limpar"
+      "clear": "Limpar",
+      "everyone": "todos"
     },
     "badge_one": "{{count}} pendente para você",
     "badge_other": "{{count}} pendentes para você",
@@ -4925,7 +4923,11 @@
       "deadline": "Prazo",
       "estimate": "Estimativa",
       "hours": "{{hours}} h",
-      "attachments": "Anexos"
+      "attachments": "Anexos",
+      "relations": "Relações",
+      "docs": "Documentação",
+      "open": "Ver",
+      "urgency": "Urgência {{name}}"
     },
     "events": {
       "opened": "abriu a demanda para {{owner}}",
@@ -4939,7 +4941,8 @@
       "validated": "validou a entrega",
       "returned": "devolveu para ajustes",
       "edited": "editou: {{fields}}",
-      "attached": "anexou {{name}}"
+      "attached": "anexou {{name}}",
+      "created": "criou a tarefa"
     },
     "projectFlow": {
       "owner": "Responsável (recebe e distribui)",
@@ -4948,7 +4951,8 @@
       "title": "Recebe e distribui",
       "step": "Passo",
       "assignee": "Atribuída a",
-      "deadline": "Prazo"
+      "deadline": "Prazo",
+      "flowStep": "Passo do fluxo:"
     },
     "columns": {
       "task": "Tarefa",
@@ -4956,6 +4960,29 @@
       "urgency": "Urgência",
       "priority": "Prioridade",
       "assignee": "Atribuída a"
+    },
+    "step": {
+      "assignedTo": "Atribuída a {{name}}"
+    },
+    "view": {
+      "label": "Visão da Caixa de entrada",
+      "list": "Lista",
+      "timeline": "Linha do tempo"
+    },
+    "gantt": {
+      "title": "Linha do tempo das tarefas",
+      "legend": "Legenda",
+      "late": "Prazo vencido",
+      "groupBy": "Agrupar por",
+      "byPerson": "Pessoa",
+      "byProject": "Projeto",
+      "empty": "Nenhuma tarefa deste filtro tem prazo.",
+      "today": "Hoje",
+      "tip": "{{title}} · {{step}} · {{start}} → {{due}}",
+      "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (vencida)",
+      "groupSummary": "{{count}} · {{hours}} h",
+      "undated_one": "{{count}} sem prazo segue na Lista.",
+      "undated_other": "{{count}} sem prazo seguem na Lista."
     }
   }
 }

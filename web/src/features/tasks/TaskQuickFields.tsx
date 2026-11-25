@@ -1,18 +1,14 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
 import type { OptionColor } from '@/domain/task-config'
-import type { TaskDetail, TaskInput } from '@/domain/tasks'
-import { isUrgency, NO_URGENCY, type Urgency } from '@/domain/urgency'
+import type { TaskDetail } from '@/domain/tasks'
+import { isUrgency, NO_URGENCY } from '@/domain/urgency'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
-import { AppSelect, notify } from '@/presentation/components'
-import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { AppSelect } from '@/presentation/components'
 import { useProjectMembers } from '@/features/projects/queries'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
 import { usePriorities, useStatuses } from '@/features/workflow/queries'
-import { useTaskMutations } from './queries'
-import { RequiredFieldsDialog, type RequiredFieldsRequest } from './RequiredFieldsDialog'
-import { missingForStatus } from './required-fields'
+import { useTaskQuickChange } from './use-task-quick-change'
 import { useUrgencyChoices } from './urgency-choices'
 
 const NONE = '__none__'
@@ -38,61 +34,15 @@ const withCurrent = <T extends { id: string }>(list: readonly T[], current: T | 
  */
 export function TaskQuickFields({ task, className, split = false }: { task: TaskDetail; className?: string; split?: boolean }) {
   const { t } = useTranslation()
-  const errorMessage = useErrorMessage()
-  const { update, setUrgency } = useTaskMutations()
   const statuses = useStatuses(false)
   const priorities = usePriorities(false)
   const urgencyChoices = useUrgencyChoices()
   // a lista de pessoas só serve para trocar o responsável (o Responsável TI não reatribui nem vê os membros)
   const members = useProjectMembers(task.capabilities.assign ? task.project?.id : undefined)
   const assignable = (members.data ?? []).filter((m) => m.user.status === 'active' && (m.role !== 'viewer' || m.isOwner))
-
-  const [required, setRequired] = useState<RequiredFieldsRequest | null>(null)
-
-  function quickChange(data: TaskInput, undo: TaskInput) {
-    update.mutate(
-      { id: task.id, data },
-      {
-        onSuccess: (saved) =>
-          notify.success(t('tasks.updated', { code: saved.code }), {
-            undo: { label: t('common.undo'), onClick: () => update.mutate({ id: task.id, data: undo }, { onError: (error) => notify.error(errorMessage(error)) }) },
-          }),
-        onError: (error) => {
-          // o novo status exige campos vazios: abre o preenchimento e aplica a troca em seguida
-          const missing = missingForStatus(error)
-          const target = statuses.data?.find((s) => s.id === data.statusId)
-          if (missing && data.statusId && target) {
-            setRequired({
-              taskId: task.id,
-              code: task.code,
-              status: missing.status ?? { id: target.id, name: target.name },
-              fieldNames: missing.fieldNames,
-              retry: () => update.mutateAsync({ id: task.id, data: { statusId: data.statusId } }),
-            })
-            return
-          }
-          notify.error(errorMessage(error))
-        },
-      },
-    )
-  }
-
-  function changeUrgency(next: Urgency | null, undo: Urgency | null) {
-    const label = (u: Urgency | null) => (u ? t(`tasks.urgency.${u}`) : t('tasks.urgency.none'))
-    setUrgency.mutate(
-      { id: task.id, urgency: next },
-      {
-        onSuccess: (saved) =>
-          notify.success(t('tasks.urgency.saved', { code: saved.code, urgency: label(saved.urgency) }), {
-            undo: { label: t('common.undo'), onClick: () => setUrgency.mutate({ id: task.id, urgency: undo }, { onError: (error) => notify.error(errorMessage(error)) }) },
-          }),
-        onError: (error) => notify.error(errorMessage(error)),
-      },
-    )
-  }
+  const { change: quickChange, changeUrgency, busy, dialog } = useTaskQuickChange(task)
 
   const owner = split ? (task.demand?.owner ?? null) : null
-  const busy = update.isPending || setUrgency.isPending
   return (
     <div className={cn('@container', className)}>
       <div className={cn('grid gap-3 @sm:grid-cols-2', owner ? '@4xl:grid-cols-5' : '@3xl:grid-cols-4')}>
@@ -148,7 +98,7 @@ export function TaskQuickFields({ task, className, split = false }: { task: Task
             ).map((u) => ({ value: u.id, label: u.name })),
           ]}
         />
-        <RequiredFieldsDialog request={required} onClose={() => setRequired(null)} />
+        {dialog}
       </div>
     </div>
   )

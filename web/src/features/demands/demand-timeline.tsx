@@ -27,7 +27,8 @@ export function demandEventText(t: TFunction, entry: AuditEntry, locale: string)
   }
   switch (entry.action) {
     case 'task.created':
-      return { text: t('demands.events.opened', { owner: text(value.demand_owner) }), note: '' }
+      // tarefa de projeto sem quem recebe e distribui (página da tarefa no módulo Tarefas, ajuste 25/11): "criou a tarefa"
+      return { text: text(value.demand_owner) ? t('demands.events.opened', { owner: text(value.demand_owner) }) : t('demands.events.created'), note: '' }
     case 'task.demand_assigned':
       return { text: t('demands.events.assigned', { name: text(value.assignee) }) + details(), note }
     case 'task.demand_reassigned':

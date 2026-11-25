@@ -75,6 +75,8 @@ export function writeInboxFilters(params: URLSearchParams, filters: InboxFilters
   return next
 }
 
+export const NO_INBOX_FILTERS: InboxFilters = { search: '', projectId: '', priorityIds: [], urgencies: [] }
+
 export const hasInboxFilters = (filters: InboxFilters) => !!(filters.search.trim() || filters.projectId || filters.priorityIds.length || filters.urgencies.length)
 
 /** Filtros da Bandeja no formato da consulta (`DemandListFilters`). */
@@ -86,6 +88,50 @@ export function inboxQuery(filters: InboxFilters): DemandListFilters {
   if (filters.urgencies.length) out.urgencies = filters.urgencies
   return out
 }
+
+/**
+ * Filtros de pessoa e empresa da caixa Todas (Responsável, Atribuída a e Empresa), no endereço: `owner`,
+ * `assignee` e `company`. Desde o ajuste 25/11 ficam na mesma linha dos filtros da Bandeja.
+ */
+export interface PersonFilters {
+  ownerId: string
+  assigneeId: string
+  companyId: string
+}
+
+const PERSON_KEYS = { ownerId: 'owner', assigneeId: 'assignee', companyId: 'company' } as const
+
+export const NO_PERSON_FILTERS: PersonFilters = { ownerId: '', assigneeId: '', companyId: '' }
+
+export function readPersonFilters(params: URLSearchParams): PersonFilters {
+  return { ownerId: params.get(PERSON_KEYS.ownerId) ?? '', assigneeId: params.get(PERSON_KEYS.assigneeId) ?? '', companyId: params.get(PERSON_KEYS.companyId) ?? '' }
+}
+
+/** Novo endereço com os filtros de pessoa (vazios saem); as outras chaves ficam. */
+export function writePersonFilters(params: URLSearchParams, filters: PersonFilters): URLSearchParams {
+  const next = new URLSearchParams(params)
+  for (const key of Object.keys(PERSON_KEYS) as Array<keyof PersonFilters>) {
+    if (filters[key]) next.set(PERSON_KEYS[key], filters[key])
+    else next.delete(PERSON_KEYS[key])
+  }
+  return next
+}
+
+export const hasPersonFilters = (filters: PersonFilters) => !!(filters.ownerId || filters.assigneeId || filters.companyId)
+
+/** Filtros de pessoa no formato da consulta. */
+export function personQuery(filters: PersonFilters): DemandListFilters {
+  const out: DemandListFilters = {}
+  if (filters.ownerId) out.ownerId = filters.ownerId
+  if (filters.assigneeId) out.assigneeId = filters.assigneeId
+  if (filters.companyId) out.companyId = filters.companyId
+  return out
+}
+
+/** Visões da Caixa de entrada (ajuste 25/11): a lista de sempre ou a linha do tempo (Gantt) das tarefas. */
+export const INBOX_VIEWS = ['list', 'timeline'] as const
+export type InboxView = (typeof INBOX_VIEWS)[number]
+export const toInboxView = (value: unknown): InboxView => (INBOX_VIEWS.includes(value as InboxView) ? (value as InboxView) : 'list')
 
 const URGENCY_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 }
 

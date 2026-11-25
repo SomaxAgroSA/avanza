@@ -34,6 +34,7 @@ import { managementLink } from '@/features/plan/paths'
 import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useCompanies } from '@/features/companies/queries'
 import { useDemandOwners } from '@/features/demands/queries'
+import { INTERNAL_PROJECT } from '@/domain/demands'
 import { PROJECT_OPTIONS_QUERY, useProjects } from '@/features/projects/queries'
 import { CompanyChip } from '@/features/companies/company-visuals'
 import { useTaskMutations, useTasksList } from './queries'
@@ -147,7 +148,11 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const people = useDemandOwners(!!scope)
   const projects = useProjects(PROJECT_OPTIONS_QUERY, !!scope)
   const peopleOptions = useMemo(() => (people.data ?? []).map((person) => ({ value: person.id, label: person.name })), [people.data])
-  const projectOptions = useMemo(() => (projects.data?.items ?? []).map((project) => ({ value: project.id, label: project.name })), [projects.data])
+  // "Demanda interna" no topo (ajuste 25/11): as tarefas sem projeto, no lugar do antigo "Sem projeto"
+  const projectOptions = useMemo(
+    () => [{ value: INTERNAL_PROJECT, label: t('demands.chip') }, ...(projects.data?.items ?? []).map((project) => ({ value: project.id, label: project.name }))],
+    [projects.data, t],
+  )
   const dueOptions = useMemo(() => DUE_GROUPS.map((group) => ({ value: group, label: t(`tasks.due.${group}`) })), [t])
 
   const [viewing, setViewing] = useState<string | null>(null)

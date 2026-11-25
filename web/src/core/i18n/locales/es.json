@@ -575,7 +575,8 @@
     "tasks": {
       "title": "Tareas",
       "show": "Qué aparece",
-      "start": "Al entrar en Tareas abre"
+      "start": "Al entrar en Tareas abre",
+      "hint": "Con una sola marcada, la pantalla se llama «Bandeja», sin botones, y abre directo con esos datos."
     }
   },
   "permissions": {
@@ -1869,10 +1870,6 @@
     "all": "Ver todas",
     "overdue": "vencida",
     "moduleHint": "Menú «Tareas»: abre en «Mis tareas» (quien ve todos los proyectos, en «Ver todas») y después recuerda la última elección; con «Ver todas», las de los proyectos a los que la persona tiene acceso. Necesita «Tareas» prendido; apagado, las tareas siguen dentro de cada proyecto.",
-    "kindLabel": "Con o sin proyecto",
-    "kindAll": "Todas",
-    "kindProject": "Con proyecto",
-    "kindDemand": "Sin proyecto",
     "viewLabel": "Vista",
     "viewList": "Lista",
     "viewDemands": "Bandeja",
@@ -4854,7 +4851,8 @@
       "priority": "Prioridad",
       "urgency": "Urgencia",
       "all": "todas",
-      "clear": "Limpiar"
+      "clear": "Limpiar",
+      "everyone": "todos"
     },
     "badge_one": "{{count}} pendiente para ti",
     "badge_other": "{{count}} pendientes para ti",
@@ -4925,7 +4923,11 @@
       "deadline": "Plazo",
       "estimate": "Estimación",
       "hours": "{{hours}} h",
-      "attachments": "Adjuntos"
+      "attachments": "Adjuntos",
+      "relations": "Relaciones",
+      "docs": "Documentación",
+      "open": "Ver",
+      "urgency": "Urgencia {{name}}"
     },
     "events": {
       "opened": "abrió la demanda para {{owner}}",
@@ -4939,7 +4941,8 @@
       "validated": "validó la entrega",
       "returned": "la devolvió para ajustes",
       "edited": "editó: {{fields}}",
-      "attached": "adjuntó {{name}}"
+      "attached": "adjuntó {{name}}",
+      "created": "creó la tarea"
     },
     "projectFlow": {
       "owner": "Responsable (recibe y distribuye)",
@@ -4948,7 +4951,8 @@
       "title": "Recibe y distribuye",
       "step": "Paso",
       "assignee": "Asignada a",
-      "deadline": "Plazo"
+      "deadline": "Plazo",
+      "flowStep": "Paso del flujo:"
     },
     "columns": {
       "task": "Tarea",
@@ -4956,6 +4960,29 @@
       "urgency": "Urgencia",
       "priority": "Prioridad",
       "assignee": "Asignada a"
+    },
+    "step": {
+      "assignedTo": "Asignada a {{name}}"
+    },
+    "view": {
+      "label": "Vista de la Bandeja",
+      "list": "Lista",
+      "timeline": "Línea de tiempo"
+    },
+    "gantt": {
+      "title": "Línea de tiempo de las tareas",
+      "legend": "Leyenda",
+      "late": "Plazo vencido",
+      "groupBy": "Agrupar por",
+      "byPerson": "Persona",
+      "byProject": "Proyecto",
+      "empty": "Ninguna tarea de este filtro tiene plazo.",
+      "today": "Hoy",
+      "tip": "{{title}} · {{step}} · {{start}} → {{due}}",
+      "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (vencida)",
+      "groupSummary": "{{count}} · {{hours}} h",
+      "undated_one": "{{count}} sin plazo sigue en la Lista.",
+      "undated_other": "{{count}} sin plazo siguen en la Lista."
     }
   }
 }
