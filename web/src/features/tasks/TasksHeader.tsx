@@ -53,7 +53,8 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
                 label: (
                   <>
                     <span className="@max-[1060px]:hidden">{t('taskList.viewDemands')}</span>
-                    <span aria-hidden className="hidden @max-[1060px]:inline">
+                    {/* só um dos dois textos aparece por vez: o curto também precisa dar nome ao link (a11y link-name) */}
+                    <span className="hidden @max-[1060px]:inline">
                       {t('taskList.viewDemandsShort')}
                     </span>
                     {pending > 0 && (

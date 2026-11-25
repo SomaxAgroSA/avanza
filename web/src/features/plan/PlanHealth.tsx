@@ -128,8 +128,11 @@ function HealthCard({
       </ul>
       {open && <FactorDetails factor={open} data={data} />}
       <div className="mt-4 grid gap-4 border-t border-border pt-4 @xl:grid-cols-3">
-        <Metrics id="plan-health-summary" title={t('plan.report.summary.title')}>
-          <ProgressBar value={summary.progress} label={t('plan.columns.progress')} className="mb-1" />
+        <Metrics
+          id="plan-health-summary"
+          title={t('plan.report.summary.title')}
+          lead={<ProgressBar value={summary.progress} label={t('plan.columns.progress')} className="mb-1" />}
+        >
           <Metric label={t('plan.report.summary.done')} value={`${summary.done}/${summary.total}`} />
           <Metric label={t('plan.report.summary.overdue')} value={summary.overdue} tone={summary.overdue ? 'danger' : undefined} />
           <Metric label={t('plan.report.summary.stuck')} value={summary.stuck} tone={summary.stuck ? 'warning' : undefined} />
@@ -192,12 +195,14 @@ function FactorDetails({ factor, data }: { factor: HealthFactorKey; data: PlanRe
   )
 }
 
-function Metrics({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+/** `lead` fica fora do <dl> (que só aceita dt/dd: a11y definition-list). */
+function Metrics({ id, title, lead, children }: { id: string; title: string; lead?: ReactNode; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="flex min-w-0 flex-col gap-1.5">
       <h3 id={id} className="text-xs font-medium uppercase tracking-wide text-muted">
         {title}
       </h3>
+      {lead}
       <dl className="flex flex-col gap-1">{children}</dl>
     </section>
   )
