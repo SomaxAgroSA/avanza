@@ -10,6 +10,7 @@ import type { Dependencies } from '@/domain/dependencies'
 import type { TaskDetail } from '@/domain/tasks'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import { ProjectsPage } from '../ProjectsPage'
+import { STATUS_COLORS } from './direction-data'
 
 beforeAll(async () => {
   await i18n.changeLanguage('es')
@@ -288,7 +289,7 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'planning,active,paused' }))
   })
 
-  it('Estado de ejecución: una fila con barra por estado; tocar una filtra todo (junto al indicador), atenúa las otras y vuelve a quitarse', async () => {
+  it('Estado de ejecución en torta (25/11): tocar la fila de la leyenda o el sector filtra todo (junto al indicador), atenúa los otros y vuelve a quitarse', async () => {
     const { list } = setup()
     const panel = await screen.findByTestId('direction-panel')
     const card = within(panel).getByRole('region', { name: 'Estado de ejecución' })
@@ -298,12 +299,16 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await userEvent.click(within(card).getByRole('button', { name: /^Pausado/ }))
     expect(await screen.findByRole('status')).toHaveTextContent('Filtrando todo el panel: En marcha · Pausado (1 proyecto)')
     await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'paused' }))
-    // las demás filas siguen a la vista, atenuadas
-    const others = within(card).getAllByRole('button', { pressed: false })
-    expect(others.length).toBe(2)
-    others.forEach((row) => expect(row.style.opacity).toBe('0.45'))
+    expect(within(card).getByRole('button', { name: /^Pausado/ })).toHaveAttribute('aria-pressed', 'true')
+    // los otros sectores siguen a la vista, atenuados
+    const slice = (key: string) => card.querySelector(`[data-slice="${key}"]`)!
+    expect(['planning', 'active', 'paused'].map((key) => slice(key).getAttribute('opacity'))).toEqual(['0.3', '0.3', '1'])
     await userEvent.click(within(card).getByRole('button', { name: /^Pausado/ }))
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+    // el sector también filtra
+    await userEvent.click(slice('active'))
+    expect(await screen.findByRole('status')).toHaveTextContent('Filtrando todo el panel: En marcha · En curso (2 proyectos)')
+    await waitFor(() => expect(lastTableFilters(list)?.filters).toEqual({ status: 'active' }))
   })
 
   it('el departamento de la pizza se combina con el indicador; "Sin departamento" también filtra', async () => {
@@ -347,11 +352,19 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     // los dos en la misma fila (mismo contenedor de la grilla)
     expect(status.parentElement).toBe(departments.parentElement)
     expect(within(panel).queryByRole('region', { name: 'Tareas por proyecto' })).toBeNull()
-    // una barra por estado, una debajo de la otra (ya no hay una barra dividida)
-    expect(within(status).queryByRole('group', { name: /barra/i })).toBeNull()
+    // en torta, como la de departamentos (ya no hay barras): sector por estado con los colores de siempre y
+    // leyenda con nombre, número y %; el mouse sobre el sector muestra el detalle
+    expect(status.querySelector('[data-bar]')).toBeNull()
+    const chart = within(status).getByRole('img', { name: 'Gráfico de proyectos por estado de ejecución' })
+    const slices = [...chart.querySelectorAll('path')]
+    expect(slices.map((p) => [p.getAttribute('data-slice'), p.getAttribute('fill')])).toEqual([
+      ['planning', STATUS_COLORS.planning],
+      ['active', STATUS_COLORS.active],
+      ['paused', STATUS_COLORS.paused],
+    ])
+    expect(slices[1]!.querySelector('title')).toHaveTextContent('En curso: 2 (50 %)')
     const rows = within(status).getAllByRole('button')
-    expect(rows.map((r) => r.querySelector('[data-bar]') !== null)).toEqual(rows.map(() => true))
-    expect(rows[0]).toHaveTextContent('Planificación')
+    expect(rows.map((r) => r.textContent)).toEqual(['Planificación125 %', 'En curso250 %', 'Pausado125 %'])
   })
 
   it('Equipo ahora: una tarjeta por persona, con los grupos y los movimientos; respeta el filtro', async () => {

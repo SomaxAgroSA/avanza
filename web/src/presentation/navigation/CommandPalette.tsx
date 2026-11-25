@@ -11,8 +11,9 @@ import { usePreferences } from '@/features/preferences/use-preferences'
 import { useProjects } from '@/features/projects/queries'
 import { useTasksList } from '@/features/tasks/queries'
 import { useDebouncedValue } from '@/presentation/common/use-debounced-value'
-import { platformNavItems, visibleNavItems, withNavEntry, type NavItem } from './nav-items'
+import { platformNavItems, visibleNavItems, withNavEntry, withProjectLists, type NavItem } from './nav-items'
 import { useTaskViews } from '@/features/tasks/use-task-views'
+import { useProjectLists } from '@/features/projects/use-project-lists'
 
 function flatten(items: NavItem[]): NavItem[] {
   // Filhos herdam o ícone do grupo; itens com o mesmo destino aparecem uma vez só.
@@ -52,9 +53,11 @@ export function CommandPalette() {
   const permissions = current?.permissions
   const platform = current?.platform
   const tasksEntry = useTaskViews().entry
+  const projectLists = useProjectLists()
   const groups = useMemo<CommandGroup[]>(() => {
     // o Panorama desligado na plataforma (§26.2) também não é oferecido aqui
-    const nav = flatten(withNavEntry(visibleNavItems(permissions ?? [], platformNavItems(platform)), 'tasks', tasksEntry))
+    // Projetos só com as listas do perfil (ajuste 25/11)
+    const nav = flatten(withProjectLists(withNavEntry(visibleNavItems(permissions ?? [], platformNavItems(platform)), 'tasks', tasksEntry), projectLists))
     const canViewUsers = permissions?.includes('users.view')
     // criar e buscar abrem a Lista de tarefas (/tasks): só com o módulo (§44); as tarefas encontradas abrem direto
     const canListTasks = canViewTasks && !!permissions?.includes('tasks.list')
@@ -121,7 +124,7 @@ export function CommandPalette() {
         heading: t('commandPalette.navigation'),
         items: nav.map((item) => ({
           id: `nav-${item.id}`,
-          label: t(item.labelKey),
+          label: item.detailKey ? `${t(item.labelKey)} · ${t(item.detailKey)}` : t(item.labelKey),
           icon: item.icon ? <item.icon /> : undefined,
           hint: item.phase ? t('nav.soon') : undefined,
           onSelect: () => navigate(item.entry ?? item.to),
@@ -143,7 +146,7 @@ export function CommandPalette() {
         ],
       },
     ]
-  }, [permissions, platform, tasksEntry, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
+  }, [permissions, platform, tasksEntry, projectLists, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
 
   return (
     <AppCommandPalette

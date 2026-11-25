@@ -2,6 +2,7 @@ import type { AuditEntry, CurrentUser, OngoingView, Permission, Role, Session, U
 import type { ListQuery, Page } from './pagination'
 import type { PermissionCode } from './permissions'
 import type { TaskViews } from './task-views'
+import type { ProjectList } from './project-lists'
 import type { CustomField, FieldConfig, FieldOption, FieldType, FieldValue, OptionColor, TaskType, TaskTypeDetail, TaskTypeIcon, TranslatedLocale, TypeTexts } from './task-config'
 import type { Area, LookupItem, StatusCategory, TaskPriority, TaskStatus } from './workflow'
 import type { Attachment, ProjectFile } from './attachments'
@@ -203,6 +204,8 @@ export interface RoleData {
   description: string
   /** Vista da lista Em andamento (§41); sem o campo, não muda. */
   ongoingView?: OngoingView
+  /** Listas do menu Projetos (ajuste 25/11); sem o campo, não muda. */
+  projectsLists?: ProjectList[]
   permissions?: PermissionCode[]
 }
 
@@ -213,7 +216,7 @@ export interface RoleRepository {
   list(): Promise<Role[]>
   listPermissions(): Promise<Permission[]>
   create(data: RoleInputData): Promise<Role>
-  update(id: string, data: Pick<RoleInputData, 'name' | 'description' | 'ongoingView' | keyof TaskViews>): Promise<Role>
+  update(id: string, data: Pick<RoleInputData, 'name' | 'description' | 'ongoingView' | 'projectsLists' | keyof TaskViews>): Promise<Role>
   updatePermissions(id: string, permissions: PermissionCode[]): Promise<Role>
   remove(id: string): Promise<void>
 }

@@ -55,3 +55,20 @@ describe('página inicial com o Panorama desligado (§26.2)', () => {
     expect(automaticHomePath(director, off)).toBe('/projects')
   })
 })
+
+describe('página inicial e as listas de Projetos do perfil (ajuste 25/11)', () => {
+  it('só as listas que o perfil mostra; com uma só, ela fica com o nome da lista', () => {
+    expect(homePageOptions(director, undefined, ['ongoing', 'archived']).map((o) => o.path)).toEqual(['/projects/ongoing', '/projects/archived', '/kanban', '/docs'])
+    expect(homePageOptions(director, undefined, ['ongoing']).filter((o) => o.path.startsWith('/projects'))).toEqual([
+      { path: '/projects/ongoing', labelKeys: ['nav.projects', 'nav.projectsOngoing'] },
+    ])
+    expect(homePageOptions(director, undefined, ['all'])[0]).toEqual({ path: '/projects', labelKeys: ['nav.projects', 'nav.projectsAll'] })
+  })
+
+  it('a automática e uma escolha que o perfil já não mostra levam à primeira lista visível', () => {
+    expect(automaticHomePath(director, undefined, ['ongoing'])).toBe('/projects/ongoing')
+    expect(resolveHomePath('/projects/finished', director, undefined, ['ongoing'])).toBe('/projects/ongoing')
+    expect(resolveHomePath('/projects/ongoing', director, undefined, ['ongoing'])).toBe('/projects/ongoing')
+    expect(resolveHomePath('/tracking', manager, { panoramaEnabled: false }, ['finished'])).toBe('/projects/finished')
+  })
+})

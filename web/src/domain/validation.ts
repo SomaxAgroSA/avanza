@@ -3,6 +3,7 @@ import { SUPPORTED_LANGUAGES } from '@/core/i18n'
 import { PROJECT_COVERS, PROJECT_ICONS, PROJECT_PRIORITIES, PROJECT_STATUSES } from './projects'
 import { SPACE_ICONS, SPACE_VISIBILITIES } from './docs'
 import { OPTION_COLORS } from './task-config'
+import { PROJECT_LISTS } from './project-lists'
 import { isHexColor, type HexColor } from './colors'
 import { isIconName } from './icons'
 import { DEFAULT_PASSWORD_POLICY, type PasswordPolicy } from './platform'
@@ -99,6 +100,8 @@ export const roleSchema = z.object({
   tasksList: z.enum(['', 'mine', 'hidden']),
   tasksAllBox: z.enum(['', 'hidden']),
   tasksHiddenBoxes: z.array(z.enum(['received', 'assigned', 'requested'])),
+  /** Listas do menu Projetos (ajuste 25/11): sempre ao menos uma. */
+  projectsLists: z.array(z.enum(PROJECT_LISTS)).min(1, 'required'),
 })
 export type RoleInput = z.input<typeof roleSchema>
 

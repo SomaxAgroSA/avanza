@@ -5,7 +5,7 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const { ROLE_CODES, ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES } = require('../domain/permissions')
+const { ROLE_CODES, ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES, projectListsIssue, projectListsFromText, projectListsToText } = require('../domain/permissions')
 const { buildAuditEntry, diff } = require('./audit')
 const { toRoleDto } = require('./presenters')
 
@@ -23,6 +23,9 @@ const hiddenBoxes = rules.custom((value) => {
   return value.every((box) => TASK_HIDDEN_BOXES.indexOf(box) >= 0) ? null : 'invalid_option'
 })
 
+/** Listas do menu Projetos (ajuste 25/11): só as conhecidas, ao menos uma (domain/permissions.js). */
+const projectLists = rules.custom(projectListsIssue)
+
 const CREATE_SCHEMA = {
   code: [rules.required(), roleCode],
   name: [rules.required(), rules.maxLength(60)],
@@ -33,6 +36,7 @@ const CREATE_SCHEMA = {
   tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
   tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
   tasks_hidden_boxes: [hiddenBoxes],
+  projects_lists: [projectLists],
 }
 
 const UPDATE_SCHEMA = {
@@ -43,6 +47,7 @@ const UPDATE_SCHEMA = {
   tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
   tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
   tasks_hidden_boxes: [hiddenBoxes],
+  projects_lists: [projectLists],
 }
 
 const READ_ROLES_PERMISSIONS = ['permissions.manage', 'users.view', 'users.create', 'users.edit']
@@ -51,11 +56,25 @@ function uniqueSorted(codes) {
   return codes.filter((code, index) => codes.indexOf(code) === index).sort()
 }
 
-/** Ajustes de tela do perfil: o nome na API e o da entidade (vista de Em andamento §41 e Tarefas, 23/11). */
-const SCREEN_FIELDS = Object.freeze({ ongoing_view: 'ongoingView', tasks_start: 'tasksStart', tasks_list: 'tasksList', tasks_all_box: 'tasksAllBox', tasks_hidden_boxes: 'tasksHiddenBoxes' })
+/** Ajustes de tela do perfil: o nome na API e o da entidade (vista de Em andamento §41, Tarefas 23/11, Projetos 25/11). */
+const SCREEN_FIELDS = Object.freeze({
+  ongoing_view: 'ongoingView',
+  tasks_start: 'tasksStart',
+  tasks_list: 'tasksList',
+  tasks_all_box: 'tasksAllBox',
+  tasks_hidden_boxes: 'tasksHiddenBoxes',
+  projects_lists: 'projectsLists',
+})
 
-/** Na entidade (e no histórico) as caixas escondidas são um texto, na ordem da tela e sem repetidas. */
-const storedValue = (api, value) => (api === 'tasks_hidden_boxes' ? TASK_HIDDEN_BOXES.filter((box) => value.indexOf(box) >= 0).join(',') : value)
+/**
+ * Na entidade as listas são um texto, na ordem da tela e sem repetidas: as caixas escondidas (e assim no histórico)
+ * e as listas de Projetos visíveis ('' = as quatro; no histórico saem como na API).
+ */
+function storedValue(api, value) {
+  if (api === 'tasks_hidden_boxes') return TASK_HIDDEN_BOXES.filter((box) => value.indexOf(box) >= 0).join(',')
+  if (api === 'projects_lists') return projectListsToText(value)
+  return value
+}
 
 /** Os ajustes vindos da API, com o nome da entidade ('' para os que não vieram, com `fill`). */
 function screenValues(data, fill) {
@@ -73,7 +92,7 @@ function publicChanges(values) {
   Object.keys(SCREEN_FIELDS).forEach((api) => {
     const field = SCREEN_FIELDS[api]
     if (out[field] === undefined) return
-    out[api] = out[field]
+    out[api] = api === 'projects_lists' ? projectListsFromText(out[field]) : out[field]
     delete out[field]
   })
   return out
@@ -143,7 +162,7 @@ function createRoleService(deps) {
     const role = await findRoleOrFail(id)
     if (role.code === ROLE_CODES.SUPER_ADMIN) throw appError('ROLE_IMMUTABLE')
     const data = assertValid(input, UPDATE_SCHEMA)
-    // ajustes de tela (Em andamento §41, Tarefas 23/11): na API ongoing_view…; na entidade ongoingView…
+    // ajustes de tela (Em andamento §41, Tarefas 23/11, Projetos 25/11): na API ongoing_view…; na entidade ongoingView…
     const fields = Object.keys(SCREEN_FIELDS).map((api) => SCREEN_FIELDS[api])
     const current = Object.assign({}, role)
     fields.forEach((field) => {

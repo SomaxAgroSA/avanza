@@ -3,6 +3,8 @@
  * Campos sensíveis (hash de token, senha) nunca passam por aqui.
  */
 
+const { projectListsFromText } = require('../domain/permissions')
+
 function iso(date) {
   return date ? new Date(date).toISOString() : null
 }
@@ -46,6 +48,8 @@ function toRoleDto(role, extra) {
     tasks_all_box: role.tasksAllBox || '',
     // caixas pessoais escondidas (ajuste 24/11): na API, uma lista
     tasks_hidden_boxes: (role.tasksHiddenBoxes || '').split(',').filter(Boolean),
+    // listas do menu Projetos (ajuste 25/11): na API, as visíveis (gravado '' = as quatro)
+    projects_lists: projectListsFromText(role.projectsLists),
   }
   if (extra && extra.permissions) dto.permissions = extra.permissions.slice().sort()
   if (extra && typeof extra.userCount === 'number') dto.user_count = extra.userCount
