@@ -3,7 +3,8 @@
  *
  * Tipos: menção, tarefa atribuída, comentário em tarefa sua, mudança de status, prazo amanhã e prazo vencido;
  * no quadro de gerenciamento, menção e resposta numa atualização de elemento (plan_mention, plan_reply);
- * nas demandas internas (§45), demanda recebida, passada, concluída, validada e devolvida.
+ * nas demandas internas (§45), demanda recebida, passada, concluída, validada e devolvida;
+ * na Documentação (§47), o aviso sobre uma página (doc_shared).
  * Regras: quem fez a ação nunca é notificado; cada pessoa recebe uma notificação por evento
  * (a primeira razão da lista vence — ex.: menção tem prioridade sobre "comentário").
  */
@@ -23,6 +24,8 @@ const TYPES = Object.freeze([
   'demand_concluded',
   'demand_validated',
   'demand_returned',
+  // Documentação (§47): alguém pediu que a pessoa olhe uma página
+  'doc_shared',
 ])
 
 /** [{ userId, type }] -> sem vazios, sem o autor da ação e sem repetir pessoa. */

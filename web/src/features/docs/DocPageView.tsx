@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { FilePlus2, FileText, FolderInput, History, Link2, MoreHorizontal, PenLine, Pencil, Printer, Trash2 } from 'lucide-react'
+import { Bell, FilePlus2, FileText, FolderInput, History, Link2, MoreHorizontal, PenLine, Pencil, Printer, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { docOutline, MAX_DOC_DEPTH, type DocPage, type DocSpaceDetail, type DocTreePage } from '@/domain/docs'
@@ -12,6 +12,7 @@ import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { editPath, pagePath } from './docs-paths'
 import { DraftBadge } from './docs-visuals'
 import { PageTasksBar } from './doc-links'
+import { NotifyPageDialog, PageNoticesLine } from './doc-notices'
 import { ExportPdfDialog } from './export/ExportPdfDialog'
 import { useDocPage } from './queries'
 import { VersionsDrawer } from './VersionsDrawer'
@@ -52,6 +53,16 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
   const contentRef = useRef<HTMLDivElement>(null)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const location = useLocation()
+  // "Avisar" (§47): quem edita avisa sobre a página publicada; ao publicar, a janela abre sozinha
+  const canNotify = page.capabilities.edit && page.status === 'published' && page.version > 0
+  const [notifying, setNotifying] = useState(false)
+  const askToNotify = canNotify && (location.state as { notify?: boolean } | null)?.notify === true
+  const changeNotifying = (open: boolean) => {
+    setNotifying(open)
+    // ao fechar a janela aberta pela publicação, o pedido sai do histórico (voltar não abre de novo)
+    if (!open && askToNotify) void navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
+  }
   useDocumentTitle(page.title)
   // só o publicado sai no PDF: a página nunca publicada não tem o que exportar
   const canExport = page.version > 0
@@ -65,6 +76,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
   const moreItems: AppDropdownItem[] = [
     ...(canEdit && depth < MAX_DOC_DEPTH ? [{ key: 'child', label: t('docs.page.addChild'), icon: <FilePlus2 />, onSelect: () => onCreateChild(page.id) }] : []),
     { key: 'link', label: t('docs.page.copyLink'), icon: <Link2 />, onSelect: copyLink },
+    ...(canNotify ? [{ key: 'notify', label: t('docs.notices.button'), icon: <Bell />, onSelect: () => setNotifying(true) }] : []),
     ...(page.version > 0 ? [{ key: 'versions', label: t('docs.versions.title'), icon: <History />, onSelect: () => setVersionsOpen(true) }] : []),
     ...(canExport ? [{ key: 'export', label: t('docs.export.button'), icon: <Printer />, onSelect: () => setExporting(true) }] : []),
     ...(canEdit && treePage && !page.isHome
@@ -106,12 +118,18 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
               <span>{t('docs.page.neverPublished')}</span>
             )}
           </p>
+          {canNotify && <PageNoticesLine pageId={page.id} />}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {panelButton}
           {canEdit && (
             <AppButton leftIcon={<Pencil />} onClick={() => void navigate(editPath(page.space.key, page.id))}>
               {page.draft ? t('docs.page.continueEditing') : t('common.edit')}
+            </AppButton>
+          )}
+          {canNotify && (
+            <AppButton variant="secondary" leftIcon={<Bell />} onClick={() => setNotifying(true)} className="max-sm:hidden">
+              {t('docs.notices.button')}
             </AppButton>
           )}
           {page.version > 0 && (
@@ -199,6 +217,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
       </div>
 
       {page.version > 0 && <VersionsDrawer page={page} open={versionsOpen} onOpenChange={setVersionsOpen} />}
+      {canNotify && <NotifyPageDialog open={notifying || askToNotify} onOpenChange={changeNotifying} page={{ id: page.id, title: page.title }} projectName={detail.space.project?.name ?? null} />}
       <ExportPdfDialog origin={exporting ? { kind: 'page', spaceKey: page.space.key, pageId: page.id } : null} onOpenChange={setExporting} />
     </article>
   )

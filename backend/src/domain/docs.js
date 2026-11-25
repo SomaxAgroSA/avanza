@@ -45,4 +45,38 @@ function canSeePage(access, page) {
   return page.status === 'published' || access.canEdit
 }
 
-module.exports = { SPACE_VISIBILITIES, PAGE_STATUSES, SPACE_ICONS, spaceKeyIssue, visibilityIssue, spaceAccess, canSeePage }
+/**
+ * Avisar sobre uma página (§47): quem edita a página escolhe até MAX_NOTICE_RECIPIENTS pessoas que a leem,
+ * com um "O que olhar" opcional de até NOTICE_NOTE_MAX caracteres. Só página publicada (rascunho ninguém lê).
+ */
+const MAX_NOTICE_RECIPIENTS = 20
+const NOTICE_NOTE_MAX = 500
+
+/** Página que pode ser avisada: publicada. */
+function canNotifyPage(access, page) {
+  return !!(access && access.canEdit && page && page.status === 'published')
+}
+
+/** O aviso mais recente de cada pessoa (`notices` já vem dos mais recentes para os mais antigos). */
+function latestNoticePerUser(notices) {
+  const seen = new Set()
+  return (notices || []).filter((n) => {
+    if (seen.has(n.userId)) return false
+    seen.add(n.userId)
+    return true
+  })
+}
+
+module.exports = {
+  SPACE_VISIBILITIES,
+  PAGE_STATUSES,
+  SPACE_ICONS,
+  MAX_NOTICE_RECIPIENTS,
+  NOTICE_NOTE_MAX,
+  spaceKeyIssue,
+  visibilityIssue,
+  spaceAccess,
+  canSeePage,
+  canNotifyPage,
+  latestNoticePerUser,
+}

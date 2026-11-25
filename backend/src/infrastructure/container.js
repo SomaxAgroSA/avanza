@@ -44,6 +44,7 @@ const { createDocSpaceService } = require('../application/doc-spaces')
 const { createDocModuleService } = require('../application/doc-modules')
 const { createDocPageService } = require('../application/doc-pages')
 const { createDocLinkService } = require('../application/doc-links')
+const { createDocNoticeService } = require('../application/doc-notices')
 const { createDocExportService } = require('../application/doc-export')
 const { createTeamActivityService } = require('../application/team-activity')
 const { createDependenciesService } = require('../application/dependencies')
@@ -142,6 +143,7 @@ function createContainer(runtime, options) {
     docModules: createDocModuleService(deps),
     docPages: createDocPageService(deps),
     docLinks: createDocLinkService(deps),
+    docNotices: createDocNoticeService(deps),
     docExport: createDocExportService(deps),
     teamActivity: createTeamActivityService(deps),
     dependencies: createDependenciesService(deps),

@@ -1236,6 +1236,16 @@ function build() {
           parameters: [idParam, { name: 'taskId', in: 'path', required: true, schema: { type: 'string' } }, csrfHeader],
         }),
       },
+      '/docs/pages/{id}/notices': {
+        get: op('Avisos sobre a página (§47; quem edita o espaço): o mais recente de cada pessoa — id, user, actor, note, created_at, opened_at (null = ainda não abriu)', ['docs'], { 200: ok('Avisos', { type: 'array', items: { type: 'object' } }), 404: errorResponse('DOC_PAGE_NOT_FOUND') }, { parameters: [idParam] }),
+        post: op('Avisa pessoas sobre a página publicada (§47; quem edita o espaço): notificação doc_shared no sino e por e-mail. Só pessoas ativas que leem a página (senão 400 user_ids: no_access); até 20; note até 500 caracteres. Devolve { notified, notices }', ['docs'], { 200: ok('Avisados', { type: 'object' }), 400: errorResponse('VALIDATION_ERROR'), 409: errorResponse('DOC_PAGE_NOT_PUBLISHED') }, {
+          parameters: [idParam, csrfHeader],
+          requestBody: jsonBody({ type: 'object', required: ['user_ids'], properties: { user_ids: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 20 }, note: { type: 'string', maxLength: 500 } } }),
+        }),
+      },
+      '/docs/pages/{id}/notices/candidates': {
+        get: op('Quem pode ser avisado sobre a página (§47): pessoas ativas que a leem, fora quem pergunta; suggested = responsável de Desenvolvimento do projeto do espaço (vem primeiro)', ['docs'], { 200: ok('Pessoas', { type: 'array', items: { type: 'object' } }), 409: errorResponse('DOC_PAGE_NOT_PUBLISHED') }, { parameters: [idParam] }),
+      },
       '/tasks/{id}/docs': {
         get: op('Páginas de documentação vinculadas à tarefa (só as dos espaços que a pessoa lê): id, title, status, is_home, space, updated_at, linked_at, capabilities.unlink', ['docs'], { 200: ok('Páginas', { type: 'array', items: { type: 'object' } }), 404: errorResponse('TASK_NOT_FOUND') }, { parameters: [idParam] }),
       },

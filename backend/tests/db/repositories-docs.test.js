@@ -217,4 +217,35 @@ describe('repositórios da documentação', () => {
       await spaces.delete(other.id)
     })
   })
+  describe('avisos sobre a página (§47)', () => {
+    it('gravam o aviso, marcam como aberto só os não abertos e a notificação aponta para a página', async () => {
+      const notices = docs.createDocPageNoticeRepository(t.db)
+      const { createNotificationRepository } = require('../../src/infrastructure/repositories/tasks')
+      const notifications = createNotificationRepository(t.db)
+      const role = await t.db.one("SELECT id FROM roles WHERE code = 'ADMIN'")
+      const reader = await insertRow(t.db, 'users', { email: 'leitor@avanza.test', name: 'Leitor', role_id: role.id, status: 'active' })
+      const page = await insertRow(t.db, 'doc_pages', { space_id: company.id, title: 'Tabela de custos', status: 'published', version: 1 })
+
+      const first = await notices.create({ pageId: page.id, userId: reader.id, actorId: author.id, note: 'Veja a seção 2' })
+      assert.deepEqual([first.userId, first.actorId, first.note, first.openedAt], [reader.id, author.id, 'Veja a seção 2', null])
+      const second = await notices.create({ pageId: page.id, userId: reader.id, actorId: null })
+      assert.deepEqual((await notices.listByPage(page.id)).map((n) => n.id), [second.id, first.id])
+
+      const sent = await notifications.create({ userId: reader.id, type: 'doc_shared', docPageId: page.id, actorId: author.id, data: { title: 'Tabela de custos', space_key: 'empresa' } })
+      assert.equal(sent.docPageId, page.id)
+      assert.equal(sent.taskId, null)
+
+      const at = new Date('2026-11-25T12:00:00.000Z')
+      assert.equal(await notices.markOpened(page.id, reader.id, at), 2)
+      assert.equal(await notices.markOpened(page.id, reader.id, new Date()), 0)
+      assert.ok((await notices.listByPage(page.id)).every((n) => n.openedAt.getTime() === at.getTime()))
+      assert.equal(await notifications.markReadByDocPage(reader.id, page.id, at), 1)
+      assert.equal(await notifications.countUnread(reader.id), 0)
+
+      // excluir a página leva os avisos e as notificações dela
+      await t.db.exec('DELETE FROM doc_pages WHERE id = $1', [page.id])
+      assert.deepEqual(await notices.listByPage(page.id), [])
+      assert.equal(await notifications.findById(sent.id), null)
+    })
+  })
 })

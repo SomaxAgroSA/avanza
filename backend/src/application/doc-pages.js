@@ -19,6 +19,7 @@ const attachmentDomain = require('../domain/attachment')
 const { buildAuditEntry } = require('./audit')
 const { iso, toUserSummary } = require('./presenters')
 const { createDocAccess } = require('./doc-access')
+const { createDocNoticeService } = require('./doc-notices')
 
 const TITLE_RULES = [rules.required(), rules.string(), rules.maxLength(200)]
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
@@ -34,6 +35,7 @@ function createDocPageService(deps) {
   const pages = deps.docPageRepository
   const versions = deps.docPageVersionRepository
   const access = createDocAccess(deps)
+  const notices = createDocNoticeService(deps)
 
   async function audit(repos, ctx, page, action, oldValue, newValue) {
     await repos.auditRepository.record(buildAuditEntry(ctx, { entityType: 'doc_page', entityId: page.id, action, oldValue, newValue }))
@@ -93,6 +95,8 @@ function createDocPageService(deps) {
 
   async function getPage(ctx, id) {
     const loaded = await access.loadPage(ctx, id)
+    // quem foi avisado sobre a página (§47) e a abriu: o aviso fica "aberto em" e a notificação, lida
+    await notices.markOpened(ctx, loaded.page)
     return present(loaded, loaded.page)
   }
 

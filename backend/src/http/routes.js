@@ -455,6 +455,9 @@ function unlinkDocPageTask(e) {
   return handle(e, async ({ ctx, services, param }) => ({ data: await services.docLinks.unlinkTask(ctx, param('id'), param('taskId')) }))
 }
 const listTaskDocs = configAction('docLinks', (s, ctx, r) => s.listTaskDocs(ctx, r.id))
+const listDocPageNotices = configAction('docNotices', (s, ctx, r) => s.listNotices(ctx, r.id))
+const listDocNoticeCandidates = configAction('docNotices', (s, ctx, r) => s.listCandidates(ctx, r.id))
+const notifyDocPage = configAction('docNotices', (s, ctx, r) => s.notify(ctx, r.id, r.body()))
 const deleteDocPage = configAction('docPages', (s, ctx, r) => s.deletePage(ctx, r.id))
 const getDocDraft = configAction('docPages', (s, ctx, r) => s.getDraft(ctx, r.id))
 const saveDocDraft = configAction('docPages', (s, ctx, r) => s.saveDraft(ctx, r.id, r.body()))
@@ -841,6 +844,9 @@ module.exports = {
   listDocPageTasks,
   linkDocPageTasks,
   unlinkDocPageTask,
+  listDocPageNotices,
+  listDocNoticeCandidates,
+  notifyDocPage,
   listTaskDocs,
   deleteDocPage,
   getDocDraft,

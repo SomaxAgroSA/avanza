@@ -107,6 +107,7 @@ export const AUDIT_ACTIONS = [
   'doc_module.deleted',
   'doc_page.created',
   'doc_page.published',
+  'doc_page.notified',
   'doc_page.moved',
   'doc_page.deleted',
   'doc_page.restored',

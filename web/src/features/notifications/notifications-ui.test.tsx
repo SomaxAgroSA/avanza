@@ -16,6 +16,7 @@ const mention: AppNotification = {
   type: 'mention',
   task: { id: 'k1', code: 'CRM-7', title: 'Erro ao salvar pedido' },
   planItem: null,
+  docPage: null,
   actor: { id: 'u2', name: 'Carla Mendes', email: 'c@x.com', avatarUrl: null },
   data: { comment: '@Ana pode revisar?' },
   read: false,

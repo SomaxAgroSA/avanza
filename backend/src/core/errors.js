@@ -59,6 +59,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   DOC_PAGE_CYCLE: { status: 409, message: 'A page cannot be moved under itself' },
   DOC_PAGE_TOO_DEEP: { status: 409, message: 'Too many page levels' },
   DOC_PAGE_IS_HOME: { status: 409, message: 'The space home page cannot be moved or deleted' },
+  DOC_PAGE_NOT_PUBLISHED: { status: 409, message: 'Publish the page before notifying people about it' },
   DOC_MODULE_NOT_FOUND: { status: 404, message: 'Documentation module not found' },
   DOC_MODULE_NAME_IN_USE: { status: 409, message: 'A documentation module with this name already exists' },
   ATTACHMENT_NOT_FOUND: { status: 404, message: 'Attachment not found' },

@@ -89,6 +89,7 @@ function createFakeStore() {
     docModules: [],
     docPages: [],
     docPageTasks: [],
+    docPageNotices: [],
     docVersions: [],
     docFiles: [],
     relations: [],
@@ -1272,6 +1273,28 @@ function createFakeRepositories(store) {
     },
   }
 
+  let noticeClock = 0
+  const docPageNoticeRepository = {
+    create: (data) => {
+      noticeClock += 1
+      const notice = { id: nextDocId('ntc0'), pageId: data.pageId, userId: data.userId, actorId: data.actorId || null, note: data.note || '', openedAt: null, createdAt: new Date(Date.UTC(2026, 3, 1, 0, 0, noticeClock)) }
+      store.docPageNotices.push(notice)
+      return notice
+    },
+    listByPage: (pageId) =>
+      store.docPageNotices
+        .filter((n) => n.pageId === pageId)
+        .slice()
+        .sort((a, b) => b.createdAt - a.createdAt),
+    markOpened: (pageId, userId, at) => {
+      const open = store.docPageNotices.filter((n) => n.pageId === pageId && n.userId === userId && !n.openedAt)
+      open.forEach((n) => {
+        n.openedAt = at
+      })
+      return open.length
+    },
+  }
+
   const loginAttemptRepository = {
     record: (key, at) => store.loginAttempts.push({ key, at: new Date(at) }),
     listSince: (key, since) => store.loginAttempts.filter((a) => a.key === key && a.at >= since).map((a) => a.at),
@@ -1456,6 +1479,13 @@ function createFakeRepositories(store) {
     countUnread: (userId) => store.notifications.filter((n) => n.userId === userId && !n.readAt).length,
     markRead: (id, at) => {
       notificationRepository.findById(id).readAt = at
+    },
+    markReadByDocPage: (userId, pageId, at) => {
+      const unread = store.notifications.filter((n) => n.userId === userId && n.docPageId === pageId && !n.readAt)
+      unread.forEach((n) => {
+        n.readAt = at
+      })
+      return unread.length
     },
     markAllRead: (userId, at) => {
       const unread = store.notifications.filter((n) => n.userId === userId && !n.readAt)
@@ -1712,6 +1742,7 @@ function createFakeRepositories(store) {
     docPageVersionRepository,
     docFileRepository,
     docPageTaskRepository,
+    docPageNoticeRepository,
     taskValueRepository,
     tagRepository,
     companyRepository,

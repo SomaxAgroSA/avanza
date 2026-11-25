@@ -23,9 +23,9 @@ import type { Attachment, ProjectFile } from '@/domain/attachments'
 import { NOTIFICATION_TYPES, type AppNotification } from '@/domain/notifications'
 import type { ExecutiveDto, ExecutivePersonDto, ExecutiveProjectRefDto } from './dtos'
 import type { ExecutiveDashboard, ExecutiveHealth, ExecutivePerson, ExecutiveProjectRef } from '@/domain/executive'
-import type { BacklogDto, BoardDto, DocExportDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto } from './dtos'
+import type { BacklogDto, BoardDto, DocExportDto, DocModuleDto, DocPageDto, DocSpaceDto, DocTreePageDto, TaskDocLinkDto, DurationDto, MilestoneDto, ReportDto, ReportTaskDto, SprintDto, NotificationDto, TaskRelationsDto, TimelineDto, DocNoticeDto, DocNoticeCandidateDto } from './dtos'
 import { MILESTONE_STATES, type Milestone, type Timeline } from '@/domain/timeline'
-import { SPACE_ICONS, SPACE_VISIBILITIES, type DocModule, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink } from '@/domain/docs'
+import { SPACE_ICONS, SPACE_VISIBILITIES, type DocModule, type DocPage, type DocSpace, type DocTreePage, type RichContent, type TaskDocLink, type DocNotice, type DocNoticeCandidate } from '@/domain/docs'
 import type { DocExport } from '@/domain/doc-export'
 import { RELATION_TYPES, type TaskRelations } from '@/domain/relations'
 import { REPORT_DIMENSIONS, type BreakdownLabel, type Duration, type Report, type ReportDimension, type ReportTask } from '@/domain/reports'
@@ -426,8 +426,9 @@ export function toNotification(dto: NotificationDto): AppNotification {
     type: oneOf(NOTIFICATION_TYPES, dto.type, 'comment'),
     task: dto.task ?? null,
     planItem: dto.plan_item ? { id: dto.plan_item.id, projectId: dto.plan_item.project_id ?? '', name: dto.plan_item.name, projectName: dto.plan_item.project_name } : null,
+    docPage: dto.doc_page ? { id: dto.doc_page.id, spaceKey: dto.doc_page.space_key, spaceName: dto.doc_page.space_name, title: dto.doc_page.title, projectName: dto.doc_page.project_name } : null,
     actor: dto.actor ? toUserSummary(dto.actor) : null,
-    data: { comment: text('comment') ?? text('update'), status: text('status'), due_date: text('due_date'), assignee: text('assignee') },
+    data: { comment: text('comment') ?? text('update') ?? text('note'), status: text('status'), due_date: text('due_date'), assignee: text('assignee') },
     read: !!dto.read,
     createdAt: toDate(dto.created_at),
   }
@@ -519,6 +520,21 @@ export function toTaskDocLink(dto: TaskDocLinkDto): TaskDocLink {
     updatedAt: toDate(dto.updated_at),
     linkedAt: toDate(dto.linked_at),
     canUnlink: !!dto.capabilities?.unlink,
+  }
+}
+
+export function toDocNoticeCandidate(dto: DocNoticeCandidateDto): DocNoticeCandidate {
+  return Object.assign(toUserSummary(dto), { suggested: !!dto.suggested })
+}
+
+export function toDocNotice(dto: DocNoticeDto): DocNotice {
+  return {
+    id: dto.id,
+    user: toUserSummary(dto.user),
+    actor: dto.actor ? toUserSummary(dto.actor) : null,
+    note: dto.note ?? '',
+    createdAt: toDate(dto.created_at),
+    openedAt: toDate(dto.opened_at),
   }
 }
 

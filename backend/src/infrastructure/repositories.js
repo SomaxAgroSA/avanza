@@ -80,6 +80,7 @@ function createRepositories(db, ctx) {
     docPageVersionRepository: docs.createDocPageVersionRepository(db, ctx),
     docFileRepository: docs.createDocFileRepository(db, ctx),
     docPageTaskRepository: docs.createDocPageTaskRepository(db),
+    docPageNoticeRepository: docs.createDocPageNoticeRepository(db),
   }
   // o histórico também enfileira as entregas dos webhooks que assinam o evento (na mesma transação)
   repos.auditRepository = webhooks.withWebhooks(repos.auditRepository, repos)

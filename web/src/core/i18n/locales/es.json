@@ -229,6 +229,7 @@
     "DOC_PAGE_CYCLE": "Una página no puede quedar dentro de una de sus subpáginas.",
     "DOC_PAGE_TOO_DEEP": "Se alcanzó el límite de 8 niveles de páginas.",
     "DOC_PAGE_IS_HOME": "La página inicial del espacio no se puede mover ni eliminar.",
+    "DOC_PAGE_NOT_PUBLISHED": "Publica la página antes de avisar a alguien.",
     "DOC_MODULE_NOT_FOUND": "Módulo no encontrado.",
     "DOC_MODULE_NAME_IN_USE": "Ya existe un módulo con ese nombre.",
     "GROUP_NOT_FOUND": "Grupo no encontrado.",
@@ -945,6 +946,7 @@
       "doc_module.deleted": "Módulo de documentación eliminado",
       "doc_page.created": "Página de documentación creada",
       "doc_page.published": "Página de documentación publicada",
+      "doc_page.notified": "Aviso sobre una página de documentación",
       "doc_page.moved": "Página de documentación movida",
       "doc_page.deleted": "Página de documentación eliminada",
       "doc_page.restored": "Versión de página restaurada",
@@ -2046,9 +2048,12 @@
       "demand_passed": "{{actor}} pasó {{code}} a {{assignee}}",
       "demand_concluded": "{{actor}} concluyó {{code}}: falta validar",
       "demand_validated": "{{actor}} validó {{code}}",
-      "demand_returned": "{{actor}} devolvió {{code}}"
+      "demand_returned": "{{actor}} devolvió {{code}}",
+      "doc_shared": "{{actor}} te pidió que mires «{{title}}»"
     },
-    "planItemIn": "Tablero de {{project}}"
+    "planItemIn": "Tablero de {{project}}",
+    "docPageIn": "Documentación del proyecto {{project}}",
+    "docSpaceIn": "Documentación: {{space}}"
   },
   "kanban": {
     "title": "Kanban",
@@ -2925,6 +2930,28 @@
       "openFull": "Abrir completa",
       "unlinkPage": "Quitar vínculo",
       "pageUnlinked": "Vínculo quitado."
+    },
+    "notices": {
+      "button": "Avisar",
+      "dialogTitle": "Avisar sobre esta página",
+      "dialogDescription": "{{page}}, en el proyecto {{project}}",
+      "who": "¿A quién avisar?",
+      "addPerson": "Agregar persona…",
+      "suggestedHint": "{{name}} viene marcado porque es el responsable de Desarrollo del proyecto.",
+      "onlyReaders": "Solo aparecen las personas que pueden ver esta documentación.",
+      "nobody": "Nadie más puede ver esta documentación todavía.",
+      "note": "Qué mirar",
+      "optional": "(opcional)",
+      "notePlaceholder": "Ej.: revisa la sección 2 y dame tu estimación.",
+      "howItArrives": "Le llega en la campanita y por correo, con el enlace a esta página.",
+      "notNow": "Ahora no",
+      "send": "Avisar",
+      "sent_one": "Aviso enviado a {{names}}.",
+      "sent_other": "Aviso enviado a {{names}}.",
+      "notified": "Avisada a:",
+      "opened": "la abrió {{when}}",
+      "notOpened": "todavía no la abrió",
+      "sentAt": "Avisada por {{who}} el {{when}}"
     },
     "project": {
       "emptyTitle": "Este proyecto todavía no tiene documentación",

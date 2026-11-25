@@ -448,4 +448,45 @@ function createDocPageTaskRepository(db) {
   }
 }
 
-module.exports = { createDocSpaceRepository, createDocModuleRepository, createDocPageRepository, createDocPageVersionRepository, createDocFileRepository, createDocPageTaskRepository }
+/** Avisos sobre uma página (§47): um por pessoa e envio; `openedAt` = quando a pessoa abriu a página depois do aviso. */
+function createDocPageNoticeRepository(db) {
+  const toEntity = (row) => ({
+    id: row.id,
+    pageId: row.page_id,
+    userId: row.user_id,
+    actorId: row.actor_id || null,
+    note: row.note || '',
+    openedAt: row.opened_at || null,
+    createdAt: row.created,
+  })
+  return {
+    async create(data) {
+      const row = await db.one('INSERT INTO doc_page_notices (id, page_id, user_id, actor_id, note) VALUES ($1, $2, $3, $4, $5) RETURNING *', [
+        newId(),
+        data.pageId,
+        data.userId,
+        data.actorId || null,
+        data.note || '',
+      ])
+      return toEntity(row)
+    },
+    /** Mais recentes primeiro. */
+    async listByPage(pageId) {
+      return (await db.query('SELECT * FROM doc_page_notices WHERE page_id = $1 ORDER BY created DESC, id DESC', [pageId])).map(toEntity)
+    },
+    /** Marca como abertos os avisos ainda não abertos da pessoa nessa página; devolve quantos. */
+    async markOpened(pageId, userId, at) {
+      return db.exec('UPDATE doc_page_notices SET opened_at = $3 WHERE page_id = $1 AND user_id = $2 AND opened_at IS NULL', [pageId, userId, toDbDate(at)])
+    },
+  }
+}
+
+module.exports = {
+  createDocSpaceRepository,
+  createDocModuleRepository,
+  createDocPageRepository,
+  createDocPageVersionRepository,
+  createDocFileRepository,
+  createDocPageTaskRepository,
+  createDocPageNoticeRepository,
+}

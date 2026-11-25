@@ -97,7 +97,8 @@ function createNotifier(deps) {
       const user = users[recipient.userId]
       // menção em tarefa (ajuste 23/11): a própria menção dá acesso à tarefa, então o aviso sempre chega
       if (!user || user.status !== 'active') continue
-      if (!(recipient.type === 'mention' && event.task) && !(await hasAccess(event.project, user, event.task || null))) continue
+      // aviso de página da Documentação (§47): quem avisa já conferiu que a pessoa lê a página
+      if (!event.verified && !(recipient.type === 'mention' && event.task) && !(await hasAccess(event.project, user, event.task || null))) continue
       const dedupeKey = event.dedupeKey ? event.dedupeKey(recipient.type) : ''
       if (dedupeKey && (await repos.notificationRepository.existsKey(user.id, dedupeKey))) continue
       const notification = Object.assign({ userId: user.id, type: recipient.type, actorId: event.actorId || null, data: Object.assign({}, baseData, event.data || {}), dedupeKey }, target)
@@ -118,6 +119,20 @@ function createNotifier(deps) {
   /** Elemento do quadro (GP-3): `event.item` no lugar de `event.task`. */
   async function notifyItem(repos, event) {
     return deliver(repos, event, { planItemId: event.item.id, projectId: event.project.id }, { name: event.item.name, project: event.project.name })
+  }
+
+  /**
+   * Página da Documentação (§47): `event` { page, space, project?, actorId, userIds, note }. Quem chama já
+   * conferiu que cada pessoa lê a página (`verified`). Uma notificação `doc_shared` por pessoa (sino + e-mail).
+   */
+  async function notifyDocPage(repos, event) {
+    const project = event.project || null
+    return deliver(
+      repos,
+      { project, actorId: event.actorId, verified: true, entries: event.userIds.map((userId) => ({ userId, type: 'doc_shared' })) },
+      { docPageId: event.page.id, projectId: project ? project.id : null },
+      { title: event.page.title, space_key: event.space.key, space: event.space.name, project: project ? project.name : '', note: event.note || '' },
+    )
   }
 
   /**
@@ -148,7 +163,7 @@ function createNotifier(deps) {
     return emails
   }
 
-  return { notify, notifyItem, copy }
+  return { notify, notifyItem, notifyDocPage, copy }
 }
 
 function createNotificationService(deps) {
@@ -160,13 +175,14 @@ function createNotificationService(deps) {
     const actor = item.actorId ? actors[item.actorId] : null
     const extra = {}
     Object.keys(data).forEach((key) => {
-      if (['code', 'title', 'name', 'project'].indexOf(key) < 0) extra[key] = data[key]
+      if (['code', 'title', 'name', 'project', 'space_key', 'space'].indexOf(key) < 0) extra[key] = data[key]
     })
     return {
       id: item.id,
       type: item.type,
       task: item.taskId ? { id: item.taskId, code: data.code || '', title: data.title || '' } : null,
       plan_item: item.planItemId ? { id: item.planItemId, project_id: item.projectId || null, name: data.name || '', project_name: data.project || '' } : null,
+      doc_page: item.docPageId ? { id: item.docPageId, space_key: data.space_key || '', space_name: data.space || '', title: data.title || '', project_name: data.project || '' } : null,
       actor: actor ? toUserSummary(actor) : null,
       data: extra,
       read: !!item.readAt,

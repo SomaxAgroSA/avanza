@@ -179,6 +179,7 @@ const NOTICE = {
       demand_concluded: '{actor} concluiu uma demanda e falta validar.',
       demand_validated: '{actor} validou uma demanda.',
       demand_returned: '{actor} devolveu uma demanda.',
+      doc_shared: '{actor} pediu que você olhe uma página da documentação.',
     },
     subjects: {
       mention: 'Menção no {platform}',
@@ -194,6 +195,7 @@ const NOTICE = {
       demand_concluded: 'Demanda para validar no {platform}',
       demand_validated: 'Demanda validada no {platform}',
       demand_returned: 'Demanda devolvida no {platform}',
+      doc_shared: 'Documentação no {platform}',
     },
     next: {
       demand_received: 'Para avançar, atribua a uma pessoa da sua equipe com o prazo.',
@@ -201,7 +203,7 @@ const NOTICE = {
       demand_returned: 'Veja o comentário e retome o trabalho.',
       overdue: 'Atualize o status ou ajuste o prazo.',
     },
-    labels: { requester: 'Pedida por', project: 'Projeto', priority: 'Prioridade', urgency: 'Urgência', company: 'Empresa', due: 'Prazo', responsible: 'Responsável' },
+    labels: { requester: 'Pedida por', project: 'Projeto', priority: 'Prioridade', urgency: 'Urgência', company: 'Empresa', due: 'Prazo', responsible: 'Responsável', look: 'O que olhar' },
     copy: {
       task: '{actor} abriu uma tarefa e colocou você em cópia.',
       demand: '{actor} abriu uma demanda e colocou você em cópia.',
@@ -210,7 +212,7 @@ const NOTICE = {
     },
     urgency: { high: 'Alta', medium: 'Média', low: 'Baixa' },
     internal: 'Demanda interna',
-    button: { task: 'Ver tarefa', demand: 'Ver demanda', plan: 'Ver na gestão', other: 'Abrir' },
+    button: { task: 'Ver tarefa', demand: 'Ver demanda', plan: 'Ver na gestão', doc: 'Ver página', other: 'Abrir' },
     someone: 'Alguém',
   },
   en: {
@@ -229,6 +231,7 @@ const NOTICE = {
       demand_concluded: '{actor} completed a request and it awaits validation.',
       demand_validated: '{actor} validated a request.',
       demand_returned: '{actor} returned a request.',
+      doc_shared: '{actor} asked you to look at a documentation page.',
     },
     subjects: {
       mention: 'Mention in {platform}',
@@ -244,6 +247,7 @@ const NOTICE = {
       demand_concluded: 'Request to validate in {platform}',
       demand_validated: 'Request validated in {platform}',
       demand_returned: 'Request returned in {platform}',
+      doc_shared: 'Documentation in {platform}',
     },
     next: {
       demand_received: 'To move forward, assign it to someone on your team with a deadline.',
@@ -251,7 +255,7 @@ const NOTICE = {
       demand_returned: 'Read the comment and pick the work back up.',
       overdue: 'Update the status or adjust the deadline.',
     },
-    labels: { requester: 'Requested by', project: 'Project', priority: 'Priority', urgency: 'Urgency', company: 'Company', due: 'Due', responsible: 'Owner' },
+    labels: { requester: 'Requested by', project: 'Project', priority: 'Priority', urgency: 'Urgency', company: 'Company', due: 'Due', responsible: 'Owner', look: 'What to look at' },
     copy: {
       task: '{actor} opened a task and copied you.',
       demand: '{actor} opened a request and copied you.',
@@ -260,7 +264,7 @@ const NOTICE = {
     },
     urgency: { high: 'High', medium: 'Medium', low: 'Low' },
     internal: 'Internal request',
-    button: { task: 'View task', demand: 'View request', plan: 'View in management', other: 'Open' },
+    button: { task: 'View task', demand: 'View request', plan: 'View in management', doc: 'View page', other: 'Open' },
     someone: 'Someone',
   },
   es: {
@@ -279,6 +283,7 @@ const NOTICE = {
       demand_concluded: '{actor} concluyó una demanda y falta validarla.',
       demand_validated: '{actor} validó una demanda.',
       demand_returned: '{actor} devolvió una demanda.',
+      doc_shared: '{actor} te pidió que mires una página de la documentación.',
     },
     subjects: {
       mention: 'Mención en {platform}',
@@ -294,6 +299,7 @@ const NOTICE = {
       demand_concluded: 'Demanda para validar en {platform}',
       demand_validated: 'Demanda validada en {platform}',
       demand_returned: 'Demanda devuelta en {platform}',
+      doc_shared: 'Documentación en {platform}',
     },
     next: {
       demand_received: 'Para avanzar, asígnala a una persona de tu equipo con su plazo.',
@@ -301,7 +307,7 @@ const NOTICE = {
       demand_returned: 'Revisa el comentario y retoma el trabajo.',
       overdue: 'Actualiza el estado o ajusta el plazo.',
     },
-    labels: { requester: 'Pedida por', project: 'Proyecto', priority: 'Prioridad', urgency: 'Urgencia', company: 'Empresa', due: 'Plazo', responsible: 'Responsable' },
+    labels: { requester: 'Pedida por', project: 'Proyecto', priority: 'Prioridad', urgency: 'Urgencia', company: 'Empresa', due: 'Plazo', responsible: 'Responsable', look: 'Qué mirar' },
     copy: {
       task: '{actor} abrió una tarea y te puso en copia.',
       demand: '{actor} abrió una demanda y te puso en copia.',
@@ -310,7 +316,7 @@ const NOTICE = {
     },
     urgency: { high: 'Alta', medium: 'Media', low: 'Baja' },
     internal: 'Demanda interna',
-    button: { task: 'Ver tarea', demand: 'Ver demanda', plan: 'Ver en la gestión', other: 'Abrir' },
+    button: { task: 'Ver tarea', demand: 'Ver demanda', plan: 'Ver en la gestión', doc: 'Ver página', other: 'Abrir' },
     someone: 'Alguien',
   },
 }
@@ -418,6 +424,10 @@ function renderEmail(kind, locale, data) {
 }
 
 function notificationLink(notification, appUrl) {
+  if (notification.docPageId) {
+    const key = (notification.data && notification.data.space_key) || ''
+    return `${appUrl}/docs/${encodeURIComponent(key)}/${encodeURIComponent(notification.docPageId)}`
+  }
   if (notification.planItemId) return `${appUrl}/projects/${encodeURIComponent(notification.projectId || '')}/management?item=${encodeURIComponent(notification.planItemId)}`
   if (notification.taskId) return `${appUrl}/tasks/${encodeURIComponent(notification.taskId)}`
   return `${appUrl}/notifications`
@@ -433,7 +443,8 @@ function formatDay(value, locale) {
 }
 
 /**
- * E-mail de uma notificação: `notification` { type, taskId?, planItemId?, projectId?, data };
+ * E-mail de uma notificação: `notification` { type, taskId?, planItemId?, docPageId?, projectId?, data };
+ * página da Documentação (`doc_shared`, §47): projeto e "O que olhar" (`data.note`), botão para a página.
  * `ctx` { locale, actorName, platform, appUrl, details? }. `details` (opcional, montado por quem notifica):
  * { demand, internal, project, priority: { name, translations }, urgency, company, requester, requesterArea, dueDate }.
  * Sem códigos: o título da tarefa (ou o nome do elemento da gestão) vai em destaque e o projeto pelo nome.
@@ -443,13 +454,19 @@ function renderNotificationEmail(notification, ctx) {
   const data = notification.data || {}
   const d = ctx.details || {}
   const isPlan = !!notification.planItemId
+  const isDoc = !!notification.docPageId
   const isDemand = !!d.demand || notification.type.indexOf('demand_') === 0
   const values = Object.assign({}, data, { actor: ctx.actorName || n.someone, item: isDemand ? n.item.demand : n.item.task })
   const intro = fill(n.types[notification.type] || '', values)
-  const project = isPlan ? data.project || '' : d.internal ? n.internal : d.project || ''
+  const project = isPlan || isDoc ? data.project || '' : d.internal ? n.internal : d.project || ''
   const priority = d.priority ? localize(d.priority, ctx.locale, ['name']).name : ''
   const subject = [fill(n.subjects[notification.type] || '{platform}', { platform: ctx.platform }), project, priority].filter(Boolean).join(' | ')
-  const rows = isPlan
+  const rows = isDoc
+    ? [
+        [n.labels.project, project],
+        [n.labels.look, data.note || ''],
+      ]
+    : isPlan
     ? [[n.labels.project, project]]
     : [
         [n.labels.requester, isDemand && d.requester ? [d.requester, d.requesterArea].filter(Boolean).join(' · ') : ''],
@@ -467,7 +484,7 @@ function renderNotificationEmail(notification, ctx) {
     quote: data.comment || data.update || '',
     next: n.next[notification.type] || '',
     link: notificationLink(notification, ctx.appUrl),
-    button: isPlan ? n.button.plan : notification.taskId ? (isDemand ? n.button.demand : n.button.task) : n.button.other,
+    button: isDoc ? n.button.doc : isPlan ? n.button.plan : notification.taskId ? (isDemand ? n.button.demand : n.button.task) : n.button.other,
   })
   return { subject, html: body.html, text: body.text }
 }

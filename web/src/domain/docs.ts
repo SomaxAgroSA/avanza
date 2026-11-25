@@ -222,6 +222,24 @@ export interface DocSpaceDetail {
   capabilities: { edit: boolean; manage: boolean }
 }
 
+/** Pessoa que pode ser avisada sobre uma página (§47); `suggested` = responsável de Desenvolvimento do projeto. */
+export interface DocNoticeCandidate extends UserSummary {
+  suggested: boolean
+}
+
+/** Aviso sobre uma página (§47): o mais recente de cada pessoa e quando ela abriu a página (null = ainda não). */
+export interface DocNotice {
+  id: string
+  user: UserSummary
+  actor: UserSummary | null
+  note: string
+  createdAt: Date | null
+  openedAt: Date | null
+}
+
+/** "O que olhar" do aviso: até 500 caracteres. */
+export const DOC_NOTICE_NOTE_MAX = 500
+
 export interface DocPage {
   id: string
   space: { id: string; key: string; name: string }
