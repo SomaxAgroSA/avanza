@@ -203,7 +203,7 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
       await page.keyboard.press('Escape')
 
       // quadro de gerenciamento: painel de filtros, barra da seleção em massa e importação
-      await page.goto(`${app.baseUrl}${pages.find(([label]) => label === 'gestão de projetos')[1]}`)
+      await page.goto(`${app.baseUrl}${pages.find(([label]) => label === 'projeto — gestão')[1]}`)
       await page.getByRole('table', { name: '1.0 Iniciação', exact: true }).waitFor()
       await page.getByRole('button', { name: 'Filtro', exact: true }).click()
       await page.getByRole('dialog', { name: 'Filtros do quadro' }).waitFor()
