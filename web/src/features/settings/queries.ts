@@ -38,7 +38,7 @@ export function useUpdateRole() {
   const { roles } = useRepositories()
   const invalidate = useInvalidateRoles()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Pick<RoleInputData, 'name' | 'description' | 'ongoingView' | keyof TaskViews> }) => roles.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Pick<RoleInputData, 'name' | 'description' | 'ongoingView' | 'projectsLists' | keyof TaskViews> }) => roles.update(id, data),
     onSuccess: invalidate,
   })
 }

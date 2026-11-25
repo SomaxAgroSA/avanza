@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry } from './nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry, withProjectLists } from './nav-items'
 
 describe('navegação', () => {
   it('Panorama desligado na plataforma (§26.2): some do menu de todos, mesmo com executive.view; ligado, fica', () => {
@@ -73,5 +73,38 @@ describe('Tarefas abre onde o perfil escolheu (ajuste 23/11)', () => {
     expect(withNavEntry(items, 'tasks', '/tasks/demands?box=all').find((item) => item.id === 'tasks')).toMatchObject({ to: '/tasks', entry: '/tasks/demands?box=all' })
     expect(withNavEntry(items, 'tasks', '/tasks').find((item) => item.id === 'tasks')?.entry).toBeUndefined()
     expect(withNavEntry(items, 'tasks', '/tasks/demands').find((item) => item.id === 'projects')?.entry).toBeUndefined()
+  })
+})
+
+describe('Projetos por perfil: listas do menu (ajuste 25/11)', () => {
+  const items = visibleNavItems(['projects.view', 'tasks.view', 'tasks.list'])
+  const projects = (lists: Parameters<typeof withProjectLists>[1]) => withProjectLists(items, lists).find((item) => item.id === 'projects')!
+
+  it('as quatro: o submenu de sempre', () => {
+    expect(projects(['all', 'ongoing', 'finished', 'archived']).children?.filter((c) => !c.hidden).map((c) => c.to)).toEqual([
+      '/projects',
+      '/projects/ongoing',
+      '/projects/finished',
+      '/projects/archived',
+    ])
+  })
+
+  it('só as do perfil, na ordem do menu; Meus projetos segue fora do menu', () => {
+    const group = projects(['ongoing', 'archived'])
+    expect(group.children?.map((c) => [c.to, !!c.hidden])).toEqual([
+      ['/projects/ongoing', false],
+      ['/projects/archived', false],
+      ['/projects/mine', true],
+    ])
+    expect(group.entry).toBeUndefined()
+  })
+
+  it('com uma só: sem submenu, leva direto a ela e o rótulo diz qual é', () => {
+    expect(projects(['ongoing'])).toMatchObject({ to: '/projects', entry: '/projects/ongoing', detailKey: 'nav.projectsOngoing' })
+    expect(projects(['ongoing']).children).toBeUndefined()
+    const all = projects(['all'])
+    expect([all.to, all.entry, all.detailKey, all.children]).toEqual(['/projects', undefined, 'nav.projectsAll', undefined])
+    // os outros itens não mudam
+    expect(withProjectLists(items, ['ongoing']).find((item) => item.id === 'tasks')).toEqual(items.find((item) => item.id === 'tasks'))
   })
 })

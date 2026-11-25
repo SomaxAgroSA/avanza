@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppShell } from '@/presentation/layouts/AppShell'
 import { AccessTabRedirect, HomeRedirect, LegacyProjectRedirect, SettingsIndexRedirect } from './legacy-redirects'
 import { GuestOnly, PermissionGate, RequireAuth } from '@/features/auth/guards'
+import { ProjectListGate } from '@/features/projects/ProjectListGate'
 import { NotFoundPage, RouteErrorPage } from '@/features/errors/ErrorPages'
 import { isChunkLoadError, reloadForNewVersion } from './chunk-reload'
 
@@ -79,11 +80,17 @@ export const routes: RouteObject[] = [
       {
         element: <PermissionGate permission="projects.view" />,
         children: [
-          { path: 'projects', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.AllProjectsPage }))) },
+          {
+            // listas do menu por perfil (ajuste 25/11): a escondida leva à primeira visível
+            element: <ProjectListGate />,
+            children: [
+              { path: 'projects', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.AllProjectsPage }))) },
+              { path: 'projects/ongoing', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.OngoingProjectsPage }))) },
+              { path: 'projects/finished', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.FinishedProjectsPage }))) },
+              { path: 'projects/archived', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.ArchivedProjectsPage }))) },
+            ],
+          },
           { path: 'projects/mine', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.MyProjectsPage }))) },
-          { path: 'projects/ongoing', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.OngoingProjectsPage }))) },
-          { path: 'projects/finished', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.FinishedProjectsPage }))) },
-          { path: 'projects/archived', ...page(() => import('@/features/projects/ProjectsPage').then((m) => ({ default: m.ArchivedProjectsPage }))) },
           {
             // o projeto é o centro do trabalho: cada aba (e cada visão das tarefas) tem o seu endereço
             path: 'projects/:projectId',

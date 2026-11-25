@@ -135,4 +135,45 @@ const TASK_VIEWS = Object.freeze({
  */
 const TASK_HIDDEN_BOXES = Object.freeze(['received', 'assigned', 'requested'])
 
-module.exports = { PERMISSIONS, ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES, ROLE_CODES, DEFAULT_ROLE_PERMISSIONS, DEFAULT_ROLES, isKnownPermission }
+/**
+ * Projetos por perfil (ajuste 25/11/2026), escolhido em Controle de acesso → Perfis — só a tela, como as Tarefas
+ * do perfil: as listas que aparecem no menu Projetos (Todos os meus projetos, Em andamento, Concluídos,
+ * Arquivados), na ordem do menu. Sempre ao menos uma. O acesso continua nas permissões (a API das listas não muda).
+ * Gravadas em roles.projects_lists, separadas por vírgula; '' = as quatro (o padrão, como antes).
+ */
+const PROJECT_LISTS = Object.freeze(['all', 'ongoing', 'finished', 'archived'])
+
+/** Problema na escolha vinda da API (null = válida): uma lista, só com as conhecidas, ao menos uma. */
+function projectListsIssue(value) {
+  if (!Array.isArray(value)) return 'invalid_type'
+  if (value.length === 0) return 'required'
+  return value.every((list) => PROJECT_LISTS.indexOf(list) >= 0) ? null : 'invalid_option'
+}
+
+/** Texto gravado → listas visíveis, na ordem do menu (vazio ou sem nenhuma conhecida = as quatro). */
+function projectListsFromText(value) {
+  const parts = String(value || '').split(',')
+  const lists = PROJECT_LISTS.filter((list) => parts.indexOf(list) >= 0)
+  return lists.length ? lists : PROJECT_LISTS.slice()
+}
+
+/** Listas visíveis → texto gravado: na ordem do menu, sem repetidas; as quatro = '' (o padrão). */
+function projectListsToText(lists) {
+  const visible = PROJECT_LISTS.filter((list) => lists.indexOf(list) >= 0)
+  return visible.length === PROJECT_LISTS.length ? '' : visible.join(',')
+}
+
+module.exports = {
+  PERMISSIONS,
+  ONGOING_VIEWS,
+  TASK_VIEWS,
+  TASK_HIDDEN_BOXES,
+  PROJECT_LISTS,
+  projectListsIssue,
+  projectListsFromText,
+  projectListsToText,
+  ROLE_CODES,
+  DEFAULT_ROLE_PERMISSIONS,
+  DEFAULT_ROLES,
+  isKnownPermission,
+}

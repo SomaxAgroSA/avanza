@@ -377,6 +377,24 @@ describe('API /api/v1', { timeout: 120000 }, () => {
     })
   })
 
+  describe('Projetos por perfil (ajuste 25/11)', () => {
+    it('PATCH /roles/:id grava projects_lists; sai em /roles e em /auth/me de quem tem o perfil', async () => {
+      const { client } = await createUserAndLogin('MEMBER', 'projetos-perfil@kamban.test')
+      const all = ['all', 'ongoing', 'finished', 'archived']
+      assert.deepEqual((await client.get('/auth/me')).body.data.role.projects_lists, all)
+      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: ['ongoing'] })
+      assert.equal(res.status, 200, JSON.stringify(res.body))
+      assert.deepEqual(res.body.data.projects_lists, ['ongoing'])
+      assert.deepEqual((await admin.get(`/roles/${roleId('MEMBER')}`)).body.data.projects_lists, ['ongoing'])
+      assert.deepEqual((await client.get('/auth/me')).body.data.role.projects_lists, ['ongoing'])
+      // só a tela: a lista escondida continua respondendo pela API
+      assert.equal((await client.get('/projects?view=finished')).status, 200)
+      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: [] })).body.error.code, 'VALIDATION_ERROR')
+      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: ['mine'] })).body.error.code, 'VALIDATION_ERROR')
+      assert.deepEqual((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: all })).body.data.projects_lists, all)
+    })
+  })
+
   describe('página inicial por pessoa (§38)', () => {
     it('PATCH /users/:id grava home_page e devolve o valor salvo', async () => {
       const { user } = await createUserAndLogin('MEMBER', 'pagina-inicial@kamban.test')

@@ -130,6 +130,41 @@ describe('application/roles', () => {
     }
   })
 
+  it('Projetos do perfil (25/11): listas do menu; padrão todas, sempre ao menos uma, auditadas', async () => {
+    const deps = createFakeDeps()
+    const roles = createRoleService(deps)
+    const admin = await ctxFor(deps, 'ADMIN')
+    const manager = await deps.roleRepository.findByCode('MANAGER')
+    const all = ['all', 'ongoing', 'finished', 'archived']
+    assert.deepEqual((await roles.getRole(admin, manager.id)).projects_lists, all, 'sem escolha: as quatro, como antes')
+
+    // na ordem do menu e sem repetidas; no histórico, como na API
+    const saved = await roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: ['archived', 'ongoing', 'ongoing'] })
+    assert.deepEqual(saved.projects_lists, ['ongoing', 'archived'])
+    const entry = deps.store.audit.at(-1)
+    assert.deepEqual([entry.action, entry.oldValue, entry.newValue], ['role.updated', { projects_lists: all }, { projects_lists: ['ongoing', 'archived'] }])
+
+    // sem mudança, nada no histórico; omitir não muda
+    const count = deps.store.audit.length
+    await roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: ['ongoing', 'archived'] })
+    assert.equal((await roles.updateRole(admin, manager.id, { name: manager.name })).projects_lists.length, 2)
+    assert.equal(deps.store.audit.length, count)
+
+    // marcar as quatro volta ao padrão
+    assert.deepEqual((await roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: all.slice().reverse() })).projects_lists, all)
+    assert.equal((await deps.roleRepository.findById(manager.id)).projectsLists, '')
+
+    // nenhuma, desconhecida ou fora de lista: recusado
+    for (const bad of [[], ['mine'], ['ongoing', 'kanban'], 'ongoing']) {
+      await assert.rejects(() => roles.updateRole(admin, manager.id, { name: manager.name, projects_lists: bad }), { code: 'VALIDATION_ERROR' })
+    }
+
+    const created = await roles.createRole(admin, { code: 'CHEFIA', name: 'Chefia', projects_lists: ['ongoing'] })
+    assert.deepEqual(created.projects_lists, ['ongoing'])
+    assert.deepEqual(deps.store.audit.at(-1).newValue.projects_lists, ['ongoing'])
+    assert.deepEqual((await roles.createRole(admin, { code: 'OUTRO', name: 'Outro' })).projects_lists, all)
+  })
+
   it('§41: SUPER_ADMIN continua imutável (fica em Gestão) e o perfil novo aceita a vista', async () => {
     const deps = createFakeDeps()
     const roles = createRoleService(deps)

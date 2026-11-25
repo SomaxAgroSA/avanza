@@ -181,6 +181,7 @@ describe('application/auth — logout e sessões', () => {
     assert.equal(me.user.email, 'ana@example.com')
     assert.equal(me.role.code, 'MEMBER')
     assert.equal(me.role.ongoing_view, '', '§41: a vista de Em andamento do perfil viaja em /auth/me')
+    assert.deepEqual(me.role.projects_lists, ['all', 'ongoing', 'finished', 'archived'], 'as listas de Projetos do perfil também')
     assert.ok(Array.isArray(me.permissions))
     assert.ok(me.session.expires_at)
   })

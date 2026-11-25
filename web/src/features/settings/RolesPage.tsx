@@ -8,6 +8,7 @@ import { isAppError } from '@/core/errors/app-error'
 import type { Role } from '@/domain/entities'
 import { DEFAULT_TASK_VIEWS, shownScreens, startScreen, type TaskScreen } from '@/domain/task-views'
 import { permissionModule } from '@/domain/permissions'
+import { PROJECT_LISTS, PROJECT_LIST_LABELS, toProjectLists } from '@/domain/project-lists'
 import { roleSchema, type RoleInput } from '@/domain/validation'
 import {
   AppBadge,
@@ -26,6 +27,7 @@ import { SectionHeader } from '@/presentation/layouts/SectionHeader'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCreateRole, useDeleteRole, useRoles, useUpdateRole } from './queries'
 import { RoleTaskViews } from './RoleTaskViews'
+import { RoleProjectLists } from './RoleProjectLists'
 
 export function RolesPage() {
   const { t } = useTranslation()
@@ -196,6 +198,9 @@ function RoleDetailsDrawer({ role, onOpenChange }: { role: Role | null; onOpenCh
               {shownScreens(role).map(screenName).join(', ')} · {t('roles.tasks.start')}: {screenName(shownScreens(role).includes(startScreen(role.tasksStart)) ? startScreen(role.tasksStart) : shownScreens(role)[0]!)}
             </span>
           </p>
+          <p className="text-sm text-muted">
+            {t('roles.projects.title')}: <span className="font-medium text-fg">{toProjectLists(role.projectsLists).map((list) => t(PROJECT_LIST_LABELS[list])).join(', ')}</span>
+          </p>
           {role.code === 'SUPER_ADMIN' ? (
             <p className="text-sm text-muted">{t('roles.superAdminNote')}</p>
           ) : groups.length === 0 ? (
@@ -229,7 +234,7 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
   const pending = createRole.isPending || updateRole.isPending
   const { register, handleSubmit, reset, setError, setValue, control, formState } = useForm<RoleInput>({
     resolver: zodResolver(roleSchema),
-    defaultValues: { code: '', name: '', description: '', ongoingView: '', ...DEFAULT_TASK_VIEWS },
+    defaultValues: { code: '', name: '', description: '', ongoingView: '', ...DEFAULT_TASK_VIEWS, projectsLists: [...PROJECT_LISTS] },
   })
 
   useEffect(() => {
@@ -243,12 +248,15 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
         tasksList: role?.tasksList ?? '',
         tasksAllBox: role?.tasksAllBox ?? '',
         tasksHiddenBoxes: role?.tasksHiddenBoxes ?? [],
+        projectsLists: toProjectLists(role?.projectsLists),
       })
   }, [open, role, reset])
   // vista da lista Em andamento de quem tem este perfil (§41); '' = Gestão
   const ongoingView = useWatch({ control, name: 'ongoingView' })
   // Tarefas do perfil (ajustes 23 e 24/11): o que aparece (a Lista e cada caixa) e onde o menu abre
   const [tasksStart, tasksList, tasksAllBox, tasksHiddenBoxes] = useWatch({ control, name: ['tasksStart', 'tasksList', 'tasksAllBox', 'tasksHiddenBoxes'] })
+  // Projetos do perfil (ajuste 25/11): as listas do menu
+  const projectsLists = useWatch({ control, name: 'projectsLists' })
 
   const onSubmit = handleSubmit((values) => {
     const onError = (error: unknown) => {
@@ -262,7 +270,7 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
       notify.success(isEdit ? t('roles.updated') : t('roles.created'))
       onOpenChange(false)
     }
-    const views = { tasksStart: values.tasksStart, tasksList: values.tasksList, tasksAllBox: values.tasksAllBox, tasksHiddenBoxes: values.tasksHiddenBoxes }
+    const views = { tasksStart: values.tasksStart, tasksList: values.tasksList, tasksAllBox: values.tasksAllBox, tasksHiddenBoxes: values.tasksHiddenBoxes, projectsLists: values.projectsLists }
     if (role) updateRole.mutate({ id: role.id, data: { name: values.name, description: values.description, ongoingView: values.ongoingView, ...views } }, { onSuccess, onError })
     else createRole.mutate({ code: values.code, name: values.name, description: values.description, permissions: [], ongoingView: values.ongoingView, ...views }, { onSuccess, onError })
   })
@@ -316,6 +324,7 @@ function RoleFormDialog({ open, role, onOpenChange }: { open: boolean; role: Rol
             setValue('tasksHiddenBoxes', next.tasksHiddenBoxes, { shouldDirty: true })
           }}
         />
+        <RoleProjectLists value={toProjectLists(projectsLists)} onChange={(next) => setValue('projectsLists', next, { shouldDirty: true })} />
       </form>
     </AppDialog>
   )
