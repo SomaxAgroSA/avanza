@@ -208,12 +208,9 @@ function createRoleRepository(db) {
       name: row.name,
       description: row.description,
       isSystem: row.is_system,
-      ongoingView: row.ongoing_view || '',
-      tasksStart: row.tasks_start || '',
-      tasksList: row.tasks_list || '',
-      tasksAllBox: row.tasks_all_box || '',
-      tasksHiddenBoxes: row.tasks_hidden_boxes || '',
-      projectsLists: row.projects_lists || '',
+      // "O que aparece" (§48, migration 0038): jsonb — escondidas (lista) e "Abre em" ({ grupo: item })
+      hiddenScreens: Array.isArray(row.hidden_screens) ? row.hidden_screens : [],
+      screenStarts: row.screen_starts && typeof row.screen_starts === 'object' && !Array.isArray(row.screen_starts) ? row.screen_starts : {},
     }
   }
 
@@ -255,7 +252,7 @@ function createRoleRepository(db) {
 
     async create(data) {
       try {
-        const row = await insertRow(db, 'roles', { code: text(data.code), name: text(data.name), description: text(data.description), is_system: false, ongoing_view: text(data.ongoingView), tasks_start: text(data.tasksStart), tasks_list: text(data.tasksList), tasks_all_box: text(data.tasksAllBox), tasks_hidden_boxes: text(data.tasksHiddenBoxes), projects_lists: text(data.projectsLists) })
+        const row = await insertRow(db, 'roles', { code: text(data.code), name: text(data.name), description: text(data.description), is_system: false, hidden_screens: toJson(data.hiddenScreens || []), screen_starts: toJson(data.screenStarts || {}) })
         return toEntity(row)
       } catch (err) {
         if (isUniqueViolation(err, 'idx_roles_code')) throw appError('ROLE_CODE_IN_USE')
@@ -267,12 +264,8 @@ function createRoleRepository(db) {
       const values = {}
       if (patch.name !== undefined) values.name = text(patch.name)
       if (patch.description !== undefined) values.description = text(patch.description)
-      if (patch.ongoingView !== undefined) values.ongoing_view = text(patch.ongoingView)
-      if (patch.tasksStart !== undefined) values.tasks_start = text(patch.tasksStart)
-      if (patch.tasksList !== undefined) values.tasks_list = text(patch.tasksList)
-      if (patch.tasksAllBox !== undefined) values.tasks_all_box = text(patch.tasksAllBox)
-      if (patch.tasksHiddenBoxes !== undefined) values.tasks_hidden_boxes = text(patch.tasksHiddenBoxes)
-      if (patch.projectsLists !== undefined) values.projects_lists = text(patch.projectsLists)
+      if (patch.hiddenScreens !== undefined) values.hidden_screens = toJson(patch.hiddenScreens)
+      if (patch.screenStarts !== undefined) values.screen_starts = toJson(patch.screenStarts)
       return toEntity(mustExist(await updateRow(db, 'roles', id, values), 'roles', id))
     },
 

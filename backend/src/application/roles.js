@@ -5,7 +5,8 @@
 const { appError } = require('../core/errors')
 const { assertValid, rules } = require('../core/validation')
 const rbac = require('../domain/rbac')
-const { ROLE_CODES, ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES, projectListsIssue, projectListsFromText, projectListsToText } = require('../domain/permissions')
+const { ROLE_CODES } = require('../domain/permissions')
+const { hiddenScreensIssue, screenStartsIssue, normalizeHidden, normalizeStarts } = require('../domain/screens')
 const { buildAuditEntry, diff } = require('./audit')
 const { toRoleDto } = require('./presenters')
 
@@ -17,37 +18,24 @@ const roleCode = rules.custom((value) => {
   return ROLE_CODE_PATTERN.test(value.trim().toUpperCase()) ? null : 'invalid_format'
 })
 
-/** Caixas pessoais escondidas (ajuste 24/11): lista só com as conhecidas. */
-const hiddenBoxes = rules.custom((value) => {
-  if (!Array.isArray(value)) return 'invalid_type'
-  return value.every((box) => TASK_HIDDEN_BOXES.indexOf(box) >= 0) ? null : 'invalid_option'
-})
-
-/** Listas do menu Projetos (ajuste 25/11): só as conhecidas, ao menos uma (domain/permissions.js). */
-const projectLists = rules.custom(projectListsIssue)
+/** "O que aparece" do perfil (§48): as partes escondidas e onde cada módulo abre (domain/screens.js). */
+const hiddenScreens = rules.custom(hiddenScreensIssue)
+const screenStarts = rules.custom(screenStartsIssue)
 
 const CREATE_SCHEMA = {
   code: [rules.required(), roleCode],
   name: [rules.required(), rules.maxLength(60)],
   description: [rules.maxLength(255)],
   permissions: [rules.stringArray(MAX_PERMISSIONS)],
-  ongoing_view: [rules.oneOf(ONGOING_VIEWS)],
-  tasks_start: [rules.oneOf(TASK_VIEWS.tasks_start)],
-  tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
-  tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
-  tasks_hidden_boxes: [hiddenBoxes],
-  projects_lists: [projectLists],
+  hidden_screens: [hiddenScreens],
+  screen_starts: [screenStarts],
 }
 
 const UPDATE_SCHEMA = {
   name: [rules.required(), rules.maxLength(60)],
   description: [rules.maxLength(255)],
-  ongoing_view: [rules.oneOf(ONGOING_VIEWS)],
-  tasks_start: [rules.oneOf(TASK_VIEWS.tasks_start)],
-  tasks_list: [rules.oneOf(TASK_VIEWS.tasks_list)],
-  tasks_all_box: [rules.oneOf(TASK_VIEWS.tasks_all_box)],
-  tasks_hidden_boxes: [hiddenBoxes],
-  projects_lists: [projectLists],
+  hidden_screens: [hiddenScreens],
+  screen_starts: [screenStarts],
 }
 
 const READ_ROLES_PERMISSIONS = ['permissions.manage', 'users.view', 'users.create', 'users.edit']
@@ -56,45 +44,35 @@ function uniqueSorted(codes) {
   return codes.filter((code, index) => codes.indexOf(code) === index).sort()
 }
 
-/** Ajustes de tela do perfil: o nome na API e o da entidade (vista de Em andamento §41, Tarefas 23/11, Projetos 25/11). */
-const SCREEN_FIELDS = Object.freeze({
-  ongoing_view: 'ongoingView',
-  tasks_start: 'tasksStart',
-  tasks_list: 'tasksList',
-  tasks_all_box: 'tasksAllBox',
-  tasks_hidden_boxes: 'tasksHiddenBoxes',
-  projects_lists: 'projectsLists',
-})
-
 /**
- * Na entidade as listas são um texto, na ordem da tela e sem repetidas: as caixas escondidas (e assim no histórico)
- * e as listas de Projetos visíveis ('' = as quatro; no histórico saem como na API).
+ * "O que aparece" que vai ser gravado (§48): as escondidas na ordem do catálogo e o "Abre em" só com itens visíveis
+ * (um item que acabou de ser escondido perde a entrada; a tela abre no primeiro visível). `current` = o que o perfil
+ * já tem, para o campo que não veio. Um "Abre em" num item escondido é recusado (VALIDATION_ERROR).
  */
-function storedValue(api, value) {
-  if (api === 'tasks_hidden_boxes') return TASK_HIDDEN_BOXES.filter((box) => value.indexOf(box) >= 0).join(',')
-  if (api === 'projects_lists') return projectListsToText(value)
-  return value
+function screenValues(data, current) {
+  const hidden = normalizeHidden(data.hidden_screens !== undefined ? data.hidden_screens : current.hiddenScreens)
+  if (data.screen_starts !== undefined) {
+    const kept = normalizeStarts(data.screen_starts, hidden)
+    if (Object.keys(kept).length !== Object.keys(data.screen_starts).length) throw appError('VALIDATION_ERROR', undefined, { fields: { screen_starts: 'invalid_option' } })
+    return { hiddenScreens: hidden, screenStarts: kept }
+  }
+  return { hiddenScreens: hidden, screenStarts: normalizeStarts(current.screenStarts, hidden) }
 }
 
-/** Os ajustes vindos da API, com o nome da entidade ('' para os que não vieram, com `fill`). */
-function screenValues(data, fill) {
-  const out = {}
-  Object.keys(SCREEN_FIELDS).forEach((api) => {
-    if (data[api] !== undefined) out[SCREEN_FIELDS[api]] = storedValue(api, data[api])
-    else if (fill) out[SCREEN_FIELDS[api]] = ''
-  })
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+function withoutScreens(values) {
+  const out = Object.assign({}, values)
+  delete out.hiddenScreens
+  delete out.screenStarts
   return out
 }
 
-/** Na auditoria os campos saem como na API (ongoing_view, tasks_start…). */
-function publicChanges(values) {
-  const out = Object.assign({}, values)
-  Object.keys(SCREEN_FIELDS).forEach((api) => {
-    const field = SCREEN_FIELDS[api]
-    if (out[field] === undefined) return
-    out[api] = api === 'projects_lists' ? projectListsFromText(out[field]) : out[field]
-    delete out[field]
-  })
+/** Na auditoria os campos saem como na API (hidden_screens, screen_starts). */
+function publicScreens(values) {
+  const out = {}
+  if (values.hiddenScreens !== undefined) out.hidden_screens = values.hiddenScreens
+  if (values.screenStarts !== undefined) out.screen_starts = values.screenStarts
   return out
 }
 
@@ -141,15 +119,17 @@ function createRoleService(deps) {
     const permissions = uniqueSorted(data.permissions || [])
     rbac.assertCanUpdateRolePermissions(ctx.principal, { id: null, code }, permissions)
 
+    // perfil novo vê tudo, a menos que já venha com o que esconder (§48)
+    const screens = screenValues(data, { hiddenScreens: [], screenStarts: {} })
     const role = await deps.unitOfWork.run(async (repos) => {
-      const created = await repos.roleRepository.create(Object.assign({ code, name: data.name, description: data.description || '' }, screenValues(data, true)))
+      const created = await repos.roleRepository.create(Object.assign({ code, name: data.name, description: data.description || '' }, screens))
       await repos.roleRepository.setPermissionCodes(created.id, permissions)
       await repos.auditRepository.record(
         buildAuditEntry(ctx, {
           entityType: 'role',
           entityId: created.id,
           action: 'role.created',
-          newValue: Object.assign({ code, name: data.name, permissions }, publicChanges(screenValues(data, true))),
+          newValue: Object.assign({ code, name: data.name, permissions }, publicScreens(screens)),
         }),
       )
       return created
@@ -162,15 +142,16 @@ function createRoleService(deps) {
     const role = await findRoleOrFail(id)
     if (role.code === ROLE_CODES.SUPER_ADMIN) throw appError('ROLE_IMMUTABLE')
     const data = assertValid(input, UPDATE_SCHEMA)
-    // ajustes de tela (Em andamento §41, Tarefas 23/11, Projetos 25/11): na API ongoing_view…; na entidade ongoingView…
-    const fields = Object.keys(SCREEN_FIELDS).map((api) => SCREEN_FIELDS[api])
-    const current = Object.assign({}, role)
-    fields.forEach((field) => {
-      current[field] = role[field] || ''
+    const changes = diff(role, { name: data.name, description: data.description }, ['name', 'description']) || { oldValue: {}, newValue: {} }
+    // "O que aparece" (§48): listas e objetos comparados pelo conteúdo; omitir os campos não os muda
+    const current = { hiddenScreens: normalizeHidden(role.hiddenScreens), screenStarts: normalizeStarts(role.screenStarts, role.hiddenScreens) }
+    const screens = screenValues(data, current)
+    ;['hiddenScreens', 'screenStarts'].forEach((field) => {
+      if (same(current[field], screens[field])) return
+      changes.oldValue[field] = current[field]
+      changes.newValue[field] = screens[field]
     })
-    const next = Object.assign({ name: data.name, description: data.description }, screenValues(data, false))
-    const changes = diff(current, next, ['name', 'description'].concat(fields))
-    if (!changes) return await present(role)
+    if (Object.keys(changes.newValue).length === 0) return await present(role)
 
     const updated = await deps.unitOfWork.run(async (repos) => {
       const saved = await repos.roleRepository.update(role.id, changes.newValue)
@@ -179,8 +160,8 @@ function createRoleService(deps) {
           entityType: 'role',
           entityId: role.id,
           action: 'role.updated',
-          oldValue: publicChanges(changes.oldValue),
-          newValue: publicChanges(changes.newValue),
+          oldValue: Object.assign(withoutScreens(changes.oldValue), publicScreens(changes.oldValue)),
+          newValue: Object.assign(withoutScreens(changes.newValue), publicScreens(changes.newValue)),
         }),
       )
       return saved

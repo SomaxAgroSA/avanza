@@ -108,70 +108,10 @@ function isKnownPermission(code) {
   return ALL_CODES.indexOf(code) >= 0
 }
 
-/**
- * Vista da lista "Em andamento" por perfil (§41), escolhida em Controle de acesso → Perfis. '' = Gestão
- * (a tela de sempre); 'executive' = Direção e gerência (painel de consulta). Só muda a tela, não o que a
- * pessoa pode fazer: isso continua nas permissões do perfil.
- */
-const ONGOING_VIEWS = Object.freeze(['', 'executive', 'both'])
-
-/**
- * Tarefas por perfil (ajuste 23/11/2026), escolhido em Controle de acesso → Perfis — só a tela, como a vista de
- * Em andamento: a pessoa enxerga o que precisa, sem se perder (o acesso continua nas permissões).
- * - tasks_start: onde o menu Tarefas abre — '' Lista; 'inbox' Caixa de entrada (Recebidas); 'inbox_assigned',
- *   'inbox_requested' e 'inbox_all' as caixas Atribuídas a mim, Pedidas por mim e Todas;
- * - tasks_list: a Lista — '' todas as que a pessoa pode ver; 'mine' só "Minhas tarefas"; 'hidden' sem a Lista;
- * - tasks_all_box: a caixa Todas da Caixa de entrada (que exige projects.view_all) — '' visível; 'hidden' não.
- */
-const TASK_VIEWS = Object.freeze({
-  tasks_start: Object.freeze(['', 'inbox', 'inbox_assigned', 'inbox_requested', 'inbox_all']),
-  tasks_list: Object.freeze(['', 'mine', 'hidden']),
-  tasks_all_box: Object.freeze(['', 'hidden']),
-})
-
-/**
- * Caixas pessoais da Caixa de entrada que o perfil pode esconder (ajuste 24/11/2026), na ordem da tela; a caixa
- * Todas fica em tasks_all_box. Gravadas em roles.tasks_hidden_boxes, separadas por vírgula.
- */
-const TASK_HIDDEN_BOXES = Object.freeze(['received', 'assigned', 'requested'])
-
-/**
- * Projetos por perfil (ajuste 25/11/2026), escolhido em Controle de acesso → Perfis — só a tela, como as Tarefas
- * do perfil: as listas que aparecem no menu Projetos (Todos os meus projetos, Em andamento, Concluídos,
- * Arquivados), na ordem do menu. Sempre ao menos uma. O acesso continua nas permissões (a API das listas não muda).
- * Gravadas em roles.projects_lists, separadas por vírgula; '' = as quatro (o padrão, como antes).
- */
-const PROJECT_LISTS = Object.freeze(['all', 'ongoing', 'finished', 'archived'])
-
-/** Problema na escolha vinda da API (null = válida): uma lista, só com as conhecidas, ao menos uma. */
-function projectListsIssue(value) {
-  if (!Array.isArray(value)) return 'invalid_type'
-  if (value.length === 0) return 'required'
-  return value.every((list) => PROJECT_LISTS.indexOf(list) >= 0) ? null : 'invalid_option'
-}
-
-/** Texto gravado → listas visíveis, na ordem do menu (vazio ou sem nenhuma conhecida = as quatro). */
-function projectListsFromText(value) {
-  const parts = String(value || '').split(',')
-  const lists = PROJECT_LISTS.filter((list) => parts.indexOf(list) >= 0)
-  return lists.length ? lists : PROJECT_LISTS.slice()
-}
-
-/** Listas visíveis → texto gravado: na ordem do menu, sem repetidas; as quatro = '' (o padrão). */
-function projectListsToText(lists) {
-  const visible = PROJECT_LISTS.filter((list) => lists.indexOf(list) >= 0)
-  return visible.length === PROJECT_LISTS.length ? '' : visible.join(',')
-}
+// Os ajustes de tela do perfil (o que aparece e onde abre) ficam em domain/screens.js (§48): não são permissões.
 
 module.exports = {
   PERMISSIONS,
-  ONGOING_VIEWS,
-  TASK_VIEWS,
-  TASK_HIDDEN_BOXES,
-  PROJECT_LISTS,
-  projectListsIssue,
-  projectListsFromText,
-  projectListsToText,
   ROLE_CODES,
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_ROLES,

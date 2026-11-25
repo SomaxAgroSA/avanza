@@ -333,65 +333,40 @@ describe('API /api/v1', { timeout: 120000 }, () => {
     })
   })
 
-  describe('vista de Em andamento por perfil (§41)', () => {
-    it('PATCH /roles/:id grava ongoing_view, sai em /roles e em /auth/me de quem tem o perfil', async () => {
-      const { client } = await createUserAndLogin('MEMBER', 'vista-perfil@kamban.test')
-      assert.equal((await client.get('/auth/me')).body.data.role.ongoing_view, '')
-      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: 'executive' })
+  describe('"O que aparece" por perfil (§48)', () => {
+    it('PATCH /roles/:id grava hidden_screens e screen_starts; saem em /roles e em /auth/me de quem tem o perfil', async () => {
+      const { client } = await createUserAndLogin('MEMBER', 'o-que-aparece@kamban.test')
+      const initial = (await client.get('/auth/me')).body.data.role
+      // os perfis do sistema vinham só com a Gestão em Em andamento (0028): a 0038 manteve isso
+      assert.deepEqual([initial.hidden_screens, initial.screen_starts], [['projects.ongoing_views.executive'], {}])
+      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, {
+        name: 'Member',
+        hidden_screens: ['projects.lists.all', 'projects.lists.finished', 'projects.lists.archived', 'tasks.views.timeline'],
+        screen_starts: { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' },
+      })
       assert.equal(res.status, 200, JSON.stringify(res.body))
-      assert.equal(res.body.data.ongoing_view, 'executive')
-      assert.equal((await admin.get(`/roles/${roleId('MEMBER')}`)).body.data.ongoing_view, 'executive')
-      assert.equal((await client.get('/auth/me')).body.data.role.ongoing_view, 'executive')
-      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: 'tudo' })).body.error.code, 'VALIDATION_ERROR')
-      assert.equal((await client.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: '' })).status, 403, 'só quem gerencia permissões')
-      assert.equal((await admin.patch(`/roles/${roleId('SUPER_ADMIN')}`, { name: 'Super Admin', ongoing_view: 'executive' })).body.error.code, 'ROLE_IMMUTABLE')
-      const back = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', ongoing_view: '' })
-      assert.equal(back.body.data.ongoing_view, '')
-    })
-
-    it('POST /roles aceita ongoing_view', async () => {
-      const created = await admin.post('/roles', { code: 'diretoria', name: 'Diretoria', ongoing_view: 'executive' })
-      assert.equal(created.status, 201, JSON.stringify(created.body))
-      assert.equal(created.body.data.ongoing_view, 'executive')
-      await admin.del(`/roles/${created.body.data.id}`)
-    })
-  })
-
-  describe('Tarefas por perfil (ajuste 23/11)', () => {
-    it('PATCH /roles/:id grava tasks_start, tasks_list e tasks_all_box; saem em /auth/me de quem tem o perfil', async () => {
-      const { client } = await createUserAndLogin('MEMBER', 'tarefas-perfil@kamban.test')
-      const role = (await client.get('/auth/me')).body.data.role
-      assert.deepEqual([role.tasks_start, role.tasks_list, role.tasks_all_box], ['', '', ''])
-      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: 'inbox', tasks_list: 'mine', tasks_all_box: 'hidden' })
-      assert.equal(res.status, 200, JSON.stringify(res.body))
-      const after = (await client.get('/auth/me')).body.data.role
-      assert.deepEqual([after.tasks_start, after.tasks_list, after.tasks_all_box], ['inbox', 'mine', 'hidden'])
-      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_list: 'tudo' })).body.error.code, 'VALIDATION_ERROR')
-      // caixas da Caixa de entrada (24/11)
-      const boxes = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: 'inbox_assigned', tasks_hidden_boxes: ['requested', 'received'] })
-      assert.equal(boxes.status, 200, JSON.stringify(boxes.body))
-      const withBoxes = (await client.get('/auth/me')).body.data.role
-      assert.deepEqual([withBoxes.tasks_start, withBoxes.tasks_hidden_boxes], ['inbox_assigned', ['received', 'requested']])
-      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_hidden_boxes: ['todas'] })).body.error.code, 'VALIDATION_ERROR')
-      await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', tasks_start: '', tasks_list: '', tasks_all_box: '', tasks_hidden_boxes: [] })
-    })
-  })
-
-  describe('Projetos por perfil (ajuste 25/11)', () => {
-    it('PATCH /roles/:id grava projects_lists; sai em /roles e em /auth/me de quem tem o perfil', async () => {
-      const { client } = await createUserAndLogin('MEMBER', 'projetos-perfil@kamban.test')
-      const all = ['all', 'ongoing', 'finished', 'archived']
-      assert.deepEqual((await client.get('/auth/me')).body.data.role.projects_lists, all)
-      const res = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: ['ongoing'] })
-      assert.equal(res.status, 200, JSON.stringify(res.body))
-      assert.deepEqual(res.body.data.projects_lists, ['ongoing'])
-      assert.deepEqual((await admin.get(`/roles/${roleId('MEMBER')}`)).body.data.projects_lists, ['ongoing'])
-      assert.deepEqual((await client.get('/auth/me')).body.data.role.projects_lists, ['ongoing'])
+      assert.deepEqual(res.body.data.hidden_screens, ['projects.lists.all', 'projects.lists.finished', 'projects.lists.archived', 'tasks.views.timeline'])
+      assert.deepEqual((await admin.get(`/roles/${roleId('MEMBER')}`)).body.data.screen_starts, { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' })
+      assert.deepEqual((await client.get('/auth/me')).body.data.role.hidden_screens, res.body.data.hidden_screens)
       // só a tela: a lista escondida continua respondendo pela API
       assert.equal((await client.get('/projects?view=finished')).status, 200)
-      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: [] })).body.error.code, 'VALIDATION_ERROR')
-      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: ['mine'] })).body.error.code, 'VALIDATION_ERROR')
-      assert.deepEqual((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', projects_lists: all })).body.data.projects_lists, all)
+      const invalid = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', hidden_screens: ['projects.lists.all', 'projects.lists.ongoing', 'projects.lists.finished', 'projects.lists.archived'] })
+      assert.equal(invalid.body.error.code, 'VALIDATION_ERROR')
+      assert.equal((await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', hidden_screens: ['nada'] })).body.error.code, 'VALIDATION_ERROR')
+      assert.equal((await client.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', hidden_screens: [] })).status, 403, 'só quem gerencia permissões')
+      assert.equal((await admin.patch(`/roles/${roleId('SUPER_ADMIN')}`, { name: 'Super Admin', hidden_screens: [] })).body.error.code, 'ROLE_IMMUTABLE')
+      const back = await admin.patch(`/roles/${roleId('MEMBER')}`, { name: 'Member', hidden_screens: initial.hidden_screens, screen_starts: {} })
+      assert.deepEqual([back.body.data.hidden_screens, back.body.data.screen_starts], [initial.hidden_screens, {}])
+    })
+
+    it('POST /roles: o perfil novo vê tudo ou já vem com o que esconder', async () => {
+      const created = await admin.post('/roles', { code: 'diretoria', name: 'Diretoria', hidden_screens: ['projects.ongoing_views.management'] })
+      assert.equal(created.status, 201, JSON.stringify(created.body))
+      assert.deepEqual(created.body.data.hidden_screens, ['projects.ongoing_views.management'])
+      await admin.del(`/roles/${created.body.data.id}`)
+      const plain = await admin.post('/roles', { code: 'simples', name: 'Simples' })
+      assert.deepEqual([plain.body.data.hidden_screens, plain.body.data.screen_starts], [[], {}])
+      await admin.del(`/roles/${plain.body.data.id}`)
     })
   })
 

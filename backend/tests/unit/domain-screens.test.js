@@ -1,0 +1,56 @@
+const { describe, it } = require('node:test')
+const assert = require('node:assert/strict')
+const {
+  SCREEN_GROUPS,
+  SCREEN_KEYS,
+  START_GROUPS,
+  hiddenScreensIssue,
+  screenStartsIssue,
+  normalizeHidden,
+  normalizeStarts,
+  visibleItems,
+} = require('../../src/domain/screens')
+
+describe('"O que aparece" por perfil (domain/screens, §48)', () => {
+  it('catálogo: chaves estáveis <grupo>.<item>, únicas, e os grupos com "Abre em"', () => {
+    assert.equal(new Set(SCREEN_KEYS).size, SCREEN_KEYS.length)
+    ;['projects.lists.finished', 'tasks.views.timeline', 'projects.blocks.team', 'projects.tabs.history', 'settings.menu.icons', 'tasks.filters.company', 'docs.actions.notify'].forEach((key) =>
+      assert.ok(SCREEN_KEYS.includes(key), key),
+    )
+    assert.deepEqual(START_GROUPS, ['projects.lists', 'projects.ongoing_views', 'tasks.screens', 'tasks.boxes', 'tasks.views'])
+    assert.deepEqual([...new Set(SCREEN_GROUPS.map((g) => g.module))], ['tracking', 'projects', 'tasks', 'docs', 'settings'])
+  })
+
+  it('escondidas: só chaves conhecidas e sempre ao menos uma visível em cada grupo', () => {
+    assert.equal(hiddenScreensIssue([]), null)
+    assert.equal(hiddenScreensIssue(['projects.lists.all', 'projects.lists.finished', 'projects.lists.archived']), null)
+    assert.equal(hiddenScreensIssue(['projects.lists.all', 'projects.lists.ongoing', 'projects.lists.finished', 'projects.lists.archived']), 'required')
+    assert.equal(hiddenScreensIssue(['tasks.views.list', 'tasks.views.timeline']), 'required')
+    assert.equal(hiddenScreensIssue(['projects.lists.mine']), 'invalid_option')
+    assert.equal(hiddenScreensIssue('projects.lists.all'), 'invalid_type')
+    assert.equal(hiddenScreensIssue([1]), 'invalid_type')
+  })
+
+  it('"Abre em": só nos grupos com escolha e com um item do grupo', () => {
+    assert.equal(screenStartsIssue({}), null)
+    assert.equal(screenStartsIssue({ 'projects.lists': 'ongoing', 'tasks.boxes': 'all' }), null)
+    assert.equal(screenStartsIssue({ 'projects.lists': 'mine' }), 'invalid_option')
+    assert.equal(screenStartsIssue({ 'docs.actions': 'pdf' }), 'invalid_option', 'grupo sem "Abre em"')
+    assert.equal(screenStartsIssue({ outra: 'x' }), 'invalid_option')
+    assert.equal(screenStartsIssue([]), 'invalid_type')
+    assert.equal(screenStartsIssue(null), 'invalid_type')
+  })
+
+  it('normalizam: escondidas na ordem do catálogo sem repetidas; "Abre em" só com item visível', () => {
+    assert.deepEqual(normalizeHidden(['tasks.views.timeline', 'projects.lists.all', 'tasks.views.timeline', 'outra']), ['projects.lists.all', 'tasks.views.timeline'])
+    assert.deepEqual(normalizeHidden(undefined), [])
+    assert.deepEqual(normalizeStarts({ 'tasks.boxes': 'all', 'projects.lists': 'ongoing', 'docs.actions': 'pdf' }, ['tasks.boxes.all']), { 'projects.lists': 'ongoing' })
+    assert.deepEqual(normalizeStarts(null, []), {})
+  })
+
+  it('itens visíveis de um grupo (nunca vazio)', () => {
+    assert.deepEqual(visibleItems(['projects.lists.all', 'projects.lists.archived'], 'projects.lists'), ['ongoing', 'finished'])
+    assert.deepEqual(visibleItems(['tasks.views.list', 'tasks.views.timeline'], 'tasks.views'), ['list', 'timeline'])
+    assert.deepEqual(visibleItems([], 'nada'), [])
+  })
+})
