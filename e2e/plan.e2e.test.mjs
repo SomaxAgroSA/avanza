@@ -453,9 +453,10 @@ describe('E2E — Quadro do projeto (Gerenciamento)', { timeout: 300000 }, () =>
     const [download] = await Promise.all([admin.page.waitForEvent('download'), admin.page.getByRole('button', { name: 'Exportar' }).click()])
     assert.equal(download.suggestedFilename(), 'cronograma-VIS.csv')
 
-    // Gestão: diário e problema (o Kanban do quadro saiu — repetia o Kanban das tarefas)
+    // Gestão: diário e problema (o Kanban do quadro saiu — repetia o Kanban das tarefas); dentro da aba
+    // Gestão do projeto, a visão agora se chama "Diário e problemas"
     await mario.page.goto(`${app.baseUrl}/projects/${p}/management`)
-    await mario.page.getByRole('navigation', { name: 'Visões do quadro' }).getByRole('link', { name: 'Gestão' }).click()
+    await mario.page.getByRole('navigation', { name: 'Visões do quadro' }).getByRole('link', { name: 'Diário e problemas' }).click()
     await mario.page.getByRole('button', { name: 'Novo registro' }).click()
     const journal = mario.page.getByRole('dialog', { name: 'Novo registro no diário' })
     await journal.getByRole('textbox', { name: /^Registro/ }).fill('Reunião de abertura do projeto.')
@@ -467,11 +468,16 @@ describe('E2E — Quadro do projeto (Gerenciamento)', { timeout: 300000 }, () =>
     await issue.getByRole('button', { name: 'Novo problema' }).click()
     await mario.page.getByRole('table', { name: 'Gestão dos problemas' }).getByText('Cliente sem acesso à VPN').waitFor()
 
-    // saúde com os fatores na visão geral do projeto (o problema em aberto pesa)
+    // saúde com os fatores na visão geral do projeto: o atraso da "Reunião de kickoff" (terminou ontem)
+    // aparece em Prazos e abre a lista; o problema em aberto não pesa mais na saúde (decisão de 13/11 —
+    // fica só na Gestão e no Panorama), então são só os quatro fatores
     await mario.page.goto(`${app.baseUrl}/projects/${p}`)
     const health = mario.page.getByRole('region', { name: 'Saúde do projeto' })
-    await health.getByText('1 problema em aberto na Gestão.').waitFor()
-    await health.getByText('Problemas em aberto').waitFor()
+    await health.getByTestId('health-factor-schedule').click()
+    await health.getByTestId('health-details').getByText('Reunião de kickoff').waitFor()
+    const factors = await health.locator('[data-testid^="health-factor-"]').evaluateAll((els) => els.map((el) => el.dataset.testid))
+    assert.deepEqual(factors, ['health-factor-schedule', 'health-factor-progress', 'health-factor-stuck', 'health-factor-effort'])
+    assert.equal(await health.getByText('Problemas em aberto').count(), 0)
     assert.deepEqual(mario.errors, [])
     assert.deepEqual(admin.errors, [])
   })

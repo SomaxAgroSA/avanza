@@ -64,6 +64,9 @@ describe('E2E — E-mail', { timeout: 240000 }, () => {
     const page = await guest()
     await page.goto(`${app.baseUrl}/login`)
     await page.getByRole('link', { name: 'Esqueci minha senha' }).click()
+    // a tela é carregada sob demanda: sem esperar o título, o e-mail ia para o campo do login (que ainda
+    // estava na tela) e "Enviar link" saía com o campo vazio
+    await page.getByRole('heading', { name: 'Esqueci minha senha' }).waitFor()
     await page.getByLabel(/^E-mail/).fill('mario@kamban.test')
     await page.getByRole('button', { name: 'Enviar link' }).click()
     await page.getByText(/o link chega em instantes/).waitFor()
