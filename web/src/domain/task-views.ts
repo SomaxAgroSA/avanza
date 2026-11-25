@@ -122,3 +122,13 @@ export function toggleScreen(views: TaskViews, screen: TaskScreen, on: boolean):
   const left = shownScreens(next)
   return left.includes(startScreen(next.tasksStart)) ? next : { ...next, tasksStart: screenStart(left[0]!) }
 }
+
+/**
+ * Cabeçalho da Caixa de entrada (ajuste 25/11, aprovado em demonstração): `boxSwitch` — os botões das caixas, só
+ * com mais de uma (com uma só não há o que escolher); `title` — sem a Lista e com uma caixa só, a tela se chama
+ * "Caixa de entrada": no começo da linha vai o nome com o número, sem as abas Lista | Caixa de entrada.
+ */
+export function inboxHeader(views: TaskViews, boxes: readonly InboxBox[]): { boxSwitch: boolean; title: boolean } {
+  const boxSwitch = boxes.length > 1
+  return { boxSwitch, title: !boxSwitch && views.tasksList === 'hidden' }
+}

@@ -405,23 +405,36 @@ describe('TaskDetailPage', () => {
     await waitFor(() => expect(setUrgency).toHaveBeenCalledWith('k1', 'high'))
   })
 
-  it('sem permissão de edição, as trocas rápidas ficam bloqueadas', async () => {
+  it('sem permissão de edição, os selos ficam só para ler (sem trocar no selo nem Editar)', async () => {
     setup({ ...detail, parent: null, forkedFrom: null, capabilities: { edit: false, delete: false, assign: false, comment: true, link: false, fork: false } })
     await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
-    expect(screen.getByRole('combobox', { name: /^Status/ })).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: /^Urgência/ })).toBeDisabled()
+    expect(screen.queryByRole('combobox', { name: /^Status/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /^Urgência/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Backlog')).toBeInTheDocument()
+    expect(screen.getByText('Prioridade Média')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument()
   })
 
-  it('tarefa comum: no topo Status, Prioridade e um só Responsável (sem "Atribuída a" repetido)', async () => {
+  it('tarefa de projeto no módulo Tarefas (25/11): o formato da demanda interna — código · projeto · tipo, selos, Propriedades com um só Responsável e as tarjetas', async () => {
     setup({ ...detail, assignee: members[0]!.user })
     await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
-    expect(screen.getByRole('combobox', { name: /^Responsável/ })).toBeEnabled()
-    expect(screen.queryByRole('combobox', { name: /^Atribuída a/ })).not.toBeInTheDocument()
+    expect(screen.getByText('CRM-7 · CRM Corporativo · Bug')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Voltar a Tarefas/ })).toHaveAttribute('href', '/tasks')
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    const properties = screen.getByRole('heading', { name: 'Propriedades' }).closest('section')!
+    expect(within(properties).getByText('Projeto')).toBeInTheDocument()
+    expect(within(properties).getByText('Responsável')).toBeInTheDocument()
+    expect(within(properties).getByText(members[0]!.user.name)).toBeInTheDocument()
+    expect(within(properties).queryByText('Atribuída a')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Recebe e distribui' })).not.toBeInTheDocument()
+    // campos do tipo numa tarjeta própria; Anexos e Relações compactas, que abrem ao lado
+    expect(screen.getByRole('heading', { name: 'Campos de Bug' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Linha do tempo e comentários' })).toBeInTheDocument()
+    await userEvent.click(within(screen.getByRole('region', { name: 'Relações' })).getByRole('button'))
+    expect(await screen.findByRole('dialog', { name: /Relações \(0\)/ })).toBeInTheDocument()
   })
 
-  it('com quem recebe e distribui: no topo Status, Prioridade, Responsável e Atribuída a; sem a caixa "Recebe e distribui"; Propriedades com Responsável, Atribuída a, Prazo e Estimativa', async () => {
+  it('com quem recebe e distribui: o passo no selo (sem Status), os botões do fluxo e Propriedades com Responsável, Atribuída a, Prazo e Estimativa', async () => {
     const cesar = { id: 'u7', name: 'César TI', email: 'c@x.com', avatarUrl: null }
     setup({
       ...detail,
@@ -430,12 +443,10 @@ describe('TaskDetailPage', () => {
       demand: { status: 'unassigned', owner: cesar, dueAt: new Date(2026, 10, 21, 17, 0), openedAt: null, actions: { assign: true, start: false, pass: false, conclude: false, validate: false, return: false } },
     })
     await screen.findByRole('heading', { name: 'Erro ao salvar pedido' })
-    const owner = screen.getByRole('combobox', { name: /^Responsável/ })
-    expect(owner).toHaveTextContent('César TI')
-    expect(owner).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: /^Atribuída a/ })).toHaveTextContent('Sem atribuir')
+    expect(screen.queryByRole('combobox', { name: /^Status/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Sem atribuir')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Recebe e distribui' })).not.toBeInTheDocument()
-    // o passo e os botões do fluxo continuam no cabeçalho
+    // os botões do fluxo continuam no cabeçalho
     expect(screen.getByRole('button', { name: 'Atribuir' })).toBeInTheDocument()
     const properties = screen.getByRole('heading', { name: 'Propriedades' }).closest('section')!
     expect(within(properties).getByText('Atribuída a')).toBeInTheDocument()
@@ -444,11 +455,15 @@ describe('TaskDetailPage', () => {
     expect(within(properties).getByText(new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(2026, 10, 21, 17, 0)))).toBeInTheDocument()
   })
 
-  it('histórico mostra campos personalizados pelo rótulo', async () => {
+  it('atribuída: o selo diz a quem ("Atribuída a …")', async () => {
+    setup({ ...detail, assignee: members[0]!.user, demand: { status: 'assigned', owner: null, dueAt: null, openedAt: null } })
+    expect(await screen.findByText(`Atribuída a ${members[0]!.user.name}`)).toBeInTheDocument()
+  })
+
+  it('histórico e comentários numa só linha do tempo, com os campos personalizados pelo rótulo', async () => {
     setup()
-    await userEvent.click(await screen.findByRole('tab', { name: 'Histórico' }))
-    expect((await screen.findAllByText(/Severidade/)).length).toBeGreaterThan(0)
-    expect(screen.getByText('Atualizou a tarefa', { exact: false })).toBeInTheDocument()
+    const events = await screen.findAllByTestId('demand-event')
+    expect(events[0]).toHaveTextContent(/Gabi editou: .*Severidade/)
   })
 })
 

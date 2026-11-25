@@ -576,7 +576,8 @@
     "tasks": {
       "title": "Tasks",
       "show": "What shows",
-      "start": "Tasks opens on"
+      "start": "Tasks opens on",
+      "hint": "With only one checked, the screen is called \"Inbox\", without buttons, and opens straight on that data."
     },
     "projects": {
       "title": "Projects",
@@ -1876,10 +1877,6 @@
     "all": "See all",
     "overdue": "overdue",
     "moduleHint": "\"Tasks\" menu: opens on \"My tasks\" (people who see every project, on \"See all\") and then remembers the last choice; with \"See all\", the tasks of the projects the person can access. Needs \"Tasks\" on; when off, tasks stay inside each project.",
-    "kindLabel": "With or without a project",
-    "kindAll": "All",
-    "kindProject": "With project",
-    "kindDemand": "Without project",
     "viewLabel": "View",
     "viewList": "List",
     "viewDemands": "Inbox",
@@ -4741,8 +4738,8 @@
       "title": "Execution status",
       "count_one": "{{count}} project",
       "count_other": "{{count}} projects",
-      "chart": "Chart of projects by execution status",
-      "segment": "{{label}}: {{count}} ({{percent}} %) · click to filter"
+      "segment": "{{label}}: {{count}} ({{percent}} %) · click to filter",
+      "chart": "Chart of projects by execution status"
     },
     "team": {
       "idle": "Open tasks with no movement",
@@ -4935,7 +4932,8 @@
       "priority": "Priority",
       "urgency": "Urgency",
       "all": "all",
-      "clear": "Clear"
+      "clear": "Clear",
+      "everyone": "all"
     },
     "badge_one": "{{count}} waiting for you",
     "badge_other": "{{count}} waiting for you",
@@ -5006,7 +5004,11 @@
       "deadline": "Deadline",
       "estimate": "Estimate",
       "hours": "{{hours}} h",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "relations": "Relations",
+      "docs": "Documentation",
+      "open": "View",
+      "urgency": "{{name}} urgency"
     },
     "events": {
       "opened": "opened the request for {{owner}}",
@@ -5020,7 +5022,8 @@
       "validated": "validated the delivery",
       "returned": "returned it for changes",
       "edited": "edited: {{fields}}",
-      "attached": "attached {{name}}"
+      "attached": "attached {{name}}",
+      "created": "created the task"
     },
     "projectFlow": {
       "owner": "Owner (receives and distributes)",
@@ -5029,7 +5032,8 @@
       "title": "Receives and distributes",
       "step": "Step",
       "assignee": "Assigned to",
-      "deadline": "Deadline"
+      "deadline": "Deadline",
+      "flowStep": "Flow step:"
     },
     "columns": {
       "task": "Task",
@@ -5037,6 +5041,29 @@
       "urgency": "Urgency",
       "priority": "Priority",
       "assignee": "Assigned to"
+    },
+    "step": {
+      "assignedTo": "Assigned to {{name}}"
+    },
+    "view": {
+      "label": "Inbox view",
+      "list": "List",
+      "timeline": "Timeline"
+    },
+    "gantt": {
+      "title": "Task timeline",
+      "legend": "Legend",
+      "late": "Overdue",
+      "groupBy": "Group by",
+      "byPerson": "Person",
+      "byProject": "Project",
+      "empty": "No task in this filter has a deadline.",
+      "today": "Today",
+      "tip": "{{title}} · {{step}} · {{start}} → {{due}}",
+      "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (overdue)",
+      "groupSummary": "{{count}} · {{hours}} h",
+      "undated_one": "{{count}} without a deadline stays in the List.",
+      "undated_other": "{{count}} without a deadline stay in the List."
     }
   }
 }

@@ -102,15 +102,19 @@ function setup({ rels = relations, relationRepo = {}, taskRepo = {} }: { rels?: 
 }
 
 describe('Relações na página da tarefa', () => {
-  it('mostra subtarefas com progresso, relações agrupadas, origem do fork e contagem na aba', async () => {
+  it('mostra subtarefas com progresso, relações agrupadas, origem do fork e contagem (?tab=relations abre o painel)', async () => {
     setup()
     expect(await screen.findByText('Tela de pagamento')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Relações (5)' })).toBeInTheDocument()
+    // página da tarefa no módulo Tarefas (25/11): as relações abrem ao lado, pela tarjeta "Relações (n)"
+    expect(await screen.findByRole('dialog', { name: /Relações \(5\)/ })).toBeInTheDocument()
     expect(screen.getAllByText('1 de 2 subtarefas concluídas').length).toBeGreaterThan(0)
     expect(within(screen.getByRole('region', { name: 'Bloqueada por' })).getByText('Gateway Pix')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Relacionada a' })).getByText('Relatório')).toBeInTheDocument()
-    // cabeçalho: origem do fork e indicador de bloqueio
+    // cabeçalho (com o painel fechado): origem do fork, indicador de bloqueio e a tarjeta com a contagem
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(screen.getByRole('link', { name: 'CRM-9' })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Relações' })).getByRole('button')).toHaveTextContent('Relações (5)')
     expect(screen.getAllByText('Bloqueada').length).toBeGreaterThan(0)
   })
 
@@ -159,6 +163,10 @@ describe('Relações na página da tarefa', () => {
   it('fork: cópia padrão marcada, envia as escolhas e abre a nova tarefa', async () => {
     const fork = vi.fn<RelationRepository['fork']>(() => Promise.resolve({ ...detail, id: '10', code: 'CRM-10' }))
     const { router } = setup({ relationRepo: { fork } })
+    // fecha o painel das relações (aberto pelo ?tab=relations) e usa o botão do topo
+    await screen.findByRole('dialog', { name: /Relações/ })
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await userEvent.click(await screen.findByRole('button', { name: 'Fork' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByRole('checkbox', { name: 'Descrição' })).toBeChecked()

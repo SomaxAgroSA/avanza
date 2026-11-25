@@ -69,6 +69,8 @@ describe('domain/tasks — Lista de tarefas do menu (§44)', () => {
     expect(scopedTaskFilters({}, 'all', 'demand')).toEqual({ kind: 'demand', category: OPEN_TASK_CATEGORIES })
     expect(scopedTaskFilters({}, 'mine', 'project')).toEqual({ mine: 'true', kind: 'project', category: OPEN_TASK_CATEGORIES })
     expect(scopedTaskFilters({}, 'all', 'all')).toEqual({ category: OPEN_TASK_CATEGORIES })
+    // Projeto "Demanda interna" (25/11): as sem projeto
+    expect(scopedTaskFilters({ project: 'internal' }, 'all')).toEqual({ kind: 'demand', category: OPEN_TASK_CATEGORIES })
     expect(scopeCountFilters('mine', 'demand')).toEqual({ mine: 'true', kind: 'demand', category: OPEN_TASK_CATEGORIES })
   })
 
