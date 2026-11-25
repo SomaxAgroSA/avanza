@@ -1,5 +1,6 @@
 import type { PermissionCode } from './permissions'
 import type { TaskViews } from './task-views'
+import type { ProjectList } from './project-lists'
 import type { ThemePreference } from '@/core/theme/theme'
 import type { Language } from '@/core/i18n'
 
@@ -36,11 +37,13 @@ export interface Role extends TaskViews {
   isSystem: boolean
   /** Vista da lista Em andamento de quem tem este perfil (§41). */
   ongoingView: OngoingView
+  /** Listas do menu Projetos do perfil (ajuste 25/11), na ordem do menu; sempre ao menos uma. */
+  projectsLists: ProjectList[]
   permissions: PermissionCode[]
   userCount: number
 }
 
-export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'ongoingView' | keyof TaskViews>
+export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'ongoingView' | 'projectsLists' | keyof TaskViews>
 
 export interface Permission {
   id: string

@@ -13,7 +13,7 @@ beforeAll(async () => {
   await i18n.changeLanguage('es')
 })
 
-const role = (id: string, code: string, name: string, permissions: Role['permissions'], userCount: number): Role => ({ id, code, name, description: '', isSystem: false, ongoingView: '', ...DEFAULT_TASK_VIEWS, permissions, userCount })
+const role = (id: string, code: string, name: string, permissions: Role['permissions'], userCount: number): Role => ({ id, code, name, description: '', isSystem: false, ongoingView: '', projectsLists: ['all', 'ongoing', 'finished', 'archived'], ...DEFAULT_TASK_VIEWS, permissions, userCount })
 const admin = role('role-admin', 'ADMIN', 'Admin', [...PERMISSION_CODES], 1)
 const memberRole = role('role-member', 'MEMBER', 'Miembro', ['projects.view', 'tasks.view', 'tasks.edit', 'reports.view'], 2)
 const douglas = makeUser({ id: 'u2', name: 'Douglas Martins', email: 'douglas@x.test', roleId: 'role-member' })
@@ -164,7 +164,7 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual(['Gestión', 'Dirección y gerencia', 'Ambas (se elige en la pantalla)'])
     await userEvent.click(screen.getByRole('option', { name: 'Dirección y gerencia' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
-    await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: 'executive', ...DEFAULT_TASK_VIEWS }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', { name: 'Miembro', description: '', ongoingView: 'executive', ...DEFAULT_TASK_VIEWS, projectsLists: ['all', 'ongoing', 'finished', 'archived'] }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
     // vuelve a leerse del servidor
     await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
@@ -180,7 +180,7 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     await userEvent.click(within(dialog).getByRole('combobox', { name: 'Vista de En marcha' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Dirección y gerencia' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
-    await waitFor(() => expect(createRole).toHaveBeenCalledWith({ code: 'DIRETORIA', name: 'Dirección', description: '', permissions: [], ongoingView: 'executive', ...DEFAULT_TASK_VIEWS }))
+    await waitFor(() => expect(createRole).toHaveBeenCalledWith({ code: 'DIRETORIA', name: 'Dirección', description: '', permissions: [], ongoingView: 'executive', ...DEFAULT_TASK_VIEWS, projectsLists: ['all', 'ongoing', 'finished', 'archived'] }))
   })
 
   it('Tareas del perfil (23 y 24/11): qué aparece (Lista y cada caja) y dónde abre el menú; guarda y vuelve a leerse', async () => {
@@ -207,12 +207,13 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
         tasksList: 'hidden',
         tasksAllBox: '',
         tasksHiddenBoxes: ['received', 'assigned', 'requested'],
+        projectsLists: ['all', 'ongoing', 'finished', 'archived'],
       }),
     )
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
     await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
     const again = await screen.findByRole('dialog', { name: 'Editar perfil' })
-    expect(within(again).getAllByRole('checkbox').map((c) => c.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'false', 'true'])
+    expect(within(within(again).getByRole('group', { name: 'Qué aparece' })).getAllByRole('checkbox').map((c) => c.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false', 'false', 'true'])
     // volver a marcar una caja y elegirla como entrada
     await userEvent.click(within(again).getByRole('checkbox', { name: 'Recibidas por mí' }))
     await userEvent.click(within(again).getByRole('combobox', { name: 'Al entrar en Tareas abre' }))
@@ -220,6 +221,25 @@ describe('Control de acceso: vista de En marcha por perfil (§41)', () => {
     await userEvent.click(screen.getByRole('option', { name: 'Bandeja · Recibidas por mí' }))
     await userEvent.click(within(again).getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(update).toHaveBeenLastCalledWith('role-member', expect.objectContaining({ tasksStart: 'inbox', tasksHiddenBoxes: ['assigned', 'requested'] })))
+  })
+
+  it('Proyectos del perfil (25/11): listas en el menú, siempre al menos una; guarda y vuelve a leerse', async () => {
+    const { update } = setupRoles([admin, memberRole])
+    await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Editar perfil' })
+    const lists = within(dialog).getByRole('group', { name: 'Listas en el menú' })
+    // por defecto, como antes: las cuatro
+    expect(within(lists).getAllByRole('checkbox').map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'true', 'true', 'true'])
+    expect(within(dialog).getByText(/Con una sola, Proyectos abre directo esa lista/)).toBeInTheDocument()
+    // el caso del jefe: solo En marcha; la última marcada no se puede desmarcar
+    for (const name of ['Todos mis proyectos', 'Terminados', 'Archivados']) await userEvent.click(within(lists).getByRole('checkbox', { name }))
+    expect(within(lists).getByRole('checkbox', { name: 'En marcha' })).toBeDisabled()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('role-member', expect.objectContaining({ projectsLists: ['ongoing'], ...DEFAULT_TASK_VIEWS })))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar perfil' })).toBeNull())
+    await userEvent.click(within((await screen.findByText('Miembro')).closest('tr')!).getByRole('button', { name: 'Editar' }))
+    const again = within(await screen.findByRole('dialog', { name: 'Editar perfil' })).getByRole('group', { name: 'Listas en el menú' })
+    expect(within(again).getAllByRole('checkbox').map((c) => c.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false', 'false'])
   })
 
   it('Por persona muestra la vista heredada del perfil (solo lectura; no hay opción por persona)', async () => {

@@ -40,6 +40,7 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useRepositories } from '@/presentation/common/repositories-context'
 import { useCan, useSession } from '@/features/auth/session'
 import { automaticHomePath, homePageOptions } from '@/presentation/navigation/home-page'
+import { toProjectLists } from '@/domain/project-lists'
 import { projectKeys, useMemberMutations, useProjects } from '@/features/projects/queries'
 import { useUpdateUser, useUsersList } from '@/features/users/queries'
 import { useCreateRole, useRoles, useUpdateRolePermissions } from './queries'
@@ -202,12 +203,14 @@ function HomePageSelect({ user, role }: { user: User; role: Role | undefined }) 
   const perms: PermissionCode[] = role?.code === SUPER_ADMIN_ROLE ? [...PERMISSION_CODES] : (role?.permissions ?? [])
   // Panorama desligado na plataforma (§26.2): não é oferecido; quem já o tinha aparece na automática
   const platform = useSession().current?.platform
-  const options = homePageOptions(perms, platform)
+  // das listas de Projetos, só as que o perfil dela mostra (ajuste 25/11)
+  const projectLists = toProjectLists(role?.projectsLists)
+  const options = homePageOptions(perms, platform, projectLists)
   const labelOf = (path: string) => {
     const option = options.find((o) => o.path === path) ?? homePageOptions([...PERMISSION_CODES]).find((o) => o.path === path)
     return option ? option.labelKeys.map((key) => t(key)).join(' › ') : path
   }
-  const auto = t('access.homePageAuto', { page: labelOf(automaticHomePath(perms, platform)) })
+  const auto = t('access.homePageAuto', { page: labelOf(automaticHomePath(perms, platform, projectLists)) })
   const current = options.some((o) => o.path === user.homePage) ? user.homePage : AUTO_HOME
   return (
     <AppSelect
@@ -314,7 +317,7 @@ function ModulesCard({ user, role, roles, perms }: { user: User; role: Role | un
     if (!pending || !role) return
     const code = personalRoleCode(user.name, roles.map((r) => r.code))
     createRole.mutate(
-      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, ongoingView: role.ongoingView, tasksStart: role.tasksStart, tasksList: role.tasksList, tasksAllBox: role.tasksAllBox, tasksHiddenBoxes: role.tasksHiddenBoxes },
+      { code, name: t('access.personalRoleName', { name: user.name }), description: t('access.personalRoleDescription', { role: role.name }), permissions: pending.perms, ongoingView: role.ongoingView, tasksStart: role.tasksStart, tasksList: role.tasksList, tasksAllBox: role.tasksAllBox, tasksHiddenBoxes: role.tasksHiddenBoxes, projectsLists: role.projectsLists },
       {
         onSuccess: (created) =>
           updateUser.mutate(

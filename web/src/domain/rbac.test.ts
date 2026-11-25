@@ -22,7 +22,7 @@ const user = (id: string, status: User['status'] = 'active'): User => ({
 
 const current = (roleCode: string, permissions: PermissionCode[], roleId = `role-${roleCode}`): CurrentUser => ({
   user: user('me'),
-  role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '', ...DEFAULT_TASK_VIEWS },
+  role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '', projectsLists: ['all', 'ongoing', 'finished', 'archived'], ...DEFAULT_TASK_VIEWS },
   permissions,
   session: null,
   platform: { panoramaEnabled: true },
@@ -34,6 +34,7 @@ const role = (code: string, permissions: PermissionCode[] = []): Role => ({
   name: code,
   description: '',
   ongoingView: '',
+  projectsLists: ['all', 'ongoing', 'finished', 'archived'],
   ...DEFAULT_TASK_VIEWS,
   isSystem: true,
   permissions,

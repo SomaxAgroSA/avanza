@@ -10,11 +10,14 @@ import {
 } from 'lucide-react'
 import type { PlatformFeatures } from '@/domain/entities'
 import { canAny, type PermissionCode } from '@/domain/permissions'
+import { PROJECT_LIST_PATHS, type ProjectList } from '@/domain/project-lists'
 
 export interface NavItem {
   id: string
   /** Chave de i18n do rótulo. */
   labelKey: string
+  /** Complemento do rótulo ("Projetos · Em andamento"): a única lista do grupo, quando o perfil mostra só uma (ajuste 25/11). */
+  detailKey?: string
   to: string
   /** Para onde o clique leva, quando não é `to` (Tarefas abre onde o perfil escolheu, ajuste 23/11); `to` segue marcando o item. */
   entry?: string
@@ -96,6 +99,24 @@ export function platformNavItems(features: PlatformFeatures | undefined, items: 
 /** O item `id` passa a levar a `entry` (ex.: Tarefas → a Caixa de entrada do perfil); sem mudança quando é o `to`. */
 export function withNavEntry(items: NavItem[], id: string, entry: string): NavItem[] {
   return items.map((item) => (item.id === id && item.to !== entry ? { ...item, entry } : item))
+}
+
+/**
+ * Projetos por perfil (ajuste 25/11): o grupo Projetos só com as listas do perfil. Com uma só, vira um item sem
+ * submenu que leva direto a ela ("Projetos · Em andamento") e segue marcado em todo /projects (o projeto aberto
+ * inclusive). "Meus projetos" (fora do menu) fica no grupo enquanto há submenu.
+ */
+export function withProjectLists(items: NavItem[], lists: readonly ProjectList[]): NavItem[] {
+  return items.map((item) => {
+    if (item.id !== 'projects' || !item.children) return item
+    const paths = lists.map((list) => PROJECT_LIST_PATHS[list])
+    const children = item.children.filter((child) => child.hidden || paths.includes(child.to))
+    const shown = children.filter((child) => !child.hidden)
+    if (shown.length !== 1) return { ...item, children }
+    const only = shown[0]!
+    const { children: _children, ...rest } = item
+    return { ...rest, detailKey: only.labelKey, ...(only.to !== item.to ? { entry: only.to } : {}) }
+  })
 }
 
 /** Filtra a navegação pelas permissões do usuário (itens sem filhos visíveis somem). */
