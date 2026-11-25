@@ -199,8 +199,15 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
   })
 
   it('timeline: arrastar a barra move as datas; puxar a ponta muda o prazo; leitor só vê', async () => {
-    const task = await seed.task('Cronograma de implantação', { start_date: '2026-11-02', due_date: '2026-11-06' })
-    await app.admin.post(`/projects/${seed.project.id}/milestones`, { name: 'Go-live', due_date: '2026-11-30' })
+    // datas a partir de hoje: o cronograma abre rolado até hoje e a coluna fixa dos nomes cobre as barras
+    // que ficam semanas antes (com datas fixas, o mouse passou a pegar a coluna em vez da barra)
+    const now = new Date()
+    const day = (offset) => {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    const task = await seed.task('Cronograma de implantação', { start_date: day(2), due_date: day(6) })
+    await app.admin.post(`/projects/${seed.project.id}/milestones`, { name: 'Go-live', due_date: day(30) })
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD, { viewport: { width: 1600, height: 900 } })
     await page.goto(`${app.baseUrl}/projects/${seed.project.id}/timeline`)
     const bar = page.getByTestId(`timeline-bar-${task.id}`)
@@ -215,7 +222,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     await page.mouse.up()
     await page.getByText(new RegExp(`${task.code}: `)).first().waitFor()
     let saved = (await api(page, 'GET', `/tasks/${task.id}`)).json.data
-    assert.deepEqual([saved.start_date.slice(0, 10), saved.due_date.slice(0, 10)], ['2026-11-05', '2026-11-09'])
+    assert.deepEqual([saved.start_date.slice(0, 10), saved.due_date.slice(0, 10)], [day(5), day(9)])
 
     // ponta direita: +2 dias só no prazo
     const moved = await bar.boundingBox()
@@ -225,16 +232,16 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     await page.mouse.move(moved.x + moved.width - 3 + 36, moved.y + moved.height / 2, { steps: 6 })
     await page.mouse.up()
     await page.waitForFunction(
-      async ([id]) => {
+      async ([id, due]) => {
         const res = await fetch(`/api/v1/tasks/${id}`)
         const body = await res.json()
-        return body.data.due_date.slice(0, 10) === '2026-11-11'
+        return body.data.due_date.slice(0, 10) === due
       },
-      [task.id],
+      [task.id, day(11)],
       { timeout: 10000 },
     )
     saved = (await api(page, 'GET', `/tasks/${task.id}`)).json.data
-    assert.equal(saved.start_date.slice(0, 10), '2026-11-05')
+    assert.equal(saved.start_date.slice(0, 10), day(5))
     assert.deepEqual(errors, [])
 
     const viewer = await signIn('lia@kamban.test', PASSWORD, { viewport: { width: 1600, height: 900 } })
