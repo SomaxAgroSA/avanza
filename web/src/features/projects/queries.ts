@@ -61,22 +61,6 @@ export function useDependencies(enabled = true) {
   return useQuery({ queryKey: dependenciesKey, queryFn: () => projects.dependencies(), enabled, staleTime: 60_000 })
 }
 
-/**
- * "Confirmar bloqueio": a tarefa só relacionada passa a depender da entrega (API de relações de sempre:
- * cria "depende de" e só então desfaz a "relacionada"). Ciclo ou falta de permissão = nada muda.
- */
-export function useConfirmBlock() {
-  const { relations } = useRepositories()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (input: { taskId: string; deliveryId: string; relationId: string }) => {
-      await relations.create(input.taskId, { type: 'depends_on', targetId: input.deliveryId })
-      await relations.remove(input.relationId)
-    },
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: ['tasks'] }),
-  })
-}
-
 export function useProject(id: string | undefined) {
   const { projects } = useRepositories()
   return useQuery({ queryKey: projectKeys.detail(id ?? ''), queryFn: () => projects.get(id as string), enabled: !!id })

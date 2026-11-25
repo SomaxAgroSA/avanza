@@ -804,14 +804,19 @@ describe('application/demands — Relatórios e Em andamento (demandas internas 
   it('Equipo ahora: a demanda conta na atividade de quem executa, no bloco "Demandas internas"', async () => {
     const s = await assigned()
     await s.demands.start(s.ctx.jorge, s.id)
-    // o relógio falso das tarefas não acompanha o do serviço: a mudança é de agora
-    s.deps.store.tasks.find((t) => t.id === s.id).updatedAt = s.deps.clock.now()
+    // o relógio falso do histórico não acompanha o do serviço: a ação de Jorge (começar) é de agora
+    s.deps.store.audit
+      .filter((e) => e.action === 'task.demand_started')
+      .forEach((e) => {
+        e.createdAt = s.deps.clock.now()
+      })
     const team = createTeamActivityService(s.deps)
     const jorge = (await team.getTeamActivity(s.ctx.admin)).people.find((p) => p.user.id === s.users.jorge.id)
     assert.deepEqual(jorge.projects.map((p) => [p.project, p.state, p.in_progress]), [
       [{ id: s.inbox.id, key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', kind: 'demands' }, 'working', 1],
     ])
     assert.deepEqual(jorge.projects[0].tasks.map((t) => t.code), ['DEM-1'])
+    assert.deepEqual(jorge.projects[0].acted_tasks.map((t) => [t.code, t.action.type, t.action.step]), [['DEM-1', 'step', 'started']])
     assert.equal((await team.getTeamActivity(s.ctx.ana)).people.length, 1)
     assert.deepEqual((await team.getTeamActivity(s.ctx.fabi)).people, [])
   })

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import type { OngoingView } from '@/domain/entities'
 import { PERMISSION_CODES } from '@/domain/permissions'
-import type { Project, ProjectStatus, ProjectPriority, TeamActivity } from '@/domain/projects'
+import type { Project, ProjectStatus, ProjectPriority, TeamActivity, TeamActivityActedTask } from '@/domain/projects'
 import type { ProjectListQuery, ProjectPage } from '@/domain/repositories'
 import type { Dependencies } from '@/domain/dependencies'
 import type { TaskDetail } from '@/domain/tasks'
@@ -43,16 +43,24 @@ const ALL = [ALFA, BETA, GAMA, DELTA, EPSILON]
 
 const ref = (p: Project) => ({ id: p.id, key: p.key, name: p.name, icon: p.icon, cover: p.cover })
 const status = { id: 's1', name: 'En curso', color: 'blue', category: 'in_progress' }
-const row = (p: Project, state: 'working' | 'active' | 'idle', recent: number, tasks: TeamActivity['people'][number]['projects'][number]['tasks'] = []) => ({
-  project: ref(p), state, inProgress: state === 'working' ? 2 : 0, recent, open: 3, stale: false, lastActivity: new Date(Date.now() - 2 * 864e5), tasks,
+const row = (p: Project, state: 'working' | 'active' | 'idle', recent: number, tasks: TeamActivity['people'][number]['projects'][number]['tasks'] = [], actedTasks: TeamActivityActedTask[] = []) => ({
+  project: ref(p), state, inProgress: state === 'working' ? 2 : 0, recent, actions: recent, open: 3, stale: false, lastActivity: new Date(Date.now() - 2 * 864e5), actedTasks, tasks,
 })
+const hoursAgo = (n: number) => new Date(Date.now() - n * 36e5)
+const acted = (id: string, title: string, action: TeamActivityActedTask['action']): TeamActivityActedTask => ({ id, code: id.toUpperCase(), title, status: { id: 's2', name: 'Prueba', color: 'blue', category: 'in_progress' }, inProgress: true, action, actions: 1 })
+const ANA_ALFA = [
+  acted('a1', 'Portal de acceso · subir el portal de login al servidor', { type: 'status_changed', from: 'Desarrollo', to: 'Prueba', at: hoursAgo(4) }),
+  acted('a2', 'Entregar las vistas de Libro Mayor (S/4)', { type: 'commented', excerpt: 'Vistas publicadas en el espacio de pruebas', at: hoursAgo(5) }),
+  acted('a3', 'Configurar acceso a la API del integrador', { type: 'edited', at: hoursAgo(26) }),
+  acted('a4', 'CRM Fuerza de Ventas Brasil · servidores en Azure', { type: 'attached', count: 1, at: hoursAgo(6 * 24) }),
+]
 const TEAM: TeamActivity = {
   windowDays: 7,
   people: [
     {
       user: ana,
       projects: [
-        row(ALFA, 'working', 4, [{ id: 't1', code: 'ALF-49', title: 'Guardar el trabajo y publicar el repositorio con un título bastante largo que tiene que ocupar varias líneas', status, updatedAt: new Date(Date.now() - 7 * 864e5), inProgress: true, moved: true }]),
+        row(ALFA, 'working', 4, [{ id: 't1', code: 'ALF-49', title: 'Guardar el trabajo y publicar el repositorio con un título bastante largo que tiene que ocupar varias líneas', status, updatedAt: new Date(Date.now() - 7 * 864e5), inProgress: true, moved: true }], ANA_ALFA),
         row(BETA, 'active', 30),
       ],
     },
@@ -96,7 +104,7 @@ const DEPS: Dependencies = {
         { ...dref('t38', 'ALF-38', 'Tablas en SAP', ALFA, AREA_TI, '2027-02-04'), assigneeId: 'u9', waitingDays: 1, daysLeft: 77, risk: 'ok', blocks: 0, blocksProjects: [] },
       ],
       blocked: [],
-      pending: [{ ...tref('t31', 'ALF-31', 'Capa de seguridad', ALFA, '2026-11-20'), relatedTo: dref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r2', canConfirm: true }],
+      pending: [{ ...tref('t31', 'ALF-31', 'Capa de seguridad', ALFA, '2026-11-20'), relatedTo: dref('t39', 'ALF-39', 'Definir la autenticación (SSO)', ALFA), relationId: 'r2' }],
     },
   ],
 }
@@ -359,7 +367,7 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     const team = await screen.findByTestId('direction-team')
     const [first, second] = within(team).getAllByRole('article')
     expect(within(first!).getByRole('heading', { name: 'Angelica Davalos' })).toBeInTheDocument()
-    expect(first).toHaveTextContent('1 proyecto(s) en curso · 1 con actividad esta semana')
+    expect(first).toHaveTextContent('Actuó en 34 tareas esta semana')
     expect(first).toHaveTextContent('Trabajando ahora')
     expect(first).toHaveTextContent('Activo esta semana')
     expect(first).toHaveTextContent('30 mov.')
@@ -370,11 +378,42 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(within(screen.getByTestId('direction-team')).getByRole('heading', { name: 'Angelica Davalos' })).toBeInTheDocument()
   })
 
-  it('el "+" de un proyecto abre el panel lateral: estado, tareas (números y barra), tareas recientes sin código, quién trabaja y abrir el proyecto', async () => {
+  it('bajo cada proyecto, hasta 3 tareas en que la persona actuó, con la acción y cuándo; "+N más" abre el panel', async () => {
+    setup()
+    const team = await screen.findByTestId('direction-team')
+    const card = within(team).getAllByRole('article')[0]!
+    const preview = within(card).getByRole('list', { name: 'Lo que hizo Angelica Davalos en Alfa' })
+    expect(within(preview).getAllByRole('link').map((a) => a.textContent)).toEqual([
+      'Portal de acceso · subir el portal de login al servidor',
+      'Entregar las vistas de Libro Mayor (S/4)',
+      'Configurar acceso a la API del integrador',
+    ])
+    expect(preview).toHaveTextContent('pasó a Prueba · hace 4 horas')
+    expect(preview).toHaveTextContent('comentó · hace 5 horas')
+    expect(preview).toHaveTextContent('editó · ayer')
+    expect(within(preview).getByRole('link', { name: 'Entregar las vistas de Libro Mayor (S/4)' })).toHaveAttribute('href', '/tasks/a2')
+    await userEvent.click(within(preview).getByRole('button', { name: 'Ver todas las tareas de Angelica Davalos en Alfa' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Angelica en Alfa' })
+    expect(within(drawer).getByRole('tab', { name: 'Tareas de Angelica · 4' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(drawer).getAllByRole('listitem')).toHaveLength(4)
+    expect(drawer).toHaveTextContent('Adjuntó 1 archivo')
+  })
+
+  it('el "+" de la persona abre "<Nombre> en <Proyecto>": sus tareas con la acción y, en "Todo el proyecto", el panel de siempre', async () => {
     setup()
     const team = await screen.findByTestId('direction-team')
     await userEvent.click(within(team).getByRole('button', { name: 'Ver el detalle de Alfa (Angelica Davalos)' }))
-    const drawer = await screen.findByRole('dialog', { name: 'Alfa' })
+    const drawer = await screen.findByRole('dialog', { name: 'Angelica en Alfa' })
+    expect(drawer).toHaveTextContent('Lo que hizo en los últimos 7 días')
+    // por defecto, solo las tareas de ella: la acción con el detalle, cuándo y el estado
+    const mine = within(drawer).getByRole('list', { name: 'Tareas de Angelica · 4' })
+    expect(mine).toHaveTextContent('Pasó de Desarrollo a Prueba · hace 4 horas')
+    expect(mine).toHaveTextContent('Comentó: «Vistas publicadas en el espacio de pruebas» · hace 5 horas')
+    expect(within(mine).getAllByText('Prueba').length).toBeGreaterThan(0)
+    expect(drawer).not.toHaveTextContent('Guardar el trabajo y publicar el repositorio')
+    expect(within(drawer).getByRole('link', { name: /Abrir el proyecto/ })).toHaveAttribute('href', '/projects/p1')
+    // "Todo el proyecto": estado, tareas (números y barra), tareas recientes sin código y quién trabaja
+    await userEvent.click(within(drawer).getByRole('tab', { name: 'Todo el proyecto' }))
     expect(within(drawer).getByText('Planificación')).toBeInTheDocument()
     const tasks = within(drawer).getByRole('region', { name: 'Tareas' })
     expect(tasks).toHaveTextContent('41ejecutadas')
@@ -389,11 +428,12 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(who).toHaveTextContent('Angelica Davalos')
     expect(who).toHaveTextContent('Trabajando ahora')
     expect(within(drawer).queryByText(/Responsables|Fechas/)).toBeNull()
-    expect(within(drawer).getByRole('link', { name: /Abrir el proyecto/ })).toHaveAttribute('href', '/projects/p1')
-    // Beta sin tareas recientes de Angelica pero con las de Douglas
+    // Douglas en Beta: sin acciones propias en la lista de él, el aviso; "Todo el proyecto" con sus tareas
     await userEvent.keyboard('{Escape}')
     await userEvent.click(within(team).getByRole('button', { name: 'Ver el detalle de Beta (Douglas Martins)' }))
-    const beta = await screen.findByRole('dialog', { name: 'Beta' })
+    const beta = await screen.findByRole('dialog', { name: 'Douglas en Beta' })
+    expect(beta).toHaveTextContent('Douglas no actuó en tareas de este proyecto en los últimos 7 días.')
+    await userEvent.click(within(beta).getByRole('tab', { name: 'Todo el proyecto' }))
     expect(within(beta).getByText('Revisar el simulador')).toBeInTheDocument()
     expect(within(beta).getByRole('region', { name: 'Quién está trabajando' })).toHaveTextContent('Douglas Martins')
   })
@@ -486,7 +526,9 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     expect(within(alfa).getByText('09/11 · vencida hace 10 días')).toHaveClass('bg-danger-soft')
     expect(within(alfa).getByText('Sin plazo')).toHaveClass('bg-warning-soft')
     expect(within(alfa).getByText('04/02/27 · en 77 días')).toHaveClass('bg-success-soft')
-    expect(within(alfa).getByRole('button', { name: 'Confirmar bloqueo' })).toBeInTheDocument()
+    // "Por validar" queda solo con la información (sin "Confirmar bloqueo")
+    expect(alfa).toHaveTextContent('Relacionada con Definir la autenticación (SSO)')
+    expect(within(alfa).queryByRole('button', { name: 'Confirmar bloqueo' })).toBeNull()
     expect(within(drawer).queryByRole('button', { name: /Ver todos los proyectos/ })).toBeNull()
   })
 
@@ -531,27 +573,13 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     await waitFor(() => expect(get).toHaveBeenCalledWith('t40'))
   })
 
-  it('el ⚠ abre solo ese proyecto con "Ver todos los proyectos"; "Confirmar bloqueo" crea "depende de" y quita la relacionada', async () => {
-    const create = vi.fn(() => Promise.resolve({}))
-    const remove = vi.fn(() => Promise.resolve())
-    setup({ deps: DEPS, relations: { create, remove } })
+  it('el ⚠ abre solo ese proyecto con "Ver todos los proyectos"', async () => {
+    setup({ deps: DEPS })
     const timeline = await screen.findByRole('region', { name: 'Línea de tiempo de los proyectos' })
     await userEvent.click(await within(timeline).findByRole('button', { name: 'Dependencias en este proyecto: Alfa' }))
     const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
     expect(within(drawer).getAllByRole('region').map((b) => b.getAttribute('aria-label'))).toEqual(['Alfa'])
-    await userEvent.click(within(drawer).getByRole('button', { name: 'Confirmar bloqueo' }))
-    await waitFor(() => expect(remove).toHaveBeenCalledWith('r2'))
-    expect(create).toHaveBeenCalledWith('t31', { type: 'depends_on', targetId: 't39' })
     await userEvent.click(within(drawer).getByRole('button', { name: /Ver todos los proyectos/ }))
     await waitFor(() => expect(within(drawer).getAllByRole('region')).toHaveLength(2))
-  })
-
-  it('sin permiso para relacionar no hay "Confirmar bloqueo"', async () => {
-    const readOnly: Dependencies = { ...DEPS, projects: DEPS.projects.map((p) => ({ ...p, pending: p.pending.map((x) => ({ ...x, canConfirm: false })) })) }
-    setup({ deps: readOnly })
-    await userEvent.click(await screen.findByTestId('dep-strip'))
-    const drawer = await screen.findByRole('dialog', { name: 'Dependencias' })
-    expect(drawer).toHaveTextContent('Capa de seguridad')
-    expect(within(drawer).queryByRole('button', { name: 'Confirmar bloqueo' })).toBeNull()
   })
 })

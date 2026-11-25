@@ -5,11 +5,9 @@ import { cn } from '@/core/utils/cn'
 import type { Project } from '@/domain/projects'
 import type { DepAreaRef, Dependencies, DepProject, DepTaskRef } from '@/domain/dependencies'
 import { projectDisplayName } from '@/domain/demands'
-import { AppButton, AppDrawer, notify } from '@/presentation/components'
-import { useErrorMessage } from '@/presentation/common/use-error-message'
+import { AppButton, AppDrawer } from '@/presentation/components'
 import { TaskPreviewDrawer } from '@/features/tasks/TaskPreviewDrawer'
 import { TaskEditDialog } from '@/features/tasks/TaskEditDialog'
-import { useConfirmBlock } from '../queries'
 import { areaChips, depInScope, dueLabel, type DepScope, type DueTone } from './dependency-data'
 
 /* Dependências por área no painel Direção e gerência (regras §42): faixa, ⚠ do Gantt e painel lateral. */
@@ -217,7 +215,7 @@ function ProjectBlock({ row, today, onOpenTask }: { row: DepProject; today: stri
       {row.pending.length > 0 && (
         <Subsection title={t('dependencies.pendingTitle')} hint={t('dependencies.pendingHint')} dot="bg-warning">
           {row.pending.map((task) => (
-            <div key={task.relationId} className="mb-1.5 grid grid-cols-1 items-center gap-x-3 gap-y-1.5 rounded-lg border border-dashed border-warning px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto]" data-testid="dep-row">
+            <div key={task.relationId} className="mb-1.5 rounded-lg border border-dashed border-warning px-3 py-2.5" data-testid="dep-row">
               <div className="min-w-0">
                 <span className="block text-sm font-semibold leading-snug text-fg">{task.title}</span>
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] text-muted">
@@ -227,11 +225,6 @@ function ProjectBlock({ row, today, onOpenTask }: { row: DepProject; today: stri
                   {other(task.relatedTo)}
                 </span>
               </div>
-              {task.canConfirm && (
-                <div className="justify-self-start sm:justify-self-end">
-                  <ConfirmButton task={task} />
-                </div>
-              )}
             </div>
           ))}
         </Subsection>
@@ -318,29 +311,5 @@ function Due({ date, today }: { date: string | null; today: string }) {
     <span className={cn('inline-block min-w-32 whitespace-nowrap rounded-lg px-2 py-0.5 text-right text-xs font-bold', TONE[label.tone])}>
       {t(`dependencies.due.${label.kind}`, { date: formatted, count: label.days })}
     </span>
-  )
-}
-
-function ConfirmButton({ task }: { task: DepProject['pending'][number] }) {
-  const { t } = useTranslation()
-  const errorMessage = useErrorMessage()
-  const confirm = useConfirmBlock()
-  return (
-    <AppButton
-      size="sm"
-      variant="secondary"
-      loading={confirm.isPending}
-      onClick={() =>
-        confirm.mutate(
-          { taskId: task.id, deliveryId: task.relatedTo.id, relationId: task.relationId },
-          {
-            onSuccess: () => notify.success(t('dependencies.confirmed', { title: task.title, target: task.relatedTo.title })),
-            onError: (error) => notify.error(errorMessage(error)),
-          },
-        )
-      }
-    >
-      {t('dependencies.confirm')}
-    </AppButton>
   )
 }

@@ -326,13 +326,13 @@ function build() {
         }),
       },
       '/team-activity': {
-        get: op('Equipo ahora: por pessoa, em quais projetos em andamento está trabalhando (tarefas atribuídas em andamento, que mudaram nos últimos 7 dias ou abertas), com as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; as demandas internas que ela enxerga (§45) entram num bloco com project.kind = demands. Exige tasks.view (sem ele, lista vazia)', ['projects'], {
+        get: op('Equipo ahora (§41): por pessoa, os projetos em andamento em que ela agiu nos últimos 7 dias (ações dela no histórico da tarefa: status, passo, comentário, anexo, edição) ou tem tarefas abertas atribuídas, com as tarefas em que agiu (acted_tasks, a última ação e a data) e as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; as demandas internas que ela enxerga (§45) entram num bloco com project.kind = demands. Exige tasks.view (sem ele, lista vazia)', ['projects'], {
           200: ok('Atividade', {
             type: 'object',
             properties: {
               window_days: { type: 'integer' },
               generated_at: { type: 'string', format: 'date-time' },
-              people: { type: 'array', items: { type: 'object', description: 'user + projects[{ project, state: working|active|idle, in_progress, recent, open, stale, last_activity, tasks[] }]' } },
+              people: { type: 'array', items: { type: 'object', description: 'user + projects[{ project, state: working|active|idle, in_progress, recent (tarefas em que agiu), actions (ações dela), open, stale, last_activity (última ação dela), acted_tasks[{ id, code, title, status, updated_at, in_progress, actions, action{ type: status_changed|step|commented|attached|created|edited, at, from, to, step, excerpt, count } }], tasks[] }]' } },
             },
           }),
         }),
