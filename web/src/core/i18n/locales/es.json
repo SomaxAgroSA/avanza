@@ -565,24 +565,203 @@
       "users": "Usuarios",
       "type": "Tipo"
     },
-    "ongoingView": {
-      "label": "Vista de En marcha",
-      "management": "Gestión",
-      "executive": "Dirección y gerencia",
-      "hint": "Gestión: la lista de siempre. Dirección y gerencia: panel de consulta (indicadores, línea de tiempo, equipo y tabla) sin acciones de editar. Para bloquear la edición en todo Avanza, apaga los permisos de edición de este perfil.",
-      "inherited": "Vista de En marcha: {{view}} (se cambia en el perfil)",
-      "both": "Ambas (se elige en la pantalla)"
-    },
-    "tasks": {
-      "title": "Tareas",
-      "show": "Qué aparece",
-      "start": "Al entrar en Tareas abre",
-      "hint": "Con una sola marcada, la pantalla se llama «Bandeja», sin botones, y abre directo con esos datos."
-    },
-    "projects": {
-      "title": "Proyectos",
-      "lists": "Listas en el menú",
-      "hint": "Siempre queda al menos una. Con una sola, Proyectos abre directo esa lista. Solo cambia la pantalla: los permisos del perfil siguen iguales."
+    "screens": {
+      "open": "Qué aparece",
+      "title": "Qué aparece · {{role}}",
+      "back": "Volver a Perfiles",
+      "role": "Perfil",
+      "intro": "Cada módulo tiene, además de «Lo ve» y «Qué puede hacer», el bloque «Qué aparece»: marca los submenús, listas, cajas, vistas, pestañas, bloques, filtros y botones, y dónde abre cada módulo. A la derecha ves cómo queda Avanza para este perfil.",
+      "rules": {
+        "profile": {
+          "title": "Por perfil, nunca por persona",
+          "text": "Vale para todas las personas que tienen el perfil."
+        },
+        "screen": {
+          "title": "Solo pantalla",
+          "text": "Ocultar no quita permisos: lo que se puede hacer sigue en «Qué puede hacer» y Avanza lo sigue validando."
+        },
+        "one": {
+          "title": "Siempre queda una",
+          "text": "En cada grupo no se puede desmarcar la última opción."
+        },
+        "all": {
+          "title": "Todo visible por defecto",
+          "text": "Los perfiles no cambian hasta que alguien desmarque algo."
+        }
+      },
+      "sees": "Lo ve",
+      "doesNotSee": "No lo ve",
+      "canDo": "Qué puede hacer",
+      "noActions": "Sin acciones en este módulo",
+      "editPermissions": "Editar permisos",
+      "shows": "Qué aparece · {{group}}",
+      "onlySees": "Solo «Lo ve»: este módulo no tiene partes para ocultar.",
+      "opensIn": "Abre en",
+      "single": "Con una sola, no hay botones: abre directo en «{{item}}».",
+      "last": "Tiene que quedar al menos una",
+      "missing": "Sin el permiso «{{permission}}» no aparece, aunque esté marcado",
+      "save": "Guardar",
+      "discard": "Descartar",
+      "saved": "Perfil {{role}} actualizado: lo que aparece cambia en la próxima carga de la página de quien lo tiene.",
+      "immutable": "El Super Admin ve todo y no se puede modificar.",
+      "summary": "Qué aparece",
+      "summaryAll": "Todo visible",
+      "summaryHidden_one": "{{count}} parte oculta",
+      "summaryHidden_other": "{{count}} partes ocultas",
+      "preview": {
+        "title": "Vista previa",
+        "menu": "Menú lateral de este perfil",
+        "tasks": "Tareas · línea de arriba",
+        "ongoing": "Proyectos › En marcha · bloques",
+        "project": "Dentro de un proyecto · pestañas",
+        "none": "Sin módulos",
+        "noTasks": "Este perfil no ve Tareas.",
+        "noOngoing": "No ve «En marcha».",
+        "noProjects": "No ve Proyectos."
+      },
+      "modules": {
+        "tracking": "Panorama",
+        "projects": "Proyectos",
+        "tasks": "Tareas",
+        "kanban": "Kanban",
+        "docs": "Documentación",
+        "users": "Usuarios",
+        "settings": "Configuración"
+      },
+      "groups": {
+        "tracking": {
+          "blocks": "Bloques"
+        },
+        "projects": {
+          "lists": "Listas del menú",
+          "ongoing_views": "En marcha — vistas",
+          "blocks": "En marcha — bloques (Dirección y gerencia; «Equipo ahora» también en Gestión)",
+          "tabs": "Dentro del proyecto — pestañas",
+          "task_views": "Tareas del proyecto — vistas"
+        },
+        "tasks": {
+          "screens": "Pantallas",
+          "scopes": "Lista — alcance",
+          "boxes": "Caja de entrada — cajas",
+          "views": "Caja de entrada — vistas",
+          "filters": "Filtros de la línea de arriba",
+          "create": "Botones de crear"
+        },
+        "docs": {
+          "actions": "Botones de la página"
+        },
+        "settings": {
+          "menu": "Submenús"
+        }
+      },
+      "items": {
+        "tracking": {
+          "blocks": {
+            "synthesis": "Síntesis",
+            "kpis": "Indicadores",
+            "health": "Salud del portafolio",
+            "execution": "Ejecución × planificación",
+            "attention": "Proyectos que requieren atención",
+            "milestones": "Próximos hitos"
+          }
+        },
+        "projects": {
+          "lists": {
+            "all": "Todos mis proyectos",
+            "ongoing": "En marcha",
+            "finished": "Terminados",
+            "archived": "Archivados"
+          },
+          "ongoing_views": {
+            "management": "Gestión",
+            "executive": "Dirección y gerencia"
+          },
+          "blocks": {
+            "kpis": "Indicadores",
+            "dependencies": "Dependencias",
+            "timeline": "Línea de tiempo de los proyectos",
+            "areas": "Proyectos por departamento",
+            "status": "Estado de ejecución",
+            "team": "Equipo ahora",
+            "table": "Tabla de proyectos"
+          },
+          "tabs": {
+            "overview": "Visión general",
+            "charter": "Ficha",
+            "management": "Gestión",
+            "tasks": "Tareas",
+            "report": "Informe",
+            "files": "Archivos",
+            "docs": "Documentación",
+            "members": "Miembros",
+            "history": "Historial",
+            "settings": "Configuraciones"
+          },
+          "task_views": {
+            "list": "Lista",
+            "kanban": "Kanban",
+            "planning": "Planificación",
+            "timeline": "Cronograma"
+          }
+        },
+        "tasks": {
+          "screens": {
+            "list": "Lista",
+            "inbox": "Caja de entrada"
+          },
+          "scopes": {
+            "mine": "Mis tareas",
+            "all": "Ver todas"
+          },
+          "boxes": {
+            "received": "Recibidas",
+            "assigned": "Atribuidas",
+            "requested": "Pedidas",
+            "all": "Todas"
+          },
+          "views": {
+            "list": "Lista",
+            "timeline": "Línea de tiempo (Gantt)"
+          },
+          "filters": {
+            "search": "Buscar",
+            "project": "Proyecto",
+            "priority": "Prioridad",
+            "urgency": "Urgencia",
+            "responsible": "Responsable",
+            "assignee": "Atribuida a",
+            "company": "Empresa"
+          },
+          "create": {
+            "project_task": "＋ Tarea de proyecto",
+            "internal_demand": "＋ Demanda interna"
+          }
+        },
+        "docs": {
+          "actions": {
+            "notify": "Avisar",
+            "versions": "Versiones",
+            "pdf": "Exportar PDF"
+          }
+        },
+        "settings": {
+          "menu": {
+            "general": "General",
+            "integrations": "Integraciones",
+            "task_types": "Tipos de tarea",
+            "custom_fields": "Campos personalizados",
+            "statuses": "Estados",
+            "priorities": "Prioridades",
+            "areas": "Departamentos",
+            "dependency_areas": "Dependencias por área",
+            "companies": "Empresas",
+            "tags": "Etiquetas",
+            "icons": "Íconos",
+            "access": "Control de acceso",
+            "audit": "Auditoría"
+          }
+        }
+      }
     }
   },
   "permissions": {

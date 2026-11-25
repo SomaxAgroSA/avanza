@@ -1,17 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TASK_VIEWS, inboxHeader, inboxPath, showsAllBox, startBox, tasksEntryPath, toTaskViews, visibleBoxes, type TaskViews } from './task-views'
+import { DEFAULT_TASK_VIEWS, inboxHeader, inboxPath, showsAllBox, startBox, taskViewsOf, tasksEntryPath, visibleBoxes, type TaskViews } from './task-views'
+import { DEFAULT_SCREENS, type ScreenKey } from './screens'
 
 const views = (patch: Partial<TaskViews>): TaskViews => ({ ...DEFAULT_TASK_VIEWS, ...patch })
 
 describe('Tarefas por perfil (ajustes 23 e 24/11)', () => {
-  it('sem escolha (ou valor desconhecido) fica como antes', () => {
-    expect(toTaskViews(null)).toEqual(DEFAULT_TASK_VIEWS)
-    expect(toTaskViews({ tasksStart: 'kanban', tasksList: 'mine', tasksAllBox: 'on', tasksHiddenBoxes: ['requested', 'all', 'received'] })).toEqual({
-      tasksStart: '',
-      tasksList: 'mine',
-      tasksAllBox: '',
-      tasksHiddenBoxes: ['received', 'requested'],
-    })
+  it('sem escolha fica como antes', () => {
+    expect(taskViewsOf(DEFAULT_SCREENS)).toEqual(DEFAULT_TASK_VIEWS)
     expect(tasksEntryPath(DEFAULT_TASK_VIEWS, true)).toBe('/tasks')
     expect(visibleBoxes(DEFAULT_TASK_VIEWS, true)).toEqual(['received', 'assigned', 'requested', 'all'])
     expect(visibleBoxes(DEFAULT_TASK_VIEWS, false)).toEqual(['received', 'assigned', 'requested'])
@@ -66,5 +61,26 @@ describe('Caixa de entrada com uma caixa só (ajuste 25/11)', () => {
   it('com várias caixas, os botões continuam', () => {
     expect(inboxHeader(views({ tasksList: 'hidden' }), ['received', 'all'])).toEqual({ boxSwitch: true, title: false })
     expect(inboxHeader(DEFAULT_TASK_VIEWS, ['received', 'assigned'])).toEqual({ boxSwitch: true, title: false })
+  })
+})
+
+describe('Tarefas a partir do "O que aparece" do perfil (§48)', () => {
+  const of = (hidden: ScreenKey[], starts: Record<string, string> = {}) => taskViewsOf({ hidden, starts })
+
+  it('a Lista, o alcance dela e onde o menu abre', () => {
+    expect(of(['tasks.screens.list']).tasksList).toBe('hidden')
+    expect(of(['tasks.scopes.all']).tasksList).toBe('mine')
+    expect(of(['tasks.scopes.mine']).tasksList).toBe('all')
+    expect(of([], { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' }).tasksStart).toBe('inbox_all')
+    expect(of([], { 'tasks.screens': 'inbox' }).tasksStart).toBe('inbox')
+    // a caixa escolhida escondida: a primeira visível
+    expect(of(['tasks.boxes.received'], { 'tasks.screens': 'inbox' }).tasksStart).toBe('inbox_assigned')
+  })
+
+  it('as caixas escondidas; sem a Caixa de entrada, nenhuma caixa (e o menu leva à Lista)', () => {
+    expect(of(['tasks.boxes.received', 'tasks.boxes.all'])).toMatchObject({ tasksHiddenBoxes: ['received'], tasksAllBox: 'hidden' })
+    const noInbox = of(['tasks.screens.inbox'])
+    expect(visibleBoxes(noInbox, true)).toEqual([])
+    expect(tasksEntryPath(noInbox, true)).toBe('/tasks')
   })
 })

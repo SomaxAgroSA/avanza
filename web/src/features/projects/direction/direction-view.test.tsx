@@ -2,7 +2,15 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
-import type { OngoingView } from '@/domain/entities'
+import type { ScreenKey, ScreenSettings } from '@/domain/screens'
+
+/** As vistas de Em andamento do perfil ("O que aparece" §48): '' = só Gestão, 'executive' = só Direção, 'both' = as duas (abre em Direção). */
+type OngoingView = '' | 'executive' | 'both'
+const ONGOING: Record<OngoingView, ScreenSettings> = {
+  '': { hidden: ['projects.ongoing_views.executive'], starts: {} },
+  executive: { hidden: ['projects.ongoing_views.management'], starts: {} },
+  both: { hidden: [], starts: { 'projects.ongoing_views': 'executive' } },
+}
 import { PERMISSION_CODES } from '@/domain/permissions'
 import type { Project, ProjectStatus, ProjectPriority, TeamActivity, TeamActivityActedTask } from '@/domain/projects'
 import type { ProjectListQuery, ProjectPage } from '@/domain/repositories'
@@ -160,7 +168,8 @@ function setup({
   deps = { today: '2026-11-19', people: [], areas: [], projects: [] },
   relations = {},
   tasks = {},
-}: { view?: OngoingView; counts?: boolean; perms?: typeof PERMS; deps?: Dependencies; relations?: Record<string, unknown>; tasks?: Record<string, unknown> } = {}) {
+  hidden = [],
+}: { hidden?: ScreenKey[]; view?: OngoingView; counts?: boolean; perms?: typeof PERMS; deps?: Dependencies; relations?: Record<string, unknown>; tasks?: Record<string, unknown> } = {}) {
   const list = vi.fn((query: ProjectListQuery): Promise<ProjectPage> => {
     // simula el servidor: estado, prioridad y departamento de la tabla; la lista completa del panel no filtra
     const csv = (value?: string) => (value ? value.split(',') : null)
@@ -176,7 +185,7 @@ function setup({
   })
   const me = makeCurrentUser(perms)
   const repositories = fakeRepositories({
-    auth: { me: async () => ({ ...me, role: { ...me.role!, ongoingView: view } }) },
+    auth: { me: async () => ({ ...me, role: { ...me.role!, screens: { ...ONGOING[view], hidden: [...ONGOING[view].hidden, ...hidden] } } }) },
     projects: {
       list,
       teamActivity: () => Promise.resolve(TEAM),
@@ -207,7 +216,8 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     window.localStorage.clear()
     const { unmount } = setup({ view: 'both' })
     const sw = await screen.findByRole('group', { name: 'Vista de En marcha' })
-    expect(within(sw).getByRole('button', { name: 'Dirección y gerencia' })).toHaveAttribute('aria-pressed', 'true')
+    // abre no «Abre em» do perfil (Direção) assim que a sessão chega
+    await waitFor(() => expect(within(sw).getByRole('button', { name: 'Dirección y gerencia' })).toHaveAttribute('aria-pressed', 'true'))
     expect(await screen.findByTestId('direction-panel')).toBeInTheDocument()
     await userEvent.click(within(sw).getByRole('button', { name: 'Gestión' }))
     await waitFor(() => expect(screen.queryByTestId('direction-panel')).toBeNull())
@@ -216,6 +226,14 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     setup({ view: 'both' })
     const again = await screen.findByRole('group', { name: 'Vista de En marcha' })
     expect(within(again).getByRole('button', { name: 'Gestión' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('§48: los bloques que el perfil oculta no aparecen (la tabla también es un bloque)', async () => {
+    setup({ hidden: ['projects.blocks.kpis', 'projects.blocks.table', 'projects.blocks.team'] })
+    await screen.findByTestId('direction-panel')
+    expect(screen.queryByRole('group', { name: /Indicadores/i })).toBeNull()
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByText('Equipo ahora')).toBeNull()
   })
 
   it('sin «Ambas» no hay selector', async () => {

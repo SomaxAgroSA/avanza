@@ -5,6 +5,7 @@ import { cn } from '@/core/utils/cn'
 import { formatDay } from '@/core/utils/format'
 import type { Project, ProjectStatus, ProjectTaskCount, TeamActivity } from '@/domain/projects'
 import type { Dependencies } from '@/domain/dependencies'
+import type { ScreenKey } from '@/domain/screens'
 import { AppTooltip } from '@/presentation/components'
 import {
   DEFAULT_PANEL,
@@ -29,6 +30,9 @@ import { PieChart } from './PieChart'
 import { DepDrawer, DepFlag, DepStrip } from './Dependencies'
 import { depAffected, depInScope } from './dependency-data'
 
+/** Sem o bloco Dependências (§48): a linha do tempo fica sem o ⚠. */
+const NO_DEPS = new Set<string>()
+
 /** Cor da marca de cada estado; o nome vai sempre ao lado (a cor nunca fica sozinha). */
 const dot = (color: string) => <span aria-hidden className="inline-block size-2.5 shrink-0 rounded-full" style={{ background: color }} />
 
@@ -43,10 +47,12 @@ export interface DirectionPanelProps {
   team: { data: TeamActivity | undefined; pending: boolean; error: boolean; retry: () => void } | null
   /** Dependências por área (§42); sem tasks.view ou ainda sem resposta, nada aparece. */
   dependencies?: Dependencies | undefined
+  /** Blocos que o perfil mostra ("O que aparece" §48, `projects.blocks.*`); sem a função, todos. */
+  shows?: (key: ScreenKey) => boolean
 }
 
 /** Painel da vista "Direção e gerência" de Em andamento (regras §41): indicadores, linha do tempo, gráficos e equipe. */
-export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, dependencies }: DirectionPanelProps) {
+export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, dependencies, shows = () => true }: DirectionPanelProps) {
   const scope = useMemo(() => panelScope(projects, filter), [projects, filter])
   const set = (patch: Partial<PanelFilter>) => onFilter({ ...filter, ...patch })
   // painel lateral das Dependências: null = fechado; only = projeto do ⚠ (null = todos do recorte)
@@ -57,16 +63,20 @@ export function DirectionPanel({ projects, filter, onFilter, taskCounts, team, d
   return (
     <div className="contents" data-testid="direction-panel">
       {/* clicar no indicador escolhido de novo limpa a escolha (volta aos em andamento, sem destaque) */}
-      <Kpis projects={projects} filter={filter} onSelect={(kpi) => set({ kpi: filter.kpi === kpi ? DEFAULT_PANEL.kpi : kpi })} />
+      {shows('projects.blocks.kpis') && <Kpis projects={projects} filter={filter} onSelect={(kpi) => set({ kpi: filter.kpi === kpi ? DEFAULT_PANEL.kpi : kpi })} />}
       <FilterBand projects={projects} filter={filter} count={scope.length} onClear={() => onFilter(DEFAULT_PANEL)} />
-      <DepStrip scope={depScope} onOpen={() => setDepView({ only: null })} />
-      <Timeline projects={scope} affected={affected} onDependencies={(projectId) => setDepView({ only: projectId })} />
+      {shows('projects.blocks.dependencies') && <DepStrip scope={depScope} onOpen={() => setDepView({ only: null })} />}
+      {shows('projects.blocks.timeline') && (
+        <Timeline projects={scope} affected={shows('projects.blocks.dependencies') ? affected : NO_DEPS} onDependencies={(projectId) => setDepView({ only: projectId })} />
+      )}
       <DepDrawer data={dependencies} panel={scope} only={depView?.only ?? null} open={!!depView} onClose={() => setDepView(null)} onShowAll={() => setDepView({ only: null })} />
       {/* departamentos e estado de execução lado a lado (o bloco "Tarefas por projeto" saiu a pedido da coordenação) */}
-      <div className="mb-4 grid gap-3 lg:grid-cols-2">
-        <Departments projects={departmentScope(projects, filter)} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />
-        <StatusStrip projects={statusScope(projects, filter)} status={filter.status} onSelect={(status) => set({ status: filter.status === status ? null : status })} />
-      </div>
+      {(shows('projects.blocks.areas') || shows('projects.blocks.status')) && (
+        <div className={cn('mb-4 grid gap-3', shows('projects.blocks.areas') && shows('projects.blocks.status') && 'lg:grid-cols-2')}>
+          {shows('projects.blocks.areas') && <Departments projects={departmentScope(projects, filter)} area={filter.area} onSelect={(key) => set({ area: filter.area === key ? null : key })} />}
+          {shows('projects.blocks.status') && <StatusStrip projects={statusScope(projects, filter)} status={filter.status} onSelect={(status) => set({ status: filter.status === status ? null : status })} />}
+        </div>
+      )}
       {team && <DirectionTeam team={teamInScope(team.data, scope)} projects={projects} counts={taskCounts} pending={team.pending} error={team.error} onRetry={team.retry} />}
     </div>
   )

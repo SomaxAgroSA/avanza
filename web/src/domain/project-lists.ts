@@ -1,10 +1,10 @@
 /**
- * Projetos por perfil (ajuste 25/11/2026), escolhido em Controle de acesso → Perfis — só a tela, como as Tarefas do
- * perfil: as listas que aparecem no menu Projetos. Com uma só, "Projetos" abre direto nela, sem submenu; entrar
- * pelo endereço de uma lista escondida leva à primeira visível. O que a pessoa pode fazer continua nas permissões
- * (a página de um projeto, por link direto, segue abrindo). A lista fechada é a do servidor
- * (backend/src/domain/permissions.js#PROJECT_LISTS).
+ * Projetos por perfil (ajuste 25/11/2026), hoje parte do "O que aparece" do perfil (§48, `projects.lists` em
+ * domain/screens.ts) — só a tela: as listas que aparecem no menu Projetos e onde ele abre ("Abre em"). Com uma só,
+ * "Projetos" abre direto nela, sem submenu; entrar pelo endereço de uma lista escondida leva à de entrada. O que a
+ * pessoa pode fazer continua nas permissões (a página de um projeto, por link direto, segue abrindo).
  */
+import { startItem, visibleItems, type ScreenSettings } from './screens'
 
 /** As listas do menu Projetos, na ordem do menu. */
 export const PROJECT_LISTS = ['all', 'ongoing', 'finished', 'archived'] as const
@@ -26,11 +26,13 @@ export const PROJECT_LIST_LABELS: Record<ProjectList, string> = {
   archived: 'nav.projectsArchived',
 }
 
-/** As listas de um perfil (da API ou da sessão): só as conhecidas, na ordem do menu; sem nenhuma, as quatro. */
-export function toProjectLists(source: unknown): ProjectList[] {
-  const values = Array.isArray(source) ? source : []
-  const lists = PROJECT_LISTS.filter((list) => values.includes(list))
-  return lists.length ? lists : [...PROJECT_LISTS]
+/**
+ * As listas do perfil, com a de entrada ("Abre em") primeiro e as demais na ordem do menu. O menu segue a ordem dele
+ * (só filtra por estas); a primeira é para onde Projetos leva.
+ */
+export function projectListsOf(screens: ScreenSettings): ProjectList[] {
+  const start = startItem(screens, 'projects.lists') ?? 'all'
+  return [start, ...visibleItems(screens, 'projects.lists').filter((list) => list !== start)]
 }
 
 /** A lista de um endereço (caminho exato, sem a barra final), ou null quando não é uma das quatro. */
@@ -39,7 +41,7 @@ export function projectListOf(pathname: string): ProjectList | null {
   return PROJECT_LISTS.find((list) => PROJECT_LIST_PATHS[list] === path) ?? null
 }
 
-/** Para onde leva o menu Projetos: a primeira lista visível. */
+/** Para onde leva o menu Projetos: a lista de entrada (a primeira de `projectListsOf`). */
 export const projectsEntryPath = (lists: readonly ProjectList[]): string => PROJECT_LIST_PATHS[lists[0] ?? 'all']
 
 /**
@@ -49,10 +51,4 @@ export const projectsEntryPath = (lists: readonly ProjectList[]): string => PROJ
 export function hiddenListRedirect(pathname: string, lists: readonly ProjectList[]): string | null {
   const list = projectListOf(pathname)
   return list && !lists.includes(list) ? projectsEntryPath(lists) : null
-}
-
-/** Marca ou desmarca uma lista no perfil, na ordem do menu. Sempre fica ao menos uma (desmarcar a última não muda nada). */
-export function toggleProjectList(lists: readonly ProjectList[], list: ProjectList, on: boolean): ProjectList[] {
-  if (lists.includes(list) === on || (!on && lists.length === 1)) return [...lists]
-  return PROJECT_LISTS.filter((item) => (item === list ? on : lists.includes(item)))
 }

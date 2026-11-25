@@ -21,6 +21,15 @@ describe('"O que aparece" por perfil (domain/screens, §48)', () => {
     assert.deepEqual([...new Set(SCREEN_GROUPS.map((g) => g.module))], ['tracking', 'projects', 'tasks', 'docs', 'settings'])
   })
 
+  it('o catálogo do web (web/src/domain/screens.ts) é o mesmo: grupos, itens e "Abre em"', () => {
+    const source = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../../../web/src/domain/screens.ts'), 'utf8')
+    const catalog = source.slice(source.indexOf('export const SCREEN_CATALOG = {'), source.indexOf('} as const'))
+    const web = [...catalog.matchAll(/'([\w.]+)': \[([^\]]*)\]/g)].map((m) => ({ id: m[1], items: [...m[2].matchAll(/'(\w+)'/g)].map((item) => item[1]) }))
+    assert.deepEqual(web, SCREEN_GROUPS.map((g) => ({ id: g.id, items: g.items.slice() })))
+    const starts = source.match(/export const START_GROUPS = \[([^\]]*)\]/)[1]
+    assert.deepEqual([...starts.matchAll(/'([\w.]+)'/g)].map((m) => m[1]), START_GROUPS)
+  })
+
   it('escondidas: só chaves conhecidas e sempre ao menos uma visível em cada grupo', () => {
     assert.equal(hiddenScreensIssue([]), null)
     assert.equal(hiddenScreensIssue(['projects.lists.all', 'projects.lists.finished', 'projects.lists.archived']), null)

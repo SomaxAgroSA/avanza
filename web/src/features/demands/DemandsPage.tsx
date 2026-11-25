@@ -36,6 +36,7 @@ import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, 
 import { formatNumber, formatShortDateTime } from '@/core/utils/format'
 import { cn } from '@/core/utils/cn'
 import { useCan, useSession } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 import { TasksHeader } from '@/features/tasks/TasksHeader'
 import { DemandActions } from './DemandActions'
 import { DemandChip, DemandStatusBadge, ProjectChip } from './demand-visuals'
@@ -72,7 +73,11 @@ export function DemandsPage() {
   const header = inboxHeader(views, boxes)
   const raw = params.get('box')
   const box: DemandBox = isBox(raw) && boxes.includes(raw) ? raw : (boxes[0] ?? 'received')
-  const { view, setView, groupBy, setGroupBy } = useInboxView()
+  // visões do perfil (§48): Lista e/ou Linha do tempo; com uma só, sem o seletor e direto nela
+  const screens = useScreens()
+  const inboxViews = screens.visible('tasks.views')
+  const { view: chosenView, setView, groupBy, setGroupBy } = useInboxView(screens.start('tasks.views') ?? 'list')
+  const view: InboxView = inboxViews.includes(chosenView) ? chosenView : (inboxViews[0] ?? 'list')
   const overview = useDemandOverview()
   const counts = overview.data?.counts
   const open = (b: DemandBox) => (counts ? DEMAND_KPI_STATUSES.reduce((sum, status) => sum + counts[b][status], 0) : undefined)
@@ -109,7 +114,7 @@ export function DemandsPage() {
   return (
     <>
       <TasksHeader>
-        <ViewSwitch value={view} onChange={setView} />
+        {inboxViews.length > 1 && <ViewSwitch value={view} onChange={setView} />}
         {header.boxSwitch && (
           <AppSegmentedControl<DemandBox>
             className="shrink-0"
@@ -127,7 +132,7 @@ export function DemandsPage() {
             {open(box) !== undefined && <span className="text-sm font-normal text-muted tabular-nums [[data-compact~='3']_&]:hidden">{open(box)}</span>}
           </h2>
         )}
-        <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} people={peopleFilters} />
+        <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} people={peopleFilters} shows={screens.shows} />
       </TasksHeader>
       {(box === 'received' || box === 'all') && kpiCounts(box) && <KpiCards counts={kpiCounts(box)!} />}
       {view === 'timeline' ? (

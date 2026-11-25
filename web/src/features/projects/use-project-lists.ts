@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
-import { toProjectLists, type ProjectList } from '@/domain/project-lists'
-import { useSession } from '@/features/auth/session'
+import { projectListsOf, type ProjectList } from '@/domain/project-lists'
+import { useScreens } from '@/features/auth/use-screens'
 
-/** As listas do menu Projetos do perfil da pessoa (ajuste 25/11), na ordem do menu; sem escolha, as quatro. */
+/** As listas do menu Projetos do perfil da pessoa (§48): a de entrada primeiro; sem escolha, as quatro. */
 export function useProjectLists(): ProjectList[] {
-  const lists = useSession().current?.role?.projectsLists
-  return useMemo(() => toProjectLists(lists), [lists])
+  const settings = useScreens().settings
+  return useMemo(() => projectListsOf(settings), [settings])
 }

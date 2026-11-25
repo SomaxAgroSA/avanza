@@ -29,12 +29,12 @@ describe('data/mappers', () => {
     expect(toUser({ ...userDto, home_page: '/projects/ongoing' }).homePage).toBe('/projects/ongoing')
   })
 
-  it('§41: vista de Em andamento do perfil (sem o campo ou desconhecida = Gestão) e contagens de tarefas por projeto', () => {
+  it('§48: "O que aparece" do perfil (sem os campos = tudo visível; só o conhecido) e contagens de tarefas por projeto', () => {
     const base = { id: 'r1', code: 'DIRETORIA', name: 'Diretoria', description: '', is_system: false }
-    expect(toRole(base).ongoingView).toBe('')
-    expect(toRole({ ...base, ongoing_view: 'executive' }).ongoingView).toBe('executive')
-    expect(toRole({ ...base, ongoing_view: 'outra' }).ongoingView).toBe('')
-    expect(toCurrentUser({ user: userDto, role: { ...base, ongoing_view: 'executive' }, permissions: [], session: null }).role?.ongoingView).toBe('executive')
+    expect(toRole(base).screens).toEqual({ hidden: [], starts: {} })
+    const screens = { hidden_screens: ['tasks.views.timeline', 'outra', 'projects.lists.all'], screen_starts: { 'projects.lists': 'ongoing', 'tasks.views': 'timeline', 'docs.actions': 'pdf' } }
+    expect(toRole({ ...base, ...screens }).screens).toEqual({ hidden: ['projects.lists.all', 'tasks.views.timeline'], starts: { 'projects.lists': 'ongoing' } })
+    expect(toCurrentUser({ user: userDto, role: { ...base, ...screens }, permissions: [], session: null }).role?.screens.hidden).toEqual(['projects.lists.all', 'tasks.views.timeline'])
     expect(toProjectTaskCounts({ projects: [{ project_id: 'p1', done: 3, open: 5 }] })).toEqual([{ projectId: 'p1', done: 3, open: 5 }])
   })
 

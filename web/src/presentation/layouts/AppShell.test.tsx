@@ -6,7 +6,8 @@ import { GuestOnly, RequireAuth } from '@/features/auth/guards'
 import { env } from '@/core/config/env'
 import { DEFAULT_PLATFORM_INFO } from '@/domain/platform'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
-import type { ProjectList } from '@/domain/project-lists'
+import { PROJECT_LISTS, type ProjectList } from '@/domain/project-lists'
+import type { ScreenKey } from '@/domain/screens'
 import { ProjectListGate } from '@/features/projects/ProjectListGate'
 import { AppShell } from './AppShell'
 
@@ -70,7 +71,9 @@ describe('AppShell — rodapé do menu', () => {
 describe('AppShell — listas de Projetos do perfil (ajuste 25/11)', () => {
   function setup(projectsLists: ProjectList[], initialPath: string) {
     const me = makeCurrentUser(['projects.view'])
-    const repositories = fakeRepositories({ auth: { me: async () => ({ ...me, role: { ...me.role!, projectsLists } }) } })
+    // o perfil mostra só estas listas ("O que aparece" §48: as outras ficam escondidas)
+    const hidden = PROJECT_LISTS.filter((list) => !projectsLists.includes(list)).map((list) => `projects.lists.${list}` as ScreenKey)
+    const repositories = fakeRepositories({ auth: { me: async () => ({ ...me, role: { ...me.role!, screens: { hidden, starts: {} } } }) } })
     return renderRoutes(
       [
         {

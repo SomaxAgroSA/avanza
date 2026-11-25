@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TASK_VIEWS } from './task-views'
+import { DEFAULT_SCREENS } from './screens'
 import type { CurrentUser, Role, User } from './entities'
 import { assignableRoles, canGrantPermission, roleLockReason, sortRolesByHierarchy, userActions } from './rbac'
 import type { PermissionCode } from './permissions'
@@ -22,7 +22,7 @@ const user = (id: string, status: User['status'] = 'active'): User => ({
 
 const current = (roleCode: string, permissions: PermissionCode[], roleId = `role-${roleCode}`): CurrentUser => ({
   user: user('me'),
-  role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true, ongoingView: '', projectsLists: ['all', 'ongoing', 'finished', 'archived'], ...DEFAULT_TASK_VIEWS },
+  role: { id: roleId, code: roleCode, name: roleCode, description: '', isSystem: true, screens: DEFAULT_SCREENS },
   permissions,
   session: null,
   platform: { panoramaEnabled: true },
@@ -33,9 +33,7 @@ const role = (code: string, permissions: PermissionCode[] = []): Role => ({
   code,
   name: code,
   description: '',
-  ongoingView: '',
-  projectsLists: ['all', 'ongoing', 'finished', 'archived'],
-  ...DEFAULT_TASK_VIEWS,
+  screens: DEFAULT_SCREENS,
   isSystem: true,
   permissions,
   userCount: 0,

@@ -1,6 +1,5 @@
 import type { PermissionCode } from './permissions'
-import type { TaskViews } from './task-views'
-import type { ProjectList } from './project-lists'
+import type { ScreenSettings } from './screens'
 import type { ThemePreference } from '@/core/theme/theme'
 import type { Language } from '@/core/i18n'
 
@@ -24,26 +23,20 @@ export interface User {
   lastLoginAt: Date | null
 }
 
-/** Vista da lista "Em andamento" de um perfil (§41): '' = Gestão (padrão); 'executive' = Direção e gerência (consulta); 'both' = as duas, com seletor na tela. */
-export const ONGOING_VIEWS = ['', 'executive', 'both'] as const
-export type OngoingView = (typeof ONGOING_VIEWS)[number]
-
-/** Perfil de acesso; com as Tarefas do perfil (ajuste 23/11: onde o menu abre, a Lista e a caixa Todas). */
-export interface Role extends TaskViews {
+/** Perfil de acesso, com o "O que aparece" da tela de quem o tem (§48). */
+export interface Role {
   id: string
   code: string
   name: string
   description: string
   isSystem: boolean
-  /** Vista da lista Em andamento de quem tem este perfil (§41). */
-  ongoingView: OngoingView
-  /** Listas do menu Projetos do perfil (ajuste 25/11), na ordem do menu; sempre ao menos uma. */
-  projectsLists: ProjectList[]
+  /** O que aparece na tela de quem tem o perfil (partes escondidas e "Abre em"); só a tela, não é permissão. */
+  screens: ScreenSettings
   permissions: PermissionCode[]
   userCount: number
 }
 
-export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'ongoingView' | 'projectsLists' | keyof TaskViews>
+export type RoleSummary = Pick<Role, 'id' | 'code' | 'name' | 'description' | 'isSystem' | 'screens'>
 
 export interface Permission {
   id: string

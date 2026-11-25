@@ -9,6 +9,7 @@ import { AppBreadcrumb, AppButton, AppDropdown, AppEmptyState, AppErrorState, Ap
 import { useCopy } from '@/presentation/common/use-copy'
 import { AppRichTextView, scrollToHeading } from '@/presentation/components/rich-text'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
+import { useScreens } from '@/features/auth/use-screens'
 import { editPath, pagePath } from './docs-paths'
 import { DraftBadge } from './docs-visuals'
 import { PageTasksBar } from './doc-links'
@@ -55,7 +56,10 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
   const [exporting, setExporting] = useState(false)
   const location = useLocation()
   // "Avisar" (§47): quem edita avisa sobre a página publicada; ao publicar, a janela abre sozinha
-  const canNotify = page.capabilities.edit && page.status === 'published' && page.version > 0
+  // botões da página que o perfil mostra ("O que aparece" §48, `docs.actions.*`): só a tela
+  const screens = useScreens()
+  const canNotify = page.capabilities.edit && page.status === 'published' && page.version > 0 && screens.shows('docs.actions.notify')
+  const showVersions = page.version > 0 && screens.shows('docs.actions.versions')
   const [notifying, setNotifying] = useState(false)
   const askToNotify = canNotify && (location.state as { notify?: boolean } | null)?.notify === true
   const changeNotifying = (open: boolean) => {
@@ -65,7 +69,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
   }
   useDocumentTitle(page.title)
   // só o publicado sai no PDF: a página nunca publicada não tem o que exportar
-  const canExport = page.version > 0
+  const canExport = page.version > 0 && screens.shows('docs.actions.pdf')
   const outline = useMemo(() => docOutline(page.content), [page.content])
   const treePage = detail.pages.find((p) => p.id === page.id)
   const depth = page.ancestors.length + 1
@@ -77,7 +81,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
     ...(canEdit && depth < MAX_DOC_DEPTH ? [{ key: 'child', label: t('docs.page.addChild'), icon: <FilePlus2 />, onSelect: () => onCreateChild(page.id) }] : []),
     { key: 'link', label: t('docs.page.copyLink'), icon: <Link2 />, onSelect: copyLink },
     ...(canNotify ? [{ key: 'notify', label: t('docs.notices.button'), icon: <Bell />, onSelect: () => setNotifying(true) }] : []),
-    ...(page.version > 0 ? [{ key: 'versions', label: t('docs.versions.title'), icon: <History />, onSelect: () => setVersionsOpen(true) }] : []),
+    ...(showVersions ? [{ key: 'versions', label: t('docs.versions.title'), icon: <History />, onSelect: () => setVersionsOpen(true) }] : []),
     ...(canExport ? [{ key: 'export', label: t('docs.export.button'), icon: <Printer />, onSelect: () => setExporting(true) }] : []),
     ...(canEdit && treePage && !page.isHome
       ? [
@@ -132,7 +136,7 @@ function PageContent({ page, detail, panelButton, onCreateChild, onRequestMove, 
               {t('docs.notices.button')}
             </AppButton>
           )}
-          {page.version > 0 && (
+          {showVersions && (
             <AppButton variant="secondary" leftIcon={<History />} onClick={() => setVersionsOpen(true)} className="max-sm:hidden">
               {t('docs.versions.short')}
             </AppButton>

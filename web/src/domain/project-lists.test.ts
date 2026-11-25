@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { PROJECT_LISTS, hiddenListRedirect, projectListOf, projectsEntryPath, toProjectLists, toggleProjectList } from './project-lists'
+import { PROJECT_LISTS, hiddenListRedirect, projectListOf, projectListsOf, projectsEntryPath } from './project-lists'
 
 describe('Projetos por perfil — listas do menu (25/11)', () => {
-  it('sem escolha (ou só valores desconhecidos) ficam as quatro; senão, as conhecidas na ordem do menu', () => {
-    expect(toProjectLists(undefined)).toEqual([...PROJECT_LISTS])
-    expect(toProjectLists([])).toEqual([...PROJECT_LISTS])
-    expect(toProjectLists(['mine'])).toEqual([...PROJECT_LISTS])
-    expect(toProjectLists(['archived', 'mine', 'ongoing'])).toEqual(['ongoing', 'archived'])
+  it('do "O que aparece" (§48): sem escolha, as quatro; senão, as visíveis com a de entrada ("Abre em") primeiro', () => {
+    expect(projectListsOf({ hidden: [], starts: {} })).toEqual([...PROJECT_LISTS])
+    expect(projectListsOf({ hidden: ['projects.lists.all', 'projects.lists.finished'], starts: {} })).toEqual(['ongoing', 'archived'])
+    expect(projectListsOf({ hidden: [], starts: { 'projects.lists': 'archived' } })).toEqual(['archived', 'all', 'ongoing', 'finished'])
+    expect(projectsEntryPath(projectListsOf({ hidden: [], starts: { 'projects.lists': 'ongoing' } }))).toBe('/projects/ongoing')
   })
 
   it('o menu leva à primeira lista visível', () => {
@@ -28,12 +28,5 @@ describe('Projetos por perfil — listas do menu (25/11)', () => {
     expect(hiddenListRedirect('/projects/ongoing', ['ongoing'])).toBeNull()
     expect(hiddenListRedirect('/projects/abc123', ['ongoing'])).toBeNull()
     expect(hiddenListRedirect('/projects/mine', ['ongoing'])).toBeNull()
-  })
-
-  it('marcar e desmarcar: na ordem do menu e sempre ao menos uma', () => {
-    expect(toggleProjectList(['ongoing'], 'all', true)).toEqual(['all', 'ongoing'])
-    expect(toggleProjectList(['all', 'ongoing'], 'all', false)).toEqual(['ongoing'])
-    expect(toggleProjectList(['ongoing'], 'ongoing', false)).toEqual(['ongoing'])
-    expect(toggleProjectList(['ongoing'], 'ongoing', true)).toEqual(['ongoing'])
   })
 })

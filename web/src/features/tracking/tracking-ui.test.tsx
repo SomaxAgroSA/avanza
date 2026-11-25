@@ -267,3 +267,18 @@ describe('Panorama desactivado en Configuración → General (§26.2)', () => {
     expect(me.mock.calls.length).toBeGreaterThan(1)
   })
 })
+
+describe('Panorama — bloques del perfil ("O que aparece" §48)', () => {
+  it('los bloques escondidos no aparecen; los demás siguen', async () => {
+    const me = makeCurrentUser(['executive.view'])
+    const repositories = fakeRepositories({
+      auth: { me: async () => ({ ...me, role: { ...me.role!, screens: { hidden: ['tracking.blocks.synthesis', 'tracking.blocks.milestones', 'tracking.blocks.health'], starts: {} } } }) },
+      executive: { get: () => Promise.resolve(dashboard()) },
+    })
+    renderRoutes([{ path: '/tracking', element: <TrackingPage /> }], { repositories, initialPath: '/tracking' })
+    expect(await screen.findByText('Proyectos que requieren atención')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Próximos hitos relevantes')).toBeNull())
+    expect(screen.queryByRole('region', { name: '1 proyecto en riesgo y 4 tareas bloqueadas.' })).toBeNull()
+    expect(screen.queryByText('Salud del portafolio')).toBeNull()
+  })
+})

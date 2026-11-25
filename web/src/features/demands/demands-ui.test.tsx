@@ -16,7 +16,7 @@ import { fakeRepositories, makeCurrentUser, renderRoutes, typeTexts } from '@/te
 import { TasksPage } from '@/features/tasks/TasksPage'
 import { TaskDetailPage } from '@/features/tasks/TaskDetailPage'
 import { TaskFormDialog } from '@/features/tasks/TaskFormDialog'
-import type { TaskViews } from '@/domain/task-views'
+import type { ScreenSettings } from '@/domain/screens'
 import { DemandsPage } from './DemandsPage'
 
 beforeAll(async () => {
@@ -114,7 +114,7 @@ function repos(
     taskTypes?: Partial<TaskTypeRepository>
     permissions?: Parameters<typeof makeCurrentUser>[0]
     /** Tarefas do perfil (ajuste 23/11) */
-    views?: Partial<TaskViews>
+    screens?: ScreenSettings
   } = {},
 ) {
   const me = options.me ?? ana
@@ -122,7 +122,7 @@ function repos(
     auth: {
       me: async () => {
         const current = makeCurrentUser(options.permissions ?? ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.edit', 'tasks.assign', 'projects.view'])
-        return { ...current, user: { ...current.user, id: me.id, name: me.name }, role: current.role && { ...current.role, ...options.views } }
+        return { ...current, user: { ...current.user, id: me.id, name: me.name }, role: current.role && { ...current.role, ...(options.screens ? { screens: options.screens } : {}) } }
       },
     },
     taskTypes: { list: () => Promise.resolve([devType]), get: () => Promise.resolve({ ...devType, fields: [] }), ...options.taskTypes },
@@ -550,7 +550,7 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
       repositories: repos({
         me: cesar,
         permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.assign', 'projects.view', 'projects.view_all'],
-        views: { tasksAllBox: 'hidden', tasksList: 'hidden' },
+        screens: { hidden: ['tasks.screens.list', 'tasks.boxes.all'], starts: {} },
         demands: { list: () => Promise.resolve(page([])), overview: () => Promise.resolve(allOverview()) },
       }),
       initialPath: '/tasks/demands?box=all',
@@ -568,7 +568,7 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
       repositories: repos({
         me: cesar,
         permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'tasks.assign', 'projects.view', 'projects.view_all'],
-        views: { tasksStart: 'inbox_all', tasksList: 'hidden', tasksHiddenBoxes: ['received', 'assigned', 'requested'] },
+        screens: { hidden: ['tasks.screens.list', 'tasks.boxes.received', 'tasks.boxes.assigned', 'tasks.boxes.requested'], starts: { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' } },
         demands: { list, overview: () => Promise.resolve(allOverview()) },
       }),
       initialPath: '/tasks/demands',
@@ -586,7 +586,7 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
   it('Tarefas do perfil (24/11): sem a caixa Recebidas, a Caixa de entrada abre na primeira marcada', async () => {
     const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page([])))
     renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
-      repositories: repos({ me: cesar, views: { tasksHiddenBoxes: ['received'] }, demands: { list, overview: () => Promise.resolve(allOverview()) } }),
+      repositories: repos({ me: cesar, screens: { hidden: ['tasks.boxes.received'], starts: { 'tasks.screens': 'inbox' } }, demands: { list, overview: () => Promise.resolve(allOverview()) } }),
       initialPath: '/tasks/demands',
     })
     const tabs = await screen.findByRole('radiogroup', { name: 'Caixas de demandas' })
@@ -600,7 +600,7 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
       repositories: repos({
         me: cesar,
         permissions: ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'],
-        views: { tasksStart: 'inbox_all' },
+        screens: { hidden: [], starts: { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' } },
         demands: { list: () => Promise.resolve(page([])), overview: () => Promise.resolve(allOverview()) },
       }),
       initialPath: '/tasks/demands?box=all',
@@ -610,6 +610,28 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
     const views = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') })
     await waitFor(() => expect(within(views).getByRole('link', { name: /Caixa de entrada/ })).toHaveAttribute('href', '/tasks/demands?box=all'))
     expect(within(views).getByRole('link', { name: 'Lista' })).toHaveAttribute('href', '/tasks')
+  })
+
+  // "O que aparece" do perfil (§48)
+  it('visão, filtros e botões de criar escondidos não aparecem; com uma visão só, sem o seletor', async () => {
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({
+        me: cesar,
+        permissions: ['tasks.view', 'tasks.list', 'tasks.create', 'projects.view', 'projects.view_all'],
+        screens: { hidden: ['tasks.views.timeline', 'tasks.filters.search', 'tasks.filters.urgency', 'tasks.filters.company', 'tasks.create.internal_demand'], starts: { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' } },
+        demands: { list: () => Promise.resolve(page([])), overview: () => Promise.resolve(allOverview()) },
+      }),
+      initialPath: '/tasks/demands?box=all',
+    })
+    const bar = await screen.findByRole('group', { name: 'Filtros da Bandeja' })
+    await waitFor(() => expect(within(bar).queryByRole('searchbox', { name: 'Buscar' })).toBeNull())
+    expect(within(bar).queryByRole('button', { name: /Urgência/ })).toBeNull()
+    expect(within(bar).queryByRole('button', { name: /Empresa/ })).toBeNull()
+    expect(within(bar).getByRole('button', { name: /Prioridade/ })).toBeInTheDocument()
+    expect(within(bar).getByRole('button', { name: /Atribuída a/ })).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Visão da Caixa de entrada' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Tarefa de projeto' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Demanda interna' })).toBeNull()
   })
 
   it('sem projects.view_all: a aba Todas não aparece e ?box=all mostra Recebidas por mim', async () => {

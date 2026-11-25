@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PermissionCode } from '@/domain/permissions'
 import type { RoleInputData } from '@/domain/repositories'
-import type { TaskViews } from '@/domain/task-views'
 import { useRepositories } from '@/presentation/common/repositories-context'
 
 export const rolesKeys = {
@@ -38,7 +37,7 @@ export function useUpdateRole() {
   const { roles } = useRepositories()
   const invalidate = useInvalidateRoles()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Pick<RoleInputData, 'name' | 'description' | 'ongoingView' | 'projectsLists' | keyof TaskViews> }) => roles.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Pick<RoleInputData, 'name' | 'description' | 'screens'> }) => roles.update(id, data),
     onSuccess: invalidate,
   })
 }

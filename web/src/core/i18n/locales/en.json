@@ -565,24 +565,203 @@
       "users": "Users",
       "type": "Type"
     },
-    "ongoingView": {
-      "label": "Ongoing view",
-      "management": "Management",
-      "executive": "Direction and management",
-      "hint": "Management: the usual list. Direction and management: a view-only dashboard (indicators, timeline, team and table) without edit actions. To block editing everywhere in Avanza, turn off this profile's edit permissions.",
-      "inherited": "Ongoing view: {{view}} (change it in the profile)",
-      "both": "Both (choose on the page)"
-    },
-    "tasks": {
-      "title": "Tasks",
-      "show": "What shows",
-      "start": "Tasks opens on",
-      "hint": "With only one checked, the screen is called \"Inbox\", without buttons, and opens straight on that data."
-    },
-    "projects": {
-      "title": "Projects",
-      "lists": "Lists in the menu",
-      "hint": "At least one always stays. With only one, Projects opens straight on that list. Only the screen changes: the role permissions stay the same."
+    "screens": {
+      "open": "What shows",
+      "title": "What shows · {{role}}",
+      "back": "Back to Roles",
+      "role": "Role",
+      "intro": "Besides \"Sees it\" and \"What it can do\", each module has a \"What shows\" block: tick the submenus, lists, boxes, views, tabs, blocks, filters and buttons, and where each module opens. On the right you see how Avanza looks for this role.",
+      "rules": {
+        "profile": {
+          "title": "Per role, never per person",
+          "text": "It applies to everyone with the role."
+        },
+        "screen": {
+          "title": "Screen only",
+          "text": "Hiding does not remove permissions: what people can do stays in \"What it can do\" and Avanza keeps checking it."
+        },
+        "one": {
+          "title": "One always stays",
+          "text": "The last option of a group cannot be unticked."
+        },
+        "all": {
+          "title": "Everything visible by default",
+          "text": "Roles do not change until someone unticks something."
+        }
+      },
+      "sees": "Sees it",
+      "doesNotSee": "Does not see it",
+      "canDo": "What it can do",
+      "noActions": "No actions in this module",
+      "editPermissions": "Edit permissions",
+      "shows": "What shows · {{group}}",
+      "onlySees": "Only \"Sees it\": this module has no parts to hide.",
+      "opensIn": "Opens in",
+      "single": "With only one, there are no buttons: it opens straight in \"{{item}}\".",
+      "last": "At least one must stay",
+      "missing": "Without the \"{{permission}}\" permission it does not show, even if ticked",
+      "save": "Save",
+      "discard": "Discard",
+      "saved": "Role {{role}} updated: what shows changes the next time the page loads for people with it.",
+      "immutable": "The Super Admin sees everything and cannot be changed.",
+      "summary": "What shows",
+      "summaryAll": "Everything visible",
+      "summaryHidden_one": "{{count}} hidden part",
+      "summaryHidden_other": "{{count}} hidden parts",
+      "preview": {
+        "title": "Preview",
+        "menu": "Side menu for this role",
+        "tasks": "Tasks · top line",
+        "ongoing": "Projects › Ongoing · blocks",
+        "project": "Inside a project · tabs",
+        "none": "No modules",
+        "noTasks": "This role does not see Tasks.",
+        "noOngoing": "Does not see \"Ongoing\".",
+        "noProjects": "Does not see Projects."
+      },
+      "modules": {
+        "tracking": "Overview",
+        "projects": "Projects",
+        "tasks": "Tasks",
+        "kanban": "Kanban",
+        "docs": "Documentation",
+        "users": "Users",
+        "settings": "Settings"
+      },
+      "groups": {
+        "tracking": {
+          "blocks": "Blocks"
+        },
+        "projects": {
+          "lists": "Menu lists",
+          "ongoing_views": "Ongoing — views",
+          "blocks": "Ongoing — blocks (Leadership; \"Team now\" also in Management)",
+          "tabs": "Inside the project — tabs",
+          "task_views": "Project tasks — views"
+        },
+        "tasks": {
+          "screens": "Screens",
+          "scopes": "List — scope",
+          "boxes": "Inbox — boxes",
+          "views": "Inbox — views",
+          "filters": "Top line filters",
+          "create": "Create buttons"
+        },
+        "docs": {
+          "actions": "Page buttons"
+        },
+        "settings": {
+          "menu": "Submenus"
+        }
+      },
+      "items": {
+        "tracking": {
+          "blocks": {
+            "synthesis": "Summary",
+            "kpis": "Indicators",
+            "health": "Portfolio health",
+            "execution": "Execution × plan",
+            "attention": "Projects needing attention",
+            "milestones": "Upcoming milestones"
+          }
+        },
+        "projects": {
+          "lists": {
+            "all": "All my projects",
+            "ongoing": "Ongoing",
+            "finished": "Finished",
+            "archived": "Archived"
+          },
+          "ongoing_views": {
+            "management": "Management",
+            "executive": "Leadership"
+          },
+          "blocks": {
+            "kpis": "Indicators",
+            "dependencies": "Dependencies",
+            "timeline": "Projects timeline",
+            "areas": "Projects by department",
+            "status": "Execution status",
+            "team": "Team now",
+            "table": "Projects table"
+          },
+          "tabs": {
+            "overview": "Overview",
+            "charter": "Charter",
+            "management": "Management",
+            "tasks": "Tasks",
+            "report": "Report",
+            "files": "Files",
+            "docs": "Documentation",
+            "members": "Members",
+            "history": "History",
+            "settings": "Settings"
+          },
+          "task_views": {
+            "list": "List",
+            "kanban": "Kanban",
+            "planning": "Planning",
+            "timeline": "Timeline"
+          }
+        },
+        "tasks": {
+          "screens": {
+            "list": "List",
+            "inbox": "Inbox"
+          },
+          "scopes": {
+            "mine": "My tasks",
+            "all": "See all"
+          },
+          "boxes": {
+            "received": "Received",
+            "assigned": "Assigned",
+            "requested": "Requested",
+            "all": "All"
+          },
+          "views": {
+            "list": "List",
+            "timeline": "Timeline (Gantt)"
+          },
+          "filters": {
+            "search": "Search",
+            "project": "Project",
+            "priority": "Priority",
+            "urgency": "Urgency",
+            "responsible": "Owner",
+            "assignee": "Assigned to",
+            "company": "Company"
+          },
+          "create": {
+            "project_task": "＋ Project task",
+            "internal_demand": "＋ Internal request"
+          }
+        },
+        "docs": {
+          "actions": {
+            "notify": "Notify",
+            "versions": "Versions",
+            "pdf": "Export PDF"
+          }
+        },
+        "settings": {
+          "menu": {
+            "general": "General",
+            "integrations": "Integrations",
+            "task_types": "Task types",
+            "custom_fields": "Custom fields",
+            "statuses": "Statuses",
+            "priorities": "Priorities",
+            "areas": "Departments",
+            "dependency_areas": "Dependencies by area",
+            "companies": "Companies",
+            "tags": "Tags",
+            "icons": "Icons",
+            "access": "Access control",
+            "audit": "Audit"
+          }
+        }
+      }
     }
   },
   "permissions": {

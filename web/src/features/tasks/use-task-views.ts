@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { inboxPath, tasksEntryPath, toTaskViews, visibleBoxes, type InboxBox, type TaskViews } from '@/domain/task-views'
-import { useCan, useSession } from '@/features/auth/session'
+import { inboxPath, taskViewsOf, tasksEntryPath, visibleBoxes, type InboxBox, type TaskViews } from '@/domain/task-views'
+import { useCan } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 
 export interface TaskViewsState {
   views: TaskViews
@@ -12,12 +13,12 @@ export interface TaskViewsState {
   inbox: string
 }
 
-/** Tarefas do perfil da pessoa (ajustes 23 e 24/11): o que aparece (Lista e caixas) e onde o menu abre. */
+/** Tarefas do perfil da pessoa ("O que aparece", §48): a Lista, as caixas e onde o menu abre. */
 export function useTaskViews(): TaskViewsState {
-  const role = useSession().current?.role
+  const settings = useScreens().settings
   const seesAll = useCan('projects.view_all')
   return useMemo(() => {
-    const views = toTaskViews(role)
+    const views = taskViewsOf(settings)
     return { views, boxes: visibleBoxes(views, seesAll), entry: tasksEntryPath(views, seesAll), inbox: inboxPath(views, seesAll) }
-  }, [role, seesAll])
+  }, [settings, seesAll])
 }

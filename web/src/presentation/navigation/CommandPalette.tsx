@@ -11,7 +11,8 @@ import { usePreferences } from '@/features/preferences/use-preferences'
 import { useProjects } from '@/features/projects/queries'
 import { useTasksList } from '@/features/tasks/queries'
 import { useDebouncedValue } from '@/presentation/common/use-debounced-value'
-import { platformNavItems, visibleNavItems, withNavEntry, withProjectLists, type NavItem } from './nav-items'
+import { platformNavItems, visibleNavItems, withNavEntry, withProjectLists, withScreens, type NavItem } from './nav-items'
+import { useScreens } from '@/features/auth/use-screens'
 import { useTaskViews } from '@/features/tasks/use-task-views'
 import { useProjectLists } from '@/features/projects/use-project-lists'
 
@@ -54,10 +55,11 @@ export function CommandPalette() {
   const platform = current?.platform
   const tasksEntry = useTaskViews().entry
   const projectLists = useProjectLists()
+  const screens = useScreens().settings
   const groups = useMemo<CommandGroup[]>(() => {
     // o Panorama desligado na plataforma (§26.2) também não é oferecido aqui
     // Projetos só com as listas do perfil (ajuste 25/11)
-    const nav = flatten(withProjectLists(withNavEntry(visibleNavItems(permissions ?? [], platformNavItems(platform)), 'tasks', tasksEntry), projectLists))
+    const nav = flatten(withScreens(withProjectLists(withNavEntry(visibleNavItems(permissions ?? [], platformNavItems(platform)), 'tasks', tasksEntry), projectLists), screens))
     const canViewUsers = permissions?.includes('users.view')
     // criar e buscar abrem a Lista de tarefas (/tasks): só com o módulo (§44); as tarefas encontradas abrem direto
     const canListTasks = canViewTasks && !!permissions?.includes('tasks.list')
@@ -146,7 +148,7 @@ export function CommandPalette() {
         ],
       },
     ]
-  }, [permissions, platform, tasksEntry, projectLists, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
+  }, [permissions, platform, tasksEntry, projectLists, screens, search, projectItems, taskItems, canViewTasks, t, navigate, changeTheme, changeLanguage, logout])
 
   return (
     <AppCommandPalette

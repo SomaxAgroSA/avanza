@@ -4,6 +4,7 @@ import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { INTERNAL_PROJECT, NO_INBOX_FILTERS, hasInboxFilters, hasPersonFilters, type InboxFilters, type PersonFilters } from '@/domain/demands'
 import { URGENCY_FILTER_VALUES, isUrgency } from '@/domain/urgency'
+import type { ScreenKey } from '@/domain/screens'
 import { AppPopover } from '@/presentation/components'
 import { useFitToolbar } from '@/presentation/common/use-fit-toolbar'
 import { foldText } from '@/presentation/components/data-table/filter-values'
@@ -49,7 +50,8 @@ const ITEM = "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap ro
  * Buscar, Projeto (um, ou só as demandas internas), Prioridade e Urgência (várias). Cada um abre um menu
  * próprio; o botão com filtro fica em branco, como a caixa escolhida, e mostra a escolha ("Alta +1"). Na caixa
  * Todas (`people`, ajuste 25/11), também Responsável, Atribuída a e Empresa, na mesma linha e com o mesmo botão
- * (antes ficavam num bloco embaixo dos números). "Limpar" tira todos.
+ * (antes ficavam num bloco embaixo dos números). "Limpar" tira todos. Cada filtro só aparece se o perfil o mostra
+ * (`shows`, "O que aparece" §48: `tasks.filters.*`).
  */
 export function InboxFilterBar({
   filters,
@@ -57,12 +59,14 @@ export function InboxFilterBar({
   projects,
   priorities,
   people,
+  shows = () => true,
 }: {
   filters: InboxFilters
   onChange: (next: InboxFilters) => void
   projects: InboxFilterOption[]
   priorities: InboxFilterOption[]
   people?: InboxPeopleFilters
+  shows?: (key: ScreenKey) => boolean
 }) {
   const { t } = useTranslation()
   const [text, setText] = useState(filters.search)
@@ -86,64 +90,80 @@ export function InboxFilterBar({
   return (
     // ocupa o espaço livre da linha (como as caixas, o mesmo grupo); a busca cresce com ele
     <div ref={ref} role="group" aria-label={t('demands.filters.bar')} className="flex flex-1 items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5">
-      <label className={cn(ITEM, "min-w-24 flex-1 cursor-text text-muted focus-within:bg-surface focus-within:shadow-card [[data-compact~='5']_&]:min-w-9 [[data-compact~='5']_&]:focus-within:min-w-40 [[data-compact~='5']_&]:not-focus-within:has-[input:not(:placeholder-shown)]:min-w-24")}>
-        <Search className="size-3.5 shrink-0" aria-hidden />
-        <input
-          type="search"
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder={t('demands.filters.search')}
-          aria-label={t('demands.filters.search')}
-          className="w-full min-w-0 bg-transparent text-fg outline-none placeholder:text-muted [[data-compact~='5']_&]:placeholder:text-transparent [&::-webkit-search-cancel-button]:hidden"
+      {shows('tasks.filters.search') && (
+        <>
+          <label className={cn(ITEM, "min-w-24 flex-1 cursor-text text-muted focus-within:bg-surface focus-within:shadow-card [[data-compact~='5']_&]:min-w-9 [[data-compact~='5']_&]:focus-within:min-w-40 [[data-compact~='5']_&]:not-focus-within:has-[input:not(:placeholder-shown)]:min-w-24")}>
+            <Search className="size-3.5 shrink-0" aria-hidden />
+            <input
+              type="search"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder={t('demands.filters.search')}
+              aria-label={t('demands.filters.search')}
+              className="w-full min-w-0 bg-transparent text-fg outline-none placeholder:text-muted [[data-compact~='5']_&]:placeholder:text-transparent [&::-webkit-search-cancel-button]:hidden"
+            />
+          </label>
+          <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-border" />
+        </>
+      )}
+      {shows('tasks.filters.project') && (
+        <FilterMenu
+          label={t('demands.filters.project')}
+          allLabel={t('demands.filters.projectAll')}
+          options={projectOptions}
+          value={filters.projectId ? [filters.projectId] : []}
+          onChange={(value) => onChange({ ...filters, search: text, projectId: value[0] ?? '' })}
         />
-      </label>
-      <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-border" />
-      <FilterMenu
-        label={t('demands.filters.project')}
-        allLabel={t('demands.filters.projectAll')}
-        options={projectOptions}
-        value={filters.projectId ? [filters.projectId] : []}
-        onChange={(value) => onChange({ ...filters, search: text, projectId: value[0] ?? '' })}
-      />
-      <FilterMenu
-        multiple
-        label={t('demands.filters.priority')}
-        allLabel={t('demands.filters.all')}
-        options={priorities}
-        value={filters.priorityIds}
-        onChange={(value) => onChange({ ...filters, search: text, priorityIds: value })}
-      />
-      <FilterMenu
-        multiple
-        label={t('demands.filters.urgency')}
-        allLabel={t('demands.filters.all')}
-        options={urgencies}
-        value={filters.urgencies}
-        onChange={(value) => onChange({ ...filters, search: text, urgencies: value })}
-      />
+      )}
+      {shows('tasks.filters.priority') && (
+        <FilterMenu
+          multiple
+          label={t('demands.filters.priority')}
+          allLabel={t('demands.filters.all')}
+          options={priorities}
+          value={filters.priorityIds}
+          onChange={(value) => onChange({ ...filters, search: text, priorityIds: value })}
+        />
+      )}
+      {shows('tasks.filters.urgency') && (
+        <FilterMenu
+          multiple
+          label={t('demands.filters.urgency')}
+          allLabel={t('demands.filters.all')}
+          options={urgencies}
+          value={filters.urgencies}
+          onChange={(value) => onChange({ ...filters, search: text, urgencies: value })}
+        />
+      )}
       {people && (
         <>
-          <FilterMenu
-            label={t('demands.filters.owner')}
-            allLabel={t('demands.filters.everyone')}
-            options={people.people}
-            value={people.filters.ownerId ? [people.filters.ownerId] : []}
-            onChange={(value) => setPerson('ownerId', value)}
-          />
-          <FilterMenu
-            label={t('demands.filters.assignee')}
-            allLabel={t('demands.filters.everyone')}
-            options={people.people}
-            value={people.filters.assigneeId ? [people.filters.assigneeId] : []}
-            onChange={(value) => setPerson('assigneeId', value)}
-          />
-          <FilterMenu
-            label={t('companies.field')}
-            allLabel={t('demands.filters.all')}
-            options={people.companies}
-            value={people.filters.companyId ? [people.filters.companyId] : []}
-            onChange={(value) => setPerson('companyId', value)}
-          />
+          {shows('tasks.filters.responsible') && (
+            <FilterMenu
+              label={t('demands.filters.owner')}
+              allLabel={t('demands.filters.everyone')}
+              options={people.people}
+              value={people.filters.ownerId ? [people.filters.ownerId] : []}
+              onChange={(value) => setPerson('ownerId', value)}
+            />
+          )}
+          {shows('tasks.filters.assignee') && (
+            <FilterMenu
+              label={t('demands.filters.assignee')}
+              allLabel={t('demands.filters.everyone')}
+              options={people.people}
+              value={people.filters.assigneeId ? [people.filters.assigneeId] : []}
+              onChange={(value) => setPerson('assigneeId', value)}
+            />
+          )}
+          {shows('tasks.filters.company') && (
+            <FilterMenu
+              label={t('companies.field')}
+              allLabel={t('demands.filters.all')}
+              options={people.companies}
+              value={people.filters.companyId ? [people.filters.companyId] : []}
+              onChange={(value) => setPerson('companyId', value)}
+            />
+          )}
         </>
       )}
       {active && (

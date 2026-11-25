@@ -5,6 +5,7 @@
  */
 import { can, type PermissionCode } from './permissions'
 import type { ProjectProfileSection } from './projects'
+import { DEFAULT_SCREENS, screenKey, shows, type ScreenSettings } from './screens'
 
 /**
  * Abas da página do projeto, na ordem da tela: Visão geral, Ficha (para que o projeto existe e como se
@@ -90,9 +91,14 @@ export function legacyProjectTab(tab: string | null): { section: ProjectSection;
   }
 }
 
-/** Visões da aba Tarefas que a pessoa pode abrir. */
-export function visibleTaskViews(permissions: readonly string[]): ProjectTaskView[] {
-  return PROJECT_TASK_VIEWS.filter((view) => can(permissions, TASK_VIEW_PERMISSION[view]))
+/**
+ * Visões da aba Tarefas que a pessoa pode abrir e que o perfil mostra ("O que aparece" §48, `projects.task_views`).
+ * Se o perfil esconde justo as que ela pode abrir, ficam as permitidas (ninguém fica sem a aba que pode usar).
+ */
+export function visibleTaskViews(permissions: readonly string[], screens: ScreenSettings = DEFAULT_SCREENS): ProjectTaskView[] {
+  const allowed = PROJECT_TASK_VIEWS.filter((view) => can(permissions, TASK_VIEW_PERMISSION[view]))
+  const shown = allowed.filter((view) => shows(screens, screenKey('projects.task_views', view)))
+  return shown.length ? shown : allowed
 }
 
 export interface ProjectTabAccess {
@@ -102,6 +108,8 @@ export interface ProjectTabAccess {
   sections: readonly ProjectProfileSection[]
   /** Responsável TI do projeto (regras §33): só o resumo e, se o perfil liberar, a Ficha. */
   it?: boolean
+  /** "O que aparece" do perfil (§48): as abas e as visões das tarefas escondidas; sem ele, tudo. */
+  screens?: ScreenSettings
 }
 
 /** Abas do Responsável TI: o resumo (na Visão geral) e a Ficha, só leitura, se o perfil tiver a seção. */
@@ -116,6 +124,15 @@ export function itProjectTabs(sections: readonly ProjectProfileSection[]): Proje
  */
 export function visibleProjectTabs(permissions: readonly string[], access: ProjectTabAccess): ProjectTab[] {
   if (access.it) return itProjectTabs(access.sections)
+  const allowed = allowedProjectTabs(permissions, access)
+  // "O que aparece" (§48): sem as abas que o perfil esconde; se não sobrar nenhuma que ela possa abrir, as permitidas
+  const screens = access.screens ?? DEFAULT_SCREENS
+  const shown = allowed.filter((tab) => shows(screens, screenKey('projects.tabs', tab)))
+  return shown.length ? shown : allowed
+}
+
+/** Abas que as permissões deixam abrir (antes do "O que aparece"). */
+function allowedProjectTabs(permissions: readonly string[], access: ProjectTabAccess): ProjectTab[] {
   return PROJECT_TABS.filter((tab) => {
     if (tab === 'management') return can(permissions, 'plan.view')
     if (tab === 'tasks') return visibleTaskViews(permissions).length > 0
@@ -127,9 +144,15 @@ export function visibleProjectTabs(permissions: readonly string[], access: Proje
   })
 }
 
-/** A pessoa pode abrir a seção? (aba escondida também fica fechada pelo endereço) */
+/** A pessoa pode abrir a seção? (aba escondida — por permissão ou pelo perfil — também fica fechada pelo endereço) */
 export function canOpenSection(section: ProjectSection, permissions: readonly string[], access: ProjectTabAccess): boolean {
   const tab = tabOfSection(section)
-  if (tab === 'tasks') return !access.it && visibleTaskViews(permissions).includes(section as ProjectTaskView)
-  return visibleProjectTabs(permissions, access).includes(tab)
+  if (!visibleProjectTabs(permissions, access).includes(tab)) return false
+  return tab !== 'tasks' || visibleTaskViews(permissions, access.screens).includes(section as ProjectTaskView)
+}
+
+/** A primeira seção que a pessoa vê no projeto (a Visão geral, a menos que o perfil a esconda). */
+export function firstProjectSection(permissions: readonly string[], access: ProjectTabAccess): ProjectSection {
+  const tab = visibleProjectTabs(permissions, access)[0] ?? 'overview'
+  return tab === 'tasks' ? (visibleTaskViews(permissions, access.screens)[0] ?? 'list') : tab
 }

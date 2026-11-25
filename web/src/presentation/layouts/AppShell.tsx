@@ -24,7 +24,8 @@ import { CommandPalette } from '@/presentation/navigation/CommandPalette'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useDemandBadge } from '@/features/demands/queries'
 import { useLiveNotifications, useRealtimeResync, useRealtimeStatus } from '@/presentation/common/use-live'
-import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry, withProjectLists } from '@/presentation/navigation/nav-items'
+import { findNavTrail, platformNavItems, showsBreadcrumb, visibleNavItems, withNavEntry, withProjectLists, withScreens } from '@/presentation/navigation/nav-items'
+import { useScreens } from '@/features/auth/use-screens'
 import { useTaskViews } from '@/features/tasks/use-task-views'
 import { useProjectLists } from '@/features/projects/use-project-lists'
 import { rememberNavChild } from '@/presentation/navigation/nav-memory'
@@ -41,7 +42,8 @@ export function AppShell() {
   const tasksEntry = useTaskViews().entry
   // Projetos só com as listas do perfil (ajuste 25/11); com uma só, sem submenu
   const projectLists = useProjectLists()
-  const items = withProjectLists(withNavEntry(visibleNavItems(current?.permissions ?? [], platformNavItems(current?.platform)), 'tasks', tasksEntry), projectLists)
+  const screens = useScreens().settings
+  const items = withScreens(withProjectLists(withNavEntry(visibleNavItems(current?.permissions ?? [], platformNavItems(current?.platform)), 'tasks', tasksEntry), projectLists), screens)
   // Tarefas: o que espera por mim na Caixa de entrada (§45)
   const pendingDemands = useDemandBadge()
   const badges = { tasks: { count: pendingDemands, label: t('demands.badge', { count: pendingDemands }) } }

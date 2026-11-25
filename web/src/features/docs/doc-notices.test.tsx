@@ -143,3 +143,18 @@ describe('Documentação: avisar sobre a página (§47)', () => {
     expect(notificationLink(item)).toBe('/docs/TDC/spec')
   })
 })
+
+describe('Documentação: botões da página do perfil ("O que aparece" §48)', () => {
+  it('Avisar e Exportar PDF escondidos não aparecem (nem no ⋯); Versões continua', async () => {
+    const me = makeCurrentUser(ALL)
+    const detail: DocSpaceDetail = { space: space(), pages: PAGES, capabilities: { edit: true, manage: true } }
+    const repositories = fakeRepositories({
+      auth: { me: async () => ({ ...me, role: { ...me.role!, screens: { hidden: ['docs.actions.notify', 'docs.actions.pdf'], starts: {} } } }) },
+      docs: { listSpaces: async () => [detail.space], getSpace: async () => detail, getPage: async (id) => docPage(id, 'Propuesta: imputador de costos'), listNoticeCandidates: async () => [] },
+    })
+    renderRoutes([{ path: '/docs/:spaceKey/:pageId', element: <DocSpacePage /> }], { repositories, initialPath: '/docs/TDC/spec' })
+    expect(await screen.findByRole('button', { name: 'Versões' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Avisar' })).toBeNull())
+    expect(screen.queryByRole('button', { name: 'Exportar PDF' })).toBeNull()
+  })
+})
