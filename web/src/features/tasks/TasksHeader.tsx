@@ -52,9 +52,9 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
                 active: onDemands,
                 label: (
                   <>
-                    <span className="@max-[1060px]:hidden">{t('taskList.viewDemands')}</span>
-                    {/* só um dos dois textos aparece por vez: o curto também precisa dar nome ao link (a11y link-name) */}
-                    <span className="hidden @max-[1060px]:inline">
+                    {/* no celular o nome inteiro some da tela mas continua para o leitor de tela (a11y link-name) */}
+                    <span className="@max-[1060px]:sr-only">{t('taskList.viewDemands')}</span>
+                    <span aria-hidden className="hidden @max-[1060px]:inline">
                       {t('taskList.viewDemandsShort')}
                     </span>
                     {pending > 0 && (
