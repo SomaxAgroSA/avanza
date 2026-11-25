@@ -2,10 +2,11 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
-import { INTERNAL_PROJECT, hasInboxFilters, type InboxFilters } from '@/domain/demands'
+import { INTERNAL_PROJECT, NO_INBOX_FILTERS, hasInboxFilters, hasPersonFilters, type InboxFilters, type PersonFilters } from '@/domain/demands'
 import { URGENCY_FILTER_VALUES, isUrgency } from '@/domain/urgency'
 import { AppPopover } from '@/presentation/components'
 import { useFitToolbar } from '@/presentation/common/use-fit-toolbar'
+import { foldText } from '@/presentation/components/data-table/filter-values'
 import { UrgencyLight } from '@/features/tasks/TaskUrgency'
 
 export interface InboxFilterOption {
@@ -13,6 +14,21 @@ export interface InboxFilterOption {
   label: string
   prefix?: ReactNode
 }
+
+/**
+ * Responsável, Atribuída a e Empresa (caixa Todas): os valores e as opções de cada um. `onClear` tira estes e os
+ * da Bandeja de uma vez (as duas trocas juntas no endereço; uma depois da outra, a segunda desfaria a primeira).
+ */
+export interface InboxPeopleFilters {
+  filters: PersonFilters
+  onChange: (next: PersonFilters) => void
+  onClear: () => void
+  people: InboxFilterOption[]
+  companies: InboxFilterOption[]
+}
+
+/** A partir de quantas opções o menu ganha a busca. */
+const SEARCH_FROM = 8
 
 /**
  * A linha da Bandeja se adapta à largura (ajustes 23/11; `useFitToolbar`): 1 — os filtros sem o ": todas"
@@ -31,18 +47,22 @@ const ITEM = "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap ro
 /**
  * Filtros da Bandeja (ajuste 23/11, aprovado em demonstração): na linha das caixas e com o mesmo botão delas —
  * Buscar, Projeto (um, ou só as demandas internas), Prioridade e Urgência (várias). Cada um abre um menu
- * próprio; o botão com filtro fica em branco, como a caixa escolhida, e mostra a escolha ("Alta +1").
+ * próprio; o botão com filtro fica em branco, como a caixa escolhida, e mostra a escolha ("Alta +1"). Na caixa
+ * Todas (`people`, ajuste 25/11), também Responsável, Atribuída a e Empresa, na mesma linha e com o mesmo botão
+ * (antes ficavam num bloco embaixo dos números). "Limpar" tira todos.
  */
 export function InboxFilterBar({
   filters,
   onChange,
   projects,
   priorities,
+  people,
 }: {
   filters: InboxFilters
   onChange: (next: InboxFilters) => void
   projects: InboxFilterOption[]
   priorities: InboxFilterOption[]
+  people?: InboxPeopleFilters
 }) {
   const { t } = useTranslation()
   const [text, setText] = useState(filters.search)
@@ -59,7 +79,8 @@ export function InboxFilterBar({
     prefix: <UrgencyLight urgency={isUrgency(value) ? value : null} />,
   }))
   const projectOptions: InboxFilterOption[] = [{ value: INTERNAL_PROJECT, label: t('demands.chip') }, ...projects]
-  const active = hasInboxFilters({ ...filters, search: text })
+  const active = hasInboxFilters({ ...filters, search: text }) || (!!people && hasPersonFilters(people.filters))
+  const setPerson = (key: keyof PersonFilters, value: string[]) => people?.onChange({ ...people.filters, [key]: value[0] ?? '' })
   const ref = useFitToolbar(INBOX_LEVELS)
 
   return (
@@ -100,12 +121,38 @@ export function InboxFilterBar({
         value={filters.urgencies}
         onChange={(value) => onChange({ ...filters, search: text, urgencies: value })}
       />
+      {people && (
+        <>
+          <FilterMenu
+            label={t('demands.filters.owner')}
+            allLabel={t('demands.filters.everyone')}
+            options={people.people}
+            value={people.filters.ownerId ? [people.filters.ownerId] : []}
+            onChange={(value) => setPerson('ownerId', value)}
+          />
+          <FilterMenu
+            label={t('demands.filters.assignee')}
+            allLabel={t('demands.filters.everyone')}
+            options={people.people}
+            value={people.filters.assigneeId ? [people.filters.assigneeId] : []}
+            onChange={(value) => setPerson('assigneeId', value)}
+          />
+          <FilterMenu
+            label={t('companies.field')}
+            allLabel={t('demands.filters.all')}
+            options={people.companies}
+            value={people.filters.companyId ? [people.filters.companyId] : []}
+            onChange={(value) => setPerson('companyId', value)}
+          />
+        </>
+      )}
       {active && (
         <button
           type="button"
           onClick={() => {
             setText('')
-            onChange({ search: '', projectId: '', priorityIds: [], urgencies: [] })
+            if (people) people.onClear()
+            else onChange(NO_INBOX_FILTERS)
           }}
           className={cn(ITEM, 'text-primary hover:text-primary-hover')}
           aria-label={t('demands.filters.clear')}
@@ -165,43 +212,83 @@ function FilterMenu({
         </button>
       }
     >
-      {(close) => (
-        <ul className="flex flex-col">
-          {!multiple && (
-            <li>
+      {(close) => <MenuList label={label} allLabel={allLabel} options={options} value={value} onChange={onChange} multiple={multiple} close={close} />}
+    </AppPopover>
+  )
+}
+
+/**
+ * Opções do menu: "Todos" no topo (um só valor) e, numa lista longa (pessoas), uma busca sem acentos nem
+ * maiúsculas; a lista rola dentro do menu.
+ */
+function MenuList({
+  label,
+  allLabel,
+  options,
+  value,
+  onChange,
+  multiple,
+  close,
+}: {
+  label: string
+  allLabel: string
+  options: InboxFilterOption[]
+  value: string[]
+  onChange: (value: string[]) => void
+  multiple: boolean
+  close: () => void
+}) {
+  const { t } = useTranslation()
+  const [query, setQuery] = useState('')
+  const searchable = options.length >= SEARCH_FROM
+  const shown = searchable && query.trim() ? options.filter((option) => foldText(option.label).includes(foldText(query.trim()))) : options
+  return (
+    <div className="flex flex-col gap-1">
+      {searchable && (
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('demands.filters.search')}
+          aria-label={`${label}: ${t('demands.filters.search')}`}
+          className="h-8 w-full rounded-md border border-border bg-surface px-2 text-sm text-fg outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-ring"
+        />
+      )}
+      <ul className="flex max-h-72 flex-col overflow-y-auto">
+        {!multiple && !query.trim() && (
+          <li>
+            <Choice
+              selected={value.length === 0}
+              onSelect={() => {
+                onChange([])
+                close()
+              }}
+            >
+              {allLabel.charAt(0).toUpperCase() + allLabel.slice(1)}
+            </Choice>
+          </li>
+        )}
+        {shown.map((option) => {
+          const selected = value.includes(option.value)
+          return (
+            <li key={option.value}>
               <Choice
-                selected={!on}
+                selected={selected}
                 onSelect={() => {
-                  onChange([])
-                  close()
+                  if (!multiple) {
+                    onChange([option.value])
+                    close()
+                  } else onChange(selected ? value.filter((v) => v !== option.value) : [...value, option.value])
                 }}
               >
-                {allLabel.charAt(0).toUpperCase() + allLabel.slice(1)}
+                {option.prefix}
+                <span className="truncate">{option.label}</span>
               </Choice>
             </li>
-          )}
-          {options.map((option) => {
-            const selected = value.includes(option.value)
-            return (
-              <li key={option.value}>
-                <Choice
-                  selected={selected}
-                  onSelect={() => {
-                    if (!multiple) {
-                      onChange([option.value])
-                      close()
-                    } else onChange(selected ? value.filter((v) => v !== option.value) : [...value, option.value])
-                  }}
-                >
-                  {option.prefix}
-                  <span className="truncate">{option.label}</span>
-                </Choice>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </AppPopover>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 

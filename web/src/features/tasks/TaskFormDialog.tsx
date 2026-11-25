@@ -27,6 +27,7 @@ import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 import { usePlan } from '@/features/plan/queries'
 import { DemandFormDialog, LockedValue } from '@/features/demands/DemandFormDialog'
+import { DemandStepBadge } from '@/features/demands/demand-visuals'
 import { CopyEmailsField } from './CopyEmailsField'
 import { useRecentCopyEmails } from './use-recent-copy-emails'
 import { useSendCopy } from './use-send-copy'
@@ -178,6 +179,16 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const owners = useDemandOwners(open)
   const withOwner = !!draft.demandOwnerId
   const flowHint = withOwner ? t('demands.projectFlow.locked') : undefined
+  // o passo do fluxo (ajuste 25/11): o atual na tarefa que já tem o fluxo; ao criar com responsável, "Sem atribuir";
+  // ao ligar o fluxo numa tarefa que já existe, o servidor decide o passo (fica o aviso de que muda pelo fluxo)
+  const flowStep = !withOwner ? undefined : task?.demand || !isEdit ? (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      {t('demands.projectFlow.flowStep')}
+      <DemandStepBadge status={task?.demand?.status ?? 'unassigned'} assignee={task?.assignee} />
+    </span>
+  ) : (
+    flowHint
+  )
   const sprints = useSprints(open ? draft.projectId || undefined : undefined)
   // Etapa da gestão: só para quem vê a Gestão e quando o quadro do projeto tem etapas. Tarefa já ligada
   // a um elemento (na edição, ou criada pelo painel do elemento) mostra a etapa dele só para leitura.
@@ -535,6 +546,7 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             error={errors.demand_owner_id}
             disabled={!canChangeAssignee || !draft.projectId}
             onValueChange={(value) => set('demandOwnerId', value === NONE ? '' : value)}
+            hint={flowStep}
             options={[
               { value: NONE, label: t('demands.projectFlow.none') },
               ...(owners.data ?? []).map((person) => ({ value: person.id, label: person.name })),
@@ -544,16 +556,17 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             ]}
           />
           <CopyEmailsField value={ccEmails} onChange={setCcEmails} error={errors.cc_emails} recent={copy.recent} />
-          <AppSelect
-            label={t('tasks.fields.status')}
-            value={draft.statusId || undefined}
-            error={errors.status_id}
-            disabled={withOwner}
-            hint={flowHint}
-            onValueChange={(value) => set('statusId', value)}
-            // só as transições permitidas a partir do status salvo (sem transições configuradas, todos)
-            options={lookupOptions(statusChoices(statuses.data ?? [], task?.status?.id), task?.status)}
-          />
+          {/* com quem recebe e distribui (§45, ajuste 25/11): o status é do fluxo — no lugar do campo, o passo embaixo do responsável */}
+          {!withOwner && (
+            <AppSelect
+              label={t('tasks.fields.status')}
+              value={draft.statusId || undefined}
+              error={errors.status_id}
+              onValueChange={(value) => set('statusId', value)}
+              // só as transições permitidas a partir do status salvo (sem transições configuradas, todos)
+              options={lookupOptions(statusChoices(statuses.data ?? [], task?.status?.id), task?.status)}
+            />
+          )}
           <AppSelect
             label={t('tasks.fields.priority')}
             value={draft.priorityId || undefined}

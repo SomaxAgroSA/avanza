@@ -5,7 +5,8 @@ import { AppCheckbox, AppSelect } from '@/presentation/components'
 /**
  * Tarefas do perfil (ajustes 23 e 24/11, aprovado em demonstração): "O que aparece" — a Lista e cada caixa da
  * Caixa de entrada, com uma caixa de marcar por tela (sempre ao menos uma) — e "Ao entrar em Tarefas abre", entre
- * as marcadas. Só a tela: o que a pessoa pode fazer continua nas permissões.
+ * as marcadas. Só a tela: o que a pessoa pode fazer continua nas permissões. Com uma só marcada (ajuste 25/11), a
+ * tela se chama "Caixa de entrada", sem botões, e abre direto com os dados (a dica embaixo da lista diz isso).
  */
 export function RoleTaskViews({ value, onChange }: { value: TaskViews; onChange: (next: TaskViews) => void }) {
   const { t } = useTranslation()
@@ -33,6 +34,8 @@ export function RoleTaskViews({ value, onChange }: { value: TaskViews; onChange:
             </li>
           ))}
         </ul>
+        {/* ajuste 25/11: com uma tela só marcada, a Caixa de entrada abre direto, sem botões */}
+        <p className="text-xs text-muted">{t('roles.tasks.hint')}</p>
       </div>
       <AppSelect
         label={t('roles.tasks.start')}

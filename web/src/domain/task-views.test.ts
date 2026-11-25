@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TASK_VIEWS, inboxPath, showsAllBox, startBox, tasksEntryPath, toTaskViews, visibleBoxes, type TaskViews } from './task-views'
+import { DEFAULT_TASK_VIEWS, inboxHeader, inboxPath, showsAllBox, startBox, tasksEntryPath, toTaskViews, visibleBoxes, type TaskViews } from './task-views'
 
 const views = (patch: Partial<TaskViews>): TaskViews => ({ ...DEFAULT_TASK_VIEWS, ...patch })
 
@@ -53,5 +53,18 @@ describe('Tarefas por perfil (ajustes 23 e 24/11)', () => {
     expect(showsAllBox(DEFAULT_TASK_VIEWS, true)).toBe(true)
     expect(showsAllBox(DEFAULT_TASK_VIEWS, false)).toBe(false)
     expect(showsAllBox(views({ tasksAllBox: 'hidden' }), true)).toBe(false)
+  })
+})
+
+describe('Caixa de entrada com uma caixa só (ajuste 25/11)', () => {
+  it('sem a Lista e com uma caixa: o nome "Caixa de entrada" no lugar dos botões', () => {
+    expect(inboxHeader(views({ tasksList: 'hidden' }), ['all'])).toEqual({ boxSwitch: false, title: true })
+  })
+  it('com a Lista e uma caixa: nem botões nem nome (a aba Caixa de entrada já diz onde se está)', () => {
+    expect(inboxHeader(DEFAULT_TASK_VIEWS, ['received'])).toEqual({ boxSwitch: false, title: false })
+  })
+  it('com várias caixas, os botões continuam', () => {
+    expect(inboxHeader(views({ tasksList: 'hidden' }), ['received', 'all'])).toEqual({ boxSwitch: true, title: false })
+    expect(inboxHeader(DEFAULT_TASK_VIEWS, ['received', 'assigned'])).toEqual({ boxSwitch: true, title: false })
   })
 })

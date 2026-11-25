@@ -211,7 +211,7 @@ describe('Lista de tarefas do menu (§44)', () => {
 })
 
 describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
-  it('sem textos de ajuda; linha 1: visões, escopo, Com/Sem projeto e os botões de criar; linha 2: busca, filtros e "Colunas e ações"', async () => {
+  it('sem textos de ajuda; linha 1: visões, escopo e os botões de criar (sem Com/Sem projeto, 25/11); linha 2: busca, filtros e "Colunas e ações"', async () => {
     setup()
     await screen.findByText(mine.title)
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Status: Abertas')
@@ -223,7 +223,8 @@ describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
     const row = screen.getByRole('navigation', { name: i18n.t('taskList.viewLabel') }).parentElement!
     expect(row).toHaveClass('flex-nowrap')
     expect(within(row).getByRole('radiogroup', { name: i18n.t('taskList.scopeLabel') })).toBeInTheDocument()
-    expect(within(row).getByRole('radiogroup', { name: i18n.t('taskList.kindLabel') })).toBeInTheDocument()
+    expect(within(row).getAllByRole('radiogroup')).toHaveLength(1)
+    expect(within(row).queryByRole('radio', { name: 'Com projeto' })).not.toBeInTheDocument()
     expect(within(row).getByRole('button', { name: 'Tarefa de projeto' })).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: 'Demanda interna' })).toBeInTheDocument()
     expect(within(row).queryByRole('button', { name: 'Colunas e ações' })).not.toBeInTheDocument()

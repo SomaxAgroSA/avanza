@@ -1,19 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { CircleCheckBig, CircleDashed, ClipboardCheck, FolderKanban, Inbox, PlayCircle, UserCheck, type LucideIcon } from 'lucide-react'
+import { CircleDashed, FolderKanban } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatShortDateTime } from '@/core/utils/format'
 import type { DemandStatus } from '@/domain/demands'
-import type { PaletteColor } from '@/domain/task-config'
 import { LookupBadge } from '@/features/workflow/workflow-visuals'
-
-/** Cor e ícone de cada passo (paleta das opções, como os status): o mesmo em listas, caixas e página. */
-const DEMAND_STATUS_LOOK: Record<DemandStatus, { color: PaletteColor; icon: LucideIcon }> = {
-  unassigned: { color: 'violet', icon: Inbox },
-  assigned: { color: 'blue', icon: UserCheck },
-  in_progress: { color: 'green', icon: PlayCircle },
-  to_validate: { color: 'amber', icon: ClipboardCheck },
-  done: { color: 'gray', icon: CircleCheckBig },
-}
+import { DEMAND_STATUS_LOOK, useDemandStepText } from './demand-step'
 
 /**
  * Selo do passo da demanda (Sem atribuir, Atribuída, Em andamento, Para validar, Concluída). `executor`: para quem
@@ -24,6 +15,13 @@ export function DemandStatusBadge({ status, className, executor = false }: { sta
   const look = DEMAND_STATUS_LOOK[status]
   const name = executor && status === 'to_validate' ? t('demands.status.inValidation') : t(`demands.status.${status}`)
   return <LookupBadge item={{ name, color: look.color }} icon={look.icon} className={className} />
+}
+
+/** Selo do passo por extenso ("Atribuída a Jorge Benitez"), no topo da tarefa e no formulário. */
+export function DemandStepBadge({ status, assignee, className }: { status: DemandStatus; assignee: { name: string } | null | undefined; className?: string }) {
+  const text = useDemandStepText()
+  const look = DEMAND_STATUS_LOOK[status]
+  return <LookupBadge item={{ name: text(status, assignee), color: look.color }} icon={look.icon} className={className} />
 }
 
 /** Chip "Demanda interna" (no lugar do projeto). */

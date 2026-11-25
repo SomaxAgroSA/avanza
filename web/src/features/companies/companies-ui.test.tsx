@@ -202,7 +202,7 @@ describe('Listas: coluna e filtro Empresa (§46)', () => {
     await waitFor(() => expect(list.mock.calls.at(-1)?.[0].filters).toMatchObject({ company: 'c2' }))
   })
 
-  it('Demandas → Todas: filtro Empresa ao lado de Responsável e Atribuída a', async () => {
+  it('Demandas → Todas: filtro Empresa ao lado de Responsável e Atribuída a (na linha da Bandeja, 25/11)', async () => {
     const list = vi.fn<DemandRepository['list']>(() => Promise.resolve(page<TaskSummary>([])))
     renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
       repositories: repos({
@@ -210,9 +210,13 @@ describe('Listas: coluna e filtro Empresa (§46)', () => {
       }),
       initialPath: '/tasks/demands?box=all',
     })
-    const filters = await screen.findByRole('group', { name: 'Filtros das demandas' })
-    expect(within(filters).getByRole('combobox', { name: 'Empresa' })).toHaveTextContent('Todas')
-    await chooseOption('Empresa', 'Somax Paraguay')
+    const filters = await screen.findByRole('group', { name: 'Filtros da Bandeja' })
+    expect(await within(filters).findByRole('button', { name: /^Responsável/ })).toBeInTheDocument()
+    expect(within(filters).getByRole('button', { name: /^Atribuída a/ })).toBeInTheDocument()
+    const company = within(filters).getByRole('button', { name: /^Empresa/ })
+    expect(company).toHaveTextContent('Empresa: todas')
+    await userEvent.click(company)
+    await userEvent.click(await screen.findByRole('button', { name: 'Somax Paraguay', pressed: false }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { companyId: 'c1' }))
   })
 })

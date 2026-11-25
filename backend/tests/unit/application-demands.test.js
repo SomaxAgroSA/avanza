@@ -499,6 +499,20 @@ describe('application/demands — fluxo', () => {
     assert.deepEqual(entry.newValue, { assignee: 'Jorge', due_at: FUTURE, estimated_hours: 4, demand_status: 'assigned' })
   })
 
+  it('caixas trazem o que a linha do tempo da Caixa de entrada desenha (25/11): início planejado, prazo, abertura, passo, quem executa e horas', async () => {
+    const s = await opened()
+    await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 4 })
+    const [item] = (await s.demands.listDemands(s.ctx.cesar, { box: 'received' })).items
+    assert.ok('start_date' in item)
+    assert.equal(item.start_date, null)
+    assert.equal(item.demand.due_at, FUTURE)
+    assert.equal(item.demand.status, 'assigned')
+    assert.ok(item.created_at)
+    assert.equal(item.demand.opened_at, item.created_at)
+    assert.equal(item.assignee.name, 'Jorge')
+    assert.equal(item.estimated_hours, 4)
+  })
+
   it('atribuir aceita indicações para quem executa: vão no histórico e no aviso (opcionais)', async () => {
     const s = await opened()
     assert.equal(await codeOf(() => s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, comment: 'x'.repeat(5001) })), 'VALIDATION_ERROR:{"comment":"too_long"}')

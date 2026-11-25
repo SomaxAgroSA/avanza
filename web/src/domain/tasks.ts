@@ -7,7 +7,7 @@ import type { UserSummary } from './projects'
 import { isRequiredIn, valueIssue, type FieldValue, type OptionColor, type TaskTypeField, type TaskTypeIcon } from './task-config'
 import type { AreaRef, StatusCategory } from './workflow'
 import type { Urgency } from './urgency'
-import type { DemandInfo } from './demands'
+import { INTERNAL_PROJECT, type DemandInfo } from './demands'
 
 export interface TaskStatusRef {
   id: string
@@ -321,6 +321,11 @@ export function scopeBarFilters(filters: Record<string, string>): Record<string,
 export function scopedTaskFilters(filters: Record<string, string>, scope: TaskScope, kind: TaskKind = 'all'): Record<string, string> {
   const out = scopeBarFilters(filters)
   if (scope === 'mine') out.mine = 'true'
+  // Projeto "Demanda interna" (ajuste 25/11, no lugar do antigo "Sem projeto"): as tarefas sem projeto
+  if (out.project === INTERNAL_PROJECT) {
+    delete out.project
+    out.kind = 'demand'
+  }
   if (kind !== 'all') out.kind = kind
   if (!out.status) out.category = OPEN_TASK_CATEGORIES
   return out
