@@ -344,6 +344,9 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
 
   it('sessão encerrada em outro lugar leva ao login com aviso', async () => {
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD)
+    // o Dashboard ainda busca os dados logo depois do login: uma busca que chegasse depois do encerramento
+    // levaria o 401 e apagaria o cookie, e a página nova não saberia mais que a sessão expirou
+    await page.waitForLoadState('networkidle')
     const other = app.client()
     await other.login('mario@kamban.test', PASSWORD)
     assert.equal((await other.post('/auth/sessions/revoke-others')).status, 200)
