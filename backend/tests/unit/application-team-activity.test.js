@@ -86,53 +86,98 @@ describe('application/team-activity — Equipo ahora', () => {
     const secret = await projects.createProject(ctx.douglas.principal.permissions.includes('projects.create') ? ctx.douglas : ctx.ana, { name: 'Secreto', key: 'SEC', status: 'active' })
     for (const p of [ds, gcs, old]) await projects.addMember(ctx.ana, p.id, { user_id: users.douglas.id, role: 'member' })
     const recent = new Date('2026-01-09T10:00:00Z')
-    const stale = new Date('2025-12-20T10:00:00Z')
     let n = 0
-    const task = async (project, statusId, assignee, updatedAt) => {
+    const task = async (project, statusId, assignee) => {
       n++
       const t = await deps.taskRepository.create({ projectId: project.id, code: `${project.key}-${n}`, title: `Tarea ${n}`, number: n, statusId, assigneeId: assignee.id })
-      t.updatedAt = updatedAt
+      t.updatedAt = recent // a última mudança da tarefa não conta mais: só as ações da pessoa
       return t
     }
-    await task(ds, 'dev', users.douglas, recent) // trabajando
-    await task(ds, 'dev', users.douglas, recent)
-    await task(ds, 'done', users.douglas, recent) // movió esta semana
-    await task(gcs, 'dev', users.douglas, stale) // en curso pero parada
-    await task(gcs, 'back', users.douglas, stale)
-    await task(old, 'dev', users.douglas, recent) // proyecto concluido: fuera
-    await task(gcs, 'done', users.ana, recent) // Angelica: activa esta semana en GCS
-    await task(gcs, 'done', users.ana, stale) // cerrada y vieja: no cuenta
-    await task(secret, 'dev', users.lia, recent)
-    return Object.assign(s, { ds, gcs, old, secret, service: createTeamActivityService(deps) })
+    // o histórico da tarefa com quem fez (o relógio falso das tarefas não acompanha o do serviço)
+    let k = 0
+    const act = (user, t, action, at, oldValue, newValue) =>
+      deps.store.audit.push({ id: `act_${++k}`, entityType: 'task', entityId: t.id, action, oldValue: oldValue || null, newValue: newValue || null, userId: user.id, createdAt: new Date(at) })
+    const t1 = await task(ds, 'dev', users.douglas)
+    const t2 = await task(ds, 'dev', users.douglas)
+    const t3 = await task(ds, 'done', users.douglas)
+    const t4 = await task(gcs, 'dev', users.douglas)
+    await task(gcs, 'back', users.douglas)
+    const t6 = await task(old, 'dev', users.douglas)
+    const t7 = await task(gcs, 'done', users.ana)
+    await task(gcs, 'done', users.ana) // cerrada y sin acción de Angelica: no cuenta
+    const t9 = await task(secret, 'dev', users.lia)
+    // Douglas en DS: pasó la 1 a Desarrollo y comentó; adjuntó en la 3 (ya concluida)
+    act(users.douglas, t1, 'task.updated', '2026-01-09T10:00:00Z', { task_status: 'Backlog' }, { task_status: 'Desarrollo' })
+    act(users.douglas, t1, 'comment.added', '2026-01-09T11:00:00Z', null, { comment: 'Listo para revisar' })
+    act(users.douglas, t3, 'attachment.added', '2026-01-08T09:00:00Z', null, { attachments: 'informe.pdf' })
+    // Angelica editó la 2 de Douglas: cuenta para ella, no para él
+    act(users.ana, t2, 'task.updated', '2026-01-09T12:00:00Z', { title: 'x' }, { title: 'Tarea 2' })
+    act(users.ana, t7, 'comment.added', '2026-01-09T09:00:00Z', null, { comment: 'Cerrada' })
+    // Douglas en GCS: la última acción es vieja (fuera de la ventana)
+    act(users.douglas, t4, 'comment.added', '2025-12-20T10:00:00Z', null, { comment: 'viejo' })
+    act(users.douglas, t6, 'task.updated', '2026-01-09T10:00:00Z', { task_status: 'Backlog' }, { task_status: 'Desarrollo' }) // proyecto concluido: fuera
+    act(users.lia, t9, 'comment.added', '2026-01-09T10:00:00Z', null, { comment: 'secreto' })
+    return Object.assign(s, { ds, gcs, old, secret, t1, t2, t3, service: createTeamActivityService(deps) })
   }
 
-  it('por persona: trabajando, activo esta semana y en curso pero parado, con las tareas detrás de los números', async () => {
+  it('por persona, medido por las acciones propias: trabajando, activo esta semana y en curso pero parado', async () => {
     const s = await scenario()
     const data = await s.service.getTeamActivity(s.ctx.ana)
     assert.equal(data.window_days, 7)
     const douglas = data.people.find((p) => p.user.name === 'Douglas')
     assert.deepEqual(
-      douglas.projects.map((p) => [p.project.key, p.state, p.in_progress, p.recent, p.open, p.stale]),
+      douglas.projects.map((p) => [p.project.key, p.state, p.in_progress, p.recent, p.actions, p.open, p.stale]),
       [
-        ['DS', 'working', 2, 3, 2, false],
-        ['GCS', 'idle', 1, 0, 2, true],
+        ['DS', 'working', 2, 2, 3, 2, false],
+        ['GCS', 'idle', 1, 0, 0, 2, true],
       ],
     )
-    // las tareas del "+": en DS, las en curso primero y la concluida de la semana después
-    assert.deepEqual(douglas.projects[0].tasks.map((t) => [t.in_progress, t.moved]), [
-      [true, true],
-      [true, true],
-      [false, true],
+    // parado: la última acción de Douglas en GCS, aunque sea de antes de la ventana
+    assert.equal(douglas.projects[1].last_activity, '2025-12-20T10:00:00.000Z')
+    assert.equal(douglas.projects[0].last_activity, '2026-01-09T11:00:00.000Z')
+    const ana = data.people.find((p) => p.user.name === 'Angelica')
+    assert.deepEqual(ana.projects.map((p) => [p.project.key, p.state, p.recent, p.open]), [
+      ['DS', 'active', 1, 0],
+      ['GCS', 'active', 1, 0],
+    ])
+  })
+
+  it('las tareas en que actuó, con la última acción y la fecha, de la más reciente a la más antigua', async () => {
+    const s = await scenario()
+    const data = await s.service.getTeamActivity(s.ctx.ana)
+    const ds = data.people.find((p) => p.user.name === 'Douglas').projects[0]
+    assert.deepEqual(
+      ds.acted_tasks.map((t) => [t.code, t.action, t.actions, t.in_progress, t.status.name]),
+      [
+        [s.t1.code, { type: 'commented', excerpt: 'Listo para revisar', at: '2026-01-09T11:00:00.000Z' }, 2, true, 'Desarrollo'],
+        [s.t3.code, { type: 'attached', count: 1, at: '2026-01-08T09:00:00.000Z' }, 1, false, 'Concluido'],
+      ],
+    )
+    const anaDs = data.people.find((p) => p.user.name === 'Angelica').projects[0]
+    assert.deepEqual(anaDs.acted_tasks.map((t) => [t.code, t.action.type]), [[s.t2.code, 'edited']])
+    // las tareas del panel del proyecto: en curso primero (la que tiene acción antes) y la concluida con acción
+    assert.deepEqual(ds.tasks.map((t) => [t.code, t.in_progress, t.moved]), [
+      [s.t1.code, true, true],
+      [s.t2.code, true, false],
+      [s.t3.code, false, true],
     ])
     // en GCS (parada) se ve la tarea en curso
-    assert.deepEqual(douglas.projects[1].tasks.map((t) => t.status.name), ['Desarrollo'])
-    const ana = data.people.find((p) => p.user.name === 'Angelica')
-    assert.deepEqual(ana.projects.map((p) => [p.project.key, p.state, p.recent]), [['GCS', 'active', 1]])
+    const gcs = data.people.find((p) => p.user.name === 'Douglas').projects[1]
+    assert.deepEqual(gcs.tasks.map((t) => t.status.name), ['Desarrollo'])
+    assert.deepEqual(gcs.acted_tasks, [])
+  })
+
+  it('cambio de estado con de/para', async () => {
+    const s = await scenario()
+    s.deps.store.audit.push({ id: 'act_last', entityType: 'task', entityId: s.t2.id, action: 'task.updated', oldValue: { task_status: 'Backlog' }, newValue: { task_status: 'Desarrollo' }, userId: s.users.douglas.id, createdAt: new Date('2026-01-10T11:00:00Z') })
+    const ds = (await s.service.getTeamActivity(s.ctx.ana)).people.find((p) => p.user.name === 'Douglas').projects[0]
+    assert.deepEqual(ds.acted_tasks[0].action, { type: 'status_changed', from: 'Backlog', to: 'Desarrollo', at: '2026-01-10T11:00:00.000Z' })
+    assert.equal(ds.recent, 3)
   })
 
   it('solo proyectos que la persona ve; sin tasks.view, vacío', async () => {
     const s = await scenario()
-    // Douglas no es miembro de SEC: Lia no le aparece
+    // Douglas no es miembro de SEC: Lia no le aparece (ni sus acciones)
     const forDouglas = await s.service.getTeamActivity(s.ctx.douglas)
     assert.equal(forDouglas.people.some((p) => p.user.name === 'Lia'), false)
     assert.ok(forDouglas.people.some((p) => p.user.name === 'Douglas'))

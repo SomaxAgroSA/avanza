@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
-import type { Project, ProjectMember, TeamActivity } from '@/domain/projects'
+import type { Project, ProjectMember, TeamActivity, TeamActivityActedTask, TeamActivityAction } from '@/domain/projects'
 import type { PermissionCode } from '@/domain/permissions'
 import type { ProjectRepository } from '@/domain/repositories'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
@@ -39,18 +39,34 @@ const ref = (p: Project) => ({ id: p.id, key: p.key, name: p.name, icon: p.icon,
 const task = (id: string, code: string, title: string, status: string, inProgress: boolean, updatedAt: Date) => ({
   id, code, title, status: { id: status, name: status, color: 'blue', category: inProgress ? 'in_progress' : 'done' }, updatedAt, inProgress, moved: true,
 })
+const hoursAgo = (n: number) => new Date(today.getTime() - n * 36e5)
+const acted = (id: string, title: string, status: string, inProgress: boolean, action: TeamActivityAction, actions = 1): TeamActivityActedTask => ({
+  id, code: id.toUpperCase(), title, status: { id: status, name: status, color: 'blue', category: inProgress ? 'in_progress' : 'done' }, inProgress, action, actions,
+})
+const DOUGLAS_DS = [
+  acted('t1', 'Íconos nuevos', 'Prueba', true, { type: 'status_changed', from: 'Desarrollo', to: 'Prueba', at: hoursAgo(4) }, 2),
+  acted('t3', 'Paleta de colores', 'Desarrollo', true, { type: 'commented', excerpt: 'Vistas publicadas en pruebas', at: hoursAgo(5) }),
+  acted('t4', 'Tipografía', 'Concluido', false, { type: 'attached', count: 1, at: daysAgo(6) }),
+  acted('t5', 'Botones', 'Desarrollo', true, { type: 'edited', at: daysAgo(6.5) }),
+]
 const ACTIVITY: TeamActivity = {
   windowDays: 7,
   people: [
     {
       user: ana,
-      projects: [{ project: ref(ODF), state: 'active', inProgress: 0, recent: 29, open: 19, stale: false, lastActivity: daysAgo(2), tasks: [task('t9', 'ODF-9', 'Simulador de precios', 'Concluido', false, daysAgo(2))] }],
+      projects: [
+        {
+          project: ref(ODF), state: 'active', inProgress: 0, recent: 1, actions: 3, open: 19, stale: false, lastActivity: daysAgo(2),
+          actedTasks: [acted('t9', 'Simulador de precios', 'Concluido', false, { type: 'commented', excerpt: 'Listo', at: daysAgo(2) }, 3)],
+          tasks: [task('t9', 'ODF-9', 'Simulador de precios', 'Concluido', false, daysAgo(2))],
+        },
+      ],
     },
     {
       user: douglas,
       projects: [
-        { project: ref(DS), state: 'working', inProgress: 35, recent: 69, open: 36, stale: false, lastActivity: today, tasks: [task('t1', 'DS-1', 'Íconos nuevos', 'Desarrollo', true, today)] },
-        { project: ref(GCS), state: 'idle', inProgress: 13, recent: 0, open: 19, stale: true, lastActivity: daysAgo(14), tasks: [task('t2', 'GCS-4', 'Portal de pedidos', 'Desarrollo', true, daysAgo(14))] },
+        { project: ref(DS), state: 'working', inProgress: 35, recent: 4, actions: 5, open: 36, stale: false, lastActivity: hoursAgo(4), actedTasks: DOUGLAS_DS, tasks: [task('t1', 'DS-1', 'Íconos nuevos', 'Desarrollo', true, today)] },
+        { project: ref(GCS), state: 'idle', inProgress: 13, recent: 0, actions: 0, open: 19, stale: true, lastActivity: daysAgo(14), actedTasks: [], tasks: [task('t2', 'GCS-4', 'Portal de pedidos', 'Desarrollo', true, daysAgo(14))] },
       ],
     },
   ],
@@ -83,21 +99,37 @@ describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
     expect(within(row('OPERATIVA DE FERTILIZANTES')).getByText(/Angelica · activo/)).toHaveAttribute('data-state', 'active')
   })
 
-  it('"Equipo ahora": por persona, sin el código del proyecto, y el + muestra las tareas', async () => {
+  it('"Equipo ahora": por persona, sin el código del proyecto, con las tareas en que actuó y el + con todas', async () => {
     setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Equipo ahora' }))
     const panel = await screen.findByTestId('team-activity')
     const douglasBlock = within(panel).getByRole('region', { name: 'Douglas Martins' })
+    expect(douglasBlock).toHaveTextContent('Actuó en 4 tareas esta semana')
     expect(douglasBlock).toHaveTextContent('Trabajando ahora')
     expect(douglasBlock).toHaveTextContent('DESIGN-SYSTEM')
     expect(douglasBlock).not.toHaveTextContent('DS ·')
     expect(douglasBlock).toHaveTextContent('Con tareas abiertas, sin movimiento hace más de 7 días')
-    expect(within(douglasBlock).queryByRole('link', { name: 'Íconos nuevos' })).toBeNull()
-    await userEvent.click(within(douglasBlock).getByRole('button', { name: 'Ver las tareas de Douglas Martins en DESIGN-SYSTEM' }))
+    // bajo el proyecto, hasta 3 tareas con lo que hizo y cuándo; "+1 más" abre el resto
+    const preview = within(douglasBlock).getByRole('list', { name: 'Lo que hizo Douglas Martins en DESIGN-SYSTEM' })
+    expect(within(preview).getAllByRole('link').map((a) => a.textContent)).toEqual(['Íconos nuevos', 'Paleta de colores', 'Tipografía'])
+    expect(preview).toHaveTextContent('pasó a Prueba · hace 4 horas')
+    expect(preview).toHaveTextContent('comentó · hace 5 horas')
+    expect(preview).toHaveTextContent('adjuntó 1 archivo · hace 6 días')
+    await userEvent.click(within(preview).getByRole('button', { name: 'Ver todas las tareas de Douglas Martins en DESIGN-SYSTEM' }))
     const tasks = within(douglasBlock).getByRole('list', { name: 'Tareas de Douglas Martins en DESIGN-SYSTEM' })
+    expect(within(tasks).getAllByRole('link')).toHaveLength(4)
     expect(within(tasks).getByRole('link', { name: 'Íconos nuevos' })).toHaveAttribute('href', '/tasks/t1')
-    expect(tasks).toHaveTextContent('DS-1')
-    expect(within(panel).getByRole('region', { name: 'Angelica Davalos' })).toHaveTextContent('Activo esta semana')
+    expect(tasks).toHaveTextContent('Pasó de Desarrollo a Prueba · hace 4 horas')
+    expect(tasks).toHaveTextContent('Comentó: «Vistas publicadas en pruebas»')
+    expect(tasks).toHaveTextContent('Editó la tarea')
+    // sin acciones propias (GCS, parado): el + muestra sus tareas abiertas, como antes
+    await userEvent.click(within(douglasBlock).getByRole('button', { name: 'Ver las tareas de Douglas Martins en GESTIÓN COMERCIAL' }))
+    const open = within(douglasBlock).getByRole('list', { name: 'Tareas de Douglas Martins en GESTIÓN COMERCIAL' })
+    expect(within(open).getByRole('link', { name: 'Portal de pedidos' })).toHaveAttribute('href', '/tasks/t2')
+    expect(open).toHaveTextContent('GCS-4')
+    const anaBlock = within(panel).getByRole('region', { name: 'Angelica Davalos' })
+    expect(anaBlock).toHaveTextContent('Activo esta semana')
+    expect(anaBlock).toHaveTextContent('3 mov.')
   })
 
   it('"Equipo ahora": las demandas internas aparecen como "Demandas internas" y llevan a la pantalla Demandas', async () => {
@@ -107,7 +139,7 @@ describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
         {
           user: edson,
           projects: [
-            { project: { id: 'sys', key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', demands: true }, state: 'working', inProgress: 1, recent: 1, open: 1, stale: false, lastActivity: today, tasks: [task('d1', 'DEM-1', 'Acceso al SAP', 'Desarrollo', true, today)] },
+            { project: { id: 'sys', key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', demands: true }, state: 'working', inProgress: 1, recent: 1, actions: 1, open: 1, stale: false, lastActivity: today, actedTasks: [], tasks: [task('d1', 'DEM-1', 'Acceso al SAP', 'Desarrollo', true, today)] },
           ],
         },
       ],

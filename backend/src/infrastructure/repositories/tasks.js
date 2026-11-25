@@ -80,6 +80,24 @@ function visibleTasksClause(user, alias) {
   )
 }
 
+/** Tarefa enxuta do Equipo ahora (com o status para classificar e o fluxo do responsável, §45). */
+function activityTask(r) {
+  return {
+    id: r.id,
+    code: r.code,
+    title: r.title,
+    projectId: r.project_id,
+    assigneeId: r.assignee_id || null,
+    updatedAt: r.updated,
+    // fluxo do responsável (§45): para quem chama filtrar as demandas internas que a pessoa enxerga
+    reporterId: r.reporter_id || null,
+    demandOwnerId: r.demand_owner_id || null,
+    demandPastAssignees: r.demand_past_assignees || [],
+    demandStatus: r.demand_status || '',
+    status: { id: r.status_id, name: r.status_name, color: r.status_color, category: r.status_category },
+  }
+}
+
 function createTaskRepository(db) {
   // horas: 0 = não informado (a coluna numérica não aceita nulo, como no PocketBase)
   const hours = (value) => (value > 0 ? value : null)
@@ -425,20 +443,59 @@ function createTaskRepository(db) {
          ORDER BY t.updated DESC, t.id ASC`,
         [projectIds, since],
       )
+      return rows.map(activityTask)
+    },
+
+    /**
+     * Equipo ahora (§41): o que cada pessoa fez nas tarefas dos projetos desde `since`, do histórico da tarefa
+     * (`audit_logs`, quem fez = `user_id`; sem as linhas sem pessoa). Uma linha por ação, da mais recente para
+     * a mais antiga, com a tarefa (como em `listActivity`) e só o que a ação precisa do histórico: o status
+     * de/para quando mudou, o começo do comentário e os nomes dos anexos.
+     */
+    async listActions(projectIds, since) {
+      if (!projectIds || projectIds.length === 0) return []
+      const rows = await db.query(
+        `SELECT a.user_id AS actor_id, a.action, a.created AS action_at,
+                (a.new_value ? 'task_status') AS status_changed, a.old_value->>'task_status' AS from_status, a.new_value->>'task_status' AS to_status,
+                left(a.new_value->>'comment', 300) AS comment, left(a.new_value->>'attachments', 2000) AS attachments,
+                t.id, t.code, t.title, t.project_id, t.assignee_id, t.updated, t.reporter_id, t.demand_owner_id, t.demand_past_assignees, t.demand_status,
+                s.id AS status_id, s.name AS status_name, s.color AS status_color, s.category AS status_category
+         FROM audit_logs a
+         JOIN tasks t ON t.id = a.entity_id
+         JOIN task_statuses s ON s.id = t.status_id
+         WHERE a.entity_type = 'task' AND a.user_id IS NOT NULL AND a.created >= $2 AND t.project_id = ANY($1::text[])
+         ORDER BY a.created DESC, a.id DESC`,
+        [projectIds, since],
+      )
       return rows.map((r) => ({
-        id: r.id,
-        code: r.code,
-        title: r.title,
-        projectId: r.project_id,
-        assigneeId: r.assignee_id,
-        updatedAt: r.updated,
-        // fluxo do responsável (§45): para quem chama filtrar as demandas internas que a pessoa enxerga
-        reporterId: r.reporter_id || null,
-        demandOwnerId: r.demand_owner_id || null,
-        demandPastAssignees: r.demand_past_assignees || [],
-        demandStatus: r.demand_status || '',
-        status: { id: r.status_id, name: r.status_name, color: r.status_color, category: r.status_category },
+        userId: r.actor_id,
+        action: r.action,
+        at: r.action_at,
+        statusChanged: !!r.status_changed,
+        fromStatus: r.from_status || null,
+        toStatus: r.to_status || null,
+        comment: r.comment || '',
+        attachments: r.attachments || '',
+        task: activityTask(r),
       }))
+    },
+
+    /**
+     * Equipo ahora (§41): a última ação de cada pessoa (`userIds`) por projeto, em qualquer data, nas tarefas
+     * dos projetos `projectIds` ou nas tarefas `taskIds` (as demandas internas que quem consulta enxerga).
+     * → [{ userId, projectId, at }]
+     */
+    async lastActions(userIds, projectIds, taskIds) {
+      if (!userIds || userIds.length === 0) return []
+      const rows = await db.query(
+        `SELECT a.user_id, t.project_id, max(a.created) AS at
+         FROM audit_logs a JOIN tasks t ON t.id = a.entity_id
+         WHERE a.entity_type = 'task' AND a.user_id = ANY($1::text[])
+           AND (t.project_id = ANY($2::text[]) OR t.id = ANY($3::text[]))
+         GROUP BY a.user_id, t.project_id`,
+        [userIds, projectIds || [], taskIds || []],
+      )
+      return rows.map((r) => ({ userId: r.user_id, projectId: r.project_id, at: r.at }))
     },
 
     /**

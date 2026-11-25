@@ -4,14 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { Minus, Plus, Users } from 'lucide-react'
 import { cn } from '@/core/utils/cn'
 import { formatRelative } from '@/core/utils/format'
-import type { TeamActivityProject, TeamActivityState, UserSummary } from '@/domain/projects'
+import type { TeamActivityActedTask, TeamActivityProject, TeamActivityState, UserSummary } from '@/domain/projects'
 import { projectDisplayName } from '@/domain/demands'
 import { AppAvatar, AppBadge, AppDrawer, AppEmptyState, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { ProjectAvatar } from './project-visuals'
 import { useTeamActivity } from './queries'
-import { teamMetric } from './team-activity-data'
-
-const firstName = (name: string) => name.split(' ')[0] ?? name
+import { ACTED_PREVIEW, actedCount, actionDetail, actionText, firstName, teamMetric } from './team-activity-data'
 
 /** Marca de uma pessoa no projeto: verde (trabalhando), âmbar (em curso, mas parado) ou azul (ativo na semana). */
 export function ActivityChip({ user, row }: { user: UserSummary; row: TeamActivityProject }) {
@@ -85,8 +83,7 @@ export function TeamActivityDrawer({ open, onOpenChange }: { open: boolean; onOp
 
 function PersonBlock({ user, projects }: { user: UserSummary; projects: TeamActivityProject[] }) {
   const { t } = useTranslation()
-  const working = projects.filter((p) => p.state === 'working').length
-  const active = projects.filter((p) => p.state === 'active').length
+  const acted = actedCount(projects)
   return (
     <section className="py-4 first:pt-0" aria-labelledby={`team-${user.id}`}>
       <header className="mb-2 flex items-center gap-3">
@@ -95,7 +92,7 @@ function PersonBlock({ user, projects }: { user: UserSummary; projects: TeamActi
           <h3 id={`team-${user.id}`} className="font-semibold text-fg">
             {user.name}
           </h3>
-          <p className="text-xs text-muted">{t('team.summary', { working, active })}</p>
+          <p className="text-xs text-muted">{acted > 0 ? t('team.acted', { count: acted }) : t('team.actedNone')}</p>
         </div>
       </header>
       {GROUPS.map(({ key, tone }) => {
@@ -142,20 +139,84 @@ function ProjectRow({ row, userName }: { row: TeamActivityProject; userName: str
         </Link>
         <span className={cn('shrink-0 text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{metric}</span>
       </div>
-      {open && (
-        <ul id={panelId} className="ml-7 mt-1 flex flex-col gap-1 border-l border-border pl-3" aria-label={t('team.tasksOf', { project: name, name: userName })}>
-          {row.tasks.map((task) => (
-            <li key={task.id} className="flex items-center gap-2 text-xs">
-              <span className="shrink-0 font-mono text-muted">{task.code}</span>
-              <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 truncate text-fg hover:text-primary-text hover:underline">
-                {task.title}
-              </Link>
-              <AppBadge tone={task.inProgress ? 'success' : 'neutral'}>{task.status.name}</AppBadge>
-              <span className="shrink-0 text-subtle">{formatRelative(task.updatedAt, i18n.language)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {!open && <ActedPreview row={row} userName={userName} onMore={() => setOpen(true)} className="ml-7 mt-1" />}
+      {open &&
+        (row.actedTasks.length > 0 ? (
+          <ActedTaskList id={panelId} tasks={row.actedTasks} label={t('team.tasksOf', { project: name, name: userName })} className="ml-7 mt-1 border-l border-border pl-3" />
+        ) : (
+          <ul id={panelId} className="ml-7 mt-1 flex flex-col gap-1 border-l border-border pl-3" aria-label={t('team.tasksOf', { project: name, name: userName })}>
+            {row.tasks.map((task) => (
+              <li key={task.id} className="flex items-center gap-2 text-xs">
+                <span className="shrink-0 font-mono text-muted">{task.code}</span>
+                <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 truncate text-fg hover:text-primary-text hover:underline">
+                  {task.title}
+                </Link>
+                <AppBadge tone={task.inProgress ? 'success' : 'neutral'}>{task.status.name}</AppBadge>
+                <span className="shrink-0 text-subtle">{formatRelative(task.updatedAt, i18n.language)}</span>
+              </li>
+            ))}
+          </ul>
+        ))}
     </li>
+  )
+}
+
+/**
+ * Até 3 tarefas em que a pessoa agiu, embaixo do projeto: o título, a ação ("pasó a Prueba", "comentó") e quando.
+ * Com mais, "+N más" abre a lista inteira.
+ */
+export function ActedPreview({ row, userName, onMore, className }: { row: TeamActivityProject; userName: string; onMore: () => void; className?: string }) {
+  const { t, i18n } = useTranslation()
+  if (row.actedTasks.length === 0) return null
+  const shown = row.actedTasks.slice(0, ACTED_PREVIEW)
+  const rest = Math.max(row.recent, row.actedTasks.length) - shown.length
+  const project = projectDisplayName(t, row.project)
+  return (
+    <ul aria-label={t('team.actedOf', { name: userName, project })} className={cn('flex min-w-0 flex-col', className)}>
+      {shown.map((task) => (
+        <li key={task.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-2 border-l-2 border-border py-0.5 pl-2.5 text-[12.5px]">
+          <Link to={`/tasks/${task.id}`} title={task.title} className="truncate text-fg hover:text-primary-text hover:underline">
+            {task.title}
+          </Link>
+          <span className="whitespace-nowrap text-muted">
+            <span className="font-semibold text-primary-text">{actionText(t, task.action)}</span> · {formatRelative(task.action.at, i18n.language)}
+          </span>
+        </li>
+      ))}
+      {rest > 0 && (
+        <li className="border-l-2 border-border py-0.5 pl-2.5">
+          <button
+            type="button"
+            onClick={onMore}
+            aria-label={t('team.moreAria', { name: userName, project })}
+            className="rounded text-[12.5px] font-semibold text-primary-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {t('team.more', { count: rest })}
+          </button>
+        </li>
+      )}
+    </ul>
+  )
+}
+
+/** Tarefas em que a pessoa agiu, por extenso: título, a ação com o detalhe ("Pasó de Desarrollo a Prueba") e quando, e o status. */
+export function ActedTaskList({ tasks, label, id, className }: { tasks: TeamActivityActedTask[]; label: string; id?: string; className?: string }) {
+  const { t, i18n } = useTranslation()
+  return (
+    <ul id={id} aria-label={label} className={cn('flex flex-col', className)}>
+      {tasks.map((task) => (
+        <li key={task.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2.5 border-b border-border py-2 last:border-b-0">
+          <div className="min-w-0">
+            <Link to={`/tasks/${task.id}`} className="text-[13px] font-semibold leading-snug text-fg hover:text-primary-text hover:underline">
+              {task.title}
+            </Link>
+            <p className="mt-0.5 text-xs text-muted">
+              {actionDetail(t, task.action)} · {formatRelative(task.action.at, i18n.language)}
+            </p>
+          </div>
+          <AppBadge tone={task.inProgress ? 'success' : 'neutral'}>{task.status.name}</AppBadge>
+        </li>
+      ))}
+    </ul>
   )
 }

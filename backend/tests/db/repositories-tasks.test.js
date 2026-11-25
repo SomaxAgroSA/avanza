@@ -5,6 +5,7 @@ const { createTestDatabase, TEST_STORAGE } = require('../support/db-harness')
 const { createStorage } = require('../../src/infrastructure/storage')
 const { insertRow } = require('../../src/infrastructure/sql')
 const repositories = require('../../src/infrastructure/repositories/tasks')
+const core = require('../../src/infrastructure/repositories/core')
 
 describe('repositórios de tarefas (Postgres)', () => {
   let t
@@ -649,5 +650,43 @@ describe('repositórios de tarefas (Postgres)', () => {
       [task.id],
     )
     assert.deepEqual(left, { tags: 0, comments: 0, relations: 0, notifications: 0 })
+  })
+
+  it('Equipo ahora: ações de cada pessoa no histórico da tarefa (listActions) e a última por projeto (lastActions)', async () => {
+    const audit = core.createAuditRepository(t.db)
+    const project = await seedProject()
+    const other = await seedProject()
+    const task = await seedTask(project, { assigneeId: member.id })
+    const hidden = await seedTask(other)
+    const record = async (entityType, userId, entityId, action, oldValue, newValue, at) => {
+      const correlationId = crypto.randomBytes(6).toString('hex')
+      await audit.record({ entityType, entityId, action, oldValue, newValue, userId, ip: '', userAgent: '', correlationId })
+      await t.db.exec('UPDATE audit_logs SET created = $2 WHERE correlation_id = $1', [correlationId, new Date(at)])
+    }
+    await record('task', member.id, task.id, 'task.updated', { task_status: 'Backlog', title: 'a' }, { task_status: 'Em andamento', title: 'b' }, '2026-11-20T10:00:00Z')
+    await record('task', member.id, task.id, 'comment.added', null, { comment: 'Pronto' }, '2026-11-21T10:00:00Z')
+    await record('task', owner.id, task.id, 'attachment.added', null, { attachments: 'a.pdf, b.pdf' }, '2026-11-22T10:00:00Z')
+    await record('task', null, task.id, 'task.updated', null, { title: 'c' }, '2026-11-22T11:00:00Z') // sem pessoa: fora
+    await record('task', member.id, task.id, 'task.updated', null, { title: 'd' }, '2026-11-01T10:00:00Z') // antes da janela
+    await record('task', member.id, hidden.id, 'comment.added', null, { comment: 'x' }, '2026-11-21T09:00:00Z') // outro projeto
+    await record('project', member.id, task.id, 'project.updated', null, { name: 'x' }, '2026-11-23T10:00:00Z') // não é da tarefa
+
+    const rows = await r.tasks.listActions([project.id], new Date('2026-11-15T00:00:00Z'))
+    assert.deepEqual(
+      rows.map((row) => [row.userId, row.action, row.statusChanged, row.fromStatus, row.toStatus, row.comment, row.attachments]),
+      [
+        [owner.id, 'attachment.added', false, null, null, '', 'a.pdf, b.pdf'],
+        [member.id, 'comment.added', false, null, null, 'Pronto', ''],
+        [member.id, 'task.updated', true, 'Backlog', 'Em andamento', '', ''],
+      ],
+    )
+    assert.deepEqual(rows[0].at, new Date('2026-11-22T10:00:00Z'))
+    assert.deepEqual([rows[0].task.id, rows[0].task.code, rows[0].task.projectId, rows[0].task.assigneeId, rows[0].task.status.id], [task.id, task.code, project.id, member.id, status.BACKLOG])
+    assert.deepEqual(await r.tasks.listActions([], new Date()), [])
+
+    // a última ação de cada pessoa por projeto, em qualquer data; por tarefa, entra a do outro projeto
+    assert.deepEqual(await r.tasks.lastActions([member.id], [project.id], []), [{ userId: member.id, projectId: project.id, at: new Date('2026-11-21T10:00:00Z') }])
+    assert.deepEqual(await r.tasks.lastActions([member.id], [], [hidden.id]), [{ userId: member.id, projectId: other.id, at: new Date('2026-11-21T09:00:00Z') }])
+    assert.deepEqual(await r.tasks.lastActions([], [project.id], []), [])
   })
 })
