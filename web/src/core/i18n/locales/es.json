@@ -4614,7 +4614,6 @@
     "emptyTitle": "Nadie tiene tareas abiertas",
     "emptyHint": "Cuando haya tareas asignadas en proyectos en marcha, aparecen aquí.",
     "noActivity": "Sin actividad esta semana",
-    "summary": "{{working}} proyecto(s) en curso · {{active}} con actividad esta semana",
     "groups": {
       "working": "Trabajando ahora",
       "active": "Activo esta semana",
@@ -4628,7 +4627,11 @@
       "stale_one": "{{count}} en curso, sin movimiento {{when}}",
       "stale_other": "{{count}} en curso, sin movimiento {{when}}",
       "idle_one": "{{count}} abierta · {{when}}",
-      "idle_other": "{{count}} abiertas · {{when}}"
+      "idle_other": "{{count}} abiertas · {{when}}",
+      "openOnly_one": "{{count}} abierta",
+      "openOnly_other": "{{count}} abiertas",
+      "staleNever_one": "{{count}} en curso, sin acciones",
+      "staleNever_other": "{{count}} en curso, sin acciones"
     },
     "chip": {
       "working_one": "{{name}} · {{count}} en curso",
@@ -4640,12 +4643,54 @@
       "staleTitle_one": "{{name}}: {{count}} tarea marcada en curso, pero sin movimiento {{when}}",
       "staleTitle_other": "{{name}}: {{count}} tareas marcadas en curso, pero sin movimiento {{when}}",
       "active": "{{name}} · activo {{when}}",
-      "activeTitle_one": "{{name}}: movió {{count}} tarea esta semana · {{when}}",
-      "activeTitle_other": "{{name}}: movió {{count}} tareas esta semana · {{when}}"
+      "activeTitle_one": "{{name}}: actuó en {{count}} tarea esta semana · {{when}}",
+      "activeTitle_other": "{{name}}: actuó en {{count}} tareas esta semana · {{when}}"
     },
     "showTasks": "Ver las tareas de {{name}} en {{project}}",
     "hideTasks": "Ocultar las tareas de {{name}} en {{project}}",
-    "tasksOf": "Tareas de {{name}} en {{project}}"
+    "tasksOf": "Tareas de {{name}} en {{project}}",
+    "acted_one": "Actuó en {{count}} tarea esta semana",
+    "acted_other": "Actuó en {{count}} tareas esta semana",
+    "actedNone": "Sin acciones esta semana",
+    "actedOf": "Lo que hizo {{name}} en {{project}}",
+    "more": "+{{count}} más",
+    "moreAria": "Ver todas las tareas de {{name}} en {{project}}",
+    "action": {
+      "status_changed": "pasó a {{to}}",
+      "commented": "comentó",
+      "attached_one": "adjuntó {{count}} archivo",
+      "attached_other": "adjuntó {{count}} archivos",
+      "created": "creó",
+      "edited": "editó",
+      "step": {
+        "assigned": "asignó",
+        "reassigned": "reasignó",
+        "started": "empezó",
+        "passed": "pasó a otra persona",
+        "concluded": "concluyó",
+        "validated": "validó",
+        "returned": "devolvió"
+      }
+    },
+    "actionLong": {
+      "status_changed": "Pasó de {{from}} a {{to}}",
+      "statusTo": "Pasó a {{to}}",
+      "commented": "Comentó: «{{excerpt}}»",
+      "attached_one": "Adjuntó {{count}} archivo",
+      "attached_other": "Adjuntó {{count}} archivos",
+      "created": "Creó la tarea",
+      "edited": "Editó la tarea",
+      "step": {
+        "assigned": "Asignó",
+        "reassigned": "Reasignó",
+        "started": "Empezó",
+        "passed": "Pasó a otra persona",
+        "concluded": "Concluyó",
+        "validated": "Validó",
+        "returned": "Devolvió"
+      },
+      "commentedPlain": "Comentó"
+    }
   },
   "direction": {
     "loading": "Cargando el panel…",
@@ -4714,7 +4759,13 @@
       "noRecent": "Sin tareas recientes.",
       "who": "Quién está trabajando",
       "nobody": "Nadie movió tareas de este proyecto en los últimos 7 días.",
-      "openProject": "Abrir el proyecto"
+      "openProject": "Abrir el proyecto",
+      "personTitle": "{{name}} en {{project}}",
+      "personHint": "Lo que hizo en los últimos 7 días",
+      "tabPerson": "Tareas de {{name}} · {{count}}",
+      "tabProject": "Todo el proyecto",
+      "tabsAria": "Qué tareas ver",
+      "noActed": "{{name}} no actuó en tareas de este proyecto en los últimos 7 días."
     },
     "viewSwitch": {
       "label": "Vista de En marcha",
@@ -4754,8 +4805,6 @@
     "blocks_one": "bloquea {{count}} tarea",
     "blocks_other": "bloquea {{count}} tareas",
     "blocksFrom": "(de {{names}})",
-    "confirm": "Confirmar bloqueo",
-    "confirmed": "«{{title}}» ahora depende de «{{target}}»",
     "seeAll": "Ver todos los proyectos",
     "openTask": "Abrir la tarea: {{title}}",
     "back": "Volver a Dependencias",

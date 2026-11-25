@@ -1051,6 +1051,17 @@ export interface ProjectTaskCountsDto {
   projects: Array<{ project_id: string; done: number; open: number }>
 }
 
+export interface TeamActedTaskDto {
+  id: string
+  code: string
+  title: string
+  status: { id: string; name: string; color: string; category: string }
+  updated_at: string | null
+  in_progress: boolean
+  action: { type: string; at: string | null; from?: string | null; to?: string | null; step?: string; excerpt?: string; count?: number }
+  actions: number
+}
+
 export interface TeamActivityDto {
   window_days: number
   generated_at: string | null
@@ -1061,9 +1072,12 @@ export interface TeamActivityDto {
       state: string
       in_progress: number
       recent: number
+      /** Ações da própria pessoa na janela (versões antigas da API não trazem). */
+      actions?: number
       open: number
       stale: boolean
       last_activity: string | null
+      acted_tasks?: TeamActedTaskDto[]
       tasks: Array<{ id: string; code: string; title: string; status: { id: string; name: string; color: string; category: string }; updated_at: string | null; in_progress: boolean; moved: boolean }>
     }>
   }>

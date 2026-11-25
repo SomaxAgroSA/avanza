@@ -523,6 +523,24 @@ function createFakeRepositories(store) {
     priority: (t) => (store.priorities.find((p) => p.id === t.priorityId) || { order: 999 }).order,
     status: (t) => (store.statuses.find((p) => p.id === t.statusId) || { order: 999 }).order,
   }
+  /** Tarefa enxuta do Equipo ahora (como o repositório real: status e fluxo do responsável). */
+  const activityTask = (t) => {
+    const st = store.statuses.find((x) => x.id === t.statusId) || { id: t.statusId, name: '', color: 'gray', category: 'todo' }
+    return {
+      id: t.id,
+      code: t.code,
+      title: t.title,
+      projectId: t.projectId,
+      assigneeId: t.assigneeId || null,
+      updatedAt: t.updatedAt,
+      reporterId: t.reporterId || null,
+      demandOwnerId: t.demandOwnerId || null,
+      demandPastAssignees: t.demandPastAssignees || [],
+      demandStatus: t.demandStatus || '',
+      status: { id: st.id, name: st.name, color: st.color, category: st.category },
+    }
+  }
+
   const taskRepository = {
     findById: (id) => store.tasks.find((t) => t.id === id) || null,
     nextNumber: (projectId) => store.tasks.filter((t) => t.projectId === projectId).reduce((max, t) => Math.max(max, t.number), 0) + 1,
@@ -629,24 +647,39 @@ function createFakeRepositories(store) {
     listActivity: (projectIds, since) =>
       store.tasks
         .filter((t) => projectIds.includes(t.projectId) && t.assigneeId)
-        .map((t) => {
-          const st = store.statuses.find((x) => x.id === t.statusId) || { id: t.statusId, name: '', color: 'gray', category: 'todo' }
-          return {
-            id: t.id,
-            code: t.code,
-            title: t.title,
-            projectId: t.projectId,
-            assigneeId: t.assigneeId,
-            updatedAt: t.updatedAt,
-            reporterId: t.reporterId || null,
-            demandOwnerId: t.demandOwnerId || null,
-            demandPastAssignees: t.demandPastAssignees || [],
-            demandStatus: t.demandStatus || '',
-            status: { id: st.id, name: st.name, color: st.color, category: st.category },
-          }
-        })
+        .map(activityTask)
         .filter((t) => !['done', 'cancelled'].includes(t.status.category) || t.updatedAt >= since)
         .sort((x, y) => y.updatedAt - x.updatedAt),
+    // Equipo ahora: o histórico da tarefa (store.audit) com quem fez, da ação mais recente para a mais antiga
+    listActions: (projectIds, since) =>
+      store.audit
+        .filter((e) => e.entityType === 'task' && e.userId && e.createdAt >= since)
+        .map((e) => ({ e, task: store.tasks.find((t) => t.id === e.entityId) }))
+        .filter(({ task }) => task && projectIds.includes(task.projectId))
+        .sort((a, b) => b.e.createdAt - a.e.createdAt || (b.e.id < a.e.id ? -1 : 1))
+        .map(({ e, task }) => ({
+          userId: e.userId,
+          action: e.action,
+          at: e.createdAt,
+          statusChanged: !!(e.newValue && 'task_status' in e.newValue),
+          fromStatus: (e.oldValue && e.oldValue.task_status) || null,
+          toStatus: (e.newValue && e.newValue.task_status) || null,
+          comment: (e.newValue && e.newValue.comment) || '',
+          attachments: (e.newValue && e.newValue.attachments) || '',
+          task: activityTask(task),
+        })),
+    lastActions: (userIds, projectIds, taskIds) => {
+      const last = new Map()
+      store.audit
+        .filter((e) => e.entityType === 'task' && userIds.includes(e.userId))
+        .forEach((e) => {
+          const task = store.tasks.find((t) => t.id === e.entityId)
+          if (!task || !(projectIds.includes(task.projectId) || (taskIds || []).includes(task.id))) return
+          const key = `${e.userId}|${task.projectId}`
+          if (!last.has(key) || last.get(key).at < e.createdAt) last.set(key, { userId: e.userId, projectId: task.projectId, at: e.createdAt })
+        })
+      return [...last.values()]
+    },
     listForReport: (query) =>
       store.tasks
         // por padrão, só tarefas de projeto (a tarefa de projeto com responsável fica); `demandsOnly`: só as

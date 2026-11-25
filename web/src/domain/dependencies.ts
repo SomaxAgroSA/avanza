@@ -58,8 +58,6 @@ export interface DepBlocked extends DepTaskRef {
 export interface DepPending extends DepTaskRef {
   relatedTo: DepDeliveryRef
   relationId: string
-  /** A pessoa pode relacionar tarefas no projeto (botão "Confirmar bloqueio"). */
-  canConfirm: boolean
 }
 
 export interface DepCounts {

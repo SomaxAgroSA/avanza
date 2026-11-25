@@ -4614,7 +4614,6 @@
     "emptyTitle": "No one has open tasks",
     "emptyHint": "Once tasks are assigned in ongoing projects, they show up here.",
     "noActivity": "No activity this week",
-    "summary": "{{working}} project(s) in progress · {{active}} with activity this week",
     "groups": {
       "working": "Working now",
       "active": "Active this week",
@@ -4628,7 +4627,11 @@
       "stale_one": "{{count}} in progress, no movement {{when}}",
       "stale_other": "{{count}} in progress, no movement {{when}}",
       "idle_one": "{{count}} open · {{when}}",
-      "idle_other": "{{count}} open · {{when}}"
+      "idle_other": "{{count}} open · {{when}}",
+      "openOnly_one": "{{count}} open",
+      "openOnly_other": "{{count}} open",
+      "staleNever_one": "{{count}} in progress, no actions",
+      "staleNever_other": "{{count}} in progress, no actions"
     },
     "chip": {
       "working_one": "{{name}} · {{count}} in progress",
@@ -4640,12 +4643,54 @@
       "staleTitle_one": "{{name}}: {{count}} task marked in progress, but no movement {{when}}",
       "staleTitle_other": "{{name}}: {{count}} tasks marked in progress, but no movement {{when}}",
       "active": "{{name}} · active {{when}}",
-      "activeTitle_one": "{{name}}: updated {{count}} task this week · {{when}}",
-      "activeTitle_other": "{{name}}: updated {{count}} tasks this week · {{when}}"
+      "activeTitle_one": "{{name}}: acted on {{count}} task this week · {{when}}",
+      "activeTitle_other": "{{name}}: acted on {{count}} tasks this week · {{when}}"
     },
     "showTasks": "Show {{name}}'s tasks in {{project}}",
     "hideTasks": "Hide {{name}}'s tasks in {{project}}",
-    "tasksOf": "{{name}}'s tasks in {{project}}"
+    "tasksOf": "{{name}}'s tasks in {{project}}",
+    "acted_one": "Acted on {{count}} task this week",
+    "acted_other": "Acted on {{count}} tasks this week",
+    "actedNone": "No actions this week",
+    "actedOf": "What {{name}} did in {{project}}",
+    "more": "+{{count}} more",
+    "moreAria": "See all of {{name}}'s tasks in {{project}}",
+    "action": {
+      "status_changed": "moved to {{to}}",
+      "commented": "commented",
+      "attached_one": "attached {{count}} file",
+      "attached_other": "attached {{count}} files",
+      "created": "created",
+      "edited": "edited",
+      "step": {
+        "assigned": "assigned",
+        "reassigned": "reassigned",
+        "started": "started",
+        "passed": "handed over",
+        "concluded": "concluded",
+        "validated": "validated",
+        "returned": "returned"
+      }
+    },
+    "actionLong": {
+      "status_changed": "Moved from {{from}} to {{to}}",
+      "statusTo": "Moved to {{to}}",
+      "commented": "Commented: “{{excerpt}}”",
+      "attached_one": "Attached {{count}} file",
+      "attached_other": "Attached {{count}} files",
+      "created": "Created the task",
+      "edited": "Edited the task",
+      "step": {
+        "assigned": "Assigned",
+        "reassigned": "Reassigned",
+        "started": "Started",
+        "passed": "Handed over to someone else",
+        "concluded": "Concluded",
+        "validated": "Validated",
+        "returned": "Returned"
+      },
+      "commentedPlain": "Commented"
+    }
   },
   "direction": {
     "loading": "Loading the dashboard…",
@@ -4714,7 +4759,13 @@
       "noRecent": "No recent tasks.",
       "who": "Who is working on it",
       "nobody": "Nobody moved tasks of this project in the last 7 days.",
-      "openProject": "Open the project"
+      "openProject": "Open the project",
+      "personTitle": "{{name}} in {{project}}",
+      "personHint": "What they did in the last 7 days",
+      "tabPerson": "{{name}}'s tasks · {{count}}",
+      "tabProject": "Whole project",
+      "tabsAria": "Which tasks to show",
+      "noActed": "{{name}} didn't act on tasks in this project in the last 7 days."
     },
     "viewSwitch": {
       "label": "Ongoing view",
@@ -4754,8 +4805,6 @@
     "blocks_one": "blocks {{count}} task",
     "blocks_other": "blocks {{count}} tasks",
     "blocksFrom": "(from {{names}})",
-    "confirm": "Confirm blocking",
-    "confirmed": "“{{title}}” now depends on “{{target}}”",
     "seeAll": "See all projects",
     "openTask": "Open the task: {{title}}",
     "back": "Back to Dependencies",

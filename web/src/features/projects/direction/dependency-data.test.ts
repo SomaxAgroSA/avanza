@@ -26,7 +26,7 @@ const DEPS: Dependencies = {
       counts: counts({ pending: 1 }),
       deliveries: [delivery('t1', fvb, TI)],
       blocked: [],
-      pending: [{ id: 't5', code: 'FVB-5', title: 'Segurança', project: fvb, dueDate: null, relatedTo: ref('t1', fvb), relationId: 'r2', canConfirm: true }],
+      pending: [{ id: 't5', code: 'FVB-5', title: 'Segurança', project: fvb, dueDate: null, relatedTo: ref('t1', fvb), relationId: 'r2' }],
     },
     {
       project: { ...dre, dueDate: null },
