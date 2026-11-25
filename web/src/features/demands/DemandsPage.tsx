@@ -1,29 +1,38 @@
 import { Link, Navigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { ChevronRight, Inbox } from 'lucide-react'
+import { ChartGantt, ChevronRight, Inbox, List } from 'lucide-react'
 import {
   DEMAND_BOXES,
   DEMAND_KPI_STATUSES,
+  NO_INBOX_FILTERS,
+  NO_PERSON_FILTERS,
   countByStatus,
   demandActionsFor,
   groupByStatus,
   hasInboxFilters,
+  hasPersonFilters,
   inboxQuery,
+  personQuery,
   readInboxFilters,
+  readPersonFilters,
   sortByUrgencyPriority,
   splitAssignedBox,
   loadPercent,
   writeInboxFilters,
+  writePersonFilters,
   type DemandBox,
   type DemandCounts,
   type DemandListFilters,
   type InboxFilters,
+  type InboxView,
+  type PersonFilters,
   type TeamLoad,
 } from '@/domain/demands'
+import { inboxHeader } from '@/domain/task-views'
 import type { UserSummary } from '@/domain/projects'
 import type { TaskSummary } from '@/domain/tasks'
-import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSelect, AppSkeleton } from '@/presentation/components'
+import { AppAvatar, AppCard, AppEmptyState, AppErrorState, AppSegmentedControl, AppSkeleton } from '@/presentation/components'
 import { formatNumber, formatShortDateTime } from '@/core/utils/format'
 import { cn } from '@/core/utils/cn'
 import { useCan, useSession } from '@/features/auth/session'
@@ -35,52 +44,64 @@ import { useCompanies } from '@/features/companies/queries'
 import { PROJECT_OPTIONS_QUERY, useProjects } from '@/features/projects/queries'
 import { usePriorities } from '@/features/workflow/queries'
 import { useTaskViews } from '@/features/tasks/use-task-views'
-import { InboxFilterBar, type InboxFilterOption } from './InboxFilterBar'
+import { InboxFilterBar, type InboxFilterOption, type InboxPeopleFilters } from './InboxFilterBar'
+import { TaskGantt } from './TaskGantt'
+import { useInboxView } from './use-inbox-view'
 
 const isBox = (value: string | null): value is DemandBox => !!value && (DEMAND_BOXES as readonly string[]).includes(value)
-/** Opção "Todos" dos filtros de pessoa. */
-const ANY = '__any__'
 
 /**
  * Demandas internas (§45) dentro de Tarefas: Recebidas por mim (grupos por passo, números dos quatro
  * primeiros, Atribuir/Reatribuir e a Carga da minha equipe), Atribuídas a mim (Começar · Passar a… ·
  * Concluir), Pedidas por mim (Validar · Devolver) e — só com `projects.view_all` — Todas (todas as
- * demandas, com os números, os filtros Responsável e Atribuída a e a Carga das equipes). A caixa e os
- * filtros ficam no endereço (`?box=&owner=&assignee=`).
+ * demandas, com os números, os filtros Responsável, Atribuída a e Empresa e a Carga das equipes). A caixa e os
+ * filtros ficam no endereço (`?box=&owner=&assignee=&company=`).
+ *
+ * Ajustes 25/11 (aprovados em demonstração): com uma caixa só e sem a Lista, a linha começa com o nome "Caixa de
+ * entrada" e o número, sem botões de caixa; Responsável, Atribuída a e Empresa sobem para a linha dos filtros; e
+ * "Lista | Linha do tempo" no começo da linha troca a lista pelo Gantt das mesmas tarefas (números e filtros
+ * valem para as duas; a escolha fica lembrada por pessoa).
  */
 export function DemandsPage() {
   const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
+  const me = useSession().current?.user.id
   // as caixas do perfil (Tarefas do perfil, ajustes 23 e 24/11): só as marcadas; a Todas exige ver todos os
   // projetos. Sem `?box=` (ou com uma caixa que a pessoa não vê), abre na primeira visível
-  const boxes: DemandBox[] = useTaskViews().boxes
+  const { views, boxes } = useTaskViews()
+  const header = inboxHeader(views, boxes)
   const raw = params.get('box')
   const box: DemandBox = isBox(raw) && boxes.includes(raw) ? raw : (boxes[0] ?? 'received')
+  const { view, setView, groupBy, setGroupBy } = useInboxView()
   const overview = useDemandOverview()
   const counts = overview.data?.counts
   const open = (b: DemandBox) => (counts ? DEMAND_KPI_STATUSES.reduce((sum, status) => sum + counts[b][status], 0) : undefined)
-  // filtros da Bandeja (ajuste 23/11): valem em todas as caixas e ficam no endereço
+  // filtros da Bandeja (ajuste 23/11): valem em todas as caixas e ficam no endereço; os de pessoa, só na Todas
   const inbox = readInboxFilters(params)
-  const filtering = hasInboxFilters(inbox)
-  const filters: DemandListFilters = { ...inboxQuery(inbox), ...(box === 'all' ? personFilters(params) : {}) }
+  const people = readPersonFilters(params)
+  const filtering = hasInboxFilters(inbox) || (box === 'all' && hasPersonFilters(people))
+  const filters: DemandListFilters = { ...inboxQuery(inbox), ...(box === 'all' ? personQuery(people) : {}) }
   const list = useDemandList(box, filters)
   const projectOptions = useInboxProjects(list.data?.items ?? [])
   const priorities = usePriorities(false)
   const priorityOptions: InboxFilterOption[] = (priorities.data ?? []).map((p) => ({ value: p.id, label: p.name }))
   const setInbox = useCallback((next: InboxFilters) => setParams(writeInboxFilters(params, next), { replace: true }), [params, setParams])
+  const setPeople = useCallback((next: PersonFilters) => setParams(writePersonFilters(params, next), { replace: true }), [params, setParams])
+  const clearAll = useCallback(() => setParams(writePersonFilters(writeInboxFilters(params, NO_INBOX_FILTERS), NO_PERSON_FILTERS), { replace: true }), [params, setParams])
+  const peopleFilters = usePeopleFilters(box === 'all', people, setPeople, clearAll, overview.data?.allTeam ?? [])
   // com filtro, os números contam o que a lista mostra (enquanto ela vem inteira); sem filtro, os da caixa
   const kpiCounts = (b: DemandBox) => {
     const data = list.data
     if (filtering && data && data.total <= data.items.length) return countByStatus(data.items)
     return counts?.[b]
   }
-
-  const setFilter = (key: 'owner' | 'assignee' | 'company', value: string) => {
-    const next = new URLSearchParams(params)
-    if (value === ANY) next.delete(key)
-    else next.set(key, value)
-    setParams(next, { replace: true })
-  }
+  // o "← Voltar" da página da tarefa volta para a mesma caixa (com os filtros)
+  const back = params.toString() ? `/tasks/demands?${params.toString()}` : '/tasks/demands'
+  const ganttTasks = useMemo(() => {
+    const all = list.data?.items ?? []
+    // em Atribuídas a mim, só o que está comigo (o histórico fica na Lista)
+    return box === 'assigned' ? splitAssignedBox(all, me).active : all
+  }, [list.data, box, me])
 
   // perfil sem nenhuma caixa (só a Lista): a Caixa de entrada não existe para ele
   if (boxes.length === 0) return <Navigate to="/tasks" replace />
@@ -88,35 +109,92 @@ export function DemandsPage() {
   return (
     <>
       <TasksHeader>
-        <AppSegmentedControl<DemandBox>
-          className="shrink-0"
-          label={t('demands.page.tabsLabel')}
-          value={box}
-          // trocar de caixa mantém os filtros da Bandeja (os de pessoa são só da caixa Todas)
-          onValueChange={(value) => setParams(writeInboxFilters(value === boxes[0] ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
-          options={boxes.map((b) => ({ value: b, label: <BoxLabel text={t(`demands.tabs.${b}`)} short={t(`demands.tabsShort.${b}`)} total={open(b)} /> }))}
-        />
-        <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} />
+        <ViewSwitch value={view} onChange={setView} />
+        {header.boxSwitch && (
+          <AppSegmentedControl<DemandBox>
+            className="shrink-0"
+            label={t('demands.page.tabsLabel')}
+            value={box}
+            // trocar de caixa mantém os filtros da Bandeja (os de pessoa são só da caixa Todas)
+            onValueChange={(value) => setParams(writeInboxFilters(value === boxes[0] ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })}
+            options={boxes.map((b) => ({ value: b, label: <BoxLabel text={t(`demands.tabs.${b}`)} short={t(`demands.tabsShort.${b}`)} total={open(b)} /> }))}
+          />
+        )}
+        {header.title && (
+          // uma caixa só (ajuste 25/11): a tela se chama "Caixa de entrada", com o número das abertas
+          <h2 className="inline-flex shrink-0 items-baseline gap-1.5 px-1 text-sm font-bold text-fg" data-testid="inbox-title">
+            {t('taskList.viewDemands')}
+            {open(box) !== undefined && <span className="text-sm font-normal text-muted tabular-nums [[data-compact~='3']_&]:hidden">{open(box)}</span>}
+          </h2>
+        )}
+        <InboxFilterBar filters={inbox} onChange={setInbox} projects={projectOptions} priorities={priorityOptions} people={peopleFilters} />
       </TasksHeader>
       {(box === 'received' || box === 'all') && kpiCounts(box) && <KpiCards counts={kpiCounts(box)!} />}
-      {box === 'received' ? (
+      {view === 'timeline' ? (
+        list.isPending ? (
+          <AppSkeleton className="h-64 rounded-2xl" />
+        ) : list.isError ? (
+          <AppErrorState onRetry={() => void list.refetch()} />
+        ) : (
+          <TaskGantt tasks={ganttTasks} groupBy={groupBy} onGroupByChange={setGroupBy} back={back} place={box} />
+        )
+      ) : box === 'received' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <DemandBoxList box="received" filters={filters} />
+          <DemandBoxList box="received" filters={filters} filtering={filtering} back={back} />
           <TeamLoadCard team={overview.data?.team ?? []} loading={overview.isPending} />
         </div>
       ) : box === 'all' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <div className="flex min-w-0 flex-col gap-3">
-            <PersonFilters filters={filters} team={overview.data?.allTeam ?? []} onChange={setFilter} />
-            <DemandBoxList box="all" filters={filters} />
-          </div>
+          <DemandBoxList box="all" filters={filters} filtering={filtering} back={back} />
           <TeamLoadCard variant="all" team={overview.data?.allTeam ?? []} loading={overview.isPending} />
         </div>
       ) : (
-        <DemandBoxList box={box} filters={filters} />
+        <DemandBoxList box={box} filters={filters} filtering={filtering} back={back} />
       )}
     </>
   )
+}
+
+/**
+ * "Lista | Linha do tempo" (ajuste 25/11, opção B): no começo da linha dos filtros. Numa linha apertada (passo 4
+ * da Bandeja), só os ícones; o nome fica para o leitor de tela.
+ */
+function ViewSwitch({ value, onChange }: { value: InboxView; onChange: (view: InboxView) => void }) {
+  const { t } = useTranslation()
+  const label = (icon: ReactNode, text: string) => (
+    <>
+      {icon}
+      <span className="[[data-compact~='4']_&]:sr-only">{text}</span>
+    </>
+  )
+  return (
+    <AppSegmentedControl<InboxView>
+      className="shrink-0"
+      label={t('demands.view.label')}
+      value={value}
+      onValueChange={onChange}
+      options={[
+        { value: 'list', label: label(<List aria-hidden />, t('demands.view.list')), ariaLabel: t('demands.view.list') },
+        { value: 'timeline', label: label(<ChartGantt aria-hidden />, t('demands.view.timeline')), ariaLabel: t('demands.view.timeline') },
+      ]}
+    />
+  )
+}
+
+/**
+ * Filtros da caixa Todas na linha da Bandeja (ajuste 25/11): Responsável e Atribuída a (pessoas ativas que podem
+ * receber, somadas a quem aparece na Carga das equipes) e Empresa (as ativas). Fora da caixa Todas, nada.
+ */
+function usePeopleFilters(on: boolean, filters: PersonFilters, onChange: (next: PersonFilters) => void, onClear: () => void, team: TeamLoad[]): InboxPeopleFilters | undefined {
+  const companies = useCompanies()
+  const owners = useDemandOwners(useCan('tasks.create') && on)
+  if (!on) return undefined
+  const byId = new Map<string, UserSummary>()
+  ;[...(owners.data ?? []), ...team.map((member) => member.user)].forEach((person) => byId.set(person.id, person))
+  const people = [...byId.values()]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((person) => ({ value: person.id, label: person.name, prefix: <AppAvatar name={person.name} src={person.avatarUrl} size="xs" /> }))
+  return { filters, onChange, onClear, people, companies: (companies.data ?? []).map((c) => ({ value: c.id, label: c.name })) }
 }
 
 /**
@@ -133,18 +211,6 @@ function useInboxProjects(items: readonly TaskSummary[]): InboxFilterOption[] {
     })
     return [...byId.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label))
   }, [projects.data, items])
-}
-
-/** Filtros de pessoa da caixa Todas, lidos do endereço (`owner`, `assignee`). */
-function personFilters(params: URLSearchParams): DemandListFilters {
-  const out: DemandListFilters = {}
-  const owner = params.get('owner')
-  const assignee = params.get('assignee')
-  const company = params.get('company')
-  if (owner) out.ownerId = owner
-  if (assignee) out.assigneeId = assignee
-  if (company) out.companyId = company
-  return out
 }
 
 /** Números dos quatro primeiros passos (Sem atribuir, Atribuídas, Em andamento, Para validar). */
@@ -165,65 +231,13 @@ function KpiCards({ counts }: { counts: Pick<DemandCounts[DemandBox], (typeof DE
 }
 
 /**
- * Filtros da caixa Todas: Responsável e Atribuída a. As pessoas vêm da lista de responsáveis possíveis
- * (pessoas ativas) somada a quem aparece na Carga das equipes.
- */
-function PersonFilters({ filters, team, onChange }: { filters: DemandListFilters; team: TeamLoad[]; onChange: (key: 'owner' | 'assignee' | 'company', value: string) => void }) {
-  const { t } = useTranslation()
-  // Empresa (§46): as ativas
-  const companies = useCompanies()
-  const companyOptions = [{ value: ANY, label: t('companies.all') }, ...(companies.data ?? []).map((c) => ({ value: c.id, label: c.name }))]
-  const owners = useDemandOwners(useCan('tasks.create'))
-  const people = new Map<string, UserSummary>()
-  ;[...(owners.data ?? []), ...team.map((member) => member.user)].forEach((person) => people.set(person.id, person))
-  const sorted = [...people.values()].sort((a, b) => a.name.localeCompare(b.name))
-  const options = [
-    { value: ANY, label: t('demands.filters.any') },
-    ...sorted.map((person) => ({ value: person.id, label: person.name, prefix: <AppAvatar name={person.name} src={person.avatarUrl} size="xs" /> })),
-  ]
-  const known = (id: string | undefined) => (id && people.has(id) ? id : ANY)
-  return (
-    // uma linha só, que nunca quebra: os seletores dividem o espaço e param em ~132px (no celular, a linha rola)
-    <div role="group" aria-label={t('demands.filters.label')} className="-m-1 flex flex-nowrap items-end gap-3 overflow-x-auto p-1">
-      <AppSelect
-        size="sm"
-        searchable
-        label={t('demands.filters.owner')}
-        value={known(filters.ownerId)}
-        onValueChange={(value) => onChange('owner', value)}
-        options={options}
-        className="min-w-[8.25rem] max-w-64 flex-1"
-      />
-      <AppSelect
-        size="sm"
-        searchable
-        label={t('demands.filters.assignee')}
-        value={known(filters.assigneeId)}
-        onValueChange={(value) => onChange('assignee', value)}
-        options={options}
-        className="min-w-[8.25rem] max-w-64 flex-1"
-      />
-      <AppSelect
-        size="sm"
-        label={t('companies.field')}
-        value={filters.companyId && companyOptions.some((o) => o.value === filters.companyId) ? filters.companyId : ANY}
-        onValueChange={(value) => onChange('company', value)}
-        options={companyOptions}
-        className="min-w-[8.25rem] max-w-64 flex-1"
-      />
-    </div>
-  )
-}
-
-/**
  * Uma caixa: as demandas agrupadas por passo (as concluídas por último), cada uma com os botões dela. Em
  * Atribuídas a mim (ajuste 23/11): o que está comigo ("Para validar" vira "Em validação") e, recolhidos no fim,
  * Concluídas (últimos 30 dias) e Passadas a outra pessoa — o histórico de quem executa.
  */
-function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListFilters }) {
+function DemandBoxList({ box, filters, filtering, back }: { box: DemandBox; filters?: DemandListFilters; filtering: boolean; back: string }) {
   const { t } = useTranslation()
   const me = useSession().current?.user.id
-  const [params] = useSearchParams()
   const list = useDemandList(box, filters)
   const priorities = usePriorities(false)
   const order = (priorities.data ?? []).map((p) => p.id)
@@ -231,9 +245,6 @@ function DemandBoxList({ box, filters }: { box: DemandBox; filters?: DemandListF
   const split = box === 'assigned' ? splitAssignedBox(all, me) : null
   const items = split ? split.active : all
   const total = list.data?.total ?? 0
-  const filtering = hasInboxFilters(readInboxFilters(params))
-  // o "← Voltar" da página da tarefa volta para a mesma caixa (com os filtros)
-  const back = params.toString() ? `/tasks/demands?${params.toString()}` : '/tasks/demands'
   const executor = box === 'assigned'
 
   if (list.isPending) return <AppSkeleton className="h-64 rounded-2xl" />

@@ -36,7 +36,7 @@ import { TaskDocsPanel } from './TaskDocsPanel'
 import { useCan } from '@/features/auth/session'
 import { useTaskDocs } from '@/features/docs/queries'
 import { TagList } from '@/features/tags/tag-visuals'
-import { DemandDetailView } from '@/features/demands/DemandDetailView'
+import { TaskSheetView } from './TaskSheetView'
 import { DemandFlowActions } from '@/features/demands/DemandFlowCard'
 import { DemandStatusBadge } from '@/features/demands/demand-visuals'
 
@@ -72,9 +72,9 @@ export function TaskDetailPage() {
     }
     return <AppErrorState onRetry={() => void task.refetch()} />
   }
-  // demanda interna (§45): a página inteira da demanda (linha do tempo, papéis e propriedades)
-  if (task.data.demand && !task.data.project) return <DemandDetailView task={task.data} />
-  return <TaskDetailView task={task.data} />
+  // módulo Tarefas (ajuste 25/11): a demanda interna e a tarefa de projeto abrem no mesmo formato (o da demanda
+  // interna, §45); dentro do projeto a tarefa abre na janela sobre o quadro (TaskDetailView), como antes
+  return <TaskSheetView task={task.data} />
 }
 
 /** Abas do detalhe; `?tab=comments` abre direto nos comentários (ex.: vindo de uma notificação). */

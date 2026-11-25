@@ -18,7 +18,6 @@ import {
   kpiOf,
   kpiStats,
   panelScope,
-  pieSlicePaths,
   statusScope,
   statusSlices,
   teamInScope,
@@ -26,6 +25,7 @@ import {
   type PanelFilter,
 } from './direction-data'
 import { DirectionTeam } from './DirectionTeam'
+import { PieChart } from './PieChart'
 import { DepDrawer, DepFlag, DepStrip } from './Dependencies'
 import { depAffected, depInScope } from './dependency-data'
 
@@ -250,48 +250,19 @@ function Timeline({ projects, affected, onDependencies }: { projects: Project[];
 function Departments({ projects, area, onSelect }: { projects: Project[]; area: string | null; onSelect: (key: string) => void }) {
   const { t } = useTranslation()
   const slices = useMemo(() => departmentSlices(projects), [projects])
-  const paths = useMemo(() => pieSlicePaths(slices, 80, 80, 70), [slices])
-  const nameOf = (name: string, key: string) => (key === NO_AREA ? t('direction.departments.none') : name)
+  const items = slices.map((slice) => ({ ...slice, label: slice.key === NO_AREA ? t('direction.departments.none') : slice.name }))
   return (
     <Card title={t('direction.departments.title')} className="mb-0">
-      {slices.length === 0 ? (
+      {items.length === 0 ? (
         <p className="py-2 text-sm text-muted">{t('direction.departments.empty')}</p>
       ) : (
-        <div className="grid items-center gap-4 sm:grid-cols-[150px_1fr]">
-          <svg viewBox="0 0 160 160" role="img" aria-label={t('direction.departments.chart')} className="mx-auto h-auto w-full max-w-[150px]">
-            {slices.map((slice) => (
-              <path
-                key={slice.key}
-                d={paths.find((p) => p.key === slice.key)?.d}
-                fill={slice.color}
-                stroke="var(--color-surface)"
-                strokeWidth={2}
-                className="cursor-pointer motion-safe:transition-opacity"
-                opacity={area && area !== slice.key ? 0.3 : 1}
-                onClick={() => onSelect(slice.key)}
-              >
-                <title>{t('direction.departments.slice', { name: nameOf(slice.name, slice.key), count: slice.count, percent: slice.percent })}</title>
-              </path>
-            ))}
-          </svg>
-          <ul className="flex flex-col">
-            {slices.map((slice) => (
-              <li key={slice.key}>
-                <button
-                  type="button"
-                  aria-pressed={area === slice.key}
-                  onClick={() => onSelect(slice.key)}
-                  className="grid w-full grid-cols-[14px_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-lg px-2 py-1 text-left text-[13px] text-fg hover:bg-surface-2 aria-pressed:bg-surface-2 aria-pressed:font-semibold focus-visible:outline-2 focus-visible:outline-ring"
-                >
-                  {dot(slice.color)}
-                  <span className="truncate">{nameOf(slice.name, slice.key)}</span>
-                  <span className="font-bold tabular-nums">{slice.count}</span>
-                  <span className="min-w-9 text-right text-xs tabular-nums text-muted">{slice.percent} %</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <PieChart
+          items={items}
+          selected={area}
+          onSelect={onSelect}
+          chartLabel={t('direction.departments.chart')}
+          sliceTitle={(item) => t('direction.departments.slice', { name: item.label, count: item.count, percent: item.percent })}
+        />
       )}
     </Card>
   )
@@ -299,41 +270,24 @@ function Departments({ projects, area, onSelect }: { projects: Project[]; area: 
 
 /* ------------------------------------------------------------------ estado de execução */
 
+/** Estado de execução em torta (ajuste 25/11), no mesmo formato de "Projetos por departamento" e com as cores de sempre. */
 function StatusStrip({ projects, status, onSelect }: { projects: Project[]; status: ProjectStatus | null; onSelect: (status: ProjectStatus) => void }) {
   const { t } = useTranslation()
   const slices = useMemo(() => statusSlices(projects), [projects])
-  // uma barra por estado, uma embaixo da outra (o comprimento é o % do estado)
+  const items = slices.map((slice) => ({ key: slice.status, label: t(`projects.status.${slice.status}`), count: slice.count, percent: slice.percent, color: STATUS_COLORS[slice.status] }))
+  const byKey = new Map(slices.map((slice) => [slice.status as string, slice.status]))
   return (
     <Card title={t('direction.status.title')} aside={<span className="text-xs text-muted">{t('direction.status.count', { count: projects.length })}</span>} className="mb-0">
-      <ul className="mt-4 flex flex-col gap-2">
-        {slices.map((slice) => {
-          const label = t(`projects.status.${slice.status}`)
-          const tip = t('direction.status.segment', { label, count: slice.count, percent: slice.percent })
-          return (
-            <li key={slice.status}>
-              <AppTooltip content={tip}>
-                <button
-                  type="button"
-                  aria-pressed={status === slice.status}
-                  onClick={() => onSelect(slice.status)}
-                  className="grid w-full grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)_2.25rem_3rem] items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-fg hover:bg-surface-2 aria-pressed:bg-surface-2 aria-pressed:font-semibold focus-visible:outline-2 focus-visible:outline-ring motion-safe:transition-opacity"
-                  style={{ opacity: status && status !== slice.status ? 0.45 : 1 }}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    {dot(STATUS_COLORS[slice.status])}
-                    <span className="truncate">{label}</span>
-                  </span>
-                  <span data-bar aria-hidden className="h-3.5 overflow-hidden rounded-[5px] bg-surface-2">
-                    <span className="block h-full rounded-[5px]" style={{ width: `${slice.count ? Math.max(2, slice.percent) : 0}%`, background: STATUS_COLORS[slice.status] }} />
-                  </span>
-                  <b className="text-right tabular-nums">{slice.count}</b>
-                  <span className="text-right text-xs tabular-nums text-muted">{slice.percent} %</span>
-                </button>
-              </AppTooltip>
-            </li>
-          )
-        })}
-      </ul>
+      <PieChart
+        items={items}
+        selected={status}
+        onSelect={(key) => {
+          const picked = byKey.get(key)
+          if (picked) onSelect(picked)
+        }}
+        chartLabel={t('direction.status.chart')}
+        sliceTitle={(item) => t('direction.status.segment', { label: item.label, count: item.count, percent: item.percent })}
+      />
     </Card>
   )
 }

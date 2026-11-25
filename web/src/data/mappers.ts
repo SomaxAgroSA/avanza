@@ -1,10 +1,11 @@
 import { DEPENDENCY_RULES, PLAN_STATUS_CATEGORIES, PROGRESS_SOURCES, type Plan, type PlanLink, type PlanGroup, type PlanGroupSummary, type PlanItem, type PlanResource, type PlanStatus } from '@/domain/plan'
 import type { PlanFile, PlanUpdate } from '@/domain/plan-updates'
 import { toTaskViews } from '@/domain/task-views'
+import { toProjectLists } from '@/domain/project-lists'
 import type { JournalEntryDto, PlanColumnDto, PlanFileDto, PlanIssueDto, PlanReportDto, PlanReportItemDto, PlanUpdateDto } from './dtos'
 import type { PasswordPolicyDto, PlatformInfoDto, PlatformSettingsDto, PlatformValuesDto } from './dtos'
 import type { EmailSettingsDto, OutboxSummaryDto, ResetTokenCheckDto, ApiTokenDto } from './dtos'
-import type { ProjectTaskCountsDto, TeamActivityDto } from './dtos'
+import type { ProjectTaskCountsDto, TeamActedTaskDto, TeamActivityDto } from './dtos'
 import type { DepCountsDto, DepDeliveryRefDto, DependenciesDto, DependencyAreasDto, DepProjectRefDto, DepTaskRefDto } from './dtos'
 import type { DepCounts, DepDeliveryRef, Dependencies, DependencyAreasConfig, DepProjectRef, DepRisk, DepTaskRef } from '@/domain/dependencies'
 import type { ApiToken, ApiTokenState } from '@/domain/api-tokens'
@@ -58,12 +59,16 @@ import {
   PROJECT_PRIORITIES,
   PROJECT_PROFILE_SECTIONS,
   PROJECT_STATUSES,
+  TEAM_ACTION_STEPS,
+  TEAM_ACTION_TYPES,
   type Project,
   type ProjectMember,
   type ProjectRole,
   type ProjectStatus,
   type ProjectTaskCount,
   type TeamActivity,
+  type TeamActivityAction,
+  type TeamActivityActedTask,
   type UserSummary,
 } from '@/domain/projects'
 
@@ -104,6 +109,7 @@ export function toRoleSummary(dto: RoleDto): RoleSummary {
     description: dto.description,
     isSystem: dto.is_system,
     ongoingView: dto.ongoing_view === 'executive' || dto.ongoing_view === 'both' ? dto.ongoing_view : '',
+    projectsLists: toProjectLists(dto.projects_lists),
     ...toTaskViews({ tasksStart: dto.tasks_start, tasksList: dto.tasks_list, tasksAllBox: dto.tasks_all_box, tasksHiddenBoxes: dto.tasks_hidden_boxes }),
   }
 }
@@ -1440,6 +1446,16 @@ export function toProjectTaskCounts(dto: ProjectTaskCountsDto): ProjectTaskCount
   return dto.projects.map((row) => ({ projectId: row.project_id, done: row.done, open: row.open }))
 }
 
+function toTeamActedTask(dto: TeamActedTaskDto): TeamActivityActedTask {
+  const a = dto.action
+  const action: TeamActivityAction = { type: oneOf(TEAM_ACTION_TYPES, a.type, 'edited'), at: toDate(a.at) }
+  if (action.type === 'status_changed') Object.assign(action, { from: a.from ?? null, to: a.to ?? null })
+  if (action.type === 'step') action.step = oneOf(TEAM_ACTION_STEPS, a.step ?? '', 'started')
+  if (action.type === 'commented') action.excerpt = a.excerpt ?? ''
+  if (action.type === 'attached') action.count = a.count ?? 1
+  return { id: dto.id, code: dto.code, title: dto.title, status: dto.status, inProgress: !!dto.in_progress, action, actions: dto.actions }
+}
+
 export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
   return {
     windowDays: dto.window_days,
@@ -1457,9 +1473,11 @@ export function toTeamActivity(dto: TeamActivityDto): TeamActivity {
         state: oneOf(TEAM_STATES, row.state, 'idle'),
         inProgress: row.in_progress,
         recent: row.recent,
+        actions: row.actions ?? row.recent,
         open: row.open,
         stale: !!row.stale,
         lastActivity: toDate(row.last_activity),
+        actedTasks: (row.acted_tasks ?? []).map(toTeamActedTask),
         tasks: row.tasks.map((task) => ({ id: task.id, code: task.code, title: task.title, status: task.status, updatedAt: toDate(task.updated_at), inProgress: !!task.in_progress, moved: !!task.moved })),
       })),
     })),
@@ -1492,7 +1510,7 @@ export function toDependencies(dto: DependenciesDto): Dependencies {
         blocksProjects: d.blocks_projects.map(toDepProjectRef),
       })),
       blocked: row.blocked.map((b) => ({ ...toDepTaskRef(b), waitingOn: b.waiting_on.map((w) => ({ ...toDepDeliveryRef(w), relationId: w.relation_id })) })),
-      pending: row.pending.map((p) => ({ ...toDepTaskRef(p), relatedTo: toDepDeliveryRef(p.related_to), relationId: p.relation_id, canConfirm: !!p.can_confirm })),
+      pending: row.pending.map((p) => ({ ...toDepTaskRef(p), relatedTo: toDepDeliveryRef(p.related_to), relationId: p.relation_id })),
     })),
   }
 }

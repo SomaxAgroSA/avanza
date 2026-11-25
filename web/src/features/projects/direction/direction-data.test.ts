@@ -189,7 +189,7 @@ describe('direction-data: filtros da tabela', () => {
 
 describe('direction-data: Equipo ahora', () => {
   const row = (id: string, state: TeamActivityProject['state'], recent: number, tasks: TeamActivityProject['tasks'] = []): TeamActivityProject => ({
-    project: { id, key: id, name: id, icon: 'folder', cover: 'blue' }, state, inProgress: 0, recent, open: 0, stale: false, lastActivity: null, tasks,
+    project: { id, key: id, name: id, icon: 'folder', cover: 'blue' }, state, inProgress: 0, recent, actions: recent, open: 0, stale: false, lastActivity: null, actedTasks: [], tasks,
   })
   const task = (id: string, at: string) => ({ id, code: `X-${id}`, title: `Tarefa ${id}`, status: { id: 's', name: 'Em curso', color: 'blue', category: 'in_progress' }, updatedAt: day(at), inProgress: false, moved: true })
   const TEAM: TeamActivity = {

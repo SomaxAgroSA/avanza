@@ -4,7 +4,7 @@
  */
 
 const { HOME_PAGES } = require('../domain/user')
-const { ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES } = require('../domain/permissions')
+const { ONGOING_VIEWS, TASK_VIEWS, TASK_HIDDEN_BOXES, PROJECT_LISTS } = require('../domain/permissions')
 
 /** "Com cópia" (ajuste 24/11): e-mails que recebem o aviso da tarefa ou demanda nova, uma vez. */
 const COPY_EMAILS = {
@@ -20,6 +20,16 @@ const TASK_VIEW_PROPS = {
   tasks_list: { type: 'string', enum: TASK_VIEWS.tasks_list, description: 'a Lista: "" = todas as que a pessoa pode ver; mine = só Minhas tarefas; hidden = sem a Lista' },
   tasks_hidden_boxes: { type: 'array', items: { type: 'string', enum: TASK_HIDDEN_BOXES }, description: 'caixas pessoais da Caixa de entrada escondidas para o perfil ([] = todas visíveis)' },
   tasks_all_box: { type: 'string', enum: TASK_VIEWS.tasks_all_box, description: 'a caixa Todas da Caixa de entrada (exige projects.view_all): "" = visível; hidden = escondida' },
+}
+
+/** Projetos do perfil (ajuste 25/11): as listas do menu Projetos; só a tela, a API das listas não muda. */
+const PROJECT_LIST_PROPS = {
+  projects_lists: {
+    type: 'array',
+    minItems: 1,
+    items: { type: 'string', enum: PROJECT_LISTS },
+    description: 'listas do menu Projetos visíveis para o perfil, na ordem do menu (padrão: as quatro); com uma só, Projetos abre direto nela',
+  },
 }
 
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` })
@@ -239,7 +249,7 @@ function build() {
       },
       '/roles/{id}': {
         get: op('Detalhe do perfil', ['rbac'], { 200: ok('Perfil', ref('Role')), 404: errorResponse('ROLE_NOT_FOUND') }, { parameters: [idParam] }),
-        patch: op('Atualiza nome, descrição e vista de Em andamento (permissions.manage)', ['rbac'], { 200: ok('Atualizado', ref('Role')) }, {
+        patch: op('Atualiza nome, descrição e os ajustes de tela do perfil (Em andamento, Tarefas, Projetos; permissions.manage)', ['rbac'], { 200: ok('Atualizado', ref('Role')) }, {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({
             type: 'object',
@@ -248,6 +258,7 @@ function build() {
               description: { type: 'string' },
               ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista de Em andamento do perfil (§41); "" = Gestão' },
               ...TASK_VIEW_PROPS,
+              ...PROJECT_LIST_PROPS,
             },
           }),
         }),
@@ -326,13 +337,13 @@ function build() {
         }),
       },
       '/team-activity': {
-        get: op('Equipo ahora: por pessoa, em quais projetos em andamento está trabalhando (tarefas atribuídas em andamento, que mudaram nos últimos 7 dias ou abertas), com as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; as demandas internas que ela enxerga (§45) entram num bloco com project.kind = demands. Exige tasks.view (sem ele, lista vazia)', ['projects'], {
+        get: op('Equipo ahora (§41): por pessoa, os projetos em andamento em que ela agiu nos últimos 7 dias (ações dela no histórico da tarefa: status, passo, comentário, anexo, edição) ou tem tarefas abertas atribuídas, com as tarefas em que agiu (acted_tasks, a última ação e a data) e as tarefas por trás dos números. Só projetos que a pessoa vê por inteiro; as demandas internas que ela enxerga (§45) entram num bloco com project.kind = demands. Exige tasks.view (sem ele, lista vazia)', ['projects'], {
           200: ok('Atividade', {
             type: 'object',
             properties: {
               window_days: { type: 'integer' },
               generated_at: { type: 'string', format: 'date-time' },
-              people: { type: 'array', items: { type: 'object', description: 'user + projects[{ project, state: working|active|idle, in_progress, recent, open, stale, last_activity, tasks[] }]' } },
+              people: { type: 'array', items: { type: 'object', description: 'user + projects[{ project, state: working|active|idle, in_progress, recent (tarefas em que agiu), actions (ações dela), open, stale, last_activity (última ação dela), acted_tasks[{ id, code, title, status, updated_at, in_progress, actions, action{ type: status_changed|step|commented|attached|created|edited, at, from, to, step, excerpt, count } }], tasks[] }]' } },
             },
           }),
         }),
@@ -1596,6 +1607,7 @@ function build() {
             is_system: { type: 'boolean' },
             ongoing_view: { type: 'string', enum: ONGOING_VIEWS, description: 'vista da lista Em andamento para quem tem este perfil (§41): "" = Gestão (padrão), "both" = as duas, com seletor na tela; "executive" = Direção e gerência' },
             ...TASK_VIEW_PROPS,
+            ...PROJECT_LIST_PROPS,
             permissions: { type: 'array', items: { type: 'string' } },
             user_count: { type: 'integer' },
           },
@@ -1610,6 +1622,7 @@ function build() {
             permissions: { type: 'array', items: { type: 'string' } },
             ongoing_view: { type: 'string', enum: ONGOING_VIEWS },
             ...TASK_VIEW_PROPS,
+            ...PROJECT_LIST_PROPS,
           },
         },
         Permission: { type: 'object', properties: { id: { type: 'string' }, code: { type: 'string' }, module: { type: 'string' } } },

@@ -44,7 +44,8 @@ describe('E2E — Tempo real', { timeout: 180000 }, () => {
     const task = await seed.task('Tarefa com conversa')
     await page.goto(`${app.baseUrl}/tasks/${task.id}`)
     await page.getByRole('heading', { name: 'Tarefa com conversa' }).waitFor()
-    await page.getByRole('tab', { name: /^Comentários/ }).click()
+    // comentários na "Linha do tempo e comentários" da página (ajuste 25/11: sem abas)
+    await page.getByRole('heading', { name: 'Linha do tempo e comentários' }).waitFor()
     await app.admin.post(`/tasks/${task.id}/comments`, { content: 'Comentário que chegou ao vivo' })
     await page.getByText('Comentário que chegou ao vivo').waitFor({ timeout: 10000 })
 

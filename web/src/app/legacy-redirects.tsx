@@ -1,6 +1,7 @@
 import { Navigate, useLocation, useParams } from 'react-router'
 import { projectPath, type ProjectSection } from '@/domain/project-routes'
 import { useSession } from '@/features/auth/session'
+import { useProjectLists } from '@/features/projects/use-project-lists'
 import { resolveHomePath } from '@/presentation/navigation/home-page'
 import { visibleNavItems } from '@/presentation/navigation/nav-items'
 
@@ -22,7 +23,8 @@ export function LegacyProjectRedirect({ section }: { section: ProjectSection }) 
  */
 export function HomeRedirect() {
   const { current } = useSession()
-  return <Navigate to={resolveHomePath(current?.user.homePage ?? '', current?.permissions ?? [], current?.platform)} replace />
+  const projectLists = useProjectLists()
+  return <Navigate to={resolveHomePath(current?.user.homePage ?? '', current?.permissions ?? [], current?.platform, projectLists)} replace />
 }
 
 /** /settings → a primeira tela de Configurações que a pessoa pode abrir (na ordem do menu). */

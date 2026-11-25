@@ -499,6 +499,20 @@ describe('application/demands — fluxo', () => {
     assert.deepEqual(entry.newValue, { assignee: 'Jorge', due_at: FUTURE, estimated_hours: 4, demand_status: 'assigned' })
   })
 
+  it('caixas trazem o que a linha do tempo da Caixa de entrada desenha (25/11): início planejado, prazo, abertura, passo, quem executa e horas', async () => {
+    const s = await opened()
+    await s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 4 })
+    const [item] = (await s.demands.listDemands(s.ctx.cesar, { box: 'received' })).items
+    assert.ok('start_date' in item)
+    assert.equal(item.start_date, null)
+    assert.equal(item.demand.due_at, FUTURE)
+    assert.equal(item.demand.status, 'assigned')
+    assert.ok(item.created_at)
+    assert.equal(item.demand.opened_at, item.created_at)
+    assert.equal(item.assignee.name, 'Jorge')
+    assert.equal(item.estimated_hours, 4)
+  })
+
   it('atribuir aceita indicações para quem executa: vão no histórico e no aviso (opcionais)', async () => {
     const s = await opened()
     assert.equal(await codeOf(() => s.demands.assign(s.ctx.cesar, s.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, comment: 'x'.repeat(5001) })), 'VALIDATION_ERROR:{"comment":"too_long"}')
@@ -804,14 +818,19 @@ describe('application/demands — Relatórios e Em andamento (demandas internas 
   it('Equipo ahora: a demanda conta na atividade de quem executa, no bloco "Demandas internas"', async () => {
     const s = await assigned()
     await s.demands.start(s.ctx.jorge, s.id)
-    // o relógio falso das tarefas não acompanha o do serviço: a mudança é de agora
-    s.deps.store.tasks.find((t) => t.id === s.id).updatedAt = s.deps.clock.now()
+    // o relógio falso do histórico não acompanha o do serviço: a ação de Jorge (começar) é de agora
+    s.deps.store.audit
+      .filter((e) => e.action === 'task.demand_started')
+      .forEach((e) => {
+        e.createdAt = s.deps.clock.now()
+      })
     const team = createTeamActivityService(s.deps)
     const jorge = (await team.getTeamActivity(s.ctx.admin)).people.find((p) => p.user.id === s.users.jorge.id)
     assert.deepEqual(jorge.projects.map((p) => [p.project, p.state, p.in_progress]), [
       [{ id: s.inbox.id, key: 'DEM', name: 'Demandas internas', icon: 'inbox', cover: 'slate', kind: 'demands' }, 'working', 1],
     ])
     assert.deepEqual(jorge.projects[0].tasks.map((t) => t.code), ['DEM-1'])
+    assert.deepEqual(jorge.projects[0].acted_tasks.map((t) => [t.code, t.action.type, t.action.step]), [['DEM-1', 'step', 'started']])
     assert.equal((await team.getTeamActivity(s.ctx.ana)).people.length, 1)
     assert.deepEqual((await team.getTeamActivity(s.ctx.fabi)).people, [])
   })

@@ -11,6 +11,11 @@ import {
   readInboxFilters,
   sortByUrgencyPriority,
   writeInboxFilters,
+  hasPersonFilters,
+  personQuery,
+  readPersonFilters,
+  toInboxView,
+  writePersonFilters,
   type DemandStatus,
 } from './demands'
 
@@ -32,6 +37,22 @@ describe('domain/demands — filtros e ordem da Bandeja (ajuste 23/11)', () => {
     expect(cleared.toString()).toBe('box=assigned&urgency=high')
     expect(hasInboxFilters(readInboxFilters(new URLSearchParams('box=all')))).toBe(false)
     expect(inboxQuery({ search: '  ', projectId: '', priorityIds: [], urgencies: [] })).toEqual({})
+  })
+
+  it('filtros de pessoa e empresa (25/11): lê, grava sem mexer nos outros e vira a consulta', () => {
+    const params = new URLSearchParams('box=all&q=dmr&owner=u2&company=c1')
+    const people = readPersonFilters(params)
+    expect(people).toEqual({ ownerId: 'u2', assigneeId: '', companyId: 'c1' })
+    expect(hasPersonFilters(people)).toBe(true)
+    expect(personQuery(people)).toEqual({ ownerId: 'u2', companyId: 'c1' })
+    expect(writePersonFilters(params, { ownerId: '', assigneeId: 'u3', companyId: '' }).toString()).toBe('box=all&q=dmr&assignee=u3')
+    expect(hasPersonFilters(readPersonFilters(new URLSearchParams('box=all')))).toBe(false)
+  })
+
+  it('visão da Caixa de entrada (25/11): lista ou linha do tempo; o resto vira lista', () => {
+    expect(toInboxView('timeline')).toBe('timeline')
+    expect(toInboxView('gantt')).toBe('list')
+    expect(toInboxView(null)).toBe('list')
   })
 
   it('ordem: as mais urgentes primeiro, depois a prioridade mais importante; empate mantém a ordem', () => {

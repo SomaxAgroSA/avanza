@@ -118,7 +118,7 @@ export function departmentSlices(projects: readonly Project[]): DepartmentSlice[
 }
 
 /** Fatia como caminho SVG (centro cx,cy; raio r). Uma fatia de 100% vira círculo (o arco não fecha sozinho). */
-export function pieSlicePaths(slices: readonly DepartmentSlice[], cx: number, cy: number, r: number): Array<{ key: string; d: string }> {
+export function pieSlicePaths(slices: ReadonlyArray<{ key: string; count: number }>, cx: number, cy: number, r: number): Array<{ key: string; d: string }> {
   const total = slices.reduce((sum, s) => sum + s.count, 0)
   if (total === 0) return []
   let angle = -Math.PI / 2

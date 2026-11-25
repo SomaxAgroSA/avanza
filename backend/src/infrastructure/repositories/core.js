@@ -213,6 +213,7 @@ function createRoleRepository(db) {
       tasksList: row.tasks_list || '',
       tasksAllBox: row.tasks_all_box || '',
       tasksHiddenBoxes: row.tasks_hidden_boxes || '',
+      projectsLists: row.projects_lists || '',
     }
   }
 
@@ -254,7 +255,7 @@ function createRoleRepository(db) {
 
     async create(data) {
       try {
-        const row = await insertRow(db, 'roles', { code: text(data.code), name: text(data.name), description: text(data.description), is_system: false, ongoing_view: text(data.ongoingView), tasks_start: text(data.tasksStart), tasks_list: text(data.tasksList), tasks_all_box: text(data.tasksAllBox), tasks_hidden_boxes: text(data.tasksHiddenBoxes) })
+        const row = await insertRow(db, 'roles', { code: text(data.code), name: text(data.name), description: text(data.description), is_system: false, ongoing_view: text(data.ongoingView), tasks_start: text(data.tasksStart), tasks_list: text(data.tasksList), tasks_all_box: text(data.tasksAllBox), tasks_hidden_boxes: text(data.tasksHiddenBoxes), projects_lists: text(data.projectsLists) })
         return toEntity(row)
       } catch (err) {
         if (isUniqueViolation(err, 'idx_roles_code')) throw appError('ROLE_CODE_IN_USE')
@@ -271,6 +272,7 @@ function createRoleRepository(db) {
       if (patch.tasksList !== undefined) values.tasks_list = text(patch.tasksList)
       if (patch.tasksAllBox !== undefined) values.tasks_all_box = text(patch.tasksAllBox)
       if (patch.tasksHiddenBoxes !== undefined) values.tasks_hidden_boxes = text(patch.tasksHiddenBoxes)
+      if (patch.projectsLists !== undefined) values.projects_lists = text(patch.projectsLists)
       return toEntity(mustExist(await updateRow(db, 'roles', id, values), 'roles', id))
     },
 

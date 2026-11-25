@@ -215,17 +215,52 @@ export interface TeamActivityTask {
   moved: boolean
 }
 
+/** Tipos da ação de uma pessoa numa tarefa (histórico da tarefa, quem fez = a pessoa). */
+export const TEAM_ACTION_TYPES = ['status_changed', 'step', 'commented', 'attached', 'created', 'edited'] as const
+export type TeamActionType = (typeof TEAM_ACTION_TYPES)[number]
+/** Passos do fluxo do responsável (§45). */
+export const TEAM_ACTION_STEPS = ['assigned', 'reassigned', 'started', 'passed', 'concluded', 'validated', 'returned'] as const
+export type TeamActionStep = (typeof TEAM_ACTION_STEPS)[number]
+
+/** A última ação da pessoa numa tarefa: status de/para, passo, trecho do comentário ou quantidade de anexos. */
+export interface TeamActivityAction {
+  type: TeamActionType
+  at: Date | null
+  from?: string | null
+  to?: string | null
+  step?: TeamActionStep
+  excerpt?: string
+  count?: number
+}
+
+/** Tarefa em que a pessoa agiu na janela, com a última ação e quantas ações. */
+export interface TeamActivityActedTask {
+  id: string
+  code: string
+  title: string
+  status: { id: string; name: string; color: string; category: string }
+  inProgress: boolean
+  action: TeamActivityAction
+  actions: number
+}
+
 export interface TeamActivityProject {
   /** `demands`: a caixa das demandas internas (§45) — mostra "Demandas internas", sem link de projeto. */
   project: { id: string; key: string; name: string; icon: ProjectIcon; cover: ProjectCover; demands?: boolean }
-  /** working = tarefas em andamento que mudaram na janela; active = mudou tarefas na janela; idle = só abertas ou paradas. */
+  /** Pelas ações da própria pessoa na janela: working = tem tarefa em andamento e agiu; active = agiu; idle = só tarefas abertas. */
   state: TeamActivityState
   inProgress: number
+  /** Em quantas tarefas a pessoa agiu na janela. */
   recent: number
+  /** Quantas ações da pessoa na janela ("N mov."). */
+  actions: number
   open: number
-  /** Tarefas em andamento, mas sem mudança na janela. */
+  /** Tarefas em andamento, mas sem ação da pessoa na janela. */
   stale: boolean
+  /** A última ação da pessoa no projeto. */
   lastActivity: Date | null
+  /** As tarefas em que agiu, da ação mais recente para a mais antiga. */
+  actedTasks: TeamActivityActedTask[]
   tasks: TeamActivityTask[]
 }
 

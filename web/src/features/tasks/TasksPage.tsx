@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { readJson, writeJson } from '@/core/storage/safe-storage'
-import { initialTaskScope, scopeCountFilters, type TaskKind, type TaskScope } from '@/domain/tasks'
+import { initialTaskScope, scopeCountFilters, type TaskScope } from '@/domain/tasks'
 import { AppSegmentedControl } from '@/presentation/components'
 import { useDocumentTitle } from '@/presentation/common/use-document-title'
 import { useCan, useSession } from '@/features/auth/session'
@@ -12,7 +12,7 @@ import { TasksTable } from './TasksTable'
 import { useTaskViews } from './use-task-views'
 
 /** Só o total: a contagem pede uma linha (o número vem em `meta.total`). */
-const countQuery = (scope: TaskScope, kind: TaskKind) => ({ page: 1, perPage: 1, sort: null, search: '', filters: scopeCountFilters(scope, kind) })
+const countQuery = (scope: TaskScope) => ({ page: 1, perPage: 1, sort: null, search: '', filters: scopeCountFilters(scope, 'all') })
 
 /** Última escolha de escopo da pessoa (neste navegador). */
 const scopeKey = (userId: string) => `avanza.taskList.scope.${userId}`
@@ -45,8 +45,9 @@ function useTaskListScope(fromUrl: TaskScope | null): [TaskScope, (scope: TaskSc
 
 /**
  * Lista de tarefas do menu (§44; `tasks.list`): "Minhas tarefas" (com as demandas internas que a pessoa pediu
- * ou recebeu, §45) ou "Ver todas", e Todas · Com projeto · Sem projeto — cada escopo com quantas abertas há —,
- * na mesma linha das visões e de "Colunas e ações"; embaixo, a busca e os filtros. Sem textos de ajuda: só as
+ * ou recebeu, §45) ou "Ver todas" — cada escopo com quantas abertas há —, na mesma linha das visões; embaixo, a
+ * busca e os filtros. A Lista mostra sempre as tarefas com e sem projeto (ajuste 25/11: saiu o "Todas · Com
+ * projeto · Sem projeto"; para ver só as demandas internas, o filtro Projeto). Sem textos de ajuda: só as
  * abertas, a menos que o Status diga outra coisa (o Status parado mostra "Abertas").
  */
 export function TasksPage() {
@@ -60,10 +61,8 @@ export function TasksPage() {
   const { views, inbox } = useTaskViews()
   const onlyMine = views.tasksList === 'mine'
   const scope: TaskScope = onlyMine ? 'mine' : chosenScope
-  const [kind, setKind] = useState<TaskKind>('all')
-  // "Colunas e ações" vai para a linha das visões
-  const mineTotal = useTasksList(countQuery('mine', kind)).data?.total
-  const allTotal = useTasksList(countQuery('all', kind), undefined, !onlyMine).data?.total
+  const mineTotal = useTasksList(countQuery('mine')).data?.total
+  const allTotal = useTasksList(countQuery('all'), undefined, !onlyMine).data?.total
   useEffect(() => {
     if (!urlScope) return
     setParams(
@@ -103,22 +102,11 @@ export function TasksPage() {
             ...(onlyMine ? [] : [{ value: 'all' as const, label: label(t('taskList.all'), allTotal) }]),
           ]}
         />
-        <AppSegmentedControl<TaskKind>
-          className="shrink-0"
-          label={t('taskList.kindLabel')}
-          value={kind}
-          onValueChange={setKind}
-          options={[
-            { value: 'all', label: t('taskList.kindAll') },
-            { value: 'project', label: t('taskList.kindProject') },
-            { value: 'demand', label: t('taskList.kindDemand') },
-          ]}
-        />
       </TasksHeader>
       <TasksTable
         tableId="task-list"
         scope={scope}
-        kind={kind}
+        kind="all"
         search={search}
         onSearchApplied={() =>
           setParams(
