@@ -2065,9 +2065,7 @@
       "unpinned": "Tarefa desafixada.",
       "by": "Fixada por {{name}} · {{when}}",
       "byNobody": "Fixada · {{when}}",
-      "group": "Fixadas · {{count}}",
-      "groupHint": "aparecem no topo para todos",
-      "rest": "As demais"
+      "hintRemove": "{{pinned}} — clique para desafixar"
     }
   },
   "taskList": {

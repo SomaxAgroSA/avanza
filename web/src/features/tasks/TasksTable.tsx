@@ -88,9 +88,6 @@ const TITLE_CLASS = 'line-clamp-2 break-words font-medium'
 const SCOPE_COLUMN_ORDER = ['code', 'project', 'status', 'responsible', 'assignee', 'priority', 'urgency', 'due_date']
 /** Ações de cada linha ("Colunas e ações"): Excluir desligado por padrão (fica no "⋯" e na página da tarefa). */
 const ROW_ACTION_DEFAULTS = { delete: false }
-/** Grupos da Lista de tarefas do menu quando há fixadas (§50): as fixadas no topo e as demais. */
-const PINNED_GROUP = 'pinned'
-const REST_GROUP = 'rest'
 /** Ocultas por padrão na Lista de tarefas do menu (continuam em "Colunas"). */
 const SCOPE_HIDDEN_COLUMNS = { area: false, type: false, plan_item: false, tags: false, category: false, updated_at: false }
 
@@ -150,7 +147,6 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const showsPin = useScreens().shows('tasks.row_actions.pin')
   const canPin = pinning && showsPin && canEdit
   const items = tasks.data?.items ?? EMPTY
-  const hasPinned = pinning && items.some((task) => !!task.pinned)
   const togglePin = (task: TaskSummary) =>
     setPinned.mutate(
       { id: task.id, pinned: !task.pinned },
@@ -204,14 +200,6 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
                 <p title={task.title} className={cn(TITLE_CLASS, isClosed(task) ? 'text-muted line-through decoration-subtle' : 'text-fg')}>
                   {task.title}
                 </p>
-                {/* fixada (§50): quem fixou e quando, sem repetir o ícone (ele fica só no botão da linha) */}
-                {task.pinned && (
-                  <p className="text-[11px] text-warning-soft-fg" data-testid="task-pinned-by">
-                    {task.pinned.by
-                      ? t('tasks.pin.by', { name: task.pinned.by.name, when: formatRelative(task.pinned.at, locale) })
-                      : t('tasks.pin.byNobody', { when: formatRelative(task.pinned.at, locale) })}
-                  </p>
-                )}
                 <TaskIndicators task={task} lean />
               </div>
             </div>
@@ -438,23 +426,6 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         searchPlaceholder={t('tasks.searchPlaceholder')}
         actionsSlot={actionsSlot}
         configurableActions
-        // fixadas no topo (§50): a faixa "Fixadas · n" em destaque e, depois, "As demais"
-        rowGroups={
-          hasPinned
-            ? {
-                of: (task) => (task.pinned ? PINNED_GROUP : REST_GROUP),
-                highlight: (group) => group === PINNED_GROUP,
-                header: (group, count) =>
-                  group === PINNED_GROUP ? (
-                    <>
-                      {t('tasks.pin.group', { count })} <span className="font-normal tracking-normal normal-case">({t('tasks.pin.groupHint')})</span>
-                    </>
-                  ) : (
-                    t('tasks.pin.rest')
-                  ),
-              }
-            : undefined
-        }
         toolbar={
           scope ? undefined : (
             <AppButton
@@ -523,17 +494,29 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
                   label: t('tasks.pin.column'),
                   render: (task: TaskSummary) => {
                     const label = task.pinned ? t('tasks.pin.remove') : t('tasks.pin.action')
+                    // fixada (ajuste 26/11): quem fixou e quando ficam só na dica do botão (a linha é igual às outras)
+                    const pinnedBy = task.pinned
+                      ? task.pinned.by
+                        ? t('tasks.pin.by', { name: task.pinned.by.name, when: formatRelative(task.pinned.at, locale) })
+                        : t('tasks.pin.byNobody', { when: formatRelative(task.pinned.at, locale) })
+                      : null
+                    const hint = pinnedBy ? (canPin ? t('tasks.pin.hintRemove', { pinned: pinnedBy }) : pinnedBy) : label
                     return (
                       <AppIconButton
                         size="sm"
-                        label={label}
+                        label={hint}
                         aria-label={`${label}: ${task.title}`}
                         aria-pressed={!!task.pinned}
                         icon={<Pin className={cn(task.pinned && 'fill-current')} />}
-                        // não fixada: cinza e tênue; fixada: na cor do destaque
-                        className={task.pinned ? 'text-warning-soft-fg hover:text-warning-soft-fg' : 'text-subtle opacity-60 hover:opacity-100'}
-                        disabled={!canPin || (setPinned.isPending && setPinned.variables?.id === task.id)}
-                        onClick={() => togglePin(task)}
+                        // não fixada: cinza e tênue; fixada: o verde da marca, cheio (só o ícone muda)
+                        className={cn(
+                          task.pinned ? 'text-primary-text hover:text-primary-text' : 'text-subtle opacity-60 hover:opacity-100',
+                          !canPin && 'cursor-default hover:bg-transparent',
+                        )}
+                        // sem poder fixar: aria-disabled (e não disabled) para a dica de quem fixou continuar aparecendo
+                        aria-disabled={!canPin || undefined}
+                        disabled={canPin && setPinned.isPending && setPinned.variables?.id === task.id}
+                        onClick={canPin ? () => togglePin(task) : undefined}
                         data-testid="task-pin"
                       />
                     )
