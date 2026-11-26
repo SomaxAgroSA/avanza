@@ -4823,13 +4823,13 @@
       "activeTitle_other": "{{name}}: acted on {{count}} tasks this week · {{when}}"
     },
     "showTasks": "Show {{name}}'s tasks in {{project}}",
-    "hideTasks": "Hide {{name}}'s tasks in {{project}}",
     "tasksOf": "{{name}}'s tasks in {{project}}",
     "acted_one": "Acted on {{count}} task this week",
     "acted_other": "Acted on {{count}} tasks this week",
     "actedNone": "No actions this week",
-    "actedOf": "What {{name}} did in {{project}}",
     "more": "+{{count}} more",
+    "moreProjects_one": "Show {{count}} more project",
+    "moreProjects_other": "Show {{count}} more projects",
     "moreAria": "See all of {{name}}'s tasks in {{project}}",
     "action": {
       "status_changed": "moved to {{to}}",
@@ -4902,6 +4902,9 @@
       "title": "Projects by department",
       "none": "No department",
       "chart": "Chart of projects by department",
+      "others": "Other ({{count}})",
+      "unit_one": "project",
+      "unit_other": "projects",
       "slice_one": "{{name}}: {{count}} project ({{percent}} %)",
       "slice_other": "{{name}}: {{count}} projects ({{percent}} %)",
       "empty": "There are no projects in this filter."
@@ -4918,11 +4921,12 @@
       "count_one": "{{count}} project",
       "count_other": "{{count}} projects",
       "segment": "{{label}}: {{count}} ({{percent}} %) · click to filter",
-      "chart": "Chart of projects by execution status"
+      "chart": "Chart of projects by execution status",
+      "unit_one": "project",
+      "unit_other": "projects"
     },
     "team": {
-      "idle": "Open tasks with no movement",
-      "detail": "See the detail of {{project}} ({{name}})"
+      "idle": "Open tasks with no movement"
     },
     "drawer": {
       "title": "Project detail",
@@ -4940,8 +4944,7 @@
       "personHint": "What they did in the last 7 days",
       "tabPerson": "{{name}}'s tasks · {{count}}",
       "tabProject": "Whole project",
-      "tabsAria": "Which tasks to show",
-      "noActed": "{{name}} didn't act on tasks in this project in the last 7 days."
+      "tabsAria": "Which tasks to show"
     },
     "viewSwitch": {
       "label": "Ongoing view",

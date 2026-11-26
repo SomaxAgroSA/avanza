@@ -99,7 +99,7 @@ describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
     expect(within(row('OPERATIVA DE FERTILIZANTES')).getByText(/Angelica · activo/)).toHaveAttribute('data-state', 'active')
   })
 
-  it('"Equipo ahora": por persona, sin el código del proyecto, con las tareas en que actuó y el + con todas', async () => {
+  it('"Equipo ahora": por persona, una fila cerrada por proyecto; el + abre ahí las tareas en que actuó y "+N más" todas', async () => {
     setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Equipo ahora' }))
     const panel = await screen.findByTestId('team-activity')
@@ -109,9 +109,19 @@ describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
     expect(douglasBlock).toHaveTextContent('DESIGN-SYSTEM')
     expect(douglasBlock).not.toHaveTextContent('DS ·')
     expect(douglasBlock).toHaveTextContent('Con tareas abiertas, sin movimiento hace más de 7 días')
-    // bajo el proyecto, hasta 3 tareas con lo que hizo y cuándo; "+1 más" abre el resto
-    const preview = within(douglasBlock).getByRole('list', { name: 'Lo que hizo Douglas Martins en DESIGN-SYSTEM' })
+    // al cargar, todo cerrado: solo [+] proyecto … métrica, sin las tareas
+    expect(douglasBlock).toHaveTextContent('35 en curso')
+    expect(douglasBlock).not.toHaveTextContent('Íconos nuevos')
+    expect(within(douglasBlock).queryByRole('list', { name: /^Tareas de/ })).toBeNull()
+    const toggle = within(douglasBlock).getByRole('button', { name: 'Ver las tareas de Douglas Martins en DESIGN-SYSTEM' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    // el + abre debajo hasta 3 tareas con lo que hizo y cuándo; "+1 más" muestra todas
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const preview = within(douglasBlock).getByRole('list', { name: 'Tareas de Douglas Martins en DESIGN-SYSTEM' })
+    expect(toggle).toHaveAttribute('aria-controls', preview.id)
     expect(within(preview).getAllByRole('link').map((a) => a.textContent)).toEqual(['Íconos nuevos', 'Paleta de colores', 'Tipografía'])
+    expect(within(preview).getByRole('link', { name: 'Íconos nuevos' })).toHaveAttribute('title', 'Íconos nuevos')
     expect(preview).toHaveTextContent('pasó a Prueba · hace 4 horas')
     expect(preview).toHaveTextContent('comentó · hace 5 horas')
     expect(preview).toHaveTextContent('adjuntó 1 archivo · hace 6 días')
@@ -122,14 +132,43 @@ describe('Proyectos: Gestión, Desarrollo y quién está trabajando', () => {
     expect(tasks).toHaveTextContent('Pasó de Desarrollo a Prueba · hace 4 horas')
     expect(tasks).toHaveTextContent('Comentó: «Vistas publicadas en pruebas»')
     expect(tasks).toHaveTextContent('Editó la tarea')
-    // sin acciones propias (GCS, parado): el + muestra sus tareas abiertas, como antes
+    // varias filas abiertas a la vez; sin acciones propias (GCS, parado): una línea corta
     await userEvent.click(within(douglasBlock).getByRole('button', { name: 'Ver las tareas de Douglas Martins en GESTIÓN COMERCIAL' }))
-    const open = within(douglasBlock).getByRole('list', { name: 'Tareas de Douglas Martins en GESTIÓN COMERCIAL' })
-    expect(within(open).getByRole('link', { name: 'Portal de pedidos' })).toHaveAttribute('href', '/tasks/t2')
-    expect(open).toHaveTextContent('GCS-4')
+    const gcs = within(douglasBlock).getByRole('list', { name: 'Tareas de Douglas Martins en GESTIÓN COMERCIAL' })
+    expect(gcs).toHaveTextContent('Sin acciones esta semana')
+    expect(within(gcs).queryByRole('link')).toBeNull()
+    expect(within(douglasBlock).getByRole('list', { name: 'Tareas de Douglas Martins en DESIGN-SYSTEM' })).toBeInTheDocument()
+    // el − cierra
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(douglasBlock).not.toHaveTextContent('Íconos nuevos')
     const anaBlock = within(panel).getByRole('region', { name: 'Angelica Davalos' })
     expect(anaBlock).toHaveTextContent('Activo esta semana')
     expect(anaBlock).toHaveTextContent('3 mov.')
+  })
+
+  it('"Equipo ahora": con más de 4 proyectos en un grupo se ven 4 y "Ver N proyectos más" muestra el resto', async () => {
+    const many = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => project(id, id.toUpperCase(), `PROYECTO ${id.toUpperCase()}`))
+    const busy: TeamActivity = {
+      windowDays: 7,
+      people: [
+        {
+          user: douglas,
+          projects: many.map((p) => ({ project: ref(p), state: 'active' as const, inProgress: 0, recent: 1, actions: 2, open: 3, stale: false, lastActivity: daysAgo(1), actedTasks: [], tasks: [] })),
+        },
+      ],
+    }
+    setup(undefined, vi.fn<ProjectRepository['teamActivity']>(() => Promise.resolve(busy)))
+    await userEvent.click(await screen.findByRole('button', { name: 'Equipo ahora' }))
+    const block = within(await screen.findByTestId('team-activity')).getByRole('region', { name: 'Douglas Martins' })
+    expect(within(block).getAllByRole('button', { name: /^Ver las tareas de/ })).toHaveLength(4)
+    expect(block).not.toHaveTextContent('PROYECTO E')
+    await userEvent.click(within(block).getByRole('button', { name: 'Ver 2 proyectos más' }))
+    expect(within(block).getAllByRole('button', { name: /^Ver las tareas de/ })).toHaveLength(6)
+    expect(block).toHaveTextContent('PROYECTO F')
+    expect(within(block).queryByRole('button', { name: /proyectos? más/ })).toBeNull()
+    // el foco pasa al primer proyecto que apareció
+    expect(within(block).getByRole('button', { name: 'Ver las tareas de Douglas Martins en PROYECTO E' })).toHaveFocus()
   })
 
   it('"Equipo ahora": las demandas internas aparecen como "Demandas internas" y llevan a la pantalla Demandas', async () => {

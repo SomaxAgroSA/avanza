@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Minus, Plus, Users } from 'lucide-react'
@@ -9,7 +10,7 @@ import { projectDisplayName } from '@/domain/demands'
 import { AppAvatar, AppBadge, AppDrawer, AppEmptyState, AppErrorState, AppSkeleton } from '@/presentation/components'
 import { ProjectAvatar } from './project-visuals'
 import { useTeamActivity } from './queries'
-import { ACTED_PREVIEW, actedCount, actionDetail, actionText, firstName, teamMetric } from './team-activity-data'
+import { ACTED_PREVIEW, TEAM_VISIBLE_PROJECTS, actedCount, actionDetail, actionText, firstName, teamMetric } from './team-activity-data'
 
 /** Marca de uma pessoa no projeto: verde (trabalhando), âmbar (em curso, mas parado) ou azul (ativo na semana). */
 export function ActivityChip({ user, row }: { user: UserSummary; row: TeamActivityProject }) {
@@ -55,7 +56,7 @@ const GROUPS: Array<{ key: TeamActivityState; tone: string }> = [
   { key: 'idle', tone: 'text-warning-soft-fg' },
 ]
 
-/** Painel "Equipo ahora": por pessoa, os projetos em que está trabalhando; o "+" abre as tarefas. */
+/** Painel "Equipo ahora": por pessoa, os projetos em que está trabalhando, fechados; o "+" abre as tarefas. */
 export function TeamActivityDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation()
   const activity = useTeamActivity(open)
@@ -101,11 +102,7 @@ function PersonBlock({ user, projects }: { user: UserSummary; projects: TeamActi
         return (
           <div key={key} className="mt-2">
             <p className={cn('mb-1 text-[11px] font-bold uppercase tracking-wide', tone)}>{t(`team.groups.${key}`)}</p>
-            <ul className="flex flex-col">
-              {rows.map((row) => (
-                <ProjectRow key={row.project.id} row={row} userName={user.name} />
-              ))}
-            </ul>
+            <TeamGroupRows rows={rows} className="flex flex-col" moreClassName="pl-7" renderRow={(row) => <ProjectRow key={row.project.id} row={row} userName={user.name} />} />
           </div>
         )
       })}
@@ -113,68 +110,108 @@ function PersonBlock({ user, projects }: { user: UserSummary; projects: TeamActi
   )
 }
 
+/**
+ * Um projeto da pessoa, fechado: [+] avatar nome … métrica. O "+" abre embaixo as tarefas em que ela agiu
+ * (até 3, "+N más" mostra a lista inteira aqui mesmo).
+ */
 function ProjectRow({ row, userName }: { row: TeamActivityProject; userName: string }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
-  const metric = teamMetric(t, row, i18n.language)
-  const panelId = `team-tasks-${row.project.id}-${userName.replace(/\W+/g, '')}`
+  const [all, setAll] = useState(false)
+  const panelId = useId()
   // a caixa das demandas internas (§45) leva para a tela Demandas
   const name = projectDisplayName(t, row.project)
   return (
     <li className="py-1">
       <div className="flex items-center gap-2 text-sm">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-label={t(open ? 'team.hideTasks' : 'team.showTasks', { project: name, name: userName })}
-          className="flex size-5 shrink-0 items-center justify-center rounded border border-border text-muted hover:border-primary hover:text-primary-text"
-        >
-          {open ? <Minus aria-hidden className="size-3" /> : <Plus aria-hidden className="size-3" />}
-        </button>
+        <TasksToggle
+          open={open}
+          controls={panelId}
+          label={t('team.showTasks', { project: name, name: userName })}
+          onToggle={() => {
+            setOpen((v) => !v)
+            setAll(false)
+          }}
+          className="size-5 rounded"
+        />
         <ProjectAvatar icon={row.project.icon} cover={row.project.cover} size="sm" className="size-5 rounded [&_svg]:size-3" />
         <Link to={row.project.demands ? '/tasks/demands' : `/projects/${row.project.id}`} className="min-w-0 flex-1 truncate text-fg hover:text-primary-text hover:underline">
           {name}
         </Link>
-        <span className={cn('shrink-0 text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{metric}</span>
+        <span className={cn('shrink-0 text-xs', row.stale ? 'text-warning-soft-fg' : 'text-muted')}>{teamMetric(t, row, i18n.language)}</span>
       </div>
-      {!open && <ActedPreview row={row} userName={userName} onMore={() => setOpen(true)} className="ml-7 mt-1" />}
       {open &&
-        (row.actedTasks.length > 0 ? (
-          <ActedTaskList id={panelId} tasks={row.actedTasks} label={t('team.tasksOf', { project: name, name: userName })} className="ml-7 mt-1 border-l border-border pl-3" />
+        (all ? (
+          <ActedTaskList id={panelId} tasks={row.actedTasks} label={t('team.tasksOf', { project: name, name: userName })} className="ml-14 mt-1 border-l border-border pl-3" />
         ) : (
-          <ul id={panelId} className="ml-7 mt-1 flex flex-col gap-1 border-l border-border pl-3" aria-label={t('team.tasksOf', { project: name, name: userName })}>
-            {row.tasks.map((task) => (
-              <li key={task.id} className="flex items-center gap-2 text-xs">
-                <span className="shrink-0 font-mono text-muted">{task.code}</span>
-                <Link to={`/tasks/${task.id}`} className="min-w-0 flex-1 truncate text-fg hover:text-primary-text hover:underline">
-                  {task.title}
-                </Link>
-                <AppBadge tone={task.inProgress ? 'success' : 'neutral'}>{task.status.name}</AppBadge>
-                <span className="shrink-0 text-subtle">{formatRelative(task.updatedAt, i18n.language)}</span>
-              </li>
-            ))}
-          </ul>
+          <ActedPreview id={panelId} row={row} userName={userName} onMore={() => setAll(true)} className="ml-14 mt-1" />
         ))}
     </li>
   )
 }
 
+/** O "+" de um projeto: abre e fecha as tarefas da pessoa embaixo dele (vira "−" aberto). */
+export function TasksToggle({ open, controls, label, onToggle, className }: { open: boolean; controls: string; label: string; onToggle: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      aria-label={label}
+      className={cn(
+        'flex shrink-0 items-center justify-center border border-border-strong text-muted hover:border-fg hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        className,
+      )}
+    >
+      {open ? <Minus aria-hidden className="size-3" /> : <Plus aria-hidden className="size-3" />}
+    </button>
+  )
+}
+
+/** Os projetos de um grupo (Trabalhando agora, Ativo…): até 4; "Ver mais N projetos" mostra o resto. */
+export function TeamGroupRows({ rows, renderRow, className, moreClassName }: { rows: TeamActivityProject[]; renderRow: (row: TeamActivityProject) => ReactNode; className?: string; moreClassName?: string }) {
+  const { t } = useTranslation()
+  const [all, setAll] = useState(false)
+  const list = useRef<HTMLUListElement>(null)
+  const shown = all ? rows : rows.slice(0, TEAM_VISIBLE_PROJECTS)
+  const hidden = rows.length - shown.length
+  return (
+    <>
+      <ul ref={list} className={className}>
+        {shown.map(renderRow)}
+      </ul>
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            // o botão some: o foco passa para o primeiro projeto que apareceu
+            flushSync(() => setAll(true))
+            list.current?.children[TEAM_VISIBLE_PROJECTS]?.querySelector<HTMLElement>('button, a')?.focus()
+          }}
+          className={cn('rounded pt-1 text-[12.5px] font-semibold text-primary-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring', moreClassName)}
+        >
+          {t('team.moreProjects', { count: hidden })}
+        </button>
+      )}
+    </>
+  )
+}
+
 /**
- * Até 3 tarefas em que a pessoa agiu, embaixo do projeto: o título, a ação ("pasó a Prueba", "comentó") e quando.
- * Com mais, "+N más" abre a lista inteira.
+ * As tarefas em que a pessoa agiu no projeto, quando o "+" está aberto: até 3, com o título, a ação ("pasó a Prueba",
+ * "comentó") e quando; com mais, "+N más" (onMore). Sem nenhuma, uma linha curta em cinza.
  */
-export function ActedPreview({ row, userName, onMore, className }: { row: TeamActivityProject; userName: string; onMore: () => void; className?: string }) {
+export function ActedPreview({ id, row, userName, onMore, opensDialog, className }: { id: string; row: TeamActivityProject; userName: string; onMore: () => void; opensDialog?: boolean; className?: string }) {
   const { t, i18n } = useTranslation()
-  if (row.actedTasks.length === 0) return null
   const shown = row.actedTasks.slice(0, ACTED_PREVIEW)
-  const rest = Math.max(row.recent, row.actedTasks.length) - shown.length
+  const rest = shown.length > 0 ? Math.max(row.recent, row.actedTasks.length) - shown.length : 0
   const project = projectDisplayName(t, row.project)
   return (
-    <ul aria-label={t('team.actedOf', { name: userName, project })} className={cn('flex min-w-0 flex-col', className)}>
+    <ul id={id} aria-label={t('team.tasksOf', { name: userName, project })} className={cn('flex min-w-0 flex-col border-l border-border pl-3', className)}>
+      {shown.length === 0 && <li className="py-0.5 text-[12.5px] text-muted">{t('team.actedNone')}</li>}
       {shown.map((task) => (
-        <li key={task.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-2 border-l-2 border-border py-0.5 pl-2.5 text-[12.5px]">
+        <li key={task.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-2 py-0.5 text-[12.5px]">
           <Link to={`/tasks/${task.id}`} title={task.title} className="truncate text-fg hover:text-primary-text hover:underline">
             {task.title}
           </Link>
@@ -184,10 +221,11 @@ export function ActedPreview({ row, userName, onMore, className }: { row: TeamAc
         </li>
       ))}
       {rest > 0 && (
-        <li className="border-l-2 border-border py-0.5 pl-2.5">
+        <li className="py-0.5">
           <button
             type="button"
             onClick={onMore}
+            aria-haspopup={opensDialog ? 'dialog' : undefined}
             aria-label={t('team.moreAria', { name: userName, project })}
             className="rounded text-[12.5px] font-semibold text-primary-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >

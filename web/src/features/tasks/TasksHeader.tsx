@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { Inbox, List, Plus } from 'lucide-react'
 import { AppButton, AppNavTabs, AppToolbar } from '@/presentation/components'
 import { PageHeader } from '@/presentation/layouts/PageHeader'
 import { useCan } from '@/features/auth/session'
@@ -48,18 +48,27 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
           <AppNavTabs
             aria-label={t('taskList.viewLabel')}
             variant="pill"
+            dense
             className="shrink-0"
             items={[
-              { key: 'list', to: '/tasks', label: t('taskList.viewList'), active: !onDemands },
+              {
+                key: 'list',
+                to: '/tasks',
+                icon: <List />,
+                // passo 1 da linha da Caixa de entrada (InboxFilterBar): só o ícone; o nome fica para o leitor de tela
+                label: <span className="[[data-compact~='1']_&]:sr-only">{t('taskList.viewList')}</span>,
+                active: !onDemands,
+              },
               {
                 key: 'demands',
                 to: inbox,
+                icon: <Inbox />,
                 active: onDemands,
                 label: (
                   <>
                     {/* no celular o nome inteiro some da tela mas continua para o leitor de tela (a11y link-name) */}
-                    <span className="@max-[1060px]:sr-only">{t('taskList.viewDemands')}</span>
-                    <span aria-hidden className="hidden @max-[1060px]:inline">
+                    <span className="@max-[1060px]:sr-only [[data-compact~='1']_&]:sr-only">{t('taskList.viewDemands')}</span>
+                    <span aria-hidden className="hidden @max-[1060px]:inline [[data-compact~='1']_&]:hidden!">
                       {t('taskList.viewDemandsShort')}
                     </span>
                     {pending > 0 && (
@@ -102,9 +111,9 @@ export function TasksHeader({ children }: { children?: ReactNode }) {
 function CreateButton({ full, short, onClick }: { full: string; short: string; onClick: () => void }) {
   return (
     <AppButton size="sm" leftIcon={<Plus />} aria-label={full} title={full} onClick={onClick}>
-      {/* `data-compact~='2'`: a linha da Bandeja não coube (InboxFilterBar) */}
-      <span className="@max-[1060px]:hidden [[data-compact~='2']_&]:hidden">{full}</span>
-      <span aria-hidden className="hidden @max-[1060px]:inline [[data-compact~='2']_&]:inline">
+      {/* `data-compact~='1'`: a linha da Caixa de entrada não coube (InboxFilterBar) */}
+      <span className="@max-[1060px]:hidden [[data-compact~='1']_&]:hidden">{full}</span>
+      <span aria-hidden className="hidden @max-[1060px]:inline [[data-compact~='1']_&]:inline">
         {short}
       </span>
     </AppButton>

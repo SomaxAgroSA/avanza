@@ -82,21 +82,32 @@ export const statusScope = (projects: readonly Project[], filter: PanelFilter): 
 
 /* ------------------------------------------------------------------ departamentos (pizza) */
 
-/** Paleta categórica validada da pizza (sem azul/laranja/verde repetidos); "Sem departamento" fica cinza. */
-export const PIE_PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4'] as const
+/**
+ * Paleta categórica da pizza: 8 cores em ordem fixa, nunca reaproveitadas (ajuste 25/11). Com mais de 8
+ * departamentos, os 7 primeiros ganham cor e o resto vai para "Outros" (cinza). "Sem departamento" fica no
+ * cinza claro e não gasta cor.
+ */
+export const PIE_PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'] as const
 export const PIE_NONE = '#b9bcb6'
+/** "Outros": cinza mais escuro que o de "Sem departamento", para os dois não se confundirem. */
+export const PIE_OTHER = '#8c918a'
+/** Chave da fatia "Outros" (não é área: abre a lista dos departamentos agrupados). */
+export const OTHER_AREAS = '__other'
 
 export interface DepartmentSlice {
-  /** Id da área ou 'none'. */
+  /** Id da área, 'none' ou OTHER_AREAS. */
   key: string
-  /** Nome da área; vazio em "Sem departamento" (a tela traduz). */
+  /** Nome da área; vazio em "Sem departamento" e em "Outros" (a tela traduz). */
   name: string
   count: number
   percent: number
   color: string
+  /** Só em "Outros": os departamentos agrupados, maior primeiro. */
+  children?: DepartmentSlice[]
 }
 
-export function departmentSlices(projects: readonly Project[]): DepartmentSlice[] {
+/** Projetos por área ('none' incluído), maior primeiro e, no empate, por nome. */
+function countByArea(projects: readonly Project[]): Array<[string, { name: string; count: number }]> {
   const byKey = new Map<string, { name: string; count: number }>()
   projects.forEach((p) => {
     const key = areaKey(p)
@@ -104,33 +115,71 @@ export function departmentSlices(projects: readonly Project[]): DepartmentSlice[
     entry.count++
     byKey.set(key, entry)
   })
-  const ordered = [...byKey.entries()].sort(
-    (a, b) => Number(a[0] === NO_AREA) - Number(b[0] === NO_AREA) || b[1].count - a[1].count || a[1].name.localeCompare(b[1].name),
-  )
-  let next = 0
-  return ordered.map(([key, { name, count }]) => ({
-    key,
-    name,
-    count,
-    percent: percentOf(count, projects.length),
-    color: key === NO_AREA ? PIE_NONE : PIE_PALETTE[next++ % PIE_PALETTE.length]!,
-  }))
+  return [...byKey.entries()].sort((a, b) => b[1].count - a[1].count || a[1].name.localeCompare(b[1].name))
 }
 
-/** Fatia como caminho SVG (centro cx,cy; raio r). Uma fatia de 100% vira círculo (o arco não fecha sozinho). */
-export function pieSlicePaths(slices: ReadonlyArray<{ key: string; count: number }>, cx: number, cy: number, r: number): Array<{ key: string; d: string }> {
+/**
+ * Fatias da pizza de departamentos. A cor (e quem vai para "Outros") sai da ordem em `reference` — no painel,
+ * os em andamento —, para a cor seguir o departamento quando o filtro muda; as contagens saem de `projects`.
+ * Ordem: departamentos com cor (maior primeiro), "Outros" e, por último, "Sem departamento".
+ */
+export function departmentSlices(projects: readonly Project[], reference: readonly Project[] = projects): DepartmentSlice[] {
+  const counted = countByArea(projects)
+  // ordem das cores: a da referência; quem só existe no recorte entra depois
+  const rank = countByArea(reference)
+    .map(([key]) => key)
+    .filter((key) => key !== NO_AREA)
+  counted.forEach(([key]) => key !== NO_AREA && !rank.includes(key) && rank.push(key))
+  const colored = rank.length <= PIE_PALETTE.length ? rank.length : PIE_PALETTE.length - 1
+  const slice = (key: string, name: string, count: number, color: string): DepartmentSlice => ({ key, name, count, percent: percentOf(count, projects.length), color })
+  const main: DepartmentSlice[] = []
+  const grouped: DepartmentSlice[] = []
+  let none: DepartmentSlice | null = null
+  for (const [key, { name, count }] of counted) {
+    const at = rank.indexOf(key)
+    if (key === NO_AREA) none = slice(key, name, count, PIE_NONE)
+    else if (at < colored) main.push(slice(key, name, count, PIE_PALETTE[at]!))
+    else grouped.push(slice(key, name, count, PIE_OTHER))
+  }
+  if (grouped.length > 0) {
+    const count = grouped.reduce((sum, s) => sum + s.count, 0)
+    main.push({ ...slice(OTHER_AREAS, '', count, PIE_OTHER), children: grouped })
+  }
+  return none ? [...main, none] : main
+}
+
+const pt = (cx: number, cy: number, r: number, angle: number) => `${(cx + r * Math.cos(angle)).toFixed(2)},${(cy + r * Math.sin(angle)).toFixed(2)}`
+
+/**
+ * Fatia como caminho SVG (centro cx,cy; raio r; `inner` > 0 = rosca, com furo desse raio). Uma fatia de 100%
+ * vira círculo — ou anel inteiro na rosca (o furo é desenhado no sentido contrário) —, porque o arco não fecha sozinho.
+ */
+export function pieSlicePaths(
+  slices: ReadonlyArray<{ key: string; count: number }>,
+  cx: number,
+  cy: number,
+  r: number,
+  inner = 0,
+): Array<{ key: string; d: string }> {
   const total = slices.reduce((sum, s) => sum + s.count, 0)
   if (total === 0) return []
   let angle = -Math.PI / 2
   return slices.map((slice) => {
-    if (slice.count === total) return { key: slice.key, d: `M${cx - r},${cy} a${r},${r} 0 1 0 ${2 * r},0 a${r},${r} 0 1 0 ${-2 * r},0 Z` }
+    if (slice.count === total) {
+      const circle = (radius: number, sweep: 0 | 1) => `M${cx - radius},${cy} a${radius},${radius} 0 1 ${sweep} ${2 * radius},0 a${radius},${radius} 0 1 ${sweep} ${-2 * radius},0 Z`
+      return { key: slice.key, d: inner > 0 ? `${circle(r, 0)} ${circle(inner, 1)}` : circle(r, 0) }
+    }
     const sweep = (slice.count / total) * Math.PI * 2
-    const x1 = cx + r * Math.cos(angle)
-    const y1 = cy + r * Math.sin(angle)
+    const start = angle
     angle += sweep
-    const x2 = cx + r * Math.cos(angle)
-    const y2 = cy + r * Math.sin(angle)
-    return { key: slice.key, d: `M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${sweep > Math.PI ? 1 : 0} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z` }
+    const large = sweep > Math.PI ? 1 : 0
+    if (inner > 0) {
+      return {
+        key: slice.key,
+        d: `M${pt(cx, cy, r, start)} A${r},${r} 0 ${large} 1 ${pt(cx, cy, r, angle)} L${pt(cx, cy, inner, angle)} A${inner},${inner} 0 ${large} 0 ${pt(cx, cy, inner, start)} Z`,
+      }
+    }
+    return { key: slice.key, d: `M${cx},${cy} L${pt(cx, cy, r, start)} A${r},${r} 0 ${large} 1 ${pt(cx, cy, r, angle)} Z` }
   })
 }
 
