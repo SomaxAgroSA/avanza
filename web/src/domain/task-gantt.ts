@@ -1,4 +1,5 @@
 import type { DemandStatus } from './demands'
+import { ganttScale, type GanttScale } from './gantt-scale'
 import type { UserSummary } from './projects'
 import type { TaskSummary } from './tasks'
 
@@ -41,11 +42,10 @@ export interface TaskGanttGroup {
 
 export interface TaskGanttModel {
   groups: TaskGanttGroup[]
-  /** Marcas do eixo (segundas-feiras ou, numa janela longa, o dia 1 de cada mês), em %. */
-  ticks: Array<{ date: Date; left: number }>
+  /** Janela longa: o cabeçalho marca os meses, não as semanas. */
   monthly: boolean
-  /** Posição de hoje, em %. */
-  today: number
+  /** Cabeçalho, sombreado e HOJE (§52): semanas e dias ou, numa janela longa, meses e segundas-feiras. */
+  scale: GanttScale
 }
 
 const DAY_MS = 86_400_000
@@ -84,18 +84,15 @@ export function taskGantt(tasks: readonly TaskSummary[], groupBy: GanttGroupBy, 
   const monthly = (last - first) / DAY_MS > WEEKLY_LIMIT_DAYS
   let from: number
   let to: number
-  const ticks: number[] = []
   if (monthly) {
     const start = new Date(first)
     from = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1)
     const end = new Date(last - 1)
     to = Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1)
-    for (let m = new Date(from); m.getTime() < to; m.setUTCMonth(m.getUTCMonth() + 1)) ticks.push(m.getTime())
   } else {
-    // semanas de segunda a domingo
+    // semanas inteiras, de segunda a domingo
     from = first - ((new Date(first).getUTCDay() + 6) % 7) * DAY_MS
     to = last + ((7 - ((new Date(last).getUTCDay() + 6) % 7)) % 7) * DAY_MS
-    for (let w = from; w < to; w += 7 * DAY_MS) ticks.push(w)
   }
   const span = to - from
   const pct = (ms: number) => Math.max(0, Math.min(100, ((ms - from) / span) * 100))
@@ -134,40 +131,8 @@ export function taskGantt(tasks: readonly TaskSummary[], groupBy: GanttGroupBy, 
   for (const group of groups) {
     group.rows.sort((a, b) => a.dueDay.getTime() - b.dueDay.getTime() || (a.dueAt?.getTime() ?? 0) - (b.dueAt?.getTime() ?? 0) || a.task.title.localeCompare(b.task.title))
   }
-  return { model: { groups, monthly, today: pct(today + DAY_MS / 2), ticks: ticks.map((ms) => ({ date: new Date(ms), left: pct(ms) })) }, undated }
+  return { model: { groups, monthly, scale: ganttScale(from, to, today, monthly ? 'months' : 'weeks') }, undated }
 }
 
-/**
- * Coluna dos títulos da linha do tempo (ajuste aprovado em demonstração, 26/11, §50): sempre abre "estendida" —
- * a largura automática acompanha o título mais longo (numa linha, até o limite; o que passar quebra em até duas
- * linhas), entre `GANTT_LABEL_MIN` e o menor de `GANTT_LABEL_MAX` e `GANTT_LABEL_SHARE` da largura. O divisor deixa
- * a pessoa escolher outra largura (de `GANTT_LABEL_MIN` até sobrar `GANTT_BARS_MIN` para as barras).
- */
-export const GANTT_LABEL_MIN = 200
-export const GANTT_LABEL_MAX = 480
-export const GANTT_LABEL_SHARE = 0.4
-export const GANTT_BARS_MIN = 260
-/** Passo das setas ← → no divisor. */
-export const GANTT_LABEL_STEP = 20
-/** Largura média de um caractere do título (12px) e a folga da coluna. */
-const CHAR_PX = 6.6
-const LABEL_PADDING = 16
-
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max))
-
-/** Largura automática da coluna dos títulos; `available` = largura da linha do tempo (0 = ainda sem medida). */
-export function autoLabelWidth(titles: readonly string[], available: number): number {
-  const longest = titles.reduce((max, title) => Math.max(max, title.trim().length), 0)
-  const wanted = Math.ceil(longest * CHAR_PX + LABEL_PADDING)
-  const cap = available > 0 ? Math.min(GANTT_LABEL_MAX, Math.round(available * GANTT_LABEL_SHARE)) : GANTT_LABEL_MAX
-  return clamp(wanted, GANTT_LABEL_MIN, cap)
-}
-
-/** Largura escolhida pela pessoa dentro dos limites (sobra ao menos `GANTT_BARS_MIN` para as barras). */
-export function clampLabelWidth(width: number, available: number): number {
-  const max = available > 0 ? available - GANTT_BARS_MIN : Number.POSITIVE_INFINITY
-  return Math.round(clamp(width, GANTT_LABEL_MIN, max))
-}
-
-/** Largura guardada no navegador: número positivo ou null (= automática). */
-export const toLabelWidth = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : null)
+/** Largura guardada da coluna dos títulos (§50/§52): a regra comum das linhas do tempo, em gantt-scale.ts. */
+export { toLabelWidth } from './gantt-scale'

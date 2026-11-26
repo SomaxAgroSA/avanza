@@ -1022,25 +1022,37 @@ describe('Caixa de entrada — Lista | Linha do tempo (ajuste 25/11, opção B)'
     await userEvent.click(screen.getByRole('link', { name: 'Publicar o dashboard' }))
     expect(await screen.findByText('Página da tarefa')).toBeInTheDocument()
   })
-  it('formato estendido (§50): títulos em até duas linhas (sem "…"), coluna automática, divisor com teclado e duplo clique, "Restabelecer"; a largura fica guardada', async () => {
+  it('títulos inteiros numa linha (§52): sem quebra e sem "…", cabeçalho por semanas, coluna automática que o divisor só alarga; a largura fica guardada', async () => {
     window.localStorage.setItem('avanza.inbox.view.u2', JSON.stringify({ view: 'timeline', groupBy: 'person' }))
     const { unmount } = setup()
     const gantt = await screen.findByRole('region', { name: 'Linha do tempo das tarefas' })
     const title = within(gantt).getAllByTestId('gantt-title')[0]!
-    expect(title).toHaveClass('line-clamp-2')
+    expect(title).toHaveClass('whitespace-nowrap', 'w-max')
+    expect(title).not.toHaveClass('line-clamp-2')
     expect(title).not.toHaveClass('truncate')
+    // todas as linhas na mesma altura
+    within(gantt).getAllByTestId('gantt-row').forEach((row) => expect(row).toHaveClass('h-7'))
+    // cabeçalho: as semanas em cima (a atual em negrito), os dias embaixo, fins de semana sombreados, HOJE
+    const current = within(gantt).getAllByTestId('gantt-period').filter((p) => p.hasAttribute('data-current'))
+    expect(current).toHaveLength(1)
+    expect(current[0]).toHaveTextContent(/^Esta semana · \d{1,2}(\s\S+)?–\d{1,2} \S+$/)
+    expect(current[0]).toHaveClass('font-bold')
+    expect(within(gantt).getAllByTestId('gantt-mark').length).toBeGreaterThan(5)
+    expect(within(gantt).getAllByTestId('gantt-weekend').length).toBeGreaterThan(0)
+    expect(within(gantt).getByTestId('gantt-today')).toHaveClass('bg-danger')
     // a dica da barra: título inteiro, passo e datas
     expect(within(gantt).getByRole('link', { name: /^Publicar o dashboard · Em andamento · .+ → .+$/ })).toBeInTheDocument()
     const divider = within(gantt).getByRole('separator', { name: 'Largura da coluna das tarefas' })
     expect(divider).toHaveAttribute('aria-orientation', 'vertical')
-    // automática pelos títulos (o mais longo: "Portal de acesso no servidor"), nunca abaixo de 200px
+    // automática pelo título mais longo ("Portal de acesso no servidor"): é também o mínimo do divisor
     const auto = divider.getAttribute('aria-valuenow')
-    expect(Number(auto)).toBeGreaterThanOrEqual(200)
+    expect(Number(auto)).toBeGreaterThan(150)
+    expect(divider).toHaveAttribute('aria-valuemin', auto)
     divider.focus()
     await userEvent.keyboard('{ArrowRight}{ArrowRight}')
     expect(divider).toHaveAttribute('aria-valuenow', String(Number(auto) + 40))
     expect(JSON.parse(window.localStorage.getItem('avanza.inbox.view.u2') ?? '{}')).toEqual({ view: 'timeline', groupBy: 'person', labelWidth: Number(auto) + 40 })
-    expect(within(gantt).getAllByTestId('gantt-row')[0]).toHaveStyle({ gridTemplateColumns: `${Number(auto) + 40}px 1fr` })
+    expect(within(gantt).getAllByTestId('gantt-row')[0]).toHaveStyle({ gridTemplateColumns: `${Number(auto) + 40}px minmax(0, 1fr)` })
     unmount()
     // na próxima entrada, a largura escolhida; duplo clique volta à automática
     setup()
@@ -1049,12 +1061,20 @@ describe('Caixa de entrada — Lista | Linha do tempo (ajuste 25/11, opção B)'
     await userEvent.dblClick(again)
     expect(again).toHaveAttribute('aria-valuenow', auto)
     expect(JSON.parse(window.localStorage.getItem('avanza.inbox.view.u2') ?? '{}')).toEqual({ view: 'timeline', groupBy: 'person' })
-    // ← também; "Restabelecer" volta ao formato estendido
+    // o divisor só alarga: ← não passa do título mais longo
     again.focus()
     await userEvent.keyboard('{ArrowLeft}')
-    expect(again).toHaveAttribute('aria-valuenow', String(Math.max(200, Number(auto) - 20)))
+    expect(again).toHaveAttribute('aria-valuenow', auto)
+    // → e ← voltam; "Restabelecer" também volta à automática
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}{ArrowLeft}')
+    expect(again).toHaveAttribute('aria-valuenow', String(Number(auto) + 20))
     await userEvent.click(screen.getByRole('button', { name: 'Restabelecer' }))
     expect(again).toHaveAttribute('aria-valuenow', auto)
+    unmount()
+    // largura guardada antiga, menor que o título mais longo: não vale
+    window.localStorage.setItem('avanza.inbox.view.u2', JSON.stringify({ view: 'timeline', groupBy: 'person', labelWidth: 40 }))
+    setup()
+    expect(await screen.findByRole('separator', { name: 'Largura da coluna das tarefas' })).toHaveAttribute('aria-valuenow', auto)
   })
 })
 

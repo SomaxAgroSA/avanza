@@ -2741,6 +2741,11 @@
     },
     "updating": "Updating the dashboard…"
   },
+  "ganttScale": {
+    "today": "Today",
+    "thisWeek": "This week · {{range}}",
+    "thisMonth": "This month · {{month}}"
+  },
   "timeline": {
     "title": "Timeline",
     "label": "{{name}} timeline",
@@ -4910,7 +4915,8 @@
     "timeline": {
       "title": "Project timeline",
       "project": "Project",
-      "today": "Today",
+      "divider": "Width of the project column",
+      "dividerHint": "Drag right to widen the column (← → on the keyboard). It never gets narrower than the longest name; double-click goes back to the automatic width.",
       "late": "Overdue",
       "tip": "{{name}} · {{status}} · due {{date}}",
       "tipLate": "{{name}} · {{status}} · due {{date}} (overdue)",
@@ -5260,16 +5266,15 @@
       "byPerson": "Person",
       "byProject": "Project",
       "empty": "No task in this filter has a deadline.",
-      "today": "Today",
       "tip": "{{title}} · {{step}} · {{start}} → {{due}}",
       "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (overdue)",
       "groupSummary": "{{count}} · {{hours}} h",
       "undated_one": "{{count}} without a deadline stays in the List.",
       "undated_other": "{{count}} without a deadline stay in the List.",
       "reset": "Reset",
-      "resetHint": "Sets the task column back to the extended layout (automatic width).",
+      "resetHint": "Sets the task column back to the automatic width (that of the longest title).",
       "divider": "Task column width",
-      "dividerHint": "Drag to see more title or more bars (← → on the keyboard). Double-click goes back to the automatic width."
+      "dividerHint": "Drag right to widen the column (← → on the keyboard). It never gets narrower than the longest title; double-click goes back to the automatic width."
     }
   }
 }

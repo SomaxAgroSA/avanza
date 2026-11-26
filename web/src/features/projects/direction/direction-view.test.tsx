@@ -420,6 +420,43 @@ describe('En marcha: vista de Dirección y gerencia (§41)', () => {
     ;['Planificación', 'En curso', 'Pausado', 'Entrega vencida'].forEach((label) => expect(within(timeline).getByText(label)).toBeInTheDocument())
   })
 
+  it('línea de tiempo (§52): nombres completos en una línea (también los sin fecha), cabecera por meses con «Este mes», columna automática que el divisor solo ensancha y queda guardada', async () => {
+    setup()
+    const panel = await screen.findByTestId('direction-panel')
+    const timeline = within(panel).getByRole('region', { name: 'Línea de tiempo de los proyectos' })
+    // el nombre entero, sin «…»: nada de truncate, en una línea
+    for (const name of ['Alfa', 'Beta', 'Delta', 'Gama']) {
+      const label = within(timeline).getByText(name)
+      expect(label).not.toHaveClass('truncate')
+      expect(label.closest('[data-gantt-label]')).toHaveClass('whitespace-nowrap', 'w-max')
+    }
+    within(timeline).getAllByTestId('direction-gantt-row').forEach((row) => expect(row).toHaveClass('h-6'))
+    // por meses: el mes actual en negrita con «Este mes · …»; abajo, el día de cada lunes; HOY y su línea roja
+    const current = within(timeline).getAllByTestId('gantt-period').filter((p) => p.hasAttribute('data-current'))
+    expect(current).toHaveLength(1)
+    expect(current[0]).toHaveTextContent(/^Este mes · \S+ \d{2}$/)
+    expect(current[0]).toHaveClass('font-bold')
+    expect(within(timeline).getAllByTestId('gantt-mark').length).toBeGreaterThan(3)
+    expect(within(timeline).queryAllByTestId('gantt-weekend')).toHaveLength(0)
+    expect(within(timeline).getByTestId('gantt-today')).toHaveClass('bg-danger')
+    // la columna: el nombre más largo (es también el mínimo); el divisor solo ensancha y queda guardado por persona
+    const divider = within(timeline).getByRole('separator', { name: 'Ancho de la columna de los proyectos' })
+    const auto = divider.getAttribute('aria-valuenow')
+    expect(divider).toHaveAttribute('aria-valuemin', auto)
+    divider.focus()
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(divider).toHaveAttribute('aria-valuenow', auto)
+    await userEvent.keyboard('{ArrowRight}')
+    expect(divider).toHaveAttribute('aria-valuenow', String(Number(auto) + 20))
+    expect(within(timeline).getAllByTestId('direction-gantt-undated')[0]).toHaveStyle({ gridTemplateColumns: `${Number(auto) + 20}px minmax(0, 1fr)` })
+    const key = Object.keys(window.localStorage).find((k) => k.startsWith('avanza.projects.timeline.labelWidth.'))
+    expect(key && JSON.parse(window.localStorage.getItem(key)!)).toBe(Number(auto) + 20)
+    // doble clic vuelve al automático
+    await userEvent.dblClick(divider)
+    expect(divider).toHaveAttribute('aria-valuenow', auto)
+    expect(key && window.localStorage.getItem(key)).toBeNull()
+  })
+
   it('Estado de ejecución va al lado de Proyectos por departamento; el bloque Tareas por proyecto ya no aparece', async () => {
     setup()
     const panel = await screen.findByTestId('direction-panel')

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DemandStatus } from './demands'
 import type { TaskSummary } from './tasks'
-import { GANTT_LABEL_MAX, GANTT_LABEL_MIN, autoLabelWidth, clampLabelWidth, taskGantt, toGanttGroupBy, toLabelWidth } from './task-gantt'
+import { taskGantt, toGanttGroupBy, toLabelWidth } from './task-gantt'
 
 const person = (id: string, name: string) => ({ id, name, email: `${id}@x`, avatarUrl: null })
 const jorge = person('u3', 'Jorge Benitez')
@@ -84,16 +84,27 @@ describe('Linha do tempo das tarefas (ajuste 25/11)', () => {
     expect(v1.start.toISOString().slice(0, 10)).toBe('2026-11-18')
     expect(v1.late).toBe(true)
     expect(v1.dueAt).toEqual(new Date(2026, 10, 24, 17))
-    // posições dentro da janela, que começa numa segunda-feira
+    // posições dentro da janela: semanas inteiras, de segunda (16/11) a domingo (06/12)
     expect(model!.monthly).toBe(false)
-    expect(model!.ticks[0]!.date.getUTCDay()).toBe(1)
-    expect(model!.ticks[0]!.left).toBe(0)
+    const { scale } = model!
+    expect(scale.unit).toBe('weeks')
+    expect(scale.from.toISOString().slice(0, 10)).toBe('2026-11-16')
+    expect(scale.to.toISOString().slice(0, 10)).toBe('2026-12-07')
+    expect(scale.periods.map((p) => `${p.start.toISOString().slice(5, 10)}..${p.last.toISOString().slice(5, 10)}${p.current ? '*' : ''}`)).toEqual([
+      '11-16..11-22',
+      '11-23..11-29*',
+      '11-30..12-06',
+    ])
+    // embaixo, cada dia menos hoje (25/11: no lugar vai HOJE); sábados e domingos sombreados
+    expect(scale.marks).toHaveLength(20)
+    expect(scale.marks.some((m) => m.date.toISOString().startsWith('2026-11-25'))).toBe(false)
+    expect(scale.weekends).toHaveLength(6)
     for (const row of model!.groups.flatMap((g) => g.rows)) {
       expect(row.left).toBeGreaterThanOrEqual(0)
       expect(row.left + row.width).toBeLessThanOrEqual(100.0001)
     }
-    expect(j1.left).toBeLessThan(model!.today)
-    expect(j1.left + j1.width).toBeGreaterThan(model!.today)
+    expect(j1.left).toBeLessThan(scale.today!)
+    expect(j1.left + j1.width).toBeGreaterThan(scale.today!)
   })
 
   it('por projeto: o projeto da tarefa; a demanda interna (sem projeto) por último', () => {
@@ -109,8 +120,14 @@ describe('Linha do tempo das tarefas (ajuste 25/11)', () => {
   it('janela longa marca os meses', () => {
     const { model } = taskGantt([task('a', 'assigned', { startDate: new Date(Date.UTC(2026, 6, 1)), dueDate: new Date(Date.UTC(2027, 1, 10)) })], 'person', now)
     expect(model!.monthly).toBe(true)
-    expect(model!.ticks.map((t) => t.date.getUTCDate())).toEqual(model!.ticks.map(() => 1))
-    expect(model!.ticks).toHaveLength(8)
+    // por meses (§52): os meses em cima (o atual em destaque), as segundas-feiras embaixo, sem fins de semana
+    const { scale } = model!
+    expect(scale.unit).toBe('months')
+    expect(scale.periods.map((p) => p.start.getUTCDate())).toEqual(scale.periods.map(() => 1))
+    expect(scale.periods).toHaveLength(8)
+    expect(scale.periods.filter((p) => p.current).map((p) => p.start.toISOString().slice(0, 7))).toEqual(['2026-11'])
+    expect(scale.marks.every((m) => m.date.getUTCDay() === 1)).toBe(true)
+    expect(scale.weekends).toEqual([])
   })
 
   it('agrupamento guardado desconhecido vira por pessoa', () => {
@@ -119,29 +136,7 @@ describe('Linha do tempo das tarefas (ajuste 25/11)', () => {
   })
 })
 
-describe('coluna dos títulos (§50): sempre estendida, ajustável', () => {
-  const long = 'DISPONIBILIZAR VÍA API LA VISTA DE PEDIDOS PENDIENTES DE BLEND (S/4) PARA EL DRE'
-
-  it('automática: acompanha o título mais longo, entre o mínimo e o máximo (ou 40% da largura)', () => {
-    expect(autoLabelWidth(['Curta'], 1200)).toBe(GANTT_LABEL_MIN)
-    expect(autoLabelWidth(['Um título de tamanho médio, quarenta e poucas'], 1600)).toBeGreaterThan(GANTT_LABEL_MIN)
-    expect(autoLabelWidth(['Um título de tamanho médio, quarenta e poucas'], 1600)).toBeLessThan(GANTT_LABEL_MAX)
-    expect(autoLabelWidth([long], 1600)).toBe(GANTT_LABEL_MAX)
-    // tela estreita: no máximo 40% (sem passar do mínimo)
-    expect(autoLabelWidth([long], 900)).toBe(360)
-    expect(autoLabelWidth([long], 300)).toBe(GANTT_LABEL_MIN)
-    // ainda sem medida: até o máximo
-    expect(autoLabelWidth([long], 0)).toBe(GANTT_LABEL_MAX)
-    expect(autoLabelWidth([], 1200)).toBe(GANTT_LABEL_MIN)
-  })
-
-  it('escolhida pela pessoa: do mínimo até sobrar espaço para as barras', () => {
-    expect(clampLabelWidth(120, 1200)).toBe(GANTT_LABEL_MIN)
-    expect(clampLabelWidth(700.4, 1200)).toBe(700)
-    expect(clampLabelWidth(1100, 1200)).toBe(940)
-    expect(clampLabelWidth(1100, 0)).toBe(1100)
-  })
-
+describe('coluna dos títulos: largura guardada (a regra da coluna está em gantt-scale, §52)', () => {
   it('guardada no navegador: só número positivo; o resto é a automática (null)', () => {
     expect(toLabelWidth(321.6)).toBe(322)
     expect(toLabelWidth(null)).toBeNull()
