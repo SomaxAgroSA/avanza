@@ -33,6 +33,8 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
     await app.admin.post(`/tasks/${a.id}/comments`, { content: 'Ambiente de homologação pronto.' })
     const sprint = (await app.admin.post(`/projects/${seed.project.id}/sprints`, { name: 'Sprint 1' })).body.data
     await app.admin.patch(`/tasks/${b.id}`, { sprint_id: sprint.id })
+    // fixada no topo da Lista (§50): o grupo "Fixadas" em destaque também passa pelo axe nos quatro modos
+    await app.admin.post(`/tasks/${b.id}/pin`)
     await app.admin.patch(`/tasks/${a.id}`, { start_date: '2020-01-01' })
     await app.admin.post(`/projects/${seed.project.id}/milestones`, { name: 'Go-live', due_date: '2020-01-31' })
     const type = seed.types.find((t) => t.key === 'BUG') || seed.types[0]

@@ -260,7 +260,8 @@
     "CHARTER_ITEM_NOT_FOUND": "Charter item not found.",
     "PROJECT_HAS_DOCS": "This project has documentation: choose whether to move it, keep it as a general space or delete it.",
     "DEMAND_STATE_CONFLICT": "This action is not available at the current step of the request. Refresh the page.",
-    "PANORAMA_DISABLED": "The Panorama is turned off in Settings → General."
+    "PANORAMA_DISABLED": "The Panorama is turned off in Settings → General.",
+    "TASK_PIN_LIMIT": "There are already 10 pinned tasks. Unpin one before pinning another."
   },
   "nav": {
     "main": "Main navigation",
@@ -645,7 +646,8 @@
           "boxes": "Inbox — boxes",
           "views": "Inbox — views",
           "filters": "Top line filters",
-          "create": "Create buttons"
+          "create": "Create buttons",
+          "row_actions": "Row actions in the List"
         },
         "docs": {
           "actions": "Page buttons"
@@ -735,6 +737,9 @@
           "create": {
             "project_task": "＋ Project task",
             "internal_demand": "＋ Internal request"
+          },
+          "row_actions": {
+            "pin": "Pin"
           }
         },
         "docs": {
@@ -1043,7 +1048,8 @@
       "company": "Company",
       "short_code": "Short code",
       "active": "Active",
-      "copy_to": "Copy to"
+      "copy_to": "Copy to",
+      "pinned": "Pinned to top"
     },
     "actions": {
       "auth.login": "Signed in",
@@ -1206,7 +1212,9 @@
       "task.demand_passed": "Passed the request on",
       "task.demand_concluded": "Completed the request",
       "task.demand_validated": "Validated the request",
-      "task.demand_returned": "Returned the request"
+      "task.demand_returned": "Returned the request",
+      "task.pinned": "Pinned the task to the top of the List",
+      "task.unpinned": "Unpinned the task"
     }
   },
   "projects": {
@@ -2048,7 +2056,19 @@
       "later": "Later",
       "none": "No due date"
     },
-    "noResponsible": "No owner"
+    "noResponsible": "No owner",
+    "pin": {
+      "action": "Pin to top",
+      "remove": "Unpin",
+      "column": "Pin",
+      "pinned": "Task pinned to the top of the List, for everyone.",
+      "unpinned": "Task unpinned.",
+      "by": "Pinned by {{name}} · {{when}}",
+      "byNobody": "Pinned · {{when}}",
+      "group": "Pinned · {{count}}",
+      "groupHint": "shown at the top for everyone",
+      "rest": "Everything else"
+    }
   },
   "taskList": {
     "scopeLabel": "Which tasks to show",
@@ -5245,7 +5265,11 @@
       "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (overdue)",
       "groupSummary": "{{count}} · {{hours}} h",
       "undated_one": "{{count}} without a deadline stays in the List.",
-      "undated_other": "{{count}} without a deadline stay in the List."
+      "undated_other": "{{count}} without a deadline stay in the List.",
+      "reset": "Reset",
+      "resetHint": "Sets the task column back to the extended layout (automatic width).",
+      "divider": "Task column width",
+      "dividerHint": "Drag to see more title or more bars (← → on the keyboard). Double-click goes back to the automatic width."
     }
   }
 }

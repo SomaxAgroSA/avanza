@@ -63,9 +63,37 @@ export interface DataTableColumn<T> {
   searchFilter?: boolean
 }
 
+/**
+ * Ação própria da tela que entra em "Colunas e ações" › "Ações em cada linha", como Visualizar e Editar (ex.: o
+ * "Fixar" da Lista de tarefas, §50): a pessoa liga e desliga; aparece antes do "Visualizar".
+ */
+export interface DataTableCustomAction<T> {
+  key: string
+  /** Nome em "Ações em cada linha". */
+  label: string
+  /** Começa ligada (padrão) ou desligada. */
+  defaultOn?: boolean
+  render: (row: T) => ReactNode
+}
+
+/**
+ * Linhas em grupos (ex.: as fixadas no topo da Lista de tarefas, §50): uma faixa antes da primeira linha de cada
+ * grupo. As linhas já vêm na ordem (o servidor ordena); a faixa só aparece onde `of` devolve um grupo.
+ */
+export interface DataTableRowGroups<T> {
+  /** Grupo da linha; null = sem faixa. */
+  of: (row: T) => string | null
+  /** Conteúdo da faixa (`count` = linhas do grupo nesta página). */
+  header: (group: string, count: number) => ReactNode
+  /** Faixa e linhas do grupo em destaque (tokens do tema). */
+  highlight?: (group: string) => boolean
+}
+
 export interface DataTableRowActions<T> {
   /** Ação própria da tela, antes do "Visualizar" (ex.: incluir a tarefa no informe do projeto). */
   leading?: (row: T) => ReactNode
+  /** Ações próprias da tela que "Colunas e ações" liga e desliga (antes do "Visualizar"). */
+  custom?: DataTableCustomAction<T>[]
   /** Clique na linha (e o botão "Visualizar"): abre a visualização rápida. */
   onView?: (row: T) => void
   /** Linha sem visualização: o botão fica desativado e o clique na linha não faz nada. */
@@ -138,6 +166,8 @@ export interface AppDataTableProps<T extends RowData> {
    * nenhuma ligada (e sem ação própria da tela) = sem a coluna Ações.
    */
   configurableActions?: boolean
+  /** Linhas em grupos, com uma faixa antes de cada um (ex.: "Fixadas" no topo da Lista de tarefas, §50). */
+  rowGroups?: DataTableRowGroups<T>
 }
 
 /** Ações da linha que "Colunas e ações" liga e desliga. */
@@ -146,6 +176,8 @@ type RowActionKey = (typeof ROW_ACTION_KEYS)[number]
 const ROW_ACTION_LABELS: Record<RowActionKey, string> = { view: 'common.view', edit: 'common.edit', delete: 'common.delete', more: 'table.moreActions' }
 /** Escolha guardada da ação: Excluir só ligado quando a pessoa ligou; as demais, ligadas até desligar. */
 const actionChosen = (prefs: Record<string, boolean>, key: RowActionKey) => (key === 'delete' ? prefs.delete === true : prefs[key] !== false)
+/** Escolha guardada de uma ação própria da tela: o padrão dela até a pessoa escolher. */
+const customChosen = <T,>(prefs: Record<string, boolean>, action: DataTableCustomAction<T>) => prefs[action.key] ?? action.defaultOn !== false
 /** Ações que a tela oferece (as que aparecem em "Ações em cada linha"). */
 function offeredActions<T>(actions: DataTableRowActions<T>): RowActionKey[] {
   return ROW_ACTION_KEYS.filter((key) => (key === 'view' ? !!actions.onView : key === 'edit' ? !!actions.onEdit : key === 'delete' ? !!actions.onDelete : !actions.hideMore))
@@ -162,6 +194,12 @@ const features = tableFeatures({
 })
 
 const ACTIONS_ID = '__actions'
+/**
+ * Fundo das linhas do grupo em destaque (ex.: as fixadas, §50): o tom de aviso do tema misturado à superfície, opaco
+ * (a coluna fixa cobre o que rola por baixo) e claro o bastante para o texto secundário manter o contraste AA nos
+ * dois temas.
+ */
+const HIGHLIGHT_ROW = 'bg-[color-mix(in_oklab,var(--color-warning-soft)_50%,var(--color-surface))]'
 /** Espera do clique simples quando a linha também abre com duplo clique. */
 const DOUBLE_CLICK_MS = 250
 /** Clique em botão, link ou item de menu da linha não conta como clique na linha. */
@@ -212,6 +250,7 @@ export function AppDataTable<T extends RowData>({
   bordered = true,
   onRowClick,
   configurableActions = true,
+  rowGroups,
 }: AppDataTableProps<T>) {
   const { t } = useTranslation()
   const { state } = tableState
@@ -276,7 +315,11 @@ export function AppDataTable<T extends RowData>({
       more: actions.hideMore ? configurableActions && !!actions.onDelete && !remove : on('more'),
     }
   }, [actions, configurableActions, rowActionPrefs])
-  const actionButtons = visibleActions ? ROW_ACTION_KEYS.filter((key) => visibleActions[key]).length : 0
+  const visibleCustom = useMemo(
+    () => (actions?.custom ?? []).filter((action) => !configurableActions || customChosen(rowActionPrefs, action)),
+    [actions, configurableActions, rowActionPrefs],
+  )
+  const actionButtons = visibleActions ? ROW_ACTION_KEYS.filter((key) => visibleActions[key]).length + visibleCustom.length : 0
   const hasActionsColumn = !!actions && !!visibleActions && (actionButtons > 0 || !!actions.leading)
 
   const columnDefs = useMemo(() => {
@@ -302,7 +345,7 @@ export function AppDataTable<T extends RowData>({
         helper.accessor((row) => row as unknown, {
           id: ACTIONS_ID,
           header: t('table.actions'),
-          cell: (ctx) => <RowActions row={ctx.row.original} actions={actions} visible={visibleActions} />,
+          cell: (ctx) => <RowActions row={ctx.row.original} actions={actions} visible={visibleActions} custom={visibleCustom} />,
           enableSorting: false,
           enableHiding: false,
           enableResizing: false,
@@ -312,7 +355,7 @@ export function AppDataTable<T extends RowData>({
       )
     }
     return defs
-  }, [columns, actions, visibleActions, hasActionsColumn, actionButtons, t])
+  }, [columns, actions, visibleActions, visibleCustom, hasActionsColumn, actionButtons, t])
 
   const sorting: SortingState = state.sort ? [{ id: state.sort.id, desc: state.sort.direction === 'desc' }] : []
   // Em telas estreitas nada fica fixo: as colunas fixas ocupariam toda a largura e esconderiam as demais.
@@ -426,16 +469,24 @@ export function AppDataTable<T extends RowData>({
       locked: !column.getCanHide() || (column.getIsVisible() && visibleColumnCount <= (hasActionsColumn ? 2 : 1)),
     }))
   const actionsMenu = configurableActions && actions
-  const menuActions: ColumnsMenuAction[] = actionsMenu
+  // as ações próprias da tela entram logo depois de Visualizar e Editar (Visualizar, Editar, Fixar…, Excluir, Mais)
+  const customMenu: ColumnsMenuAction[] = actionsMenu ? (actions.custom ?? []).map((a) => ({ key: a.key, label: a.label, checked: customChosen(rowActionPrefs, a) })) : []
+  const builtInMenu: ColumnsMenuAction[] = actionsMenu
     ? offeredActions(actions).map((key) => ({
         key,
         label: key === 'delete' && actions.deleteName ? actions.deleteName : t(ROW_ACTION_LABELS[key]),
         checked: actionChosen(rowActionPrefs, key),
       }))
     : []
-  // guarda as quatro escolhas explícitas (o padrão pode mudar sem mexer no que a pessoa escolheu)
+  const customAt = builtInMenu.filter((a) => a.key === 'view' || a.key === 'edit').length
+  const menuActions: ColumnsMenuAction[] = [...builtInMenu.slice(0, customAt), ...customMenu, ...builtInMenu.slice(customAt)]
+  // guarda as escolhas explícitas (o padrão pode mudar sem mexer no que a pessoa escolheu)
   const toggleAction = (key: string, checked: boolean) =>
-    tableState.setRowActions({ ...Object.fromEntries(ROW_ACTION_KEYS.map((k) => [k, actionChosen(rowActionPrefs, k)])), [key]: checked })
+    tableState.setRowActions({
+      ...Object.fromEntries(ROW_ACTION_KEYS.map((k) => [k, actionChosen(rowActionPrefs, k)])),
+      ...Object.fromEntries((actions?.custom ?? []).map((a) => [a.key, customChosen(rowActionPrefs, a)])),
+      [key]: checked,
+    })
   const columnsLabel = actionsMenu ? t('table.columnsAndActions') : t('table.columns')
 
   // "Colunas" e a ação principal: na barra ou no lugar indicado pela tela (actionsSlot)
@@ -645,57 +696,82 @@ export function AppDataTable<T extends RowData>({
 
               {!showSkeleton &&
                 !error &&
-                table.getRowModel().rows.map((row) => (
-                  // Clique na linha é atalho de mouse (no teclado, o botão "Visualizar"); com `onOpen`, o duplo
-                  // clique abre a página completa e o clique simples espera um instante para não abrir os dois.
-                  <tr
-                    key={row.id}
-                    onClick={(event) => {
-                      if (onRowClick && !actions?.onView && !isControl(event.target)) return onRowClick(row.original)
-                      if (!actions?.onView || isControl(event.target) || actions.canView?.(row.original) === false) return
-                      const view = actions.onView
-                      if (!actions.onOpen) return view(row.original)
-                      window.clearTimeout(clickTimer.current)
-                      clickTimer.current = window.setTimeout(() => view(row.original), DOUBLE_CLICK_MS)
-                    }}
-                    onDoubleClick={(event) => {
-                      if (!actions?.onOpen || isControl(event.target)) return
-                      window.clearTimeout(clickTimer.current)
-                      actions.onOpen(row.original)
-                    }}
-                    title={actions?.onOpen ? t('table.openHint') : undefined}
-                    className={cn('group/row transition-colors hover:bg-surface-2', (actions?.onView || onRowClick) && 'cursor-pointer', slowFetch && 'opacity-70')}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const def = columns.find((c) => c.id === cell.column.id)
-                      const content = (
-                        <td
-                          key={cell.id}
-                          style={pinnedStyle(cell.column as never)}
-                          className={cn(
-                            // primeira e última colunas mais afastadas da borda arredondada do cartão
-                            'border-b border-border px-3 py-2.5 align-middle text-fg group-last/row:border-b-0 first:pl-5 last:pr-5',
-                            cell.column.getIsPinned() && 'bg-surface group-hover/row:bg-surface-2',
-                            (def?.align === 'end' || cell.column.id === ACTIONS_ID) && 'text-right',
-                            // largura escolhida: o que não cabe fica dentro da coluna (corta ou quebra), sem invadir a vizinha
-                            customWidths && 'overflow-hidden',
-                          )}
-                        >
-                          <table.FlexRender cell={cell} />
-                        </td>
-                      )
-                      return cell.column.id === ACTIONS_ID && customWidths ? (
-                        <Fragment key={cell.id}>
-                          {filler('filler', 'border-b border-border group-last/row:border-b-0')}
-                          {content}
-                        </Fragment>
-                      ) : (
-                        content
-                      )
-                    })}
-                    {customWidths && !hasActionsColumn && filler('filler', 'border-b border-border group-last/row:border-b-0')}
-                  </tr>
-                ))}
+                table.getRowModel().rows.map((row, index, rows) => {
+                  const group = rowGroups?.of(row.original) ?? null
+                  const highlight = group !== null && !!rowGroups?.highlight?.(group)
+                  const startsGroup = group !== null && (index === 0 || rowGroups?.of(rows[index - 1]!.original) !== group)
+                  return (
+                    <Fragment key={row.id}>
+                      {startsGroup && (
+                        <tr data-testid="row-group">
+                          <td
+                            colSpan={visibleColumnCount + (customWidths ? 1 : 0)}
+                            className={cn(
+                              'border-b border-border px-5 py-1.5 text-left text-xs font-semibold tracking-wide uppercase',
+                              highlight ? 'bg-warning-soft text-warning-soft-fg' : 'bg-surface text-muted',
+                            )}
+                          >
+                            {rowGroups!.header(group, rows.filter((r) => rowGroups!.of(r.original) === group).length)}
+                          </td>
+                        </tr>
+                      )}
+                      {/* Clique na linha é atalho de mouse (no teclado, o botão "Visualizar"); com `onOpen`, o duplo
+                          clique abre a página completa e o clique simples espera um instante para não abrir os dois. */}
+                      <tr
+                        data-highlight={highlight || undefined}
+                        onClick={(event) => {
+                          if (onRowClick && !actions?.onView && !isControl(event.target)) return onRowClick(row.original)
+                          if (!actions?.onView || isControl(event.target) || actions.canView?.(row.original) === false) return
+                          const view = actions.onView
+                          if (!actions.onOpen) return view(row.original)
+                          window.clearTimeout(clickTimer.current)
+                          clickTimer.current = window.setTimeout(() => view(row.original), DOUBLE_CLICK_MS)
+                        }}
+                        onDoubleClick={(event) => {
+                          if (!actions?.onOpen || isControl(event.target)) return
+                          window.clearTimeout(clickTimer.current)
+                          actions.onOpen(row.original)
+                        }}
+                        title={actions?.onOpen ? t('table.openHint') : undefined}
+                        className={cn(
+                          'group/row transition-colors',
+                          highlight ? HIGHLIGHT_ROW : 'hover:bg-surface-2',
+                          (actions?.onView || onRowClick) && 'cursor-pointer',
+                          slowFetch && 'opacity-70',
+                        )}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const def = columns.find((c) => c.id === cell.column.id)
+                          const content = (
+                            <td
+                              key={cell.id}
+                              style={pinnedStyle(cell.column as never)}
+                              className={cn(
+                                // primeira e última colunas mais afastadas da borda arredondada do cartão
+                                'border-b border-border px-3 py-2.5 align-middle text-fg group-last/row:border-b-0 first:pl-5 last:pr-5',
+                                cell.column.getIsPinned() && (highlight ? HIGHLIGHT_ROW : 'bg-surface group-hover/row:bg-surface-2'),
+                                (def?.align === 'end' || cell.column.id === ACTIONS_ID) && 'text-right',
+                                // largura escolhida: o que não cabe fica dentro da coluna (corta ou quebra), sem invadir a vizinha
+                                customWidths && 'overflow-hidden',
+                              )}
+                            >
+                              <table.FlexRender cell={cell} />
+                            </td>
+                          )
+                          return cell.column.id === ACTIONS_ID && customWidths ? (
+                            <Fragment key={cell.id}>
+                              {filler('filler', 'border-b border-border group-last/row:border-b-0')}
+                              {content}
+                            </Fragment>
+                          ) : (
+                            content
+                          )
+                        })}
+                        {customWidths && !hasActionsColumn && filler('filler', 'border-b border-border group-last/row:border-b-0')}
+                      </tr>
+                    </Fragment>
+                  )
+                })}
             </tbody>
           </table>
         </div>
@@ -714,7 +790,17 @@ export function AppDataTable<T extends RowData>({
   )
 }
 
-function RowActions<T extends RowData>({ row, actions, visible }: { row: T; actions: DataTableRowActions<T>; visible: Record<RowActionKey, boolean> }) {
+function RowActions<T extends RowData>({
+  row,
+  actions,
+  visible,
+  custom,
+}: {
+  row: T
+  actions: DataTableRowActions<T>
+  visible: Record<RowActionKey, boolean>
+  custom: DataTableCustomAction<T>[]
+}) {
   const { t } = useTranslation()
   const canView = actions.onView && (actions.canView ? actions.canView(row) : true)
   const canEdit = actions.onEdit && (actions.canEdit ? actions.canEdit(row) : true)
@@ -741,6 +827,9 @@ function RowActions<T extends RowData>({ row, actions, visible }: { row: T; acti
   return (
     <div className="flex items-center justify-end gap-0.5">
       {actions.leading?.(row)}
+      {custom.map((action) => (
+        <Fragment key={action.key}>{action.render(row)}</Fragment>
+      ))}
       {visible.view && <AppIconButton size="sm" label={t('common.view')} icon={<Eye />} disabled={!canView} onClick={() => actions.onView?.(row)} />}
       {visible.edit && (
         <AppIconButton size="sm" label={t('common.edit')} icon={<Pencil />} disabled={!canEdit} onClick={() => actions.onEdit?.(row)} />

@@ -689,4 +689,46 @@ describe('repositórios de tarefas (Postgres)', () => {
     assert.deepEqual(await r.tasks.lastActions([member.id], [], [hidden.id]), [{ userId: member.id, projectId: other.id, at: new Date('2026-11-21T09:00:00Z') }])
     assert.deepEqual(await r.tasks.lastActions([], [project.id], []), [])
   })
+
+  it('fixadas no topo (§50): uma por tarefa, com quem fixou; limite conferido sob trava; a lista põe as fixadas primeiro', async () => {
+    const pins = repositories.createTaskPinRepository(t.db)
+    const project = await seedProject()
+    const tasks = []
+    for (let i = 0; i < 4; i++) tasks.push(await seedTask(project))
+    const pin = (task, max) => t.db.transaction(() => pins.pin(task.id, owner.id, max || 3))
+    const first = await pin(tasks[1])
+    assert.equal(first.status, 'pinned')
+    assert.deepEqual([first.pin.taskId, first.pin.pinnedBy, first.pin.createdAt instanceof Date], [tasks[1].id, owner.id, true])
+    assert.equal((await pin(tasks[1])).status, 'already')
+    await t.db.exec('UPDATE task_pins SET created = $2 WHERE task_id = $1', [tasks[1].id, new Date('2026-11-01T00:00:00Z')])
+    await pin(tasks[3])
+    await t.db.exec('UPDATE task_pins SET created = $2 WHERE task_id = $1', [tasks[3].id, new Date('2026-11-02T00:00:00Z')])
+    // duas ao mesmo tempo com uma vaga: a trava deixa passar só uma
+    const both = await Promise.all([pin(tasks[0]), pin(tasks[2])])
+    assert.deepEqual(both.map((result) => result.status).sort(), ['full', 'pinned'])
+    assert.equal(await pins.count(), 3)
+    const winner = both[0].status === 'pinned' ? tasks[0] : tasks[2]
+    const loser = winner === tasks[0] ? tasks[2] : tasks[0]
+
+    const map = await pins.listByTasks(tasks.map((task) => task.id))
+    assert.deepEqual(Object.keys(map).sort(), [tasks[1].id, tasks[3].id, winner.id].sort())
+    assert.deepEqual(await pins.listByTasks([]), {})
+
+    // as fixadas primeiro (a mais recente no topo), depois a ordem pedida; a contagem não muda
+    const base = { scope: { viewAll: true, userId: owner.id }, projectId: project.id, sort: [{ column: 'code', direction: 'ASC' }], pagination: { perPage: 50, offset: 0 } }
+    const pinnedFirst = await r.tasks.list(Object.assign({ pinnedFirst: true }, base))
+    assert.deepEqual(codes(pinnedFirst.items), [winner.code, tasks[3].code, tasks[1].code, loser.code])
+    assert.equal(pinnedFirst.total, 4)
+    assert.deepEqual(codes((await r.tasks.list(base)).items), codes(tasks))
+    // só as que passam no filtro
+    const filtered = await r.tasks.list(Object.assign({ pinnedFirst: true, statusIds: [status.BACKLOG], search: null }, base, { pagination: { perPage: 2, offset: 0 } }))
+    assert.deepEqual(codes(filtered.items), [winner.code, tasks[3].code])
+
+    // desafixar devolve a que existia; de novo, null
+    assert.equal((await pins.unpin(tasks[3].id)).taskId, tasks[3].id)
+    assert.equal(await pins.unpin(tasks[3].id), null)
+    // excluir a tarefa tira a fixação (cascata)
+    await r.tasks.delete(tasks[1].id)
+    assert.equal(await pins.count(), 1)
+  })
 })

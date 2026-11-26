@@ -306,7 +306,14 @@ function dueRange(group, today) {
   return null
 }
 
+/**
+ * Tarefas fixadas no topo da Lista de tarefas (§50, ADR-064): no máximo 10 ao mesmo tempo, para todas as pessoas
+ * (fixar é igual para todos); a mais recente fica primeiro. Fixa e desafixa quem pode editar a tarefa.
+ */
+const MAX_PINNED = 10
+
 module.exports = {
+  MAX_PINNED,
   DUE_GROUPS,
   dueRange,
   URGENCY_LEVELS,

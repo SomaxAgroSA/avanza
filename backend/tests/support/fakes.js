@@ -65,6 +65,8 @@ function createFakeStore() {
     tags: [],
     icons: [],
     taskTags: [],
+    /** Tarefas fixadas no topo da Lista (§50): { taskId, pinnedBy, createdAt }. */
+    taskPins: [],
     comments: [],
     attachments: [],
     projectFiles: [],
@@ -559,6 +561,7 @@ function createFakeRepositories(store) {
       store.tasks = store.tasks.filter((t) => t.id !== id)
       store.taskValues = store.taskValues.filter((v) => v.taskId !== id)
       store.taskTags = store.taskTags.filter((r) => r.taskId !== id)
+      store.taskPins = store.taskPins.filter((p) => p.taskId !== id)
       store.comments = store.comments.filter((c) => c.taskId !== id)
       store.attachments = store.attachments.filter((a) => a.taskId !== id)
       store.docPageTasks = store.docPageTasks.filter((l) => l.taskId !== id)
@@ -853,7 +856,13 @@ function createFakeRepositories(store) {
         )
       }
       const sorts = query.sort.concat([{ column: 'created', direction: 'ASC' }])
+      const pinnedAt = (t) => {
+        const pin = store.taskPins.find((p) => p.taskId === t.id)
+        return pin ? pin.createdAt.getTime() : -1
+      }
       items = items.slice().sort((a, b) => {
+        // fixadas primeiro (§50): a mais recente no topo
+        if (query.pinnedFirst && pinnedAt(a) !== pinnedAt(b)) return pinnedAt(b) - pinnedAt(a)
         if (query.firstAssigneeId) {
           const ma = a.assigneeId === query.firstAssigneeId ? 0 : 1
           const mb = b.assigneeId === query.firstAssigneeId ? 0 : 1
@@ -1468,6 +1477,30 @@ function createFakeRepositories(store) {
     },
   }
 
+  let pinClock = 0
+  const taskPinRepository = {
+    listByTasks: (taskIds) => {
+      const map = {}
+      store.taskPins.filter((p) => taskIds.includes(p.taskId)).forEach((p) => (map[p.taskId] = Object.assign({}, p)))
+      return map
+    },
+    count: () => store.taskPins.length,
+    pin: (taskId, userId, max) => {
+      const current = store.taskPins.find((p) => p.taskId === taskId)
+      if (current) return { status: 'already', pin: Object.assign({}, current) }
+      if (store.taskPins.length >= max) return { status: 'full', pin: null }
+      pinClock += 1
+      const pin = { taskId, pinnedBy: userId || null, createdAt: new Date(Date.UTC(2026, 0, 2, 0, 0, pinClock)) }
+      store.taskPins.push(pin)
+      return { status: 'pinned', pin: Object.assign({}, pin) }
+    },
+    unpin: (taskId) => {
+      const current = store.taskPins.find((p) => p.taskId === taskId)
+      store.taskPins = store.taskPins.filter((p) => p.taskId !== taskId)
+      return current || null
+    },
+  }
+
   let commentClock = 0
   const commentRepository = {
     findById: (id) => store.comments.find((c) => c.id === id) || null,
@@ -1781,6 +1814,7 @@ function createFakeRepositories(store) {
     companyRepository,
     iconLibraryRepository,
     taskTagRepository,
+    taskPinRepository,
     commentRepository,
     attachmentRepository,
     projectFileRepository,

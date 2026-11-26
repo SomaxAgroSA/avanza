@@ -670,6 +670,8 @@ function createTaskRepository(db) {
       const order = []
       // parâmetros só da listagem (a contagem usa os do filtro): "minhas tarefas primeiro" entra no ORDER BY
       const listParams = params.slice()
+      // fixadas primeiro (§50; a Lista de tarefas pede): a mais recente no topo, só entre as que passam no filtro
+      if (query.pinnedFirst) order.push('(SELECT p.created FROM task_pins p WHERE p.task_id = tasks.id) DESC NULLS LAST')
       if (query.firstAssigneeId) {
         listParams.push(query.firstAssigneeId)
         order.push(`(tasks.assignee_id IS NOT DISTINCT FROM $${listParams.length}) DESC`)
@@ -718,6 +720,47 @@ function createTaskTagRepository(db) {
     async replace(taskId, tagIds) {
       await db.exec('DELETE FROM task_tag_relations WHERE task_id = $1', [taskId])
       await insertMany(db, 'task_tag_relations', ['id', 'task_id', 'tag_id'], tagIds.map((tagId) => ({ id: newId(), task_id: taskId, tag_id: tagId })))
+    },
+  }
+}
+
+/**
+ * Tarefas fixadas no topo da Lista (§50, ADR-064): uma linha por tarefa fixada, com quem fixou e quando. O limite
+ * (domain/task.js#MAX_PINNED) é conferido sob uma trava da transação, para que duas pessoas fixando ao mesmo tempo
+ * não passem do máximo.
+ */
+function createTaskPinRepository(db) {
+  const toEntity = (row) => ({ taskId: row.task_id, pinnedBy: row.pinned_by || null, createdAt: row.created })
+  return {
+    /** { taskId: { pinnedBy, createdAt } } das tarefas fixadas entre `taskIds`. */
+    async listByTasks(taskIds) {
+      if (taskIds.length === 0) return {}
+      const rows = await db.query('SELECT * FROM task_pins WHERE task_id = ANY($1::text[])', [taskIds])
+      const map = {}
+      rows.forEach((row) => {
+        map[row.task_id] = toEntity(row)
+      })
+      return map
+    },
+    async count() {
+      return (await db.one('SELECT COUNT(*) AS total FROM task_pins')).total
+    },
+    /**
+     * Fixa a tarefa: `{ status: 'pinned' | 'already' | 'full', pin }` — 'already' quando já estava fixada (nada
+     * muda); 'full' quando já há `max` fixadas. A trava (por esquema) vale até o fim da transação.
+     */
+    async pin(taskId, userId, max) {
+      await db.query("SELECT pg_advisory_xact_lock(hashtext(current_schema() || '.task_pins'))")
+      const current = await db.one('SELECT * FROM task_pins WHERE task_id = $1', [taskId])
+      if (current) return { status: 'already', pin: toEntity(current) }
+      if ((await db.one('SELECT COUNT(*) AS total FROM task_pins')).total >= max) return { status: 'full', pin: null }
+      const row = await db.one('INSERT INTO task_pins (task_id, pinned_by) VALUES ($1, $2) RETURNING *', [taskId, userId || null])
+      return { status: 'pinned', pin: toEntity(row) }
+    },
+    /** Desafixa; devolve a fixação que existia (null = não estava fixada). */
+    async unpin(taskId) {
+      const row = await db.one('DELETE FROM task_pins WHERE task_id = $1 RETURNING *', [taskId])
+      return row ? toEntity(row) : null
     },
   }
 }
@@ -1199,6 +1242,7 @@ function createRelationRepository(db) {
 module.exports = {
   createTaskRepository,
   createTaskTagRepository,
+  createTaskPinRepository,
   createTaskValueRepository,
   createCommentRepository,
   createAttachmentRepository,

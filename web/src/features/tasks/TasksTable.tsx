@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/core/utils/cn'
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, FileCheck2, FileX2, Laptop, UserCheck } from 'lucide-react'
+import { ExternalLink, FileCheck2, FileX2, Laptop, Pin, PinOff, UserCheck } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import {
@@ -30,6 +30,7 @@ import {
 } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan, useSession } from '@/features/auth/session'
+import { useScreens } from '@/features/auth/use-screens'
 import { managementLink } from '@/features/plan/paths'
 import { useAreas, usePriorities, useStatuses } from '@/features/workflow/queries'
 import { useCompanies } from '@/features/companies/queries'
@@ -87,6 +88,9 @@ const TITLE_CLASS = 'line-clamp-2 break-words font-medium'
 const SCOPE_COLUMN_ORDER = ['code', 'project', 'status', 'responsible', 'assignee', 'priority', 'urgency', 'due_date']
 /** Ações de cada linha ("Colunas e ações"): Excluir desligado por padrão (fica no "⋯" e na página da tarefa). */
 const ROW_ACTION_DEFAULTS = { delete: false }
+/** Grupos da Lista de tarefas do menu quando há fixadas (§50): as fixadas no topo e as demais. */
+const PINNED_GROUP = 'pinned'
+const REST_GROUP = 'rest'
 /** Ocultas por padrão na Lista de tarefas do menu (continuam em "Colunas"). */
 const SCOPE_HIDDEN_COLUMNS = { area: false, type: false, plan_item: false, tags: false, category: false, updated_at: false }
 
@@ -133,10 +137,28 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
   const apiFilters = useMemo(() => (scope ? scopedTaskFilters(filters, scope, kind) : filters), [filters, scope, kind])
   // demanda interna (§45): abre a página inteira (não o painel lateral), lembrando de onde veio
   const openPage = (task: TaskSummary) => void navigate(`/tasks/${task.id}`, { state: { from: { to: '/tasks', place: 'tasks' } } })
-  const tasks = useTasksList({ ...table.query, filters: apiFilters }, { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}) })
+  // Lista de tarefas do menu (§50): as fixadas no topo, para todos (só as que passam nos filtros)
+  const pinning = !!scope
+  const tasks = useTasksList(
+    { ...table.query, filters: apiFilters },
+    { ...(projectId ? { projectId } : {}), ...(mineFirst ? { mineFirst: true } : {}), ...(pinning ? { pinnedFirst: true } : {}) },
+  )
   const statuses = useStatuses(true)
   const priorities = usePriorities(true)
-  const { remove, setInReport, setItVisible } = useTaskMutations()
+  const { remove, setInReport, setItVisible, setPinned } = useTaskMutations()
+  // o botão "Fixar" (e o do "⋯") some quando o perfil o esconde (§48); as fixadas continuam no topo
+  const showsPin = useScreens().shows('tasks.row_actions.pin')
+  const canPin = pinning && showsPin && canEdit
+  const items = tasks.data?.items ?? EMPTY
+  const hasPinned = pinning && items.some((task) => !!task.pinned)
+  const togglePin = (task: TaskSummary) =>
+    setPinned.mutate(
+      { id: task.id, pinned: !task.pinned },
+      {
+        onSuccess: (saved) => notify.success(t(saved.pinned ? 'tasks.pin.pinned' : 'tasks.pin.unpinned')),
+        onError: (error) => notify.error(errorMessage(error)),
+      },
+    )
   const markReport = !!projectId && !!marks?.report
   const markIt = !!projectId && !!marks?.itVisible
   const urgencyOptions = useUrgencyFilterOptions()
@@ -182,6 +204,14 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
                 <p title={task.title} className={cn(TITLE_CLASS, isClosed(task) ? 'text-muted line-through decoration-subtle' : 'text-fg')}>
                   {task.title}
                 </p>
+                {/* fixada (§50): quem fixou e quando, sem repetir o ícone (ele fica só no botão da linha) */}
+                {task.pinned && (
+                  <p className="text-[11px] text-warning-soft-fg" data-testid="task-pinned-by">
+                    {task.pinned.by
+                      ? t('tasks.pin.by', { name: task.pinned.by.name, when: formatRelative(task.pinned.at, locale) })
+                      : t('tasks.pin.byNobody', { when: formatRelative(task.pinned.at, locale) })}
+                  </p>
+                )}
                 <TaskIndicators task={task} lean />
               </div>
             </div>
@@ -397,7 +427,7 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         tableId="tasks"
         caption={t('tasks.title')}
         columns={ordered}
-        data={tasks.data?.items ?? EMPTY}
+        data={items}
         total={tasks.data?.total ?? 0}
         getRowId={(task) => task.id}
         table={table}
@@ -408,6 +438,23 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
         searchPlaceholder={t('tasks.searchPlaceholder')}
         actionsSlot={actionsSlot}
         configurableActions
+        // fixadas no topo (§50): a faixa "Fixadas · n" em destaque e, depois, "As demais"
+        rowGroups={
+          hasPinned
+            ? {
+                of: (task) => (task.pinned ? PINNED_GROUP : REST_GROUP),
+                highlight: (group) => group === PINNED_GROUP,
+                header: (group, count) =>
+                  group === PINNED_GROUP ? (
+                    <>
+                      {t('tasks.pin.group', { count })} <span className="font-normal tracking-normal normal-case">({t('tasks.pin.groupHint')})</span>
+                    </>
+                  ) : (
+                    t('tasks.pin.rest')
+                  ),
+              }
+            : undefined
+        }
         toolbar={
           scope ? undefined : (
             <AppButton
@@ -468,6 +515,32 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
                   </>
                 )
               : undefined,
+          // Lista de tarefas do menu (§50): o "Fixar" da linha, que "Colunas e ações" liga e desliga (ligado por padrão)
+          custom: pinning && showsPin
+            ? [
+                {
+                  key: 'pin',
+                  label: t('tasks.pin.column'),
+                  render: (task: TaskSummary) => {
+                    const label = task.pinned ? t('tasks.pin.remove') : t('tasks.pin.action')
+                    return (
+                      <AppIconButton
+                        size="sm"
+                        label={label}
+                        aria-label={`${label}: ${task.title}`}
+                        aria-pressed={!!task.pinned}
+                        icon={<Pin className={cn(task.pinned && 'fill-current')} />}
+                        // não fixada: cinza e tênue; fixada: na cor do destaque
+                        className={task.pinned ? 'text-warning-soft-fg hover:text-warning-soft-fg' : 'text-subtle opacity-60 hover:opacity-100'}
+                        disabled={!canPin || (setPinned.isPending && setPinned.variables?.id === task.id)}
+                        onClick={() => togglePin(task)}
+                        data-testid="task-pin"
+                      />
+                    )
+                  },
+                },
+              ]
+            : undefined,
           // demanda interna: a página inteira; tarefa de projeto (com ou sem quem distribui): o painel, como sempre
           onView: (task) => (task.demand && !task.project ? openPage(task) : setViewing(task.id)),
           onOpen: (task) => (task.demand && !task.project ? openPage(task) : void navigate(`/tasks/${task.id}`)),
@@ -475,7 +548,13 @@ export function TasksTable({ tableId, projectId, search, onSearchApplied, action
           canEdit: () => canEdit,
           onDelete: setDeleting,
           canDelete: () => canDelete,
-          more: (task) => [{ key: 'open', label: t('tasks.openPage'), icon: <ExternalLink />, onSelect: () => void navigate(`/tasks/${task.id}`) }],
+          more: (task) => [
+            { key: 'open', label: t('tasks.openPage'), icon: <ExternalLink />, onSelect: () => void navigate(`/tasks/${task.id}`) },
+            // "Fixar no topo" / "Desafixar" também no "⋯" (§50), para quem edita
+            ...(canPin
+              ? [{ key: 'pin', label: task.pinned ? t('tasks.pin.remove') : t('tasks.pin.action'), icon: task.pinned ? <PinOff /> : <Pin />, onSelect: () => togglePin(task) }]
+              : []),
+          ],
         }}
       />
 

@@ -21,6 +21,9 @@
  *   (domain/task.js#scopedAccess); nelas, referências a módulos e tarefas que ele não vê (elemento da
  *   Gestão, tarefa pai ou de origem) saem vazias. Marcar "Visível para TI" é de quem edita a tarefa, não
  *   do Responsável TI; ligar/desligar no informe exige a seção Informe (§35).
+ * - Fixar no topo da Lista (§50, ADR-064): `task_pins`, igual para todas as pessoas; quem edita a tarefa fixa e
+ *   desafixa (no máximo 10); as listas trazem `pinned: { by, at } | null` e `pinned_first=true` põe as fixadas
+ *   primeiro (só as que passam nos filtros).
  */
 
 const { appError } = require('../core/errors')
@@ -158,6 +161,8 @@ const LIST_SCHEMA = {
   sprint_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
   in_report: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   mine_first: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
+  // fixadas primeiro (§50): a Lista de tarefas pede; sem ele, a ordem de sempre
+  pinned_first: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   it_visible: [rules.custom((value) => (value === 'true' || value === 'false' ? null : 'invalid_option'))],
   // `none` = sem urgência; vários separados por vírgula (§44)
   urgency: [
@@ -460,6 +465,12 @@ function createTaskService(deps) {
       })
     })
     const taskIds = list.map((t) => t.id).filter((id, i, all) => id && all.indexOf(id) === i)
+    // fixadas no topo da Lista (§50): quem fixou entra nas pessoas da consulta
+    const pins = taskIds.length ? await deps.taskPinRepository.listByTasks(taskIds) : {}
+    Object.keys(pins).forEach((taskId) => {
+      const by = pins[taskId].pinnedBy
+      if (by && userIds.indexOf(by) < 0) userIds.push(by)
+    })
     const sprintIds = list.map((t) => t.sprintId).filter((id, i, all) => id && all.indexOf(id) === i)
     const planItemIds = list.map((t) => t.planItemId).filter((id, i, all) => id && all.indexOf(id) === i)
     const taskTags = taskIds.length ? await deps.taskTagRepository.listByTasks(taskIds) : {}
@@ -489,6 +500,7 @@ function createTaskService(deps) {
       related: byId(relatedIds.length ? await tasks.findManyByIds(relatedIds) : []),
       subtasks: taskIds.length ? await tasks.subtaskStats(taskIds, closedIds) : {},
       blocked,
+      pins,
       projects: byId(projectIds.length ? await deps.projectRepository.findManyByIds(projectIds) : []),
       users: byId(userIds.length ? await deps.userRepository.findManyByIds(userIds) : []),
       taskTags,
@@ -563,7 +575,15 @@ function createTaskService(deps) {
       area: area ? { id: area.id, key: area.key, name: area.name, color: area.color || 'gray' } : null,
       // empresa (§46): a da demanda interna ou, na tarefa de projeto, a do projeto
       company: companyId ? companyRef(refs.companies[companyId]) : null,
+      // fixada no topo da Lista de tarefas (§50): quem fixou e quando; igual para todas as pessoas
+      pinned: pinOf(task, refs),
     }
+  }
+
+  function pinOf(task, refs) {
+    const pin = refs.pins && refs.pins[task.id]
+    if (!pin) return null
+    return { by: pin.pinnedBy && refs.users[pin.pinnedBy] ? toUserSummary(refs.users[pin.pinnedBy]) : null, at: iso(pin.createdAt) }
   }
 
   const taskRef = (t) => (t ? { id: t.id, code: t.code, title: t.title } : null)
@@ -766,6 +786,7 @@ function createTaskService(deps) {
         plan_item_id: pick('plan_item_id'),
         in_report: pick('in_report'),
         mine_first: pick('mine_first'),
+        pinned_first: pick('pinned_first'),
         it_visible: pick('it_visible'),
         urgency: pick('urgency'),
         area_id: pick('area_id'),
@@ -829,6 +850,8 @@ function createTaskService(deps) {
       sort: parseSort(q.sort, SORTABLE, 'code'),
       // "Minhas tarefas primeiro": as atribuídas a quem consulta vêm antes, cada grupo na ordem pedida
       firstAssigneeId: filters.mine_first === 'true' ? ctx.principal.userId : undefined,
+      // as fixadas no topo (§50), antes de qualquer outra ordem; só as que passam nos filtros
+      pinnedFirst: filters.pinned_first === 'true',
       pagination,
     })
     const refs = Object.assign(await refsFor(result.items), { scoped: await itProjects(ctx, result.items) })
@@ -1353,6 +1376,33 @@ function createTaskService(deps) {
   }
 
   /**
+   * Fixa a tarefa no topo da Lista de tarefas, para todas as pessoas (§50, ADR-064): quem pode editar a tarefa
+   * (mesma regra da edição); no máximo `MAX_PINNED` (TASK_PIN_LIMIT); já fixada não muda nada. Histórico
+   * `task.pinned`; não exige os campos obrigatórios do status nem renova o "atualizada" da tarefa.
+   */
+  async function pinTask(ctx, id) {
+    const { task, project, access } = await loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    await deps.unitOfWork.run(async (repos) => {
+      const result = await repos.taskPinRepository.pin(task.id, ctx.principal.userId, taskDomain.MAX_PINNED)
+      if (result.status === 'full') throw appError('TASK_PIN_LIMIT', undefined, { max: taskDomain.MAX_PINNED })
+      if (result.status === 'pinned') await audit(repos, ctx, task, 'task.pinned', null, { pinned: true })
+    })
+    return presentDetail(ctx, task, project, access)
+  }
+
+  /** Desafixa (§50): a mesma regra de quem fixa; não fixada não muda nada. Histórico `task.unpinned`. */
+  async function unpinTask(ctx, id) {
+    const { task, project, access } = await loadTask(ctx, id)
+    taskDomain.assertTaskAccess(access, project, 'edit', task)
+    await deps.unitOfWork.run(async (repos) => {
+      const removed = await repos.taskPinRepository.unpin(task.id)
+      if (removed) await audit(repos, ctx, task, 'task.unpinned', { pinned: true }, null)
+    })
+    return presentDetail(ctx, task, project, access)
+  }
+
+  /**
    * Kanban: move a tarefa para `status_id` entre `prev_id` (card acima) e `next_id` (card abaixo).
    * Mudar de coluna segue as regras de edição (transição, datas, histórico, notificações);
    * reordenar dentro da mesma coluna só muda a posição (sem histórico).
@@ -1399,7 +1449,25 @@ function createTaskService(deps) {
   }
 
   // typeLinks, checkCustomValues e customDisplay: os campos do tipo na demanda interna (application/demands.js, §45)
-  return { listTasks, getTask, createTask, updateTask, setTaskReport, setTaskItVisible, setTaskUrgency, setTaskArea, sendTaskCopy, deleteTask, moveTask, summarize, typeLinks, checkCustomValues, customDisplay }
+  return {
+    listTasks,
+    getTask,
+    createTask,
+    updateTask,
+    setTaskReport,
+    setTaskItVisible,
+    setTaskUrgency,
+    setTaskArea,
+    pinTask,
+    unpinTask,
+    sendTaskCopy,
+    deleteTask,
+    moveTask,
+    summarize,
+    typeLinks,
+    checkCustomValues,
+    customDisplay,
+  }
 }
 
 /** Tipo de cada campo (a infraestrutura usa para indexar o valor na coluna certa). */

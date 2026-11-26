@@ -399,6 +399,8 @@ export interface TaskListOptions {
   planItemId?: string
   /** As tarefas de quem consulta primeiro ("Minhas tarefas primeiro"); o resto continua na lista. */
   mineFirst?: boolean
+  /** As fixadas no topo (§50), a mais recente primeiro; só as que passam nos filtros. */
+  pinnedFirst?: boolean
 }
 
 export interface TaskRepository {
@@ -414,6 +416,8 @@ export interface TaskRepository {
   setUrgency(id: string, urgency: Urgency | null): Promise<TaskDetail>
   /** Área responsável direto da lista (não exige os obrigatórios do status); null limpa. */
   setArea(id: string, areaId: string | null): Promise<TaskDetail>
+  /** Fixa (true) ou desafixa (false) no topo da Lista, para todas as pessoas (§50). */
+  setPinned(id: string, pinned: boolean): Promise<TaskDetail>
   /** "Com cópia" numa tarefa que já existe: manda o aviso dela aos endereços; devolve os que receberam. */
   sendCopy(id: string, emails: string[]): Promise<string[]>
   remove(id: string): Promise<void>

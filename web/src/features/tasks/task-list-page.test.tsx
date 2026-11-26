@@ -130,8 +130,8 @@ describe('Lista de tarefas do menu (§44)', () => {
     const [query, options] = tableCalls().at(-1)!
     expect(query.filters).toEqual({ mine: 'true', category: OPEN_TASK_CATEGORIES })
     expect(query.sort).toEqual({ id: 'due_date', direction: 'asc' })
-    // sem "Minhas tarefas primeiro": o escopo substitui
-    expect(options).toEqual({})
+    // sem "Minhas tarefas primeiro" (o escopo substitui); as fixadas no topo (§50)
+    expect(options).toEqual({ pinnedFirst: true })
     expect(screen.queryByRole('button', { name: i18n.t('tasks.mine.toggle') })).not.toBeInTheDocument()
   })
 
@@ -311,5 +311,96 @@ describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
     const { tableCalls } = setup(undefined, '/tasks?scope=all&search=Unir')
     await waitFor(() => expect(tableCalls().at(-1)![0]).toMatchObject({ search: 'Unir', filters: { category: OPEN_TASK_CATEGORIES } }))
     expect(screen.getByRole('radio', { name: /Ver todas/ })).toHaveAttribute('aria-checked', 'true')
+  })
+})
+
+describe('Lista — fixar no topo (§50)', () => {
+  const ana = { id: 'u9', name: 'Angelica Davalos', email: 'angelica@kamban.test', avatarUrl: null }
+  const pinned = task({ id: 'k5', code: 'DRE-5', title: 'Portal de acceso · subir el login', pinned: { by: ana, at: new Date(Date.now() - 5 * 60_000) } })
+
+  function setupPins(options: { hidden?: ScreenKey[]; permissions?: Parameters<typeof makeCurrentUser>[0]; items?: TaskSummary[] } = {}) {
+    const items = options.items ?? [pinned, mine, other]
+    const list = vi.fn<TaskRepository['list']>((query) =>
+      Promise.resolve(query.perPage === 1 ? { items: [], page: 1, perPage: 1, total: 3, totalPages: 3 } : { items, page: 1, perPage: 20, total: items.length, totalPages: 1 }),
+    )
+    const setPinned = vi.fn<TaskRepository['setPinned']>((id, value) => Promise.resolve({ ...items.find((t) => t.id === id)!, pinned: value ? { by: ana, at: new Date() } : null } as never))
+    const current = makeCurrentUser(options.permissions ?? ['tasks.view', 'tasks.list', 'tasks.edit', 'projects.view', 'projects.view_all'])
+    renderRoutes([{ path: '/tasks', element: <TasksPage /> }], {
+      repositories: fakeRepositories({
+        auth: { me: async () => ({ ...current, role: current.role && { ...current.role, screens: { hidden: options.hidden ?? [], starts: {} } } }) },
+        statuses: { list: () => Promise.resolve([backlog, done]) },
+        priorities: { list: () => Promise.resolve([alta, media]) },
+        areas: { list: () => Promise.resolve([]) },
+        tasks: { list, setPinned },
+      }),
+      initialPath: '/tasks?scope=all',
+    })
+    const tableCalls = () => list.mock.calls.filter(([query]) => query.perPage !== 1)
+    return { list, setPinned, tableCalls }
+  }
+
+  it('pede as fixadas primeiro; o grupo "Fixadas · n" em destaque, depois "As demais"; embaixo do título, quem fixou e quando', async () => {
+    const { tableCalls } = setupPins()
+    await screen.findByText(pinned.title)
+    expect(tableCalls().at(-1)![1]).toMatchObject({ pinnedFirst: true })
+    const bands = screen.getAllByTestId('row-group')
+    expect(bands.map((b) => b.textContent)).toEqual(['Fixadas · 1 (aparecem no topo para todos)', 'As demais'])
+    expect(screen.getByTestId('task-pinned-by')).toHaveTextContent(/^Fixada por Angelica Davalos · há \d+ minutos$/)
+    // destaque só nas fixadas; o ícone aparece uma vez por linha (no botão), nunca na faixa nem na linha "Fixada por"
+    const row = screen.getByText(pinned.title).closest('tr')!
+    expect(row).toHaveAttribute('data-highlight', 'true')
+    expect(screen.getByText(mine.title).closest('tr')).not.toHaveAttribute('data-highlight')
+    expect(within(row).getAllByTestId('task-pin')).toHaveLength(1)
+    expect(within(row).getByTestId('task-pin')).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByText(mine.title).closest('tr')!).getByTestId('task-pin')).toHaveAttribute('aria-pressed', 'false')
+    expect(bands[0]!.querySelector('svg')).toBeNull()
+  })
+
+  it('sem fixadas: nenhuma faixa', async () => {
+    setupPins({ items: [mine, other] })
+    await screen.findByText(mine.title)
+    expect(screen.queryByTestId('row-group')).not.toBeInTheDocument()
+  })
+
+  it('o 📌 da linha fixa e desafixa; também no ··· ("Fixar no topo" / "Desafixar")', async () => {
+    const { setPinned } = setupPins()
+    await screen.findByText(pinned.title)
+    await userEvent.click(screen.getByRole('button', { name: `Fixar no topo: ${mine.title}` }))
+    await waitFor(() => expect(setPinned).toHaveBeenCalledWith(mine.id, true))
+    await userEvent.click(screen.getByRole('button', { name: `Desafixar: ${pinned.title}` }))
+    await waitFor(() => expect(setPinned).toHaveBeenCalledWith(pinned.id, false))
+    const row = screen.getByText(other.title).closest('tr')!
+    await userEvent.click(within(row).getByRole('button', { name: 'Mais ações' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Fixar no topo' }))
+    await waitFor(() => expect(setPinned).toHaveBeenCalledWith(other.id, true))
+  })
+
+  it('"Colunas e ações": "Fixar" em "Ações em cada linha", ligado por padrão; desligar tira o botão', async () => {
+    setupPins()
+    await screen.findByText(pinned.title)
+    await userEvent.click(screen.getByRole('button', { name: 'Colunas e ações' }))
+    const option = await screen.findByRole('checkbox', { name: 'Fixar' })
+    expect(option).toBeChecked()
+    await userEvent.click(option)
+    await waitFor(() => expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument())
+    // as fixadas continuam no topo
+    expect(screen.getAllByTestId('row-group')).toHaveLength(2)
+  })
+
+  it('perfil sem o "Fixar" (§48) ou sem editar: sem o botão; as fixadas continuam no topo', async () => {
+    setupPins({ hidden: ['tasks.row_actions.pin'] })
+    await screen.findByText(pinned.title)
+    expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument()
+    expect(screen.getByTestId('task-pinned-by')).toBeInTheDocument()
+    expect(screen.getAllByTestId('row-group')).toHaveLength(2)
+  })
+
+  it('sem editar tarefas: o botão aparece desligado e o ··· não oferece fixar', async () => {
+    setupPins({ permissions: ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'] })
+    await screen.findByText(pinned.title)
+    screen.getAllByTestId('task-pin').forEach((button) => expect(button).toBeDisabled())
+    await userEvent.click(within(screen.getByText(mine.title).closest('tr')!).getByRole('button', { name: 'Mais ações' }))
+    await screen.findByRole('menuitem', { name: 'Abrir tarefa' })
+    expect(screen.queryByRole('menuitem', { name: 'Fixar no topo' })).not.toBeInTheDocument()
   })
 })

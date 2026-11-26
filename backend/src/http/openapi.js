@@ -545,6 +545,7 @@ function build() {
             { name: 'kind', in: 'query', schema: { type: 'string', enum: ['project', 'demand'] }, description: 'Com projeto (project) ou Sem projeto = demandas internas (demand) (§45); sem o filtro, as duas' },
             { name: 'mine', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: '"Minhas tarefas": atribuídas a quem consulta e, nas demandas internas, também as que ela pediu ou recebeu como responsável (§45)' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
+            { name: 'pinned_first', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'as fixadas no topo (§50), a mais recente primeiro, antes da ordem pedida em sort; só as que passam nos filtros' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
             { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
@@ -602,6 +603,19 @@ function build() {
           parameters: [idParam, csrfHeader],
           requestBody: jsonBody({ type: 'object', required: ['area_id'], properties: { area_id: { type: ['string', 'null'], description: 'área ativa de /areas' } } }),
         }),
+      },
+      '/tasks/{id}/pin': {
+        post: op('Fixa a tarefa no topo da Lista de tarefas, para todas as pessoas (§50); quem edita a tarefa; no máximo 10 fixadas (TASK_PIN_LIMIT); já fixada não muda nada; histórico task.pinned', ['tasks'], {
+          200: ok('Tarefa (com pinned)', ref('TaskDetail')),
+          403: errorResponse('FORBIDDEN'),
+          404: errorResponse('TASK_NOT_FOUND'),
+          409: errorResponse('TASK_PIN_LIMIT'),
+        }, { parameters: [idParam, csrfHeader] }),
+        delete: op('Desafixa a tarefa (§50); quem edita a tarefa; não fixada não muda nada; histórico task.unpinned', ['tasks'], {
+          200: ok('Tarefa (pinned = null)', ref('TaskDetail')),
+          403: errorResponse('FORBIDDEN'),
+          404: errorResponse('TASK_NOT_FOUND'),
+        }, { parameters: [idParam, csrfHeader] }),
       },
       '/tasks/{id}/copy': {
         post: op(
@@ -1687,6 +1701,12 @@ function build() {
             blocked: { type: 'boolean', description: 'algum bloqueador (bloqueia/depende de) ainda aberto' },
             in_report: { type: 'boolean', description: 'entra no informe do projeto (padrão: true)' },
             it_visible: { type: 'boolean', description: 'visível para o Responsável TI do projeto (§36; padrão: false)' },
+            pinned: {
+              oneOf: [
+                { type: 'object', description: 'fixada no topo da Lista de tarefas (§50), igual para todas as pessoas', properties: { by: { oneOf: [ref('UserSummary'), { type: 'null' }], description: 'quem fixou' }, at: { type: 'string', format: 'date-time' } } },
+                { type: 'null' },
+              ],
+            },
             urgency: { type: ['string', 'null'], enum: ['high', 'medium', 'low', null], description: 'urgência (semáforo): alta = vermelho, média = amarelo, baixa = verde; null = sem urgência' },
             area: AREA_REF,
             company: COMPANY_REF,

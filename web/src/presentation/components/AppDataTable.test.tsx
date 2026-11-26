@@ -736,3 +736,54 @@ describe('AppDataTable — larguras escolhidas e filtro na coluna (ajuste 24/11)
     await waitFor(() => expect(screen.getAllByRole('searchbox')[0]).toHaveValue('alf'))
   })
 })
+
+describe('AppDataTable — ações próprias da tela e linhas em grupos (§50)', () => {
+  function CustomHarness({ onPin = () => {} }: { onPin?: (r: Row) => void }) {
+    const api = useDataTableState('custom-table')
+    return (
+      <AppDataTable
+        tableId="custom-table"
+        caption="Tabela com ação própria"
+        columns={columns}
+        data={rows}
+        total={rows.length}
+        getRowId={(r) => r.id}
+        table={api}
+        configurableActions
+        rowGroups={{ of: (r) => (r.id === '1' ? 'top' : 'rest'), highlight: (g) => g === 'top', header: (g, count) => `${g === 'top' ? 'Topo' : 'Resto'} · ${count}` }}
+        actions={{
+          onView: () => {},
+          onEdit: () => {},
+          onDelete: () => {},
+          custom: [{ key: 'pin', label: 'Fixar', render: (r) => <button type="button" onClick={() => onPin(r)}>{`Fixar ${r.name}`}</button> }],
+        }}
+      />
+    )
+  }
+
+  it('a ação própria aparece em cada linha e em "Ações em cada linha" (depois de Editar, ligada por padrão); desligar tira e fica guardado', async () => {
+    const onPin = vi.fn()
+    renderWithProviders(<CustomHarness onPin={onPin} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Fixar Beta' }))
+    expect(onPin).toHaveBeenCalledWith(rows[1])
+    await userEvent.click(screen.getByRole('button', { name: 'Colunas e ações' }))
+    const menu = await screen.findByRole('dialog', { name: 'Colunas e ações' })
+    const names = within(menu)
+      .getAllByRole('checkbox')
+      .map((box) => box.closest('label')?.textContent ?? box.getAttribute('aria-label'))
+      .filter((name) => ['Visualizar', 'Editar', 'Fixar', 'Excluir'].includes(name ?? ''))
+    expect(names).toEqual(['Visualizar', 'Editar', 'Fixar', 'Excluir'])
+    expect(within(menu).getByRole('checkbox', { name: 'Fixar' })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'Fixar' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('button', { name: 'Fixar Alfa' })).not.toBeInTheDocument()
+    expect(JSON.parse(window.localStorage.getItem('kamban.table.custom-table') ?? '{}').rowActions).toMatchObject({ pin: false, view: true })
+  })
+
+  it('uma faixa antes de cada grupo, com a contagem; o grupo em destaque marca as linhas', () => {
+    renderWithProviders(<CustomHarness />)
+    expect(screen.getAllByTestId('row-group').map((band) => band.textContent)).toEqual(['Topo · 1', 'Resto · 1'])
+    expect(screen.getByText('Alfa').closest('tr')).toHaveAttribute('data-highlight', 'true')
+    expect(screen.getByText('Beta').closest('tr')).not.toHaveAttribute('data-highlight')
+  })
+})

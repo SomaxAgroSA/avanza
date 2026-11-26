@@ -164,7 +164,8 @@ describe('migration 0038 — "O que aparece" por perfil (§48)', () => {
         [id, code, ongoing, start, list, allBox, boxes, lists],
       )
     }
-    assert.deepEqual(await migrate(t.db), ['0038_role_hidden_screens.sql'])
+    // a 0038 roda primeiro (as que vêm depois dela também rodam aqui)
+    assert.equal((await migrate(t.db))[0], '0038_role_hidden_screens.sql')
   })
   after(async () => {
     fs.rmSync(before0038, { recursive: true, force: true })
@@ -205,5 +206,38 @@ describe('migration 0038 — "O que aparece" por perfil (§48)', () => {
     await t.db.exec(sql)
     assert.deepEqual(await screensOf('PADRAO'), { hidden: ['docs.actions.pdf'], starts: {} })
     assert.deepEqual((await screensOf('DIRETOR')).starts, { 'tasks.screens': 'inbox', 'tasks.boxes': 'all' })
+  })
+})
+
+describe('migration 0050 — tarefas fixadas no topo da Lista (§50)', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const { MIGRATIONS_DIR } = require('../../src/infrastructure/migrate')
+  const { insertRow } = require('../../src/infrastructure/sql')
+  let t
+  before(async () => {
+    t = await createTestDatabase()
+  })
+  after(() => t.drop())
+
+  it('uma linha por tarefa; apagar a tarefa tira a fixação e apagar quem fixou deixa sem autor; é idempotente', async () => {
+    const role = await t.db.one("SELECT id FROM roles WHERE code = 'ADMIN'")
+    const owner = await insertRow(t.db, 'users', { email: 'dono-pin@avanza.test', name: 'Dono', role_id: role.id, status: 'active' })
+    const pinner = await insertRow(t.db, 'users', { email: 'fixou@avanza.test', name: 'Fixou', role_id: role.id, status: 'active' })
+    const project = await insertRow(t.db, 'projects', { name: 'Fixar', key: 'FIX', owner_id: owner.id })
+    const type = await t.db.one('SELECT id FROM task_types ORDER BY "order" LIMIT 1')
+    const status = await t.db.one('SELECT id FROM task_statuses ORDER BY "order" LIMIT 1')
+    const priority = await t.db.one('SELECT id FROM task_priorities ORDER BY "order" LIMIT 1')
+    const task = (n) => insertRow(t.db, 'tasks', { project_id: project.id, number: n, code: `FIX-${n}`, title: `T${n}`, type_id: type.id, status_id: status.id, priority_id: priority.id })
+    const a = await task(1)
+    const b = await task(2)
+    await t.db.exec('INSERT INTO task_pins (task_id, pinned_by) VALUES ($1, $2), ($3, $2)', [a.id, pinner.id, b.id])
+    await assert.rejects(t.db.exec('INSERT INTO task_pins (task_id) VALUES ($1)', [a.id]), /duplicate key/)
+    await t.db.exec('DELETE FROM users WHERE id = $1', [pinner.id])
+    assert.deepEqual((await t.db.query('SELECT pinned_by FROM task_pins ORDER BY task_id')).map((row) => row.pinned_by), [null, null])
+    await t.db.exec('DELETE FROM tasks WHERE id = $1', [a.id])
+    assert.deepEqual((await t.db.query('SELECT task_id FROM task_pins')).map((row) => row.task_id), [b.id])
+    await t.db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, '0050_task_pins.sql'), 'utf8'))
+    assert.equal((await t.db.one('SELECT COUNT(*) AS n FROM task_pins')).n, 1)
   })
 })

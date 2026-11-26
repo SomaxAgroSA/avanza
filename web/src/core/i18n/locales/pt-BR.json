@@ -260,7 +260,8 @@
     "CHARTER_ITEM_NOT_FOUND": "Item da ficha não encontrado.",
     "PROJECT_HAS_DOCS": "Este projeto tem documentação: escolha se quer movê-la, deixá-la como espaço geral ou excluí-la.",
     "DEMAND_STATE_CONFLICT": "Esta ação não está disponível no passo atual da demanda. Atualize a página.",
-    "PANORAMA_DISABLED": "O Panorama está desligado em Configurações → Geral."
+    "PANORAMA_DISABLED": "O Panorama está desligado em Configurações → Geral.",
+    "TASK_PIN_LIMIT": "Já há 10 tarefas fixadas. Desafixe uma antes de fixar outra."
   },
   "nav": {
     "main": "Navegação principal",
@@ -645,7 +646,8 @@
           "boxes": "Caixa de entrada — caixas",
           "views": "Caixa de entrada — visões",
           "filters": "Filtros da linha de cima",
-          "create": "Botões de criar"
+          "create": "Botões de criar",
+          "row_actions": "Ações em cada linha da Lista"
         },
         "docs": {
           "actions": "Botões da página"
@@ -735,6 +737,9 @@
           "create": {
             "project_task": "＋ Tarefa de projeto",
             "internal_demand": "＋ Demanda interna"
+          },
+          "row_actions": {
+            "pin": "Fixar"
           }
         },
         "docs": {
@@ -1043,7 +1048,8 @@
       "company": "Empresa",
       "short_code": "Sigla",
       "active": "Ativa",
-      "copy_to": "Com cópia"
+      "copy_to": "Com cópia",
+      "pinned": "Fixada no topo"
     },
     "actions": {
       "auth.login": "Entrou no sistema",
@@ -1206,7 +1212,9 @@
       "task.demand_passed": "Passou a demanda",
       "task.demand_concluded": "Concluiu a demanda",
       "task.demand_validated": "Validou a demanda",
-      "task.demand_returned": "Devolveu a demanda"
+      "task.demand_returned": "Devolveu a demanda",
+      "task.pinned": "Fixou a tarefa no topo da Lista",
+      "task.unpinned": "Desafixou a tarefa"
     }
   },
   "projects": {
@@ -2048,7 +2056,19 @@
       "later": "Mais adiante",
       "none": "Sem prazo"
     },
-    "noResponsible": "Sem responsável"
+    "noResponsible": "Sem responsável",
+    "pin": {
+      "action": "Fixar no topo",
+      "remove": "Desafixar",
+      "column": "Fixar",
+      "pinned": "Tarefa fixada no topo da Lista, para todos.",
+      "unpinned": "Tarefa desafixada.",
+      "by": "Fixada por {{name}} · {{when}}",
+      "byNobody": "Fixada · {{when}}",
+      "group": "Fixadas · {{count}}",
+      "groupHint": "aparecem no topo para todos",
+      "rest": "As demais"
+    }
   },
   "taskList": {
     "scopeLabel": "Quais tarefas ver",
@@ -5245,7 +5265,11 @@
       "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (vencida)",
       "groupSummary": "{{count}} · {{hours}} h",
       "undated_one": "{{count}} sem prazo segue na Lista.",
-      "undated_other": "{{count}} sem prazo seguem na Lista."
+      "undated_other": "{{count}} sem prazo seguem na Lista.",
+      "reset": "Restabelecer",
+      "resetHint": "Volta a coluna das tarefas ao formato estendido (largura automática).",
+      "divider": "Largura da coluna das tarefas",
+      "dividerHint": "Arraste para ver mais título ou mais barras (← → no teclado). Duplo clique volta à largura automática."
     }
   }
 }
