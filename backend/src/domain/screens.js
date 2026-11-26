@@ -6,7 +6,8 @@
  *
  * - O perfil guarda o que está ESCONDIDO (`roles.hidden_screens`, chaves `<grupo>.<item>`): o que não está na
  *   lista aparece, então todo perfil novo vê tudo e uma chave nova no catálogo aparece para todos.
- * - Em cada grupo sempre fica ao menos um item visível (ninguém fica com uma tela vazia).
+ * - Em cada grupo sempre fica ao menos um item visível (ninguém fica com uma tela vazia), menos nos grupos
+ *   "opcionais" (`OPTIONAL_GROUPS`: botões que podem sumir todos, como o "Fixar" das linhas da Lista, §50).
  * - Os grupos com `start` têm "Abre em" (`roles.screen_starts`, { grupo: item }); sem escolha (ou com o item
  *   escondido), abre no primeiro visível.
  *
@@ -39,6 +40,8 @@ const SCREEN_GROUPS = Object.freeze([
   group('tasks', 'tasks.filters', ['search', 'project', 'priority', 'urgency', 'responsible', 'assignee', 'company']),
   // botões de criar
   group('tasks', 'tasks.create', ['project_task', 'internal_demand']),
+  // ações de cada linha da Lista (§50): o "Fixar" (opcional: pode sumir; as fixadas continuam no topo)
+  group('tasks', 'tasks.row_actions', ['pin'], false, true),
   // Documentação: botões da página
   group('docs', 'docs.actions', ['notify', 'versions', 'pdf']),
   // Configurações: cada submenu
@@ -59,8 +62,8 @@ const SCREEN_GROUPS = Object.freeze([
   ]),
 ])
 
-function group(module, id, items, start) {
-  return Object.freeze({ module, id, items: Object.freeze(items.slice()), start: !!start })
+function group(module, id, items, start, optional) {
+  return Object.freeze({ module, id, items: Object.freeze(items.slice()), start: !!start, optional: !!optional })
 }
 
 /** Todas as chaves (`<grupo>.<item>`), na ordem do catálogo. */
@@ -68,6 +71,9 @@ const SCREEN_KEYS = Object.freeze(SCREEN_GROUPS.reduce((all, g) => all.concat(g.
 
 /** Grupos com "Abre em". */
 const START_GROUPS = Object.freeze(SCREEN_GROUPS.filter((g) => g.start).map((g) => g.id))
+
+/** Grupos que podem ficar sem nenhum item visível (só botões; nenhuma tela fica vazia). */
+const OPTIONAL_GROUPS = Object.freeze(SCREEN_GROUPS.filter((g) => g.optional).map((g) => g.id))
 
 const MAX_HIDDEN = SCREEN_KEYS.length
 
@@ -84,7 +90,7 @@ function hiddenScreensIssue(value) {
   if (!Array.isArray(value) || value.some((key) => typeof key !== 'string')) return 'invalid_type'
   if (value.length > MAX_HIDDEN * 2) return 'too_many'
   if (!value.every((key) => SCREEN_KEYS.indexOf(key) >= 0)) return 'invalid_option'
-  return SCREEN_GROUPS.some((g) => g.items.every((item) => value.indexOf(`${g.id}.${item}`) >= 0)) ? 'required' : null
+  return SCREEN_GROUPS.some((g) => !g.optional && g.items.every((item) => value.indexOf(`${g.id}.${item}`) >= 0)) ? 'required' : null
 }
 
 /** Problema nas entradas "Abre em" vindas da API (null = válidas): { grupo com "Abre em": item do grupo }. */
@@ -115,19 +121,23 @@ function normalizeStarts(value, hidden) {
   return out
 }
 
-/** Itens visíveis de um grupo (nunca vazio: um grupo todo escondido, que a validação não deixa gravar, mostra tudo). */
+/**
+ * Itens visíveis de um grupo (nunca vazio: um grupo todo escondido, que a validação não deixa gravar, mostra tudo;
+ * o grupo opcional pode ficar vazio).
+ */
 function visibleItems(hidden, id) {
   const g = groupOf(id)
   if (!g) return []
   const hiddenList = normalizeHidden(hidden)
   const visible = g.items.filter((item) => hiddenList.indexOf(`${id}.${item}`) < 0)
-  return visible.length ? visible : g.items.slice()
+  return visible.length || g.optional ? visible : g.items.slice()
 }
 
 module.exports = {
   SCREEN_GROUPS,
   SCREEN_KEYS,
   START_GROUPS,
+  OPTIONAL_GROUPS,
   hiddenScreensIssue,
   screenStartsIssue,
   normalizeHidden,

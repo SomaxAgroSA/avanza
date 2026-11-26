@@ -76,7 +76,7 @@ export function DemandsPage() {
   // visões do perfil (§48): Lista e/ou Linha do tempo; com uma só, sem o seletor e direto nela
   const screens = useScreens()
   const inboxViews = screens.visible('tasks.views')
-  const { view: chosenView, setView, groupBy, setGroupBy } = useInboxView(screens.start('tasks.views') ?? 'list')
+  const { view: chosenView, setView, groupBy, setGroupBy, labelWidth, setLabelWidth } = useInboxView(screens.start('tasks.views') ?? 'list')
   const view: InboxView = inboxViews.includes(chosenView) ? chosenView : (inboxViews[0] ?? 'list')
   const overview = useDemandOverview()
   const counts = overview.data?.counts
@@ -154,7 +154,15 @@ export function DemandsPage() {
         ) : list.isError ? (
           <AppErrorState onRetry={() => void list.refetch()} />
         ) : (
-          <TaskGantt tasks={ganttTasks} groupBy={groupBy} onGroupByChange={setGroupBy} back={back} place={box} />
+          <TaskGantt
+            tasks={ganttTasks}
+            groupBy={groupBy}
+            onGroupByChange={setGroupBy}
+            labelWidth={labelWidth}
+            onLabelWidthChange={setLabelWidth}
+            back={back}
+            place={box}
+          />
         )
       ) : box === 'received' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">

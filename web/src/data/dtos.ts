@@ -188,6 +188,8 @@ export interface TaskDto {
   in_report?: boolean
   /** Visível para o Responsável TI do projeto (regras §36). */
   it_visible?: boolean
+  /** Fixada no topo da Lista de tarefas (§50): quem fixou e quando; null = não fixada. */
+  pinned?: { by: UserSummaryDto | null; at: string } | null
   /** 'high' | 'medium' | 'low' | null */
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */

@@ -4,7 +4,7 @@
  * abre ("Abre em"). É só a tela: não tira permissão nenhuma (o servidor continua validando tudo).
  *
  * O perfil guarda o que está ESCONDIDO (chaves `<grupo>.<item>`); o resto aparece. Em cada grupo sempre fica ao
- * menos um item visível. Catálogo espelhado de backend/src/domain/screens.js (o teste de paridade compara).
+ * menos um item visível, menos nos grupos opcionais (`OPTIONAL_GROUPS`: botões que podem sumir todos). Catálogo espelhado de backend/src/domain/screens.js (o teste de paridade compara).
  */
 
 /** Grupos do catálogo, na ordem da tela. */
@@ -21,6 +21,7 @@ export const SCREEN_CATALOG = {
   'tasks.views': ['list', 'timeline'],
   'tasks.filters': ['search', 'project', 'priority', 'urgency', 'responsible', 'assignee', 'company'],
   'tasks.create': ['project_task', 'internal_demand'],
+  'tasks.row_actions': ['pin'],
   'docs.actions': ['notify', 'versions', 'pdf'],
   'settings.menu': ['general', 'integrations', 'task_types', 'custom_fields', 'statuses', 'priorities', 'areas', 'dependency_areas', 'companies', 'tags', 'icons', 'access', 'audit'],
 } as const
@@ -34,6 +35,10 @@ export const SCREEN_GROUPS = Object.keys(SCREEN_CATALOG) as ScreenGroup[]
 /** Grupos com "Abre em" (onde a tela abre quando há mais de um visível). */
 export const START_GROUPS = ['projects.lists', 'projects.ongoing_views', 'tasks.screens', 'tasks.boxes', 'tasks.views'] as const satisfies readonly ScreenGroup[]
 export type StartGroup = (typeof START_GROUPS)[number]
+
+/** Grupos que podem ficar sem nenhum item visível (§50: o "Fixar" das linhas da Lista; as fixadas continuam no topo). */
+export const OPTIONAL_GROUPS = ['tasks.row_actions'] as const satisfies readonly ScreenGroup[]
+export const isOptionalGroup = (group: ScreenGroup): boolean => (OPTIONAL_GROUPS as readonly string[]).includes(group)
 
 /** Todas as chaves, na ordem do catálogo. */
 export const SCREEN_KEYS: ScreenKey[] = SCREEN_GROUPS.flatMap((group) => SCREEN_CATALOG[group].map((item) => `${group}.${item}` as ScreenKey))
@@ -69,11 +74,11 @@ export function toScreenSettings(hidden: unknown, starts: unknown): ScreenSettin
 /** A parte aparece? */
 export const shows = (settings: ScreenSettings, key: ScreenKey): boolean => !settings.hidden.includes(key)
 
-/** Itens visíveis de um grupo, na ordem da tela (nunca vazio: um grupo todo escondido mostra tudo). */
+/** Itens visíveis de um grupo, na ordem da tela (nunca vazio: um grupo todo escondido mostra tudo — menos o opcional). */
 export function visibleItems<G extends ScreenGroup>(settings: ScreenSettings, group: G): ScreenItem<G>[] {
   const items = itemsOf(group)
   const visible = items.filter((item) => shows(settings, screenKey(group, item)))
-  return visible.length ? visible : [...items]
+  return visible.length || isOptionalGroup(group) ? visible : [...items]
 }
 
 /**
@@ -93,7 +98,7 @@ export function startItem<G extends StartGroup>(settings: ScreenSettings, group:
 export function toggleScreen<G extends ScreenGroup>(settings: ScreenSettings, group: G, item: ScreenItem<G>, on: boolean): ScreenSettings {
   const key = screenKey(group, item)
   if (shows(settings, key) === on) return settings
-  if (!on && visibleItems(settings, group).length === 1) return settings
+  if (!on && !isOptionalGroup(group) && visibleItems(settings, group).length === 1) return settings
   const hidden = on ? settings.hidden.filter((k) => k !== key) : SCREEN_KEYS.filter((k) => k === key || settings.hidden.includes(k))
   const starts = { ...settings.starts }
   if (!on && isStartGroup(group) && starts[group] === item) delete starts[group]
@@ -108,6 +113,7 @@ export function chooseStart<G extends StartGroup>(settings: ScreenSettings, grou
 
 /** É o último visível do grupo (não pode ser desmarcado)? */
 export const isLastVisible = <G extends ScreenGroup>(settings: ScreenSettings, group: G, item: ScreenItem<G>): boolean => {
+  if (isOptionalGroup(group)) return false
   const visible = visibleItems(settings, group)
   return visible.length === 1 && visible[0] === item
 }

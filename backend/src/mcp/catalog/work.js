@@ -133,6 +133,7 @@ function compactTask(task) {
     company: task.company ? { id: task.company.id, name: task.company.name } : null,
     in_report: task.in_report !== false,
     it_visible: !!task.it_visible,
+    pinned: !!task.pinned,
     start_date: task.start_date || null,
     due_date: task.due_date || null,
     tags: (task.tags || []).map(nameOf),
@@ -485,6 +486,15 @@ const TOOLS = [
     inputSchema: schema({ task_id: TASK_ID, it_visible: bool('true = the IT owner sees the task; false = only if assigned to them.') }, ['task_id', 'it_visible']),
     annotations: CHANGE,
     run: (args, { services, ctx }) => services.tasks.setTaskItVisible(ctx, args.task_id, pick(args, ['it_visible'])),
+  },
+  {
+    name: 'set_task_pinned',
+    title: 'Pin task to the top of the task list',
+    description:
+      'Pins (true) or unpins (false) a task to the top of the Tasks list, the same for everyone (at most 10 pinned tasks at a time: TASK_PIN_LIMIT). Requires editing the task. Does not require the fields of the status; recorded in the task history.',
+    inputSchema: schema({ task_id: TASK_ID, pinned: bool('true = pinned to the top of the list for everyone; false = back to its normal place.') }, ['task_id', 'pinned']),
+    annotations: CHANGE,
+    run: (args, { services, ctx }) => (args.pinned ? services.tasks.pinTask(ctx, args.task_id) : services.tasks.unpinTask(ctx, args.task_id)),
   },
   {
     name: 'delete_task',

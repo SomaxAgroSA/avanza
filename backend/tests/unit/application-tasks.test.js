@@ -663,3 +663,75 @@ describe('application/tasks — etapa da Gestão (§28, ADR-052)', () => {
     assert.equal(s.deps.store.planItems.length, 0)
   })
 })
+
+describe('application/tasks — fixar no topo da Lista (§50)', () => {
+  it('quem edita fixa e desafixa; a tarefa traz quem fixou e quando; histórico task.pinned / task.unpinned', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(task.pinned, null)
+    const pinned = await s.tasks.pinTask(s.ctx.mario, task.id)
+    assert.equal(pinned.pinned.by.name, 'Mário')
+    assert.ok(pinned.pinned.at)
+    const audit = s.deps.store.audit.at(-1)
+    assert.deepEqual([audit.action, audit.entityId, audit.newValue], ['task.pinned', task.id, { pinned: true }])
+    // fixar de novo não muda nada (nem o histórico)
+    const before = s.deps.store.audit.length
+    assert.equal((await s.tasks.pinTask(s.ctx.gabi, task.id)).pinned.by.name, 'Mário')
+    assert.equal(s.deps.store.audit.length, before)
+    // global: quem só olha também vê a fixação
+    assert.equal((await s.tasks.getTask(s.ctx.lia, task.id)).pinned.by.name, 'Mário')
+    assert.equal((await s.tasks.unpinTask(s.ctx.gabi, task.id)).pinned, null)
+    assert.equal(s.deps.store.audit.at(-1).action, 'task.unpinned')
+    const after = s.deps.store.audit.length
+    await s.tasks.unpinTask(s.ctx.gabi, task.id)
+    assert.equal(s.deps.store.audit.length, after)
+  })
+
+  it('a mesma regra da edição: leitor e quem não vê o projeto não fixam; não renova o "atualizada"', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(await codeOf(() => s.tasks.pinTask(s.ctx.lia, task.id)), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.tasks.unpinTask(s.ctx.lia, task.id)), 'FORBIDDEN')
+    assert.equal(await codeOf(() => s.tasks.pinTask(s.ctx.outsider, task.id)), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.tasks.pinTask(s.ctx.mario, 'nada')), 'TASK_NOT_FOUND')
+    const updated = s.deps.store.tasks.find((t) => t.id === task.id).updatedAt
+    await s.tasks.pinTask(s.ctx.mario, task.id)
+    assert.equal(s.deps.store.tasks.find((t) => t.id === task.id).updatedAt, updated)
+  })
+
+  it('no máximo 10 fixadas ao mesmo tempo (TASK_PIN_LIMIT)', async () => {
+    const s = await setup()
+    const created = []
+    for (let i = 0; i < 11; i += 1) created.push(await s.tasks.createTask(s.ctx.mario, newBug(s, { title: `Tarefa ${i}` })))
+    for (const t of created.slice(0, 10)) await s.tasks.pinTask(s.ctx.mario, t.id)
+    let error = null
+    try {
+      await s.tasks.pinTask(s.ctx.mario, created[10].id)
+    } catch (err) {
+      error = err
+    }
+    assert.equal(error.code, 'TASK_PIN_LIMIT')
+    assert.equal(error.status, 409)
+    assert.deepEqual(error.details, { max: 10 })
+    assert.equal(s.deps.store.taskPins.length, 10)
+    await s.tasks.unpinTask(s.ctx.mario, created[0].id)
+    assert.ok((await s.tasks.pinTask(s.ctx.mario, created[10].id)).pinned)
+  })
+
+  it('pinned_first: as fixadas primeiro (a mais recente no topo), só as que passam nos filtros', async () => {
+    const s = await setup()
+    const a = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Alfa' }))
+    const b = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Beta', urgency: 'high' }))
+    const c = await s.tasks.createTask(s.ctx.mario, newBug(s, { title: 'Gama' }))
+    await s.tasks.pinTask(s.ctx.mario, a.id)
+    await s.tasks.pinTask(s.ctx.mario, c.id)
+    const titles = async (query) => (await s.tasks.listTasks(s.ctx.mario, Object.assign({ project_id: s.project.id, sort: 'title' }, query))).items.map((t) => t.title)
+    assert.deepEqual(await titles({}), ['Alfa', 'Beta', 'Gama'])
+    assert.deepEqual(await titles({ pinned_first: 'true' }), ['Gama', 'Alfa', 'Beta'])
+    assert.deepEqual(await titles({ pinned_first: 'true', urgency: 'high' }), ['Beta'])
+    const listed = (await s.tasks.listTasks(s.ctx.lia, { project_id: s.project.id, pinned_first: 'true' })).items
+    assert.equal(listed[0].pinned.by.name, 'Mário')
+    assert.equal(listed.find((t) => t.id === b.id).pinned, null)
+    assert.equal(await codeOf(() => titles({ pinned_first: 'sim' })), 'VALIDATION_ERROR:{"pinned_first":"invalid_option"}')
+  })
+})

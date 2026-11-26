@@ -347,6 +347,12 @@ export function toDemandOverview(dto: DemandOverviewDto): DemandOverview {
   return { counts, pending: Number(dto.pending ?? 0), team: load(dto.team), allTeam: load(dto.all_team) }
 }
 
+/** Fixação no topo da Lista (§50); sem data válida = não fixada. */
+function toTaskPin(dto: TaskDto['pinned']): TaskSummary['pinned'] {
+  const at = dto ? toDate(dto.at) : null
+  return dto && at ? { by: dto.by ? toUserSummary(dto.by) : null, at } : null
+}
+
 export function toTaskSummary(dto: TaskDto): TaskSummary {
   return {
     id: dto.id,
@@ -383,6 +389,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     planItem: dto.plan_item ? { id: dto.plan_item.id, name: dto.plan_item.name } : null,
     inReport: dto.in_report ?? true,
     itVisible: !!dto.it_visible,
+    pinned: toTaskPin(dto.pinned),
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
     company: toCompanyRef(dto.company),

@@ -69,6 +69,8 @@ export const AUDIT_ACTIONS = [
   'task.doc_linked',
   'task.doc_unlinked',
   'task.forked',
+  'task.pinned',
+  'task.unpinned',
   'task.demand_assigned',
   'task.demand_reassigned',
   'task.demand_started',

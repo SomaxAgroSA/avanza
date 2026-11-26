@@ -4,6 +4,7 @@ const {
   SCREEN_GROUPS,
   SCREEN_KEYS,
   START_GROUPS,
+  OPTIONAL_GROUPS,
   hiddenScreensIssue,
   screenStartsIssue,
   normalizeHidden,
@@ -28,6 +29,16 @@ describe('"O que aparece" por perfil (domain/screens, §48)', () => {
     assert.deepEqual(web, SCREEN_GROUPS.map((g) => ({ id: g.id, items: g.items.slice() })))
     const starts = source.match(/export const START_GROUPS = \[([^\]]*)\]/)[1]
     assert.deepEqual([...starts.matchAll(/'([\w.]+)'/g)].map((m) => m[1]), START_GROUPS)
+    const optional = source.match(/export const OPTIONAL_GROUPS = \[([^\]]*)\]/)[1]
+    assert.deepEqual([...optional.matchAll(/'([\w.]+)'/g)].map((m) => m[1]), OPTIONAL_GROUPS)
+  })
+
+  it('grupo opcional (§50): o "Fixar" das linhas da Lista pode sumir (as fixadas continuam no topo)', () => {
+    assert.deepEqual(OPTIONAL_GROUPS, ['tasks.row_actions'])
+    assert.ok(SCREEN_KEYS.includes('tasks.row_actions.pin'))
+    assert.equal(hiddenScreensIssue(['tasks.row_actions.pin']), null)
+    assert.deepEqual(visibleItems(['tasks.row_actions.pin'], 'tasks.row_actions'), [])
+    assert.deepEqual(visibleItems([], 'tasks.row_actions'), ['pin'])
   })
 
   it('escondidas: só chaves conhecidas e sempre ao menos uma visível em cada grupo', () => {

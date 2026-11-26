@@ -1499,6 +1499,7 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
       // o Prazo em grupos conta a partir do "hoje" de quem olha
       if (filters.due) filters.due_today = localDay()
       if (options?.mineFirst) filters.mine_first = 'true'
+      if (options?.pinnedFirst) filters.pinned_first = 'true'
       const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/tasks', {
         query: { page: query.page, perPage: query.perPage, sort: toSortParam(query.sort), search: query.search.trim() || undefined, ...filters },
       })
@@ -1524,6 +1525,10 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setArea(id, areaId: string | null) {
       return toTaskDetail((await api.put<TaskDetailDto>(`${path(id)}/area`, { area_id: areaId })).data)
+    },
+    async setPinned(id, pinned) {
+      const url = `${path(id)}/pin`
+      return toTaskDetail((pinned ? await api.post<TaskDetailDto>(url) : await api.del<TaskDetailDto>(url)).data)
     },
     async sendCopy(id, emails) {
       return (await api.post<{ copy_to: string[] }>(`${path(id)}/copy`, { cc_emails: emails })).data.copy_to

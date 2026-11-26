@@ -190,6 +190,33 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal((await member.client.patch(`/tasks/${task.id}`, { urgency: null })).body.data.urgency, null)
   })
 
+  it('fixar no topo (§50): POST/DELETE /tasks/{id}/pin, igual para todos, com histórico; pinned_first ordena', async () => {
+    const all = (await member.client.get(`/tasks?project_id=${project.id}&sort=code`)).body.data
+    const task = all[all.length - 1]
+    assert.equal(task.pinned, null)
+    const pinned = await member.client.post(`/tasks/${task.id}/pin`)
+    assert.equal(pinned.status, 200, JSON.stringify(pinned.body))
+    assert.equal(pinned.body.data.pinned.by.name, 'Mário')
+    assert.ok(pinned.body.data.pinned.at)
+    // quem só olha também vê a fixação, e a lista pedida com pinned_first traz a fixada primeiro
+    const seen = (await viewer.client.get(`/tasks?project_id=${project.id}&sort=code&pinned_first=true`)).body.data
+    assert.equal(seen[0].id, task.id)
+    assert.equal(seen[0].pinned.by.name, 'Mário')
+    assert.equal((await member.client.get(`/tasks?project_id=${project.id}&sort=code`)).body.data[0].id, all[0].id)
+    assert.equal((await member.client.get('/tasks?pinned_first=sim')).body.error.details.fields.pinned_first, 'invalid_option')
+    const history = (await member.client.get(`/tasks/${task.id}/history`)).body.data
+    assert.equal(history[0].action, 'task.pinned')
+    // a regra da edição: leitor não fixa; sem o cabeçalho anti-CSRF, não
+    assert.equal((await viewer.client.post(`/tasks/${task.id}/pin`)).status, 403)
+    assert.equal((await viewer.client.del(`/tasks/${task.id}/pin`)).status, 403)
+    assert.equal((await member.client.del(`/tasks/${task.id}/pin`, { csrf: false })).status, 403)
+    assert.equal((await outsider.client.post(`/tasks/${task.id}/pin`)).status, 404)
+    const unpinned = await member.client.del(`/tasks/${task.id}/pin`)
+    assert.equal(unpinned.status, 200, JSON.stringify(unpinned.body))
+    assert.equal(unpinned.body.data.pinned, null)
+    assert.equal((await member.client.get(`/tasks/${task.id}/history`)).body.data[0].action, 'task.unpinned')
+  })
+
   it('área responsável: lista inicial, muda pela lista, histórico, filtro e quadro', async () => {
     const areas = (await member.client.get('/areas')).body.data
     assert.equal(areas.length, 11)

@@ -136,3 +136,38 @@ export function taskGantt(tasks: readonly TaskSummary[], groupBy: GanttGroupBy, 
   }
   return { model: { groups, monthly, today: pct(today + DAY_MS / 2), ticks: ticks.map((ms) => ({ date: new Date(ms), left: pct(ms) })) }, undated }
 }
+
+/**
+ * Coluna dos títulos da linha do tempo (ajuste aprovado em demonstração, 26/11, §50): sempre abre "estendida" —
+ * a largura automática acompanha o título mais longo (numa linha, até o limite; o que passar quebra em até duas
+ * linhas), entre `GANTT_LABEL_MIN` e o menor de `GANTT_LABEL_MAX` e `GANTT_LABEL_SHARE` da largura. O divisor deixa
+ * a pessoa escolher outra largura (de `GANTT_LABEL_MIN` até sobrar `GANTT_BARS_MIN` para as barras).
+ */
+export const GANTT_LABEL_MIN = 200
+export const GANTT_LABEL_MAX = 480
+export const GANTT_LABEL_SHARE = 0.4
+export const GANTT_BARS_MIN = 260
+/** Passo das setas ← → no divisor. */
+export const GANTT_LABEL_STEP = 20
+/** Largura média de um caractere do título (12px) e a folga da coluna. */
+const CHAR_PX = 6.6
+const LABEL_PADDING = 16
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max))
+
+/** Largura automática da coluna dos títulos; `available` = largura da linha do tempo (0 = ainda sem medida). */
+export function autoLabelWidth(titles: readonly string[], available: number): number {
+  const longest = titles.reduce((max, title) => Math.max(max, title.trim().length), 0)
+  const wanted = Math.ceil(longest * CHAR_PX + LABEL_PADDING)
+  const cap = available > 0 ? Math.min(GANTT_LABEL_MAX, Math.round(available * GANTT_LABEL_SHARE)) : GANTT_LABEL_MAX
+  return clamp(wanted, GANTT_LABEL_MIN, cap)
+}
+
+/** Largura escolhida pela pessoa dentro dos limites (sobra ao menos `GANTT_BARS_MIN` para as barras). */
+export function clampLabelWidth(width: number, available: number): number {
+  const max = available > 0 ? available - GANTT_BARS_MIN : Number.POSITIVE_INFINITY
+  return Math.round(clamp(width, GANTT_LABEL_MIN, max))
+}
+
+/** Largura guardada no navegador: número positivo ou null (= automática). */
+export const toLabelWidth = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : null)

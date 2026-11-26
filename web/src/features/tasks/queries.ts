@@ -183,6 +183,14 @@ export function useTaskMutations() {
         invalidate()
       },
     }),
+    /** Fixar no topo da Lista, para todas as pessoas (§50): as listas recarregam com a ordem nova. */
+    setPinned: useMutation({
+      mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) => tasks.setPinned(id, pinned),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      },
+    }),
     /** "Com cópia" numa tarefa que já existe (ajuste 24/11): só o e-mail sai; o histórico da tarefa recarrega. */
     sendCopy: useMutation({
       mutationFn: ({ id, emails }: { id: string; emails: string[] }) => tasks.sendCopy(id, emails),

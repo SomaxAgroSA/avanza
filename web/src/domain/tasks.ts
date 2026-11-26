@@ -94,6 +94,8 @@ export interface TaskSummary {
   inReport: boolean
   /** O Responsável TI do projeto vê a tarefa (regras §36), além das atribuídas a ele. */
   itVisible: boolean
+  /** Fixada no topo da Lista de tarefas (§50), igual para todas as pessoas; null/ausente = não fixada. */
+  pinned?: TaskPin | null
   /** Urgência (semáforo); null = sem urgência. */
   urgency: Urgency | null
   /** Área responsável; null = sem área. */
@@ -106,6 +108,16 @@ export interface TaskSummary {
    */
   demand?: DemandInfo | null
 }
+
+/** Quem fixou a tarefa no topo da Lista e quando (§50). */
+export interface TaskPin {
+  /** null = a pessoa que fixou foi excluída. */
+  by: UserSummary | null
+  at: Date
+}
+
+/** No máximo 10 tarefas fixadas ao mesmo tempo, para todos (§50; o servidor confere: TASK_PIN_LIMIT). */
+export const MAX_PINNED_TASKS = 10
 
 export interface TaskCapabilities {
   edit: boolean
