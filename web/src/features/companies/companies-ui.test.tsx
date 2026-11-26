@@ -218,6 +218,6 @@ describe('Listas: coluna e filtro Empresa (§46)', () => {
     expect(company).toHaveTextContent(/^Empresa$/)
     await userEvent.click(company)
     await userEvent.click(await screen.findByRole('button', { name: 'Somax Paraguay', pressed: false }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { companyId: 'c1' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { companyIds: ['c1'] }))
   })
 })

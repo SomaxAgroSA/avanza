@@ -2065,9 +2065,7 @@
       "unpinned": "Tarea desfijada.",
       "by": "Fijada por {{name}} · {{when}}",
       "byNobody": "Fijada · {{when}}",
-      "group": "Fijadas · {{count}}",
-      "groupHint": "se ven arriba para todos",
-      "rest": "Las demás"
+      "hintRemove": "{{pinned}} — clic para desfijar"
     }
   },
   "taskList": {

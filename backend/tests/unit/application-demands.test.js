@@ -916,6 +916,39 @@ describe('application/demands — tarefa de projeto com responsável (o mesmo fl
     assert.deepEqual(report.map((t) => t.code).sort(), ['FIN-1', 'FIN-2'])
   })
 
+  it('filtros de várias opções (§51): "ou" dentro do filtro, "e" entre filtros; os números por passo seguem os filtros', async () => {
+    const s = await withProject()
+    const dem = await s.demands.createDemand(s.ctx.ana, newDemand(s, { title: 'Demanda sem projeto' }))
+    await s.demands.createDemand(s.ctx.fabi, newDemand(s, { title: 'De outro responsável', demand_owner_id: s.users.otto.id }))
+    await s.demands.assign(s.ctx.cesar, s.task.id, { assignee_id: s.users.jorge.id, due_at: FUTURE, estimated_hours: 3 })
+    const list = (name, box, extra) => s.demands.listDemands(s.ctx[name], Object.assign({ box }, extra))
+    const codes = async (name, box, extra) => (await list(name, box, extra)).items.map((t) => t.code).sort()
+
+    // Projeto: as demandas internas (`internal`) combinam com projetos
+    assert.deepEqual(await codes('cesar', 'received', { project_id: 'internal' }), ['DEM-1'])
+    assert.deepEqual(await codes('cesar', 'received', { project_id: s.fin.id }), ['FIN-1'])
+    assert.deepEqual(await codes('cesar', 'received', { project_id: `internal,${s.fin.id}` }), ['DEM-1', 'FIN-1'])
+    assert.deepEqual(await codes('cesar', 'received', { project_id: `${s.project.id},${s.fin.id}` }), ['FIN-1'])
+    // Responsável e Atribuída a: várias pessoas; entre filtros, "e"
+    assert.deepEqual(await codes('admin', 'all', { owner_id: `${s.users.cesar.id},${s.users.otto.id}` }), ['DEM-1', 'DEM-2', 'FIN-1'])
+    assert.deepEqual(await codes('admin', 'all', { owner_id: `${s.users.cesar.id},${s.users.otto.id}`, project_id: 'internal' }), ['DEM-1', 'DEM-2'])
+    assert.deepEqual(await codes('admin', 'all', { assignee_id: `${s.users.jorge.id},${s.users.carlos.id}` }), ['FIN-1'])
+    // um valor só continua valendo (enlaces antigos)
+    assert.deepEqual(await codes('admin', 'all', { owner_id: s.users.otto.id }), ['DEM-2'])
+    assert.equal(await codeOf(() => list('admin', 'all', { project_id: 'internal,x y' })), 'VALIDATION_ERROR:{"project_id":"invalid_type"}')
+    assert.equal(await codeOf(() => list('admin', 'all', { owner_id: `${s.users.otto.id},` })), 'VALIDATION_ERROR:{"owner_id":"invalid_type"}')
+
+    // números por passo com os mesmos filtros, inclusive além da página
+    const zero = { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 }
+    assert.deepEqual((await list('cesar', 'received')).meta.counts, Object.assign({}, zero, { unassigned: 1, assigned: 1 }))
+    assert.deepEqual((await list('cesar', 'received', { project_id: 'internal' })).meta.counts, Object.assign({}, zero, { unassigned: 1 }))
+    const page = await list('admin', 'all', { perPage: 1 })
+    assert.equal(page.items.length, 1)
+    assert.deepEqual(page.meta.counts, Object.assign({}, zero, { unassigned: 2, assigned: 1 }))
+    assert.deepEqual((await list('admin', 'all', { owner_id: s.users.otto.id, search: 'nada assim' })).meta.counts, zero)
+    assert.ok(dem.id)
+  })
+
   it('quem vê todas atribui a tarefa de projeto com responsável, mesmo sem ser do projeto', async () => {
     const s = await withProject()
     // CRM: dono César; o Admin não é membro

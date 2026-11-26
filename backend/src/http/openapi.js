@@ -635,17 +635,17 @@ function build() {
       },
       '/demands': {
         get: op(
-          'Demandas de uma caixa (§45; tasks.view): box = received (recebidas por mim como responsável), assigned (atribuídas a mim), requested (pedidas por mim) ou all (Todas: todas as demandas internas e tarefas de projeto com responsável — só com projects.view_all; sem ela, 403 FORBIDDEN); status = passos separados por vírgula (unassigned, assigned, in_progress, to_validate, done); owner_id e assignee_id filtram pelo responsável e por quem executa. Mais recentes primeiro; até 100 por página. Cada item é um resumo de tarefa com project (null na demanda interna) e demand = { status, owner, due_at, opened_at }',
+          'Demandas de uma caixa (§45; tasks.view): box = received (recebidas por mim como responsável), assigned (atribuídas a mim), requested (pedidas por mim) ou all (Todas: todas as demandas internas e tarefas de projeto com responsável — só com projects.view_all; sem ela, 403 FORBIDDEN); status = passos separados por vírgula (unassigned, assigned, in_progress, to_validate, done); owner_id e assignee_id filtram pelo responsável e por quem executa. Os filtros owner_id, assignee_id, company_id, project_id e priority_id aceitam um valor ou vários separados por vírgula (§51: "ou" dentro do filtro, "e" entre filtros). Mais recentes primeiro; até 100 por página. Cada item é um resumo de tarefa com project (null na demanda interna) e demand = { status, owner, due_at, opened_at }. meta.counts = { unassigned, assigned, in_progress, to_validate, done }: quantas há em cada passo com os mesmos filtros, sem a paginação (ADR-065)',
           ['demands'],
           { 200: ok('Página de demandas', { type: 'array', items: ref('Task') }, true), 400: errorResponse('VALIDATION_ERROR'), 403: errorResponse('FORBIDDEN') },
           {
             parameters: [
               { name: 'box', in: 'query', required: true, schema: { type: 'string', enum: ['received', 'assigned', 'requested', 'all'] } },
               { name: 'status', in: 'query', schema: { type: 'string' } },
-              { name: 'owner_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas desse responsável' },
-              { name: 'assignee_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas atribuídas a essa pessoa' },
-              { name: 'company_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas dessa empresa (§46; a da demanda interna ou a do projeto); none = sem empresa' },
-              { name: 'project_id', in: 'query', schema: { type: 'string' }, description: 'Só as desse projeto; internal = só as demandas internas' },
+              { name: 'owner_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas desse(s) responsável(is); vários separados por vírgula' },
+              { name: 'assignee_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas atribuídas a essa(s) pessoa(s); várias separadas por vírgula' },
+              { name: 'company_id', in: 'query', schema: { type: 'string' }, description: 'Só as demandas dessa(s) empresa(s) (§46; a da demanda interna ou a do projeto); none = sem empresa; várias separadas por vírgula' },
+              { name: 'project_id', in: 'query', schema: { type: 'string' }, description: 'Só as desse(s) projeto(s); internal = as demandas internas (combinável com projetos, ex.: internal,<id>); vários separados por vírgula' },
               { name: 'priority_id', in: 'query', schema: { type: 'string' }, description: 'Prioridades separadas por vírgula' },
               { name: 'urgency', in: 'query', schema: { type: 'string' }, description: 'high, medium, low ou none (sem urgência), separadas por vírgula' },
               { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 }, description: 'Título ou código' },

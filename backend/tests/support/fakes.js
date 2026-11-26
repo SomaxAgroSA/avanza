@@ -813,9 +813,10 @@ function createFakeRepositories(store) {
           items = items.filter((t) => !!t.demandStatus && (!field || t[field] === box.userId))
         }
       }
-      if (query.demandOwnerId) items = items.filter((t) => t.demandOwnerId === query.demandOwnerId)
+      if (query.demandOwnerId) items = items.filter((t) => [].concat(query.demandOwnerId).includes(t.demandOwnerId))
       if (query.demandStatuses) items = items.filter((t) => query.demandStatuses.includes(t.demandStatus))
       if (query.projectId) items = items.filter((t) => t.projectId === query.projectId)
+      if (query.projectChoice) items = items.filter((t) => query.projectChoice.ids.includes(t.projectId) || (query.projectChoice.internal && internal(t)))
       if (query.typeId) items = items.filter((t) => t.typeId === query.typeId)
       if (query.statusIds) items = items.filter((t) => query.statusIds.includes(t.statusId))
       if (query.priorityId) items = items.filter((t) => [].concat(query.priorityId).includes(t.priorityId))
@@ -842,7 +843,7 @@ function createFakeRepositories(store) {
       if (query.areaId) items = items.filter((t) => (t.areaId || 'none') === query.areaId)
       if (query.companyId) {
         const companyOf = (t) => t.companyId || ((store.projects.find((p) => p.id === t.projectId) || {}).companyId) || 'none'
-        items = items.filter((t) => companyOf(t) === query.companyId)
+        items = items.filter((t) => [].concat(query.companyId).includes(companyOf(t)))
       }
       if (query.search) {
         const q = query.search.text.toLowerCase()
@@ -876,6 +877,17 @@ function createFakeRepositories(store) {
         return 0
       })
       return { items: items.slice(query.pagination.offset, query.pagination.offset + query.pagination.perPage), total: items.length }
+    },
+    /** Quantas há em cada passo com os filtros de `list`, sem paginação (§51). */
+    countByDemandStatus: async (query) => {
+      const { items } = await taskRepository.list(Object.assign({}, query, { pagination: { offset: 0, perPage: Infinity } }))
+      const out = {}
+      items
+        .filter((t) => t.demandStatus)
+        .forEach((t) => {
+          out[t.demandStatus] = (out[t.demandStatus] || 0) + 1
+        })
+      return out
     },
   }
 

@@ -60,6 +60,7 @@ import type { PreferenceRepository } from '@/domain/repositories'
 import { toCompany } from './mappers'
 import type { CompanyDto } from './dtos'
 import type { CompanyInput } from '@/domain/companies'
+import { DEMAND_STATUSES, type DemandStatus } from '@/domain/demands'
 import { toArea, toAttachment, toComment, toCustomField, toFieldOption, toPriority, toProjectFile, toStatus, toTag, toTaskDetail, toTaskSummary, toTaskType, toTaskTypeDetail } from './mappers'
 import { toDemandOverview } from './mappers'
 import type { DemandOverviewDto } from './dtos'
@@ -1424,21 +1425,28 @@ export function createHttpDemandRepository(api: ApiClient): DemandRepository {
   const path = (id: string) => `/demands/${encodeURIComponent(id)}`
   return {
     async list(box, options) {
-      const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/demands', {
+      const { data, meta } = await api.get<TaskDto[], PageMetaDto & { counts?: Partial<Record<DemandStatus, number>> }>('/demands', {
         query: {
           box,
           status: options?.statuses?.length ? options.statuses.join(',') : undefined,
-          owner_id: options?.ownerId || undefined,
-          assignee_id: options?.assigneeId || undefined,
-          company_id: options?.companyId || undefined,
-          project_id: options?.projectId || undefined,
+          // várias opções (§51): valores separados por vírgula
+          owner_id: options?.ownerIds?.length ? options.ownerIds.join(',') : undefined,
+          assignee_id: options?.assigneeIds?.length ? options.assigneeIds.join(',') : undefined,
+          company_id: options?.companyIds?.length ? options.companyIds.join(',') : undefined,
+          project_id: options?.projectIds?.length ? options.projectIds.join(',') : undefined,
           priority_id: options?.priorityIds?.length ? options.priorityIds.join(',') : undefined,
           urgency: options?.urgencies?.length ? options.urgencies.join(',') : undefined,
           search: options?.search || undefined,
           perPage: 100,
         },
       })
-      return { items: data.map(toTaskSummary), ...meta }
+      const { counts, ...pageMeta } = meta
+      // números por passo com os mesmos filtros (ADR-065)
+      return {
+        items: data.map(toTaskSummary),
+        ...pageMeta,
+        ...(counts ? { counts: Object.fromEntries(DEMAND_STATUSES.map((status) => [status, counts[status] ?? 0])) as Record<DemandStatus, number> } : {}),
+      }
     },
     async create(data) {
       const body = {

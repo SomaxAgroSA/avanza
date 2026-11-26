@@ -47,6 +47,12 @@ const TEAM_LIMIT = 500
 const RECENT_DONE_DAYS = 30
 
 const idRule = rules.custom((value) => (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value) ? null : 'invalid_type'))
+/** Filtros de várias opções da Bandeja (§51): ids separados por vírgula (até 100); `extra` = valores especiais aceitos. */
+const MAX_LIST_VALUES = 100
+const idListRule = (...extra) =>
+  rules.custom((value) =>
+    typeof value === 'string' && value.split(',').length <= MAX_LIST_VALUES && value.split(',').every((v) => extra.indexOf(v) >= 0 || /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type',
+  )
 const hoursRule = rules.custom((value) => {
   if (typeof value !== 'number' || !isFinite(value)) return 'invalid_type'
   if (value <= 0) return 'too_small'
@@ -73,14 +79,15 @@ const LIST_SCHEMA = {
       typeof value === 'string' && value.split(',').every((s) => demandDomain.DEMAND_STATUSES.indexOf(s.trim()) >= 0) ? null : 'invalid_option',
     ),
   ],
-  owner_id: [idRule],
-  assignee_id: [idRule],
-  // empresa (§46): a da demanda interna ou a do projeto; `none` = sem empresa
-  company_id: [rules.custom((value) => (value === 'none' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
-  // filtros da Bandeja (ajuste 23/11): projeto (`internal` = só as demandas internas), prioridades e urgências
-  // (várias, separadas por vírgula; urgência `none` = sem urgência) e busca no título/código
-  project_id: [rules.custom((value) => (value === 'internal' || (typeof value === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(value)) ? null : 'invalid_type'))],
-  priority_id: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => /^[A-Za-z0-9_]{1,64}$/.test(v)) ? null : 'invalid_type'))],
+  // responsável e quem executa: uma pessoa ou várias, separadas por vírgula (§51; lista = "ou")
+  owner_id: [idListRule()],
+  assignee_id: [idListRule()],
+  // empresa (§46): a da demanda interna ou a do projeto; `none` = sem empresa; várias separadas por vírgula (§51)
+  company_id: [idListRule('none')],
+  // filtros da Bandeja (ajuste 23/11; várias opções desde o §51): projetos (`internal` = as demandas internas,
+  // combinável com projetos), prioridades e urgências (urgência `none` = sem urgência) e busca no título/código
+  project_id: [idListRule('internal')],
+  priority_id: [idListRule()],
   urgency: [rules.custom((value) => (typeof value === 'string' && value.split(',').every((v) => ['high', 'medium', 'low', 'none'].indexOf(v) >= 0) ? null : 'invalid_option'))],
   search: [rules.maxLength(100)],
 }
@@ -444,7 +451,8 @@ function createDemandService(deps) {
     const issue = demandDomain.boxIssue(ctx.principal, filters.box)
     if (issue) throw appError(issue)
     const pagination = parsePagination(q, { defaultPerPage: 100, maxPerPage: 100 })
-    const result = await tasks.list({
+    const projects = toList(filters.project_id)
+    const listQuery = {
       // a caixa já é de quem participa (ou, em Todas, de quem vê todas): tudo nela é visível à pessoa
       scope: { userId: ctx.principal.userId, viewAll: true },
       // Atribuídas a mim: as concluídas dos últimos 30 dias ficam como histórico (ajuste 23/11)
@@ -452,19 +460,27 @@ function createDemandService(deps) {
         { box: filters.box, userId: ctx.principal.userId },
         filters.box === 'assigned' ? { doneSince: new Date(deps.clock.now().getTime() - RECENT_DONE_DAYS * 86400000) } : {},
       ),
-      demandOwnerId: filters.owner_id,
-      assigneeId: filters.assignee_id,
-      companyId: filters.company_id,
+      // filtros de várias opções (§51): dentro de um filtro "ou"; entre filtros "e"
+      demandOwnerId: toList(filters.owner_id),
+      assigneeId: toList(filters.assignee_id),
+      companyId: toList(filters.company_id),
       demandStatuses: filters.status ? filters.status.split(',').map((s) => s.trim()) : undefined,
-      kind: filters.project_id === 'internal' ? 'demand' : undefined,
-      projectId: filters.project_id && filters.project_id !== 'internal' ? filters.project_id : undefined,
+      projectChoice: projects ? { ids: projects.filter((p) => p !== 'internal'), internal: projects.indexOf('internal') >= 0 } : undefined,
       priorityId: toList(filters.priority_id),
       urgency: toList(filters.urgency),
       search: filters.search ? { text: filters.search, fieldIds: [] } : undefined,
       sort: [{ column: 'created', direction: 'DESC' }],
       pagination,
+    }
+    const result = await tasks.list(listQuery)
+    // quantas há em cada passo com os mesmos filtros (§51, ADR-065): os números da Bandeja nunca ignoram um filtro,
+    // nem quando a lista passa de uma página
+    const raw = await tasks.countByDemandStatus(listQuery)
+    const counts = {}
+    demandDomain.DEMAND_STATUSES.forEach((status) => {
+      counts[status] = raw[status] || 0
     })
-    return { items: await taskService.summarize(result.items, ctx), meta: buildPageMeta(pagination, result.total) }
+    return { items: await taskService.summarize(result.items, ctx), meta: Object.assign(buildPageMeta(pagination, result.total), { counts }) }
   }
 
   /** Carga por pessoa, das mais carregadas para as menos: { user, open_count, estimated_hours }. */

@@ -376,6 +376,23 @@ describe('Bandeja — filtros, ordem e colunas (ajuste 23/11)', () => {
     await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('2'))
   })
 
+  it('números com filtro (§51): os do servidor com os mesmos filtros, mesmo quando a lista vem cortada', async () => {
+    const one = demand({ id: 'd1', code: 'DEM-1', title: 'Só esta veio', urgency: 'high' })
+    const counts = { unassigned: 7, assigned: 3, in_progress: 2, to_validate: 1, done: 4 }
+    const list = vi.fn<DemandRepository['list']>((_box, filters) => Promise.resolve(filters?.projectIds?.length ? { ...page([one]), total: 13, counts } : page([one])))
+    renderRoutes([{ path: '/tasks/demands', element: <DemandsPage /> }], {
+      repositories: repos({ me: cesar, demands: { overview: () => Promise.resolve(overview({ unassigned: 40, assigned: 20 })), list } }),
+      initialPath: '/tasks/demands?project=internal,p1',
+    })
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('received', { projectIds: ['internal', 'p1'] }))
+    // nunca o total da caixa sem filtro (40), nem só o que veio na página (1)
+    await waitFor(() => expect(screen.getByTestId('kpi-unassigned')).toHaveTextContent('7'))
+    expect(screen.getByTestId('kpi-assigned')).toHaveTextContent('3')
+    expect(screen.getByTestId('kpi-in_progress')).toHaveTextContent('2')
+    expect(screen.getByTestId('kpi-to_validate')).toHaveTextContent('1')
+    expect(screen.getByRole('button', { name: /^Projeto/ })).toHaveTextContent(/^Projeto:\s*Demanda interna \+1$/)
+  })
+
   it('linha apertada: compacta passo a passo até caber, e o grupo dos filtros não encolhe por baixo dos botões (erro 23/11)', async () => {
     // a linha "mede" 1000px de conteúdo em 800px de largura; cada passo de compactação libera 100px
     const steps = (el: HTMLElement) => (el.getAttribute('data-compact') ?? '').split(' ').filter(Boolean).length
@@ -702,11 +719,17 @@ describe('Demandas — Todas (§45, só com projects.view_all)', () => {
     const bar = screen.getByRole('group', { name: 'Filtros da Bandeja' })
     await userEvent.click(within(bar).getByRole('button', { name: /^Responsável/ }))
     await userEvent.click(await screen.findByRole('button', { name: /César/, pressed: false }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerId: 'u2' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerIds: ['u2'] }))
     expect(within(bar).getByRole('button', { name: /^Responsável/ })).toHaveTextContent(/^Responsável:\s*César$/)
+    // várias opções (§51): o painel fica aberto e soma outra pessoa ("ou")
+    await userEvent.click(screen.getByRole('button', { name: /Ana Souza/, pressed: false }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerIds: ['u2', 'u1'] }))
+    expect(within(bar).getByRole('button', { name: /^Responsável/ })).toHaveTextContent(/^Responsável:\s*César \+1$/)
+    await userEvent.keyboard('{Escape}')
     await userEvent.click(within(bar).getByRole('button', { name: /^Atribuída a/ }))
     await userEvent.click(await screen.findByRole('button', { name: /Jorge/, pressed: false }))
-    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerId: 'u2', assigneeId: 'u3' }))
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', { ownerIds: ['u2', 'u1'], assigneeIds: ['u3'] }))
+    await userEvent.keyboard('{Escape}')
     // "Limpar" tira também os de pessoa
     await userEvent.click(within(bar).getByRole('button', { name: 'Limpar' }))
     await waitFor(() => expect(list).toHaveBeenLastCalledWith('all', {}))
