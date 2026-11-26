@@ -6,7 +6,9 @@ import { formatDay } from '@/core/utils/format'
 import type { Project, ProjectStatus, ProjectTaskCount, TeamActivity } from '@/domain/projects'
 import type { Dependencies } from '@/domain/dependencies'
 import type { ScreenKey } from '@/domain/screens'
-import { AppTooltip } from '@/presentation/components'
+import { estimateLabelWidth } from '@/domain/gantt-scale'
+import { useSession } from '@/features/auth/session'
+import { AppTooltip, GanttDivider, GanttFrame, useGanttLabelColumn, useStoredLabelWidth } from '@/presentation/components'
 import {
   DEFAULT_PANEL,
   KPI_IDS,
@@ -161,14 +163,34 @@ function Card({ title, aside, children, className }: { title: string; aside?: Re
 
 /* ------------------------------------------------------------------ linha do tempo */
 
-const LABEL_WIDTH = 220
+/** Largura escolhida da coluna dos projetos, por pessoa neste navegador (§52; sem escolha, a automática). */
+const labelWidthKey = (userId: string) => `avanza.projects.timeline.labelWidth.${userId}`
+/** O ⚠ ao lado do nome (botão de 14px + folga) entra na estimativa sem medida. */
+const FLAG_PX = 20
 
+/**
+ * Linha do tempo dos projetos (§41; ajuste aprovado em demonstração em 26/11, §52): o nome vai inteiro, numa linha
+ * só (sem "…"), com o ⚠ ao lado; a coluna mede o nome mais longo (também os de "Sem data de entrega") e as barras
+ * se estreitam para dar lugar (abaixo do mínimo, rola para o lado). Cabeçalho por meses (o atual em destaque),
+ * as segundas-feiras embaixo e HOJE em vermelho com a linha de todo o alto (presentation/components/gantt). O
+ * divisor só alarga (arrastar, ← → no teclado, duplo clique volta à automática).
+ */
 function Timeline({ projects, affected, onDependencies }: { projects: Project[]; affected: Set<string>; onDependencies: (projectId: string) => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const model = useMemo(() => ganttModel(projects), [projects])
   // sem início e entrega válidos não há barra: aparecem no fim, marcados, para o número dos indicadores bater
   const undated = useMemo(() => projects.filter((p) => !(p.startDate && p.dueDate && p.dueDate.getTime() >= p.startDate.getTime())).sort((a, b) => a.name.localeCompare(b.name)), [projects])
+  const userId = useSession().current?.user.id
+  const [chosen, setChosen] = useStoredLabelWidth(userId ? labelWidthKey(userId) : null)
+  const listed = useMemo(() => [...(model?.rows.map((r) => r.project) ?? []), ...undated], [model, undated])
+  const { areaRef, gridRef, column } = useGanttLabelColumn({
+    chosen,
+    onChoose: setChosen,
+    estimate: estimateLabelWidth([t('direction.timeline.project'), ...listed.map((p) => p.name)], listed.some((p) => affected.has(p.id)) ? FLAG_PX : 0),
+    scale: model?.scale ?? null,
+    measureKey: listed.map((p) => `${p.id}:${p.name}${affected.has(p.id) ? ':!' : ''}`).join('|'),
+  })
   const legend = (
     <ul className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-fg">
       {(['planning', 'active', 'paused'] as const).map((status) => (
@@ -183,78 +205,67 @@ function Timeline({ projects, affected, onDependencies }: { projects: Project[];
       </li>
     </ul>
   )
+  // o nome inteiro numa linha, com o ⚠ ao lado: é o que a coluna mede
+  const name = (project: Project, className: string) => (
+    <span data-gantt-label className="inline-flex w-max items-center pr-3 whitespace-nowrap">
+      <span className={cn('text-xs', className)}>{project.name}</span>
+      {affected.has(project.id) && <DepFlag name={project.name} onOpen={() => onDependencies(project.id)} />}
+    </span>
+  )
   return (
     <Card title={t('direction.timeline.title')} aside={legend}>
-      {!model ? (
-        <p className="py-2 text-sm text-muted">{t('direction.timeline.empty')}</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <div className="relative" style={{ minWidth: Math.max(720, model.months.length * 72 + LABEL_WIDTH) }}>
-            <div className="grid border-b border-border pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-muted" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr` }}>
-              <span>{t('direction.timeline.project')}</span>
-              <div className="relative h-4">
-                {model.months.map((month) => (
-                  <span key={month.date.toISOString()} className="absolute top-0 whitespace-nowrap border-l border-border pl-1.5" style={{ left: `${month.left}%` }}>
-                    {new Intl.DateTimeFormat(locale, { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(month.date).replace('.', '')}
-                  </span>
-                ))}
+      {!model && <p className="py-2 text-sm text-muted">{t('direction.timeline.empty')}</p>}
+      {(model || undated.length > 0) && (
+        <div ref={areaRef} className="overflow-x-auto">
+          <div ref={gridRef} style={model ? { minWidth: column.minWidth } : undefined}>
+            {model && (
+              <GanttFrame
+                scale={model.scale}
+                column={column}
+                label={t('direction.timeline.project')}
+                divider={<GanttDivider column={column} label={t('direction.timeline.divider')} hint={t('direction.timeline.dividerHint')} testId="direction-gantt-divider" />}
+              >
+                <ul>
+                  {model.rows.map((row) => {
+                    const color = STATUS_COLORS[row.project.status]
+                    const tip = t(row.late ? 'direction.timeline.tipLate' : 'direction.timeline.tip', {
+                      name: row.project.name,
+                      status: t(`projects.status.${row.project.status}`),
+                      date: formatDay(row.project.dueDate, locale),
+                    })
+                    return (
+                      <li key={row.project.id} className="grid h-6 items-center border-b border-border hover:bg-surface-2/70" style={column.columns} data-testid="direction-gantt-row">
+                        {name(row.project, 'font-semibold text-fg')}
+                        <div className="relative h-full">
+                          <AppTooltip content={tip}>
+                            <div
+                              role="img"
+                              aria-label={tip}
+                              className={cn('absolute top-1/2 h-3 -translate-y-1/2 rounded', row.late && 'outline outline-2 outline-offset-1 outline-danger')}
+                              style={{ left: `${row.left}%`, width: `${row.width}%`, background: color }}
+                            />
+                          </AppTooltip>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </GanttFrame>
+            )}
+            {undated.length > 0 && (
+              <div>
+                <p className="border-b border-border pt-3 pb-1 text-[11px] font-bold tracking-wide text-muted uppercase">{t('direction.timeline.noDue', { count: undated.length })}</p>
+                <ul>
+                  {undated.map((project) => (
+                    <li key={project.id} className="grid h-6 items-center border-b border-border" style={column.columns} data-testid="direction-gantt-undated">
+                      {name(project, 'text-muted')}
+                      <span className="justify-self-start rounded-md bg-warning-soft px-2 py-0.5 text-[11.5px] text-warning-soft-fg">{t('direction.timeline.noDueTag')}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-            {/* linha de "Hoy" por cima de todas as linhas */}
-            <div aria-hidden className="pointer-events-none absolute bottom-0 top-0 z-10" style={{ left: LABEL_WIDTH, right: 0 }}>
-              <div className="absolute bottom-0 top-0 w-0.5 bg-danger" style={{ left: `${model.today}%` }}>
-                <span className="absolute -left-3 top-0 -translate-y-0.5 rounded bg-surface px-0.5 text-[10px] font-extrabold uppercase text-danger">{t('direction.timeline.today')}</span>
-              </div>
-            </div>
-            <ul>
-              {model.rows.map((row) => {
-                const color = STATUS_COLORS[row.project.status]
-                const tip = t(row.late ? 'direction.timeline.tipLate' : 'direction.timeline.tip', {
-                  name: row.project.name,
-                  status: t(`projects.status.${row.project.status}`),
-                  date: formatDay(row.project.dueDate, locale),
-                })
-                return (
-                  <li key={row.project.id} className="grid min-h-6 items-center border-b border-border hover:bg-surface-2" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr` }}>
-                    <span className="flex min-w-0 items-center pr-2.5">
-                      <span className="truncate text-xs font-semibold text-fg" title={row.project.name}>
-                        {row.project.name}
-                      </span>
-                      {affected.has(row.project.id) && <DepFlag name={row.project.name} onOpen={() => onDependencies(row.project.id)} />}
-                    </span>
-                    <div className="relative h-6">
-                      <AppTooltip content={tip}>
-                        <div
-                          role="img"
-                          aria-label={tip}
-                          className={cn('absolute top-1.5 h-3 rounded', row.late && 'outline outline-2 outline-offset-1 outline-danger')}
-                          style={{ left: `${row.left}%`, width: `${row.width}%`, background: color }}
-                        />
-                      </AppTooltip>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
+            )}
           </div>
-        </div>
-      )}
-      {undated.length > 0 && (
-        <div>
-          <p className="border-b border-border pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted">{t('direction.timeline.noDue', { count: undated.length })}</p>
-          <ul>
-            {undated.map((project) => (
-              <li key={project.id} className="grid min-h-6 items-center border-b border-border" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr` }}>
-                <span className="flex min-w-0 items-center pr-2.5">
-                  <span className="truncate text-xs text-muted" title={project.name}>
-                    {project.name}
-                  </span>
-                  {affected.has(project.id) && <DepFlag name={project.name} onOpen={() => onDependencies(project.id)} />}
-                </span>
-                <span className="justify-self-start rounded-md bg-warning-soft px-2 py-0.5 text-[11.5px] text-warning-soft-fg">{t('direction.timeline.noDueTag')}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
     </Card>

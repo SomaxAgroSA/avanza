@@ -194,11 +194,16 @@ describe('direction-data: linha do tempo', () => {
     expect(ganttModel([make('x', 'active')], now)).toBeNull()
   })
 
-  it('a escala vai do mês do primeiro início (ou de hoje) ao mês seguinte à última entrega e marca hoje', () => {
+  it('a escala vai do mês do primeiro início (ou de hoje) ao mês seguinte à última entrega e marca hoje (§52: por meses)', () => {
     const model = ganttModel([make('a', 'active', { startDate: day('2026-09-10'), dueDate: day('2027-01-20') })], now)!
-    expect(model.months.map((m) => m.date.toISOString().slice(0, 7))).toEqual(['2026-09', '2026-10', '2026-11', '2026-12', '2027-01'])
-    expect(model.today).toBeGreaterThan(40)
-    expect(model.today).toBeLessThan(60)
+    expect(model.scale.unit).toBe('months')
+    expect(model.scale.periods.map((m) => m.start.toISOString().slice(0, 7))).toEqual(['2026-09', '2026-10', '2026-11', '2026-12', '2027-01'])
+    // o mês atual em destaque; embaixo, as segundas-feiras
+    expect(model.scale.periods.filter((m) => m.current).map((m) => m.start.toISOString().slice(0, 7))).toEqual(['2026-11'])
+    expect(model.scale.marks.every((m) => m.date.getUTCDay() === 1)).toBe(true)
+    expect(model.scale.weekends).toEqual([])
+    expect(model.scale.today).toBeGreaterThan(40)
+    expect(model.scale.today).toBeLessThan(60)
     const row = model.rows[0]!
     expect(row.left).toBeGreaterThan(0)
     expect(row.left + row.width).toBeLessThanOrEqual(100)

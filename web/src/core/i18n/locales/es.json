@@ -2739,6 +2739,11 @@
     },
     "updating": "Actualizando el panel…"
   },
+  "ganttScale": {
+    "today": "Hoy",
+    "thisWeek": "Esta semana · {{range}}",
+    "thisMonth": "Este mes · {{month}}"
+  },
   "timeline": {
     "title": "Cronograma",
     "label": "Cronograma de {{name}}",
@@ -4908,7 +4913,8 @@
     "timeline": {
       "title": "Línea de tiempo de los proyectos",
       "project": "Proyecto",
-      "today": "Hoy",
+      "divider": "Ancho de la columna de los proyectos",
+      "dividerHint": "Arrastra a la derecha para ensanchar la columna (← → en el teclado). Nunca queda más angosta que el nombre más largo; doble clic vuelve al ancho automático.",
       "late": "Entrega vencida",
       "tip": "{{name}} · {{status}} · entrega {{date}}",
       "tipLate": "{{name}} · {{status}} · entrega {{date}} (vencida)",
@@ -5258,16 +5264,15 @@
       "byPerson": "Persona",
       "byProject": "Proyecto",
       "empty": "Ninguna tarea de este filtro tiene plazo.",
-      "today": "Hoy",
       "tip": "{{title}} · {{step}} · {{start}} → {{due}}",
       "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (vencida)",
       "groupSummary": "{{count}} · {{hours}} h",
       "undated_one": "{{count}} sin plazo sigue en la Lista.",
       "undated_other": "{{count}} sin plazo siguen en la Lista.",
       "reset": "Restablecer",
-      "resetHint": "Vuelve la columna de las tareas al formato extendido (ancho automático).",
+      "resetHint": "Vuelve la columna de las tareas al ancho automático (el del título más largo).",
       "divider": "Ancho de la columna de las tareas",
-      "dividerHint": "Arrastra para ver más título o más barras (← → en el teclado). Doble clic vuelve al ancho automático."
+      "dividerHint": "Arrastra a la derecha para ensanchar la columna (← → en el teclado). Nunca queda más angosta que el título más largo; doble clic vuelve al ancho automático."
     }
   }
 }

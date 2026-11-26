@@ -1092,10 +1092,10 @@ Pedido da coordenação, aprovado em demonstração (26/11/2026, "Fijar tareas y
 ### Linha do tempo das tarefas: formato estendido
 
 - **Onde:** Caixa de entrada › **Linha do tempo** (§44, ajuste de 25/11).
-- **Títulos inteiros:** quebram em **até 2 linhas** em vez de cortar com "…"; a dica do título e a da barra mostram o **título completo**; a da barra também o **passo** e as **datas** (início → prazo, "(vencida)" quando passou).
-- **Sempre abre estendida:** a coluna dos títulos toma a **largura automática** pelos títulos à vista — a do mais longo numa linha, entre **200px** e o menor de **480px** e **40% da largura** da linha do tempo.
-- **Divisor** entre os títulos e as barras (separador vertical): arrastar ajusta a largura (de 200px até sobrarem 260px para as barras); **← →** no teclado movem de 20 em 20px; **duplo clique** volta à largura automática. **Restabelecer**, no cabeçalho, também volta.
-- **Lembrada por pessoa neste navegador**, junto da visão e do agrupamento (`avanza.inbox.view.<pessoa>`, campo `labelWidth`; sem escolha, a automática).
+- **Títulos inteiros:** desde o ajuste de 26/11 (§52) vão **inteiros numa linha só**, sem quebra e sem "…" (antes quebravam em até 2 linhas); a dica do título e a da barra mostram o **título completo**; a da barra também o **passo** e as **datas** (início → prazo, "(vencida)" quando passou).
+- **Sempre abre estendida:** a coluna dos títulos toma a **largura automática** pelos títulos à vista. Desde §52 é a **largura medida do título mais longo**, sem o teto de 480px / 40% e sem o piso de 200px: as barras se estreitam para dar lugar (até o mínimo delas; abaixo disso, a linha do tempo rola para o lado).
+- **Divisor** entre os títulos e as barras (separador vertical): desde §52 **só alarga** — nunca deixa a coluna abaixo do título mais longo, até sobrar o mínimo das barras; **← →** no teclado movem de 20 em 20px (← até o título mais longo, aí volta à automática); **duplo clique** volta à largura automática. **Restabelecer**, no cabeçalho, também volta.
+- **Lembrada por pessoa neste navegador**, junto da visão e do agrupamento (`avanza.inbox.view.<pessoa>`, campo `labelWidth`; sem escolha, a automática); uma largura guardada menor que o título mais longo não vale (§52).
 
 ## 51. Fixar discreto e filtros de várias opções na Caixa de entrada
 
@@ -1121,3 +1121,24 @@ Pedido da coordenação, aprovado em demonstração (26/11/2026). ADR-065 (núme
 - Os cartões **Sem atribuir · Atribuídas · Em andamento · Para validar** (Recebidas por mim e Todas) **sempre respeitam os filtros**: com algum filtro, usam `meta.counts` da própria lista — quantas há em cada passo **com os mesmos filtros**, contadas pelo servidor **sem a paginação** (antes, se a lista passava de uma página, os cartões voltavam ao total da caixa sem filtro). Sem filtro, os números da caixa (`/demands/overview`) como sempre.
 - Enquanto a lista de um filtro novo carrega, os cartões mantêm os números do filtro anterior (não piscam).
 - A **Lista** e a **Linha do tempo** usam a **mesma lista filtrada**: os seis filtros valem para as duas.
+
+## 52. Linhas do tempo: títulos inteiros numa linha e cabeçalho por semanas
+
+Pedido da coordenação, aprovado em demonstração (26/11/2026, pontos 3 e 4 de "Ajustes lista, filtros e Gantt"). Vale para as duas linhas do tempo: **Tarefas › Caixa de entrada › Linha do tempo** (§44/§50) e **Projetos › Em andamento › "Linha do tempo dos projetos"** (§41). Cabeçalho, sombreado, HOJE, coluna e divisor são peças comuns (`presentation/components/gantt`, cálculo em `domain/gantt-scale.ts`).
+
+### Títulos e coluna
+
+- **Título inteiro, numa linha só:** sem quebra e sem "…", no mesmo tamanho de letra de antes. Em Projetos, o **⚠** das Dependências (§42) segue ao lado do nome; a lista **"Sem data de entrega"** também mostra os nomes inteiros.
+- **Largura da coluna = o título mais longo à vista**, medido na tela com a fonte de verdade (o ⚠ entra na medida). Sem o teto de 480px / 40% de antes (§50): **as barras se estreitam** para dar lugar.
+- **Mínimo das barras:** por semanas, **16px por dia** (os números dos dias cabem); por meses, **24px por semana**; e a faixa atual cabe o seu rótulo ("Esta semana · 23–29 nov"). Se título + mínimo não cabem (tela estreita), **o conjunto rola para o lado** dentro do cartão — o título nunca é cortado.
+- **Altura fixa e igual** em todas as linhas: 28px nas tarefas (também a faixa do grupo, que ocupa a linha inteira, em maiúsculas, com o resumo "n · h"), 24px nos projetos.
+- **Divisor:** continua, mas **só alarga** — nunca deixa a coluna abaixo do título mais longo (o mínimo do separador é a largura medida); ← → de 20 em 20px; **duplo clique** volta à automática. Uma largura guardada antiga menor que o mínimo **não vale**. A escolhida fica **por pessoa neste navegador**: nas tarefas, como em §50 (`avanza.inbox.view.<pessoa>`, `labelWidth`, e o botão **Restabelecer**); nos projetos, em `avanza.projects.timeline.labelWidth.<pessoa>` (sem botão: duplo clique volta).
+
+### Cabeçalho
+
+- **Duas linhas.** Janela curta (**por semanas**, até 120 dias — só nas tarefas): em cima, as semanas de segunda a domingo ("16–22 NOV", "30 NOV–6 DEZ"); a **semana atual em negrito**: "**ESTA SEMANA · 23–29 NOV**". Embaixo, o **número de cada dia**.
+- Janela longa (**por meses** — as tarefas acima de 120 dias e, sempre, os projetos): em cima, os meses ("OUT 26"); o **mês atual em negrito**: "**ESTE MÊS · NOV 26**". Embaixo, o **dia de início de cada semana** (segunda-feira), sem a que esbarra em HOJE.
+- **HOJE** em vermelho (token de perigo), na linha de baixo, no lugar do número do dia (os vizinhos que esbarram nele somem), com a **linha vertical vermelha** de todo o alto.
+- **Sombreado de todo o alto**, por trás das barras: **fins de semana** em cinza muito suave (só por semanas); a **semana ou o mês atual** com o verde suave do sistema, bem tênue; **separador vertical** entre as semanas (ou os meses).
+- Textos do cabeçalho com contraste AA sobre os fundos sombreados (o HOJE leva o fundo do cartão); os números do cabeçalho são visuais (as datas de cada barra estão na dica e no nome acessível dela).
+- **Sem mudar:** agrupar por pessoa/projeto, legenda, dica da barra, link do título, contorno vermelho do prazo vencido, ⚠ das Dependências e a nota "n sem prazo seguem na Lista".

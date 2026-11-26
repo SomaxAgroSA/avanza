@@ -2739,6 +2739,11 @@
     },
     "updating": "Atualizando o painel…"
   },
+  "ganttScale": {
+    "today": "Hoje",
+    "thisWeek": "Esta semana · {{range}}",
+    "thisMonth": "Este mês · {{month}}"
+  },
   "timeline": {
     "title": "Timeline",
     "label": "Timeline de {{name}}",
@@ -4908,7 +4913,8 @@
     "timeline": {
       "title": "Linha do tempo dos projetos",
       "project": "Projeto",
-      "today": "Hoje",
+      "divider": "Largura da coluna dos projetos",
+      "dividerHint": "Arraste para a direita para alargar a coluna (← → no teclado). Ela nunca fica menor que o nome mais longo; duplo clique volta à largura automática.",
       "late": "Entrega vencida",
       "tip": "{{name}} · {{status}} · entrega {{date}}",
       "tipLate": "{{name}} · {{status}} · entrega {{date}} (vencida)",
@@ -5258,16 +5264,15 @@
       "byPerson": "Pessoa",
       "byProject": "Projeto",
       "empty": "Nenhuma tarefa deste filtro tem prazo.",
-      "today": "Hoje",
       "tip": "{{title}} · {{step}} · {{start}} → {{due}}",
       "tipLate": "{{title}} · {{step}} · {{start}} → {{due}} (vencida)",
       "groupSummary": "{{count}} · {{hours}} h",
       "undated_one": "{{count}} sem prazo segue na Lista.",
       "undated_other": "{{count}} sem prazo seguem na Lista.",
       "reset": "Restabelecer",
-      "resetHint": "Volta a coluna das tarefas ao formato estendido (largura automática).",
+      "resetHint": "Volta a coluna das tarefas à largura automática (a do título mais longo).",
       "divider": "Largura da coluna das tarefas",
-      "dividerHint": "Arraste para ver mais título ou mais barras (← → no teclado). Duplo clique volta à largura automática."
+      "dividerHint": "Arraste para a direita para alargar a coluna (← → no teclado). Ela nunca fica menor que o título mais longo; duplo clique volta à largura automática."
     }
   }
 }

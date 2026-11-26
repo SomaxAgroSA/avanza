@@ -1,3 +1,4 @@
+import { ganttScale, type GanttScale } from '@/domain/gantt-scale'
 import { isOverdue, type Project, type ProjectPriority, type ProjectStatus, type ProjectTaskCount, type TeamActivity, type TeamActivityProject, type TeamActivityTask, type UserSummary } from '@/domain/projects'
 
 /**
@@ -229,10 +230,8 @@ export interface GanttRow {
 
 export interface GanttModel {
   rows: GanttRow[]
-  /** Início de cada mês mostrado e onde ele começa na linha do tempo, em %. */
-  months: Array<{ date: Date; left: number }>
-  /** Posição de hoje, em %. */
-  today: number
+  /** Cabeçalho por meses (§52): os meses em cima, as segundas-feiras embaixo, o mês atual e HOJE em destaque. */
+  scale: GanttScale
 }
 
 /** Só entram os projetos com início e entrega (o resto simplesmente não é desenhado); por entrega, a mais próxima primeiro. */
@@ -251,11 +250,8 @@ export function ganttModel(projects: readonly Project[], now: Date = new Date())
   to.setUTCMonth(to.getUTCMonth() + 1)
   const span = to.getTime() - from.getTime()
   const pct = (ms: number) => Math.max(0, Math.min(100, ((ms - from.getTime()) / span) * 100))
-  const months: GanttModel['months'] = []
-  for (const m = new Date(from); m < to; m.setUTCMonth(m.getUTCMonth() + 1)) months.push({ date: new Date(m), left: pct(m.getTime()) })
   return {
-    months,
-    today: pct(today),
+    scale: ganttScale(from.getTime(), to.getTime(), today, 'months'),
     rows: dated.map((project) => {
       // a barra cobre o dia inteiro da entrega
       const left = pct(dayMs(project.startDate))
