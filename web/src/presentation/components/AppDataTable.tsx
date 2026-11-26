@@ -195,11 +195,12 @@ const features = tableFeatures({
 
 const ACTIONS_ID = '__actions'
 /**
- * Fundo das linhas do grupo em destaque (ex.: as fixadas, §50): o tom de aviso do tema misturado à superfície, opaco
- * (a coluna fixa cobre o que rola por baixo) e claro o bastante para o texto secundário manter o contraste AA nos
- * dois temas.
+ * Fundo das linhas do grupo em destaque (ex.: as fixadas, §50): um quarto do tom de aviso do tema sobre a superfície,
+ * opaco (a coluna fixa cobre o que rola por baixo) e claro o bastante para o texto secundário e o vermelho do prazo
+ * vencido manterem o contraste AA nos dois temas; a primeira célula leva um traço na cor do destaque.
  */
-const HIGHLIGHT_ROW = 'bg-[color-mix(in_oklab,var(--color-warning-soft)_50%,var(--color-surface))]'
+const HIGHLIGHT_ROW = 'bg-[color-mix(in_oklab,var(--color-warning-soft)_25%,var(--color-surface))]'
+const HIGHLIGHT_MARK = 'first:shadow-[inset_3px_0_0_var(--color-warning-soft-fg)]'
 /** Espera do clique simples quando a linha também abre com duplo clique. */
 const DOUBLE_CLICK_MS = 250
 /** Clique em botão, link ou item de menu da linha não conta como clique na linha. */
@@ -750,6 +751,7 @@ export function AppDataTable<T extends RowData>({
                                 // primeira e última colunas mais afastadas da borda arredondada do cartão
                                 'border-b border-border px-3 py-2.5 align-middle text-fg group-last/row:border-b-0 first:pl-5 last:pr-5',
                                 cell.column.getIsPinned() && (highlight ? HIGHLIGHT_ROW : 'bg-surface group-hover/row:bg-surface-2'),
+                                highlight && HIGHLIGHT_MARK,
                                 (def?.align === 'end' || cell.column.id === ACTIONS_ID) && 'text-right',
                                 // largura escolhida: o que não cabe fica dentro da coluna (corta ou quebra), sem invadir a vizinha
                                 customWidths && 'overflow-hidden',
