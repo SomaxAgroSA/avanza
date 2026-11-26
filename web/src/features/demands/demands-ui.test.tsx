@@ -1022,4 +1022,39 @@ describe('Caixa de entrada — Lista | Linha do tempo (ajuste 25/11, opção B)'
     await userEvent.click(screen.getByRole('link', { name: 'Publicar o dashboard' }))
     expect(await screen.findByText('Página da tarefa')).toBeInTheDocument()
   })
+  it('formato estendido (§50): títulos em até duas linhas (sem "…"), coluna automática, divisor com teclado e duplo clique, "Restabelecer"; a largura fica guardada', async () => {
+    window.localStorage.setItem('avanza.inbox.view.u2', JSON.stringify({ view: 'timeline', groupBy: 'person' }))
+    const { unmount } = setup()
+    const gantt = await screen.findByRole('region', { name: 'Linha do tempo das tarefas' })
+    const title = within(gantt).getAllByTestId('gantt-title')[0]!
+    expect(title).toHaveClass('line-clamp-2')
+    expect(title).not.toHaveClass('truncate')
+    // a dica da barra: título inteiro, passo e datas
+    expect(within(gantt).getByRole('link', { name: /^Publicar o dashboard · Em andamento · .+ → .+$/ })).toBeInTheDocument()
+    const divider = within(gantt).getByRole('separator', { name: 'Largura da coluna das tarefas' })
+    expect(divider).toHaveAttribute('aria-orientation', 'vertical')
+    // automática pelos títulos (o mais longo: "Portal de acesso no servidor"), nunca abaixo de 200px
+    const auto = divider.getAttribute('aria-valuenow')
+    expect(Number(auto)).toBeGreaterThanOrEqual(200)
+    divider.focus()
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
+    expect(divider).toHaveAttribute('aria-valuenow', String(Number(auto) + 40))
+    expect(JSON.parse(window.localStorage.getItem('avanza.inbox.view.u2') ?? '{}')).toEqual({ view: 'timeline', groupBy: 'person', labelWidth: Number(auto) + 40 })
+    expect(within(gantt).getAllByTestId('gantt-row')[0]).toHaveStyle({ gridTemplateColumns: `${Number(auto) + 40}px 1fr` })
+    unmount()
+    // na próxima entrada, a largura escolhida; duplo clique volta à automática
+    setup()
+    const again = await screen.findByRole('separator', { name: 'Largura da coluna das tarefas' })
+    expect(again).toHaveAttribute('aria-valuenow', String(Number(auto) + 40))
+    await userEvent.dblClick(again)
+    expect(again).toHaveAttribute('aria-valuenow', auto)
+    expect(JSON.parse(window.localStorage.getItem('avanza.inbox.view.u2') ?? '{}')).toEqual({ view: 'timeline', groupBy: 'person' })
+    // ← também; "Restabelecer" volta ao formato estendido
+    again.focus()
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(again).toHaveAttribute('aria-valuenow', String(Math.max(200, Number(auto) - 20)))
+    await userEvent.click(screen.getByRole('button', { name: 'Restabelecer' }))
+    expect(again).toHaveAttribute('aria-valuenow', auto)
+  })
 })
+

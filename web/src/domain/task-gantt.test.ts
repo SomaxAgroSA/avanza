@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DemandStatus } from './demands'
 import type { TaskSummary } from './tasks'
-import { taskGantt, toGanttGroupBy } from './task-gantt'
+import { GANTT_LABEL_MAX, GANTT_LABEL_MIN, autoLabelWidth, clampLabelWidth, taskGantt, toGanttGroupBy, toLabelWidth } from './task-gantt'
 
 const person = (id: string, name: string) => ({ id, name, email: `${id}@x`, avatarUrl: null })
 const jorge = person('u3', 'Jorge Benitez')
@@ -116,5 +116,37 @@ describe('Linha do tempo das tarefas (ajuste 25/11)', () => {
   it('agrupamento guardado desconhecido vira por pessoa', () => {
     expect(toGanttGroupBy('project')).toBe('project')
     expect(toGanttGroupBy('team')).toBe('person')
+  })
+})
+
+describe('coluna dos títulos (§50): sempre estendida, ajustável', () => {
+  const long = 'DISPONIBILIZAR VÍA API LA VISTA DE PEDIDOS PENDIENTES DE BLEND (S/4) PARA EL DRE'
+
+  it('automática: acompanha o título mais longo, entre o mínimo e o máximo (ou 40% da largura)', () => {
+    expect(autoLabelWidth(['Curta'], 1200)).toBe(GANTT_LABEL_MIN)
+    expect(autoLabelWidth(['Um título de tamanho médio, quarenta e poucas'], 1600)).toBeGreaterThan(GANTT_LABEL_MIN)
+    expect(autoLabelWidth(['Um título de tamanho médio, quarenta e poucas'], 1600)).toBeLessThan(GANTT_LABEL_MAX)
+    expect(autoLabelWidth([long], 1600)).toBe(GANTT_LABEL_MAX)
+    // tela estreita: no máximo 40% (sem passar do mínimo)
+    expect(autoLabelWidth([long], 900)).toBe(360)
+    expect(autoLabelWidth([long], 300)).toBe(GANTT_LABEL_MIN)
+    // ainda sem medida: até o máximo
+    expect(autoLabelWidth([long], 0)).toBe(GANTT_LABEL_MAX)
+    expect(autoLabelWidth([], 1200)).toBe(GANTT_LABEL_MIN)
+  })
+
+  it('escolhida pela pessoa: do mínimo até sobrar espaço para as barras', () => {
+    expect(clampLabelWidth(120, 1200)).toBe(GANTT_LABEL_MIN)
+    expect(clampLabelWidth(700.4, 1200)).toBe(700)
+    expect(clampLabelWidth(1100, 1200)).toBe(940)
+    expect(clampLabelWidth(1100, 0)).toBe(1100)
+  })
+
+  it('guardada no navegador: só número positivo; o resto é a automática (null)', () => {
+    expect(toLabelWidth(321.6)).toBe(322)
+    expect(toLabelWidth(null)).toBeNull()
+    expect(toLabelWidth('300')).toBeNull()
+    expect(toLabelWidth(-5)).toBeNull()
+    expect(toLabelWidth(Number.NaN)).toBeNull()
   })
 })
