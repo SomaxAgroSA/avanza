@@ -44,7 +44,7 @@ import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-colu
 import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
 import type { Urgency } from './urgency'
 import type { Company, CompanyInput } from './companies'
-import type { AssignInput, DemandBox, DemandInput, DemandListFilters, DemandOverview } from './demands'
+import type { AssignInput, DemandBox, DemandInput, DemandListFilters, DemandOverview, DemandPage } from './demands'
 import type { CharterItem, CharterItemInput, CharterKind, CharterMeasurement, MeasurementInput, ProjectBrief, ProjectCharter } from './charter'
 import type {
   MemberRole,
@@ -426,8 +426,11 @@ export interface TaskRepository {
 
 /** Demandas internas (§45): tarefas sem projeto, pedidas a uma pessoa (o responsável). */
 export interface DemandRepository {
-  /** Caixas da tela Demandas; `statuses` restringe os passos, `ownerId` e `assigneeId` filtram as pessoas. */
-  list(box: DemandBox, options?: DemandListFilters): Promise<Page<TaskSummary>>
+  /**
+   * Caixas da tela Demandas; `statuses` restringe os passos e os demais filtros (várias opções, §51) as pessoas, os
+   * projetos e as empresas. `counts` = quantas há em cada passo com os mesmos filtros (ADR-065).
+   */
+  list(box: DemandBox, options?: DemandListFilters): Promise<DemandPage>
   create(data: DemandInput): Promise<TaskDetail>
   /** Números das caixas (o selo do menu Tarefas), a carga da equipe e, com `projects.view_all`, a de todas. */
   overview(): Promise<DemandOverview>

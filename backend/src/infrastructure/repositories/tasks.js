@@ -254,13 +254,7 @@ function createTaskRepository(db) {
         where.push(column ? `tasks.demand_status <> '' AND tasks.${column} = ${param(box.userId)}` : `tasks.demand_status <> ''`)
       }
     }
-    if (query.demandOwnerId) where.push(`tasks.demand_owner_id = ${param(query.demandOwnerId)}`)
-    if (query.demandStatuses) where.push(`tasks.demand_status = ANY(${param(query.demandStatuses)}::text[])`)
-    if (query.projectId) where.push(`tasks.project_id = ${param(query.projectId)}`)
-    if (query.typeId) where.push(`tasks.task_type_id = ${param(query.typeId)}`)
-    // prioridade e urgência: um valor ou vários (lista = "ou")
-    if (query.priorityId) where.push(`tasks.priority_id = ANY(${param([].concat(query.priorityId))}::text[])`)
-    // pessoas: uma ou várias (lista = "ou"); `none` = sem ninguém
+    // pessoas (e empresas): uma ou várias (lista = "ou"); `none` = sem ninguém
     const person = (column, value) => {
       const ids = [].concat(value)
       const known = ids.filter((id) => id !== 'none')
@@ -269,6 +263,19 @@ function createTaskRepository(db) {
       if (ids.indexOf('none') >= 0) parts.push(`${column} IS NULL`)
       return `(${parts.join(' OR ')})`
     }
+    if (query.demandOwnerId) where.push(person('tasks.demand_owner_id', query.demandOwnerId))
+    if (query.demandStatuses) where.push(`tasks.demand_status = ANY(${param(query.demandStatuses)}::text[])`)
+    if (query.projectId) where.push(`tasks.project_id = ${param(query.projectId)}`)
+    // Bandeja (§51): vários projetos e/ou as demandas internas (`internal`), "ou" entre eles
+    if (query.projectChoice) {
+      const parts = []
+      if (query.projectChoice.ids.length) parts.push(`tasks.project_id = ANY(${param(query.projectChoice.ids)}::text[])`)
+      if (query.projectChoice.internal) parts.push(`tasks.project_id IN (SELECT id FROM projects WHERE "kind" <> '')`)
+      where.push(parts.length ? `(${parts.join(' OR ')})` : '1 = 0')
+    }
+    if (query.typeId) where.push(`tasks.task_type_id = ${param(query.typeId)}`)
+    // prioridade e urgência: um valor ou vários (lista = "ou")
+    if (query.priorityId) where.push(`tasks.priority_id = ANY(${param([].concat(query.priorityId))}::text[])`)
     if (query.assigneeId) where.push(person('tasks.assignee_id', query.assigneeId))
     // Responsável (Lista de tarefas): quem recebe e distribui (§45) ou, sem ele, a pessoa atribuída
     if (query.responsibleId) where.push(person('COALESCE(tasks.demand_owner_id, tasks.assignee_id)', query.responsibleId))
@@ -291,11 +298,8 @@ function createTaskRepository(db) {
     if (query.itVisible !== undefined) where.push(`tasks.it_visible = ${param(!!query.itVisible)}`)
     if (query.urgency) where.push(`tasks.urgency = ANY(${param([].concat(query.urgency).map((u) => (u === 'none' ? '' : u)))}::text[])`)
     if (query.areaId) where.push(query.areaId === 'none' ? 'tasks.area_id IS NULL' : `tasks.area_id = ${param(query.areaId)}`)
-    // empresa (§46): a da demanda interna ou, na tarefa de projeto, a do projeto
-    if (query.companyId) {
-      const company = 'COALESCE(tasks.company_id, (SELECT p.company_id FROM projects p WHERE p.id = tasks.project_id))'
-      where.push(query.companyId === 'none' ? `${company} IS NULL` : `${company} = ${param(query.companyId)}`)
-    }
+    // empresa (§46): a da demanda interna ou, na tarefa de projeto, a do projeto; uma ou várias (§51), `none` = sem empresa
+    if (query.companyId) where.push(person('COALESCE(tasks.company_id, (SELECT p.company_id FROM projects p WHERE p.id = tasks.project_id))', query.companyId))
     if (query.statusIds) where.push(query.statusIds.length ? `tasks.status_id = ANY(${param(query.statusIds)}::text[])` : '1 = 0')
     if (query.search) {
       const q = param(likePattern(query.search.text))
@@ -687,6 +691,23 @@ function createTaskRepository(db) {
       )
       const count = await db.one(`SELECT COUNT(*) AS total FROM tasks ${where}`, params)
       return { items: rows.map(toEntity), total: count.total }
+    },
+
+    /**
+     * Quantas há em cada passo das demandas (§51, ADR-065) com os mesmos filtros de `list` (sem paginação):
+     * { [demandStatus]: total } — os números da Bandeja com filtro.
+     */
+    async countByDemandStatus(query) {
+      const { where, params } = listFilters(query)
+      const rows = await db.query(
+        `SELECT tasks.demand_status, count(*)::int AS total FROM tasks ${where ? `${where} AND` : 'WHERE'} tasks.demand_status <> '' GROUP BY tasks.demand_status`,
+        params,
+      )
+      const out = {}
+      rows.forEach((row) => {
+        out[row.demand_status] = Number(row.total)
+      })
+      return out
     },
 
     async create(data) {

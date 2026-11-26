@@ -1,3 +1,4 @@
+import type { Page } from './pagination'
 import type { UserSummary } from './projects'
 import type { FieldValue } from './task-config'
 import type { TaskSummary } from './tasks'
@@ -23,17 +24,20 @@ export const DEMAND_KPI_STATUSES: readonly DemandStatus[] = ['unassigned', 'assi
 export const DEMAND_BOXES = ['received', 'assigned', 'requested', 'all'] as const
 export type DemandBox = (typeof DEMAND_BOXES)[number]
 
-/** Filtros da lista de uma caixa (a caixa Todas usa Responsável e Atribuída a). */
+/**
+ * Filtros da lista de uma caixa (a caixa Todas usa Responsável, Atribuída a e Empresa). Os de várias opções (§51):
+ * dentro de um filtro "ou", entre filtros "e"; lista vazia = sem filtro.
+ */
 export interface DemandListFilters {
   statuses?: DemandStatus[]
-  /** Só as demandas desse responsável. */
-  ownerId?: string
-  /** Só as demandas atribuídas a essa pessoa. */
-  assigneeId?: string
-  /** Só as demandas dessa empresa (§46). */
-  companyId?: string
-  /** Filtros da Bandeja (ajuste 23/11): projeto (`internal` = só as demandas internas). */
-  projectId?: string
+  /** Só as demandas desses responsáveis. */
+  ownerIds?: string[]
+  /** Só as demandas atribuídas a essas pessoas. */
+  assigneeIds?: string[]
+  /** Só as demandas dessas empresas (§46; `none` = sem empresa). */
+  companyIds?: string[]
+  /** Filtros da Bandeja (ajuste 23/11): projetos (`internal` = as demandas internas, combinável com projetos). */
+  projectIds?: string[]
   priorityIds?: string[]
   /** high, medium, low ou none (sem urgência). */
   urgencies?: string[]
@@ -41,24 +45,27 @@ export interface DemandListFilters {
   search?: string
 }
 
-/** Valor do filtro Projeto que traz só as demandas internas (sem projeto). */
+/** Valor do filtro Projeto que traz as demandas internas (sem projeto). */
 export const INTERNAL_PROJECT = 'internal'
 
-/** Filtros da Bandeja, guardados no endereço: `q`, `project`, `priority` e `urgency` (os dois últimos com vírgulas). */
+/**
+ * Filtros da Bandeja, guardados no endereço: `q`, `project`, `priority` e `urgency` (os três últimos com vírgulas;
+ * um endereço antigo com um projeto só continua valendo).
+ */
 export interface InboxFilters {
   search: string
-  projectId: string
+  projectIds: string[]
   priorityIds: string[]
   urgencies: string[]
 }
 
-const INBOX_KEYS = { search: 'q', projectId: 'project', priorityIds: 'priority', urgencies: 'urgency' } as const
-const splitList = (value: string | null) => (value ? value.split(',').filter(Boolean) : [])
+const INBOX_KEYS = { search: 'q', projectIds: 'project', priorityIds: 'priority', urgencies: 'urgency' } as const
+const splitList = (value: string | null) => (value ? [...new Set(value.split(',').filter(Boolean))] : [])
 
 export function readInboxFilters(params: URLSearchParams): InboxFilters {
   return {
     search: params.get(INBOX_KEYS.search) ?? '',
-    projectId: params.get(INBOX_KEYS.projectId) ?? '',
+    projectIds: splitList(params.get(INBOX_KEYS.projectIds)),
     priorityIds: splitList(params.get(INBOX_KEYS.priorityIds)),
     urgencies: splitList(params.get(INBOX_KEYS.urgencies)),
   }
@@ -69,21 +76,21 @@ export function writeInboxFilters(params: URLSearchParams, filters: InboxFilters
   const next = new URLSearchParams(params)
   const set = (key: string, value: string) => (value ? next.set(key, value) : next.delete(key))
   set(INBOX_KEYS.search, filters.search)
-  set(INBOX_KEYS.projectId, filters.projectId)
+  set(INBOX_KEYS.projectIds, filters.projectIds.join(','))
   set(INBOX_KEYS.priorityIds, filters.priorityIds.join(','))
   set(INBOX_KEYS.urgencies, filters.urgencies.join(','))
   return next
 }
 
-export const NO_INBOX_FILTERS: InboxFilters = { search: '', projectId: '', priorityIds: [], urgencies: [] }
+export const NO_INBOX_FILTERS: InboxFilters = { search: '', projectIds: [], priorityIds: [], urgencies: [] }
 
-export const hasInboxFilters = (filters: InboxFilters) => !!(filters.search.trim() || filters.projectId || filters.priorityIds.length || filters.urgencies.length)
+export const hasInboxFilters = (filters: InboxFilters) => !!(filters.search.trim() || filters.projectIds.length || filters.priorityIds.length || filters.urgencies.length)
 
 /** Filtros da Bandeja no formato da consulta (`DemandListFilters`). */
 export function inboxQuery(filters: InboxFilters): DemandListFilters {
   const out: DemandListFilters = {}
   if (filters.search.trim()) out.search = filters.search.trim()
-  if (filters.projectId) out.projectId = filters.projectId
+  if (filters.projectIds.length) out.projectIds = filters.projectIds
   if (filters.priorityIds.length) out.priorityIds = filters.priorityIds
   if (filters.urgencies.length) out.urgencies = filters.urgencies
   return out
@@ -91,40 +98,45 @@ export function inboxQuery(filters: InboxFilters): DemandListFilters {
 
 /**
  * Filtros de pessoa e empresa da caixa Todas (Responsável, Atribuída a e Empresa), no endereço: `owner`,
- * `assignee` e `company`. Desde o ajuste 25/11 ficam na mesma linha dos filtros da Bandeja.
+ * `assignee` e `company`, com vírgulas (várias opções, §51). Desde o ajuste 25/11 ficam na mesma linha dos
+ * filtros da Bandeja.
  */
 export interface PersonFilters {
-  ownerId: string
-  assigneeId: string
-  companyId: string
+  ownerIds: string[]
+  assigneeIds: string[]
+  companyIds: string[]
 }
 
-const PERSON_KEYS = { ownerId: 'owner', assigneeId: 'assignee', companyId: 'company' } as const
+const PERSON_KEYS = { ownerIds: 'owner', assigneeIds: 'assignee', companyIds: 'company' } as const
 
-export const NO_PERSON_FILTERS: PersonFilters = { ownerId: '', assigneeId: '', companyId: '' }
+export const NO_PERSON_FILTERS: PersonFilters = { ownerIds: [], assigneeIds: [], companyIds: [] }
 
 export function readPersonFilters(params: URLSearchParams): PersonFilters {
-  return { ownerId: params.get(PERSON_KEYS.ownerId) ?? '', assigneeId: params.get(PERSON_KEYS.assigneeId) ?? '', companyId: params.get(PERSON_KEYS.companyId) ?? '' }
+  return {
+    ownerIds: splitList(params.get(PERSON_KEYS.ownerIds)),
+    assigneeIds: splitList(params.get(PERSON_KEYS.assigneeIds)),
+    companyIds: splitList(params.get(PERSON_KEYS.companyIds)),
+  }
 }
 
 /** Novo endereço com os filtros de pessoa (vazios saem); as outras chaves ficam. */
 export function writePersonFilters(params: URLSearchParams, filters: PersonFilters): URLSearchParams {
   const next = new URLSearchParams(params)
   for (const key of Object.keys(PERSON_KEYS) as Array<keyof PersonFilters>) {
-    if (filters[key]) next.set(PERSON_KEYS[key], filters[key])
+    if (filters[key].length) next.set(PERSON_KEYS[key], filters[key].join(','))
     else next.delete(PERSON_KEYS[key])
   }
   return next
 }
 
-export const hasPersonFilters = (filters: PersonFilters) => !!(filters.ownerId || filters.assigneeId || filters.companyId)
+export const hasPersonFilters = (filters: PersonFilters) => !!(filters.ownerIds.length || filters.assigneeIds.length || filters.companyIds.length)
 
 /** Filtros de pessoa no formato da consulta. */
 export function personQuery(filters: PersonFilters): DemandListFilters {
   const out: DemandListFilters = {}
-  if (filters.ownerId) out.ownerId = filters.ownerId
-  if (filters.assigneeId) out.assigneeId = filters.assigneeId
-  if (filters.companyId) out.companyId = filters.companyId
+  if (filters.ownerIds.length) out.ownerIds = filters.ownerIds
+  if (filters.assigneeIds.length) out.assigneeIds = filters.assigneeIds
+  if (filters.companyIds.length) out.companyIds = filters.companyIds
   return out
 }
 
@@ -150,7 +162,18 @@ export function sortByUrgencyPriority<T extends Pick<TaskSummary, 'urgency' | 'p
     .map((entry) => entry.task)
 }
 
-/** Quantas há em cada passo (números da Bandeja quando há filtro). */
+/**
+ * Uma página de uma caixa com `counts`: quantas há em cada passo com os mesmos filtros, sem a paginação (§51,
+ * ADR-065) — os números da Bandeja quando há filtro. O servidor sempre manda; ausente, conta-se a página.
+ */
+export interface DemandPage extends Page<TaskSummary> {
+  counts?: Record<DemandStatus, number>
+}
+
+/** Números dos passos de uma página: os do servidor (com os filtros) ou, sem eles, os da própria lista. */
+export const pageCounts = (page: DemandPage): Record<DemandStatus, number> => page.counts ?? countByStatus(page.items)
+
+/** Quantas há em cada passo de uma lista. */
 export function countByStatus(list: readonly Pick<TaskSummary, 'demand'>[]): Record<DemandStatus, number> {
   const out = Object.fromEntries(DEMAND_STATUSES.map((status) => [status, 0])) as Record<DemandStatus, number>
   list.forEach((task) => {

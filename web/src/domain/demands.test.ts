@@ -30,23 +30,35 @@ describe('domain/demands — filtros e ordem da Bandeja (ajuste 23/11)', () => {
   it('filtros no endereço: lê, grava (vazios saem, a caixa fica) e vira a consulta', () => {
     const params = new URLSearchParams('box=assigned&q=dmr&project=internal&priority=p1,p2&urgency=high,none')
     const filters = readInboxFilters(params)
-    expect(filters).toEqual({ search: 'dmr', projectId: 'internal', priorityIds: ['p1', 'p2'], urgencies: ['high', 'none'] })
+    expect(filters).toEqual({ search: 'dmr', projectIds: ['internal'], priorityIds: ['p1', 'p2'], urgencies: ['high', 'none'] })
     expect(hasInboxFilters(filters)).toBe(true)
-    expect(inboxQuery(filters)).toEqual({ search: 'dmr', projectId: 'internal', priorityIds: ['p1', 'p2'], urgencies: ['high', 'none'] })
-    const cleared = writeInboxFilters(params, { search: '', projectId: '', priorityIds: [], urgencies: ['high'] })
+    expect(inboxQuery(filters)).toEqual({ search: 'dmr', projectIds: ['internal'], priorityIds: ['p1', 'p2'], urgencies: ['high', 'none'] })
+    const cleared = writeInboxFilters(params, { search: '', projectIds: [], priorityIds: [], urgencies: ['high'] })
     expect(cleared.toString()).toBe('box=assigned&urgency=high')
     expect(hasInboxFilters(readInboxFilters(new URLSearchParams('box=all')))).toBe(false)
-    expect(inboxQuery({ search: '  ', projectId: '', priorityIds: [], urgencies: [] })).toEqual({})
+    expect(inboxQuery({ search: '  ', projectIds: [], priorityIds: [], urgencies: [] })).toEqual({})
+  })
+
+  it('várias opções (§51): Projeto com vírgulas (`internal` junto com projetos), sem repetidos', () => {
+    const filters = readInboxFilters(new URLSearchParams('project=internal,p1,p1'))
+    expect(filters.projectIds).toEqual(['internal', 'p1'])
+    expect(inboxQuery(filters)).toEqual({ projectIds: ['internal', 'p1'] })
+    expect(writeInboxFilters(new URLSearchParams(), { ...filters, projectIds: ['p2', 'internal'] }).toString()).toBe('project=p2%2Cinternal')
   })
 
   it('filtros de pessoa e empresa (25/11): lê, grava sem mexer nos outros e vira a consulta', () => {
     const params = new URLSearchParams('box=all&q=dmr&owner=u2&company=c1')
     const people = readPersonFilters(params)
-    expect(people).toEqual({ ownerId: 'u2', assigneeId: '', companyId: 'c1' })
+    // um valor só (endereço antigo) continua valendo
+    expect(people).toEqual({ ownerIds: ['u2'], assigneeIds: [], companyIds: ['c1'] })
     expect(hasPersonFilters(people)).toBe(true)
-    expect(personQuery(people)).toEqual({ ownerId: 'u2', companyId: 'c1' })
-    expect(writePersonFilters(params, { ownerId: '', assigneeId: 'u3', companyId: '' }).toString()).toBe('box=all&q=dmr&assignee=u3')
+    expect(personQuery(people)).toEqual({ ownerIds: ['u2'], companyIds: ['c1'] })
+    expect(writePersonFilters(params, { ownerIds: [], assigneeIds: ['u3'], companyIds: [] }).toString()).toBe('box=all&q=dmr&assignee=u3')
     expect(hasPersonFilters(readPersonFilters(new URLSearchParams('box=all')))).toBe(false)
+    // várias opções (§51): com vírgulas
+    const many = readPersonFilters(new URLSearchParams('owner=u2,u3&company=none,c1'))
+    expect(personQuery(many)).toEqual({ ownerIds: ['u2', 'u3'], companyIds: ['none', 'c1'] })
+    expect(writePersonFilters(new URLSearchParams(), many).get('owner')).toBe('u2,u3')
   })
 
   it('visão da Caixa de entrada (25/11): lista ou linha do tempo; o resto vira lista', () => {

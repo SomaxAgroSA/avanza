@@ -150,6 +150,12 @@ describe('API — demandas internas (§45)', { timeout: 240000 }, () => {
     assert.deepEqual((await admin.get(`/demands?box=all&owner_id=${people.fabi.user.id}`)).body.data, [])
     assert.deepEqual((await admin.get(`/demands?box=all&assignee_id=${people.jorge.user.id}`)).body.data, [])
     assert.equal((await admin.get('/demands?box=all&owner_id=x%20y')).status, 400)
+    // várias opções (§51): listas separadas por vírgula ('ou'), internal com projetos; meta.counts com os mesmos filtros
+    const many = await admin.get(`/demands?box=all&owner_id=${people.cesar.user.id},${people.fabi.user.id}&project_id=internal&perPage=1`)
+    assert.deepEqual(many.body.data.map((t) => t.code), ['DEM-1'])
+    assert.deepEqual(many.body.meta.counts, { unassigned: 1, assigned: 0, in_progress: 0, to_validate: 0, done: 0 })
+    assert.deepEqual((await admin.get(`/demands?box=all&owner_id=${people.fabi.user.id}`)).body.meta.counts, { unassigned: 0, assigned: 0, in_progress: 0, to_validate: 0, done: 0 })
+    assert.equal((await admin.get('/demands?box=all&project_id=internal,x%20y')).status, 400)
     // sem projects.view_all: nem o responsável nem quem pediu abrem a caixa Todas
     for (const key of ['cesar', 'ana']) {
       const forbidden = await people[key].client.get('/demands?box=all')

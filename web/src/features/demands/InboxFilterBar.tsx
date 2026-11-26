@@ -58,8 +58,9 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 /**
  * Filtros da Caixa de entrada (ajuste 25/11, aprovado em demonstração): o mesmo padrão da grade (Projetos) — a
  * busca na caixa branca com borda e cada filtro no seu botão (FilterMenu): parado só o nome ("Prioridade"), ativo
- * "Prioridade: Alta +1" em verde suave. Projeto (um, ou só as demandas internas), Prioridade e Urgência (várias);
- * na caixa Todas (`people`), também Responsável, Atribuída a e Empresa (um de cada). "Limpar" (texto verde, no fim)
+ * "Prioridade: Alta +1" em verde suave. Todos de várias opções (§51): Projeto (com "Demanda interna", combinável com
+ * projetos), Prioridade e Urgência e, na caixa Todas (`people`), Responsável, Atribuída a e Empresa — o painel fica
+ * aberto para marcar e desmarcar (fecha com clique fora ou Esc); dentro de um filtro "ou", entre filtros "e". "Limpar" (texto verde, no fim)
  * só aparece com algum filtro e tira todos. Cada filtro só aparece se o perfil o mostra (`shows`, "O que aparece"
  * §48: `tasks.filters.*`). A busca vai para o endereço 300 ms depois da última tecla.
  */
@@ -90,16 +91,16 @@ export function InboxFilterBar({
   const urgencies: InboxFilterOption[] = URGENCY_FILTER_VALUES.map((value) => ({ value, label: t(`tasks.urgency.${value}`) }))
   const projectOptions: InboxFilterOption[] = [{ value: INTERNAL_PROJECT, label: t('demands.chip') }, ...projects]
   const active = hasInboxFilters({ ...filters, search: text }) || (!!people && hasPersonFilters(people.filters))
-  const setPerson = (key: keyof PersonFilters, value: string | undefined) => people?.onChange({ ...people.filters, [key]: value ?? '' })
+  const setPerson = (key: keyof PersonFilters, value: string | undefined) => people?.onChange({ ...people.filters, [key]: filterValues(value) })
   const ref = useFitToolbar(INBOX_LEVELS)
 
-  /** Um filtro da barra: `many` = vários valores (Prioridade, Urgência); senão um só (fecha ao escolher). */
-  const filter = (id: string, label: string, allLabel: string, options: InboxFilterOption[], many = false): TableFilterDef => ({
+  /** Um filtro da barra: sempre de várias opções (§51; o painel fica aberto ao marcar). */
+  const filter = (id: string, label: string, allLabel: string, options: InboxFilterOption[]): TableFilterDef => ({
     id,
     label,
     allLabel: capitalize(allLabel),
     options,
-    variant: many ? 'menu' : 'select',
+    variant: 'menu',
   })
 
   return (
@@ -120,14 +121,14 @@ export function InboxFilterBar({
           <FilterMenu
             className={FILTER_FIT}
             filter={filter('project', t('demands.filters.project'), t('demands.filters.projectAll'), projectOptions)}
-            value={filters.projectId || undefined}
-            onChange={(value) => onChange({ ...filters, search: text, projectId: value ?? '' })}
+            value={filters.projectIds.join(',') || undefined}
+            onChange={(value) => onChange({ ...filters, search: text, projectIds: filterValues(value) })}
           />
         )}
         {shows('tasks.filters.priority') && (
           <FilterMenu
             className={FILTER_FIT}
-            filter={filter('priority', t('demands.filters.priority'), t('demands.filters.all'), priorities, true)}
+            filter={filter('priority', t('demands.filters.priority'), t('demands.filters.all'), priorities)}
             value={filters.priorityIds.join(',') || undefined}
             onChange={(value) => onChange({ ...filters, search: text, priorityIds: filterValues(value) })}
           />
@@ -135,7 +136,7 @@ export function InboxFilterBar({
         {shows('tasks.filters.urgency') && (
           <FilterMenu
             className={FILTER_FIT}
-            filter={filter('urgency', t('demands.filters.urgency'), t('demands.filters.all'), urgencies, true)}
+            filter={filter('urgency', t('demands.filters.urgency'), t('demands.filters.all'), urgencies)}
             value={filters.urgencies.join(',') || undefined}
             onChange={(value) => onChange({ ...filters, search: text, urgencies: filterValues(value) })}
           />
@@ -146,24 +147,24 @@ export function InboxFilterBar({
               <FilterMenu
                 className={FILTER_FIT}
                 filter={filter('owner', t('demands.filters.owner'), t('demands.filters.everyone'), people.people)}
-                value={people.filters.ownerId || undefined}
-                onChange={(value) => setPerson('ownerId', value)}
+                value={people.filters.ownerIds.join(',') || undefined}
+                onChange={(value) => setPerson('ownerIds', value)}
               />
             )}
             {shows('tasks.filters.assignee') && (
               <FilterMenu
                 className={FILTER_FIT}
                 filter={filter('assignee', t('demands.filters.assignee'), t('demands.filters.everyone'), people.people)}
-                value={people.filters.assigneeId || undefined}
-                onChange={(value) => setPerson('assigneeId', value)}
+                value={people.filters.assigneeIds.join(',') || undefined}
+                onChange={(value) => setPerson('assigneeIds', value)}
               />
             )}
             {shows('tasks.filters.company') && (
               <FilterMenu
                 className={FILTER_FIT}
                 filter={filter('company', t('companies.field'), t('demands.filters.all'), people.companies)}
-                value={people.filters.companyId || undefined}
-                onChange={(value) => setPerson('companyId', value)}
+                value={people.filters.companyIds.join(',') || undefined}
+                onChange={(value) => setPerson('companyIds', value)}
               />
             )}
           </>
