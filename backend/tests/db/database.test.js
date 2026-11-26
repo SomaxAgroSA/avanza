@@ -228,7 +228,7 @@ describe('migration 0050 — tarefas fixadas no topo da Lista (§50)', () => {
     const type = await t.db.one('SELECT id FROM task_types ORDER BY "order" LIMIT 1')
     const status = await t.db.one('SELECT id FROM task_statuses ORDER BY "order" LIMIT 1')
     const priority = await t.db.one('SELECT id FROM task_priorities ORDER BY "order" LIMIT 1')
-    const task = (n) => insertRow(t.db, 'tasks', { project_id: project.id, number: n, code: `FIX-${n}`, title: `T${n}`, type_id: type.id, status_id: status.id, priority_id: priority.id })
+    const task = (n) => insertRow(t.db, 'tasks', { project_id: project.id, number: n, code: `FIX-${n}`, title: `T${n}`, task_type_id: type.id, status_id: status.id, priority_id: priority.id })
     const a = await task(1)
     const b = await task(2)
     await t.db.exec('INSERT INTO task_pins (task_id, pinned_by) VALUES ($1, $2), ($3, $2)', [a.id, pinner.id, b.id])
