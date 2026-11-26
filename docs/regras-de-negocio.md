@@ -1075,18 +1075,18 @@ Pedido da coordenação, aprovado em demonstração (26/11/2026, "Fijar tareas y
 
 ### Fixar no topo da Lista (para todos)
 
-- **Onde:** Tarefas › **Lista** (a do menu, §44). Em cada linha, o botão **📌 Fixar** (área de ações da linha, antes de Visualizar) e, no **⋯**, **Fixar no topo** / **Desafixar**. O pin não fixado aparece cinza e tênue; o fixado, na cor do destaque. O ícone aparece **uma vez por linha** — nem na faixa do grupo, nem na linha "Fixada por".
-- **Global:** fixar vale para **todas as pessoas** (não é preferência de quem fixa). As fixadas sobem para o grupo **"Fixadas · n"** (faixa e linhas em destaque, com os tokens de aviso do tema) e, depois, **"As demais"**. Sem nenhuma fixada no resultado, não há faixas.
-- **Embaixo do título:** "Fixada por <nome> · <quando>" (há quanto tempo; sem o nome quando a pessoa foi excluída).
-- **Respeitam os filtros:** só sobem as fixadas que passam no escopo (Minhas tarefas / Ver todas), na busca e nos filtros da barra e das colunas; dentro do grupo, **a mais recente fica primeiro**; o resto segue a ordem escolhida (prazo, mais recentes, coluna ordenada).
-- **Quem pode:** quem pode **editar a tarefa** (a mesma regra da edição no servidor: `tasks.edit`, colaborador do projeto ou do fluxo da demanda, projeto não arquivado). Sem isso, o botão aparece desligado e o ⋯ não oferece fixar.
+- **Onde:** Tarefas › **Lista** (a do menu, §44). Em cada linha, o botão **📌 Fixar** (área de ações da linha, antes de Visualizar) e, no **⋯**, **Fixar no topo** / **Desafixar**. O pin não fixado aparece cinza e tênue; o fixado, **verde da marca e cheio** (desde o §51, antes na cor do destaque). O ícone aparece **uma vez por linha**.
+- **Global:** fixar vale para **todas as pessoas** (não é preferência de quem fixa). As fixadas ficam **no topo** da Lista. Desde o §51 (fixar discreto) a linha fixada é **igual às outras** — sem as faixas "Fixadas · n" / "As demais", sem fundo nem borda de destaque; só o ícone muda.
+- **Quem fixou e quando:** na **dica do ícone** — "Fixada por <nome> · <quando> — clique para desafixar" (há quanto tempo; sem o nome quando a pessoa foi excluída; sem o "clique para desafixar" para quem não pode). Desde o §51 não aparece mais embaixo do título.
+- **Respeitam os filtros:** só sobem as fixadas que passam no escopo (Minhas tarefas / Ver todas), na busca e nos filtros da barra e das colunas; entre as fixadas, **a mais recente fica primeiro**; o resto segue a ordem escolhida (prazo, mais recentes, coluna ordenada).
+- **Quem pode:** quem pode **editar a tarefa** (a mesma regra da edição no servidor: `tasks.edit`, colaborador do projeto ou do fluxo da demanda, projeto não arquivado). Sem isso, o botão aparece desligado (a dica de quem fixou continua aparecendo) e o ⋯ não oferece fixar.
 - **Máximo de 10 fixadas ao mesmo tempo** (no total, para todos). A 11ª recusa com `TASK_PIN_LIMIT` ("Já há 10 tarefas fixadas. Desafixe uma antes de fixar outra."). O limite é conferido sob trava, então duas pessoas fixando ao mesmo tempo não passam de 10.
 - **Fixar não "mexe" na tarefa:** não exige os campos obrigatórios do status, não muda o "atualizada" (a ordem "movidas mais recentes") nem o status. Fixar o que já está fixado (ou desafixar o que não está) não muda nada.
 - **Histórico:** `task.pinned` ("Fixou a tarefa no topo da Lista") e `task.unpinned` ("Desafixou a tarefa"), na mesma transação.
 - **Excluir a tarefa** tira a fixação; excluir quem fixou deixa a fixação sem autor.
 - **"Colunas e ações":** **Fixar** entra em "Ações em cada linha" (depois de Visualizar e Editar; **ligado por padrão**), por pessoa neste navegador, como as demais.
 - **"O que aparece" (§48):** novo grupo **Tarefas — Ações em cada linha da Lista** (`tasks.row_actions`, item `pin`; exige `tasks.edit`, senão o cadeado). É o primeiro grupo **opcional**: pode ficar sem nenhum item marcado (a regra "sempre fica uma" não vale para ele). Esconder só tira o botão e o item do ⋯; **as fixadas continuam no topo** para esse perfil.
-- **A aba Tarefas do projeto** não muda (sem o botão e sem o grupo); as tarefas continuam trazendo `pinned` na API.
+- **A aba Tarefas do projeto** não muda (sem o botão); as tarefas continuam trazendo `pinned` na API.
 - **API:** `POST /tasks/{id}/pin` e `DELETE /tasks/{id}/pin` (devolvem a tarefa); toda tarefa sai com `pinned: { by, at } | null`; `GET /tasks?pinned_first=true` põe as fixadas primeiro (a Lista pede; sem o parâmetro, a ordem de sempre). Claude (MCP): `set_task_pinned` e `pinned` nos resumos de `list_tasks`.
 
 ### Linha do tempo das tarefas: formato estendido
@@ -1096,3 +1096,28 @@ Pedido da coordenação, aprovado em demonstração (26/11/2026, "Fijar tareas y
 - **Sempre abre estendida:** a coluna dos títulos toma a **largura automática** pelos títulos à vista — a do mais longo numa linha, entre **200px** e o menor de **480px** e **40% da largura** da linha do tempo.
 - **Divisor** entre os títulos e as barras (separador vertical): arrastar ajusta a largura (de 200px até sobrarem 260px para as barras); **← →** no teclado movem de 20 em 20px; **duplo clique** volta à largura automática. **Restabelecer**, no cabeçalho, também volta.
 - **Lembrada por pessoa neste navegador**, junto da visão e do agrupamento (`avanza.inbox.view.<pessoa>`, campo `labelWidth`; sem escolha, a automática).
+
+## 51. Fixar discreto e filtros de várias opções na Caixa de entrada
+
+Pedido da coordenação, aprovado em demonstração (26/11/2026). ADR-065 (números por passo na resposta da lista).
+
+### Fixar discreto (Tarefas › Lista)
+
+- As fixadas **continuam no topo** (a ordem vem do servidor, `pinned_first`, §50), mas a linha fixada é **igual às outras**: sem as faixas "Fixadas · n" e "As demais", sem fundo e sem borda de destaque, e sem o "Fixada por…" embaixo do título.
+- **Só o ícone muda:** sem fixar, cinza e tênue (como antes); fixada, **verde da marca** (`text-primary-text`, AA no claro e no escuro) e **cheio**.
+- **Quem fixou e quando** vão para a **dica do ícone**: "Fixada por Ana · há 2 horas — clique para desafixar". Quem não pode fixar vê o botão desligado (`aria-disabled`) e a dica sem o "clique para desafixar".
+- Com o botão escondido pelo perfil (§48) ou desligado em "Colunas e ações", as fixadas continuam no topo, sem nenhuma marca.
+
+### Filtros de várias opções na Caixa de entrada
+
+- **Os seis filtros** da linha — **Projeto, Prioridade, Urgência** e, na caixa Todas, **Responsável, Atribuída a e Empresa** — aceitam **várias opções**: marcar e desmarcar deixa o painel **aberto** (fecha com clique fora ou Esc); o botão mostra "Projeto: Finanças +1".
+- **Dentro de um filtro, "ou"; entre filtros, "e".** Ex.: Projeto = Demanda interna + Finanças e Urgência = Alta → as demandas internas **ou** as de Finanças, desde que de urgência alta.
+- **Projeto** tem a opção **"Demanda interna"** (`internal`), combinável com projetos (demandas internas **ou** desses projetos). **Empresa** aceita "sem empresa" (`none`) junto das empresas (na API).
+- **No endereço:** as mesmas chaves (`project`, `priority`, `urgency`, `owner`, `assignee`, `company`), com os valores separados por vírgula. **Enlaces antigos** com um valor só continuam valendo.
+- **API:** `GET /demands` aceita listas separadas por vírgula em `project_id`, `owner_id`, `assignee_id`, `company_id` e `priority_id` (cada id é validado; `project_id` aceita `internal`, `company_id` aceita `none`; até 100 valores) e filtra com `= ANY`. Um valor só continua igual.
+
+### Números (indicadores) com filtro
+
+- Os cartões **Sem atribuir · Atribuídas · Em andamento · Para validar** (Recebidas por mim e Todas) **sempre respeitam os filtros**: com algum filtro, usam `meta.counts` da própria lista — quantas há em cada passo **com os mesmos filtros**, contadas pelo servidor **sem a paginação** (antes, se a lista passava de uma página, os cartões voltavam ao total da caixa sem filtro). Sem filtro, os números da caixa (`/demands/overview`) como sempre.
+- Enquanto a lista de um filtro novo carrega, os cartões mantêm os números do filtro anterior (não piscam).
+- A **Lista** e a **Linha do tempo** usam a **mesma lista filtrada**: os seis filtros valem para as duas.
