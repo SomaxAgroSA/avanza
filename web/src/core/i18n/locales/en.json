@@ -2065,9 +2065,7 @@
       "unpinned": "Task unpinned.",
       "by": "Pinned by {{name}} · {{when}}",
       "byNobody": "Pinned · {{when}}",
-      "group": "Pinned · {{count}}",
-      "groupHint": "shown at the top for everyone",
-      "rest": "Everything else"
+      "hintRemove": "{{pinned}} — click to unpin"
     }
   },
   "taskList": {

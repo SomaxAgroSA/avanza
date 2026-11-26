@@ -339,27 +339,32 @@ describe('Lista — fixar no topo (§50)', () => {
     return { list, setPinned, tableCalls }
   }
 
-  it('pede as fixadas primeiro; o grupo "Fixadas · n" em destaque, depois "As demais"; embaixo do título, quem fixou e quando', async () => {
+  it('pede as fixadas primeiro; fixar é discreto: sem faixas, sem fundo e sem "Fixada por" na linha — só o ícone muda', async () => {
     const { tableCalls } = setupPins()
     await screen.findByText(pinned.title)
     expect(tableCalls().at(-1)![1]).toMatchObject({ pinnedFirst: true })
-    const bands = screen.getAllByTestId('row-group')
-    expect(bands.map((b) => b.textContent)).toEqual(['Fixadas · 1 (aparecem no topo para todos)', 'As demais'])
-    expect(screen.getByTestId('task-pinned-by')).toHaveTextContent(/^Fixada por Angelica Davalos · há \d+ minutos$/)
-    // destaque só nas fixadas; o ícone aparece uma vez por linha (no botão), nunca na faixa nem na linha "Fixada por"
+    expect(screen.queryByTestId('row-group')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Fixada por/)).not.toBeInTheDocument()
     const row = screen.getByText(pinned.title).closest('tr')!
-    expect(row).toHaveAttribute('data-highlight', 'true')
-    expect(screen.getByText(mine.title).closest('tr')).not.toHaveAttribute('data-highlight')
+    expect(row).not.toHaveAttribute('data-highlight')
+    // a fixada vem primeiro (a ordem é do servidor) e o ícone aparece uma vez por linha
     expect(within(row).getAllByTestId('task-pin')).toHaveLength(1)
-    expect(within(row).getByTestId('task-pin')).toHaveAttribute('aria-pressed', 'true')
-    expect(within(screen.getByText(mine.title).closest('tr')!).getByTestId('task-pin')).toHaveAttribute('aria-pressed', 'false')
-    expect(bands[0]!.querySelector('svg')).toBeNull()
+    expect(screen.getAllByTestId('task-pin')[0]).toBe(within(row).getByTestId('task-pin'))
+    const pin = within(row).getByTestId('task-pin')
+    expect(pin).toHaveAttribute('aria-pressed', 'true')
+    expect(pin).toHaveClass('text-primary-text')
+    expect(pin.querySelector('svg')).toHaveClass('fill-current')
+    const free = within(screen.getByText(mine.title).closest('tr')!).getByTestId('task-pin')
+    expect(free).toHaveAttribute('aria-pressed', 'false')
+    expect(free).toHaveClass('text-subtle')
+    expect(free.querySelector('svg')).not.toHaveClass('fill-current')
   })
 
-  it('sem fixadas: nenhuma faixa', async () => {
-    setupPins({ items: [mine, other] })
-    await screen.findByText(mine.title)
-    expect(screen.queryByTestId('row-group')).not.toBeInTheDocument()
+  it('quem fixou e quando ficam na dica do ícone', async () => {
+    setupPins()
+    await screen.findByText(pinned.title)
+    await userEvent.hover(within(screen.getByText(pinned.title).closest('tr')!).getByTestId('task-pin'))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Fixada por Angelica Davalos · há \d+ minutos — clique para desafixar$/)
   })
 
   it('o 📌 da linha fixa e desafixa; também no ··· ("Fixar no topo" / "Desafixar")', async () => {
@@ -383,22 +388,25 @@ describe('Lista — fixar no topo (§50)', () => {
     expect(option).toBeChecked()
     await userEvent.click(option)
     await waitFor(() => expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument())
-    // as fixadas continuam no topo
-    expect(screen.getAllByTestId('row-group')).toHaveLength(2)
   })
 
-  it('perfil sem o "Fixar" (§48) ou sem editar: sem o botão; as fixadas continuam no topo', async () => {
-    setupPins({ hidden: ['tasks.row_actions.pin'] })
+  it('perfil sem o "Fixar" (§48): sem o botão; as fixadas continuam no topo, pedidas ao servidor', async () => {
+    const { tableCalls } = setupPins({ hidden: ['tasks.row_actions.pin'] })
     await screen.findByText(pinned.title)
     expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument()
-    expect(screen.getByTestId('task-pinned-by')).toBeInTheDocument()
-    expect(screen.getAllByTestId('row-group')).toHaveLength(2)
+    expect(tableCalls().at(-1)![1]).toMatchObject({ pinnedFirst: true })
+    expect(screen.queryByTestId('row-group')).not.toBeInTheDocument()
   })
 
-  it('sem editar tarefas: o botão aparece desligado e o ··· não oferece fixar', async () => {
-    setupPins({ permissions: ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'] })
+  it('sem editar tarefas: o botão aparece desligado (com a dica de quem fixou) e o ··· não oferece fixar', async () => {
+    const { setPinned } = setupPins({ permissions: ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'] })
     await screen.findByText(pinned.title)
-    screen.getAllByTestId('task-pin').forEach((button) => expect(button).toBeDisabled())
+    screen.getAllByTestId('task-pin').forEach((button) => expect(button).toHaveAttribute('aria-disabled', 'true'))
+    const pin = within(screen.getByText(pinned.title).closest('tr')!).getByTestId('task-pin')
+    await userEvent.hover(pin)
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Fixada por Angelica Davalos · há \d+ minutos$/)
+    await userEvent.click(pin)
+    expect(setPinned).not.toHaveBeenCalled()
     await userEvent.click(within(screen.getByText(mine.title).closest('tr')!).getByRole('button', { name: 'Mais ações' }))
     await screen.findByRole('menuitem', { name: 'Abrir tarefa' })
     expect(screen.queryByRole('menuitem', { name: 'Fixar no topo' })).not.toBeInTheDocument()

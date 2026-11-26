@@ -137,6 +137,11 @@ describe('empresa na tarefa e na demanda interna (§46)', () => {
     assert.deepEqual(await demandTitles({}), ['Agro'])
     assert.deepEqual(await demandTitles({ company_id: agro.id }), ['Agro'])
     assert.deepEqual(await demandTitles({ company_id: somax.id }), [])
+    // várias empresas (§51): "ou"; `none` combina com as outras
+    assert.deepEqual(await demandTitles({ company_id: `${somax.id},${agro.id}` }), ['Agro'])
+    assert.deepEqual(await demandTitles({ company_id: `none,${somax.id}` }), [])
+    assert.deepEqual(await demandTitles({ company_id: `none,${agro.id}` }), ['Agro'])
+    assert.equal(await codeOf(() => s.demands.listDemands(s.admin, { box: 'all', company_id: `${agro.id},a b` })), 'VALIDATION_ERROR:{"company_id":"invalid_type"}')
   })
 
   it('tarefa de projeto sem empresa e filtro "none"', async () => {

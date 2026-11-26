@@ -7,7 +7,6 @@ import {
   DEMAND_KPI_STATUSES,
   NO_INBOX_FILTERS,
   NO_PERSON_FILTERS,
-  countByStatus,
   demandActionsFor,
   groupByStatus,
   hasInboxFilters,
@@ -19,6 +18,7 @@ import {
   sortByUrgencyPriority,
   splitAssignedBox,
   loadPercent,
+  pageCounts,
   writeInboxFilters,
   writePersonFilters,
   type DemandBox,
@@ -96,12 +96,13 @@ export function DemandsPage() {
   const chooseBox = (value: DemandBox) => setParams(writeInboxFilters(value === boxes[0] ? new URLSearchParams() : new URLSearchParams({ box: value }), inbox), { replace: true })
   const clearAll = useCallback(() => setParams(writePersonFilters(writeInboxFilters(params, NO_INBOX_FILTERS), NO_PERSON_FILTERS), { replace: true }), [params, setParams])
   const peopleFilters = usePeopleFilters(box === 'all', people, setPeople, clearAll, overview.data?.allTeam ?? [])
-  // com filtro, os números contam o que a lista mostra (enquanto ela vem inteira); sem filtro, os da caixa
-  const kpiCounts = (b: DemandBox) => {
-    const data = list.data
-    if (filtering && data && data.total <= data.items.length) return countByStatus(data.items)
-    return counts?.[b]
-  }
+  // com filtro, os números por passo que o servidor conta com os mesmos filtros (§51, ADR-065: nunca o total da
+  // caixa sem filtro, nem quando a lista passa de uma página); sem filtro, os da caixa
+  const filteredCounts = useMemo(() => (filtering && list.data ? pageCounts(list.data) : undefined), [filtering, list.data])
+  // enquanto a lista do filtro novo carrega, ficam os números do filtro anterior (os cartões não piscam)
+  const [lastFiltered, setLastFiltered] = useState(filteredCounts)
+  if (filteredCounts && filteredCounts !== lastFiltered) setLastFiltered(filteredCounts)
+  const kpiCounts = (b: DemandBox) => (filtering ? (filteredCounts ?? lastFiltered) : counts?.[b])
   // o "← Voltar" da página da tarefa volta para a mesma caixa (com os filtros)
   const back = params.toString() ? `/tasks/demands?${params.toString()}` : '/tasks/demands'
   const ganttTasks = useMemo(() => {

@@ -48,11 +48,19 @@ describe('Filtros da Caixa de entrada — padrão da grade (ajuste 25/11)', () =
     expect(within(bar).getByRole('button', { name: 'Limpar' })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
 
-    // um valor só (Projeto): escolher fecha o menu
+    // Projeto também de várias opções (§51): "Demanda interna" junto com um projeto; o painel fica aberto
     const project = within(bar).getByRole('button', { name: 'Projeto' })
     await userEvent.click(project)
     await userEvent.click(await screen.findByRole('button', { name: 'Finanças', pressed: false }))
     expect(project).toHaveTextContent(/^Projeto:\s*Finanças$/)
+    expect(screen.getByRole('dialog', { name: 'Projeto' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Demanda interna', pressed: false }))
+    expect(project).toHaveTextContent(/^Projeto:\s*Finanças \+1$/)
+    // desmarcar também deixa o painel aberto
+    await userEvent.click(screen.getByRole('button', { name: 'Finanças', pressed: true }))
+    expect(project).toHaveTextContent(/^Projeto:\s*Demanda interna$/)
+    expect(screen.getByRole('dialog', { name: 'Projeto' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Projeto' })).toBeNull()
 
     // Limpar tira todos e some
