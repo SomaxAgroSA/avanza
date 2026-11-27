@@ -261,7 +261,8 @@
     "PROJECT_HAS_DOCS": "Este proyecto tiene documentación: elige si moverla, dejarla como espacio general o eliminarla.",
     "DEMAND_STATE_CONFLICT": "Esta acción no está disponible en el paso actual de la demanda. Actualiza la página.",
     "PANORAMA_DISABLED": "El Panorama está desactivado en Configuración → General.",
-    "TASK_PIN_LIMIT": "Ya hay 10 tareas fijadas. Desfija alguna antes de fijar otra."
+    "TASK_PIN_LIMIT": "Ya hay 10 tareas fijadas para todos. Desfija alguna antes de fijar otra.",
+    "TASK_PIN_PERSONAL_LIMIT": "Ya tienes 10 tareas fijadas para ti. Desfija alguna antes de fijar otra."
   },
   "nav": {
     "main": "Navegación principal",
@@ -739,7 +740,8 @@
             "internal_demand": "＋ Demanda interna"
           },
           "row_actions": {
-            "pin": "Fijar"
+            "pin_mine": "Fijar para mí",
+            "pin": "Fijar para todos"
           }
         },
         "docs": {
@@ -2062,10 +2064,28 @@
       "remove": "Desfijar",
       "column": "Fijar",
       "pinned": "Tarea fijada arriba de la Lista, para todos.",
-      "unpinned": "Tarea desfijada.",
-      "by": "Fijada por {{name}} · {{when}}",
-      "byNobody": "Fijada · {{when}}",
-      "hintRemove": "{{pinned}} — clic para desfijar"
+      "unpinned": "Tarea desfijada para todos.",
+      "by": "Fijada para todos por {{name}} · {{when}}",
+      "byNobody": "Fijada para todos · {{when}}",
+      "hintRemove": "{{pinned}} — clic para desfijar",
+      "both": "Fijada para ti y para todos",
+      "mine": {
+        "action": "Fijar para mí",
+        "actionHint": "Solo tú la ves arriba",
+        "remove": "Desfijar para mí",
+        "removeHint": "Vuelve a su lugar en tu Lista",
+        "full": "Ya tienes {{max}} fijadas para ti",
+        "pinned": "Tarea fijada arriba de tu Lista. Solo tú la ves.",
+        "unpinned": "Tarea desfijada de tu Lista.",
+        "state": "Fijada para ti · solo tú la ves arriba"
+      },
+      "all": {
+        "action": "Fijar para todos",
+        "actionHint": "Queda arriba para todo el equipo",
+        "remove": "Desfijar para todos",
+        "removeHint": "Deja de estar arriba para el equipo",
+        "full": "Ya hay {{max}} fijadas para todos"
+      }
     }
   },
   "taskList": {

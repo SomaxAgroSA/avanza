@@ -46,4 +46,15 @@ describe('"O que aparece" por perfil (domain/screens, §48)', () => {
     // as escondidas ficam na ordem do catálogo
     expect(toggleScreen(toggleScreen(DEFAULT_SCREENS, 'tasks.views', 'timeline', false), 'projects.lists', 'all', false).hidden).toEqual(['projects.lists.all', 'tasks.views.timeline'])
   })
+
+  it('"Fixar para mim" e "Fixar para todos" (§55): grupo opcional — um, outro ou nenhum', () => {
+    expect(visibleItems(DEFAULT_SCREENS, 'tasks.row_actions')).toEqual(['pin_mine', 'pin'])
+    let settings = toggleScreen(DEFAULT_SCREENS, 'tasks.row_actions', 'pin', false)
+    expect(visibleItems(settings, 'tasks.row_actions')).toEqual(['pin_mine'])
+    expect(isLastVisible(settings, 'tasks.row_actions', 'pin_mine')).toBe(false)
+    settings = toggleScreen(settings, 'tasks.row_actions', 'pin_mine', false)
+    expect(settings.hidden).toEqual(['tasks.row_actions.pin_mine', 'tasks.row_actions.pin'])
+    expect(visibleItems(settings, 'tasks.row_actions')).toEqual([])
+    expect(shows(settings, 'tasks.row_actions.pin_mine')).toBe(false)
+  })
 })

@@ -191,6 +191,14 @@ export function useTaskMutations() {
         void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       },
     }),
+    /** Fixar para mim (§55): só a Lista de quem fixou muda (as listas dela recarregam). */
+    setPinnedMine: useMutation({
+      mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) => tasks.setPinnedMine(id, pinned),
+      onSuccess: (task) => {
+        queryClient.setQueryData(taskKeys.detail(task.id), task)
+        void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      },
+    }),
     /** "Com cópia" numa tarefa que já existe (ajuste 24/11): só o e-mail sai; o histórico da tarefa recarrega. */
     sendCopy: useMutation({
       mutationFn: ({ id, emails }: { id: string; emails: string[] }) => tasks.sendCopy(id, emails),

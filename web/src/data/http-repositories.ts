@@ -98,6 +98,7 @@ import type {
   AuditEntryDto,
   MeDto,
   PageMetaDto,
+  TaskPageMetaDto,
   PermissionDto,
   ProjectDto,
   ProjectMemberDto,
@@ -1508,10 +1509,12 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
       if (filters.due) filters.due_today = localDay()
       if (options?.mineFirst) filters.mine_first = 'true'
       if (options?.pinnedFirst) filters.pinned_first = 'true'
-      const { data, meta } = await api.get<TaskDto[], PageMetaDto>('/tasks', {
+      const { data, meta } = await api.get<TaskDto[], TaskPageMetaDto>('/tasks', {
         query: { page: query.page, perPage: query.perPage, sort: toSortParam(query.sort), search: query.search.trim() || undefined, ...filters },
       })
-      return { items: data.map(toTaskSummary), ...meta }
+      // com as fixadas no topo (§50/§55): as contagens delas e os limites
+      const { pins, ...page } = meta
+      return { items: data.map(toTaskSummary), ...page, ...(pins ? { pins: { all: pins.all, maxAll: pins.max_all, mine: pins.mine, maxMine: pins.max_mine } } : {}) }
     },
     async get(id) {
       return toTaskDetail((await api.get<TaskDetailDto>(path(id))).data)
@@ -1536,6 +1539,10 @@ export function createHttpTaskRepository(api: ApiClient): TaskRepository {
     },
     async setPinned(id, pinned) {
       const url = `${path(id)}/pin`
+      return toTaskDetail((pinned ? await api.post<TaskDetailDto>(url) : await api.del<TaskDetailDto>(url)).data)
+    },
+    async setPinnedMine(id, pinned) {
+      const url = `${path(id)}/pin/me`
       return toTaskDetail((pinned ? await api.post<TaskDetailDto>(url) : await api.del<TaskDetailDto>(url)).data)
     },
     async sendCopy(id, emails) {

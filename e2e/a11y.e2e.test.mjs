@@ -35,6 +35,8 @@ describe('E2E — acessibilidade e responsividade', { timeout: 600000 }, () => {
     await app.admin.patch(`/tasks/${b.id}`, { sprint_id: sprint.id })
     // fixada no topo da Lista (§50/§51): o ícone verde cheio da fixada também passa pelo axe nos quatro modos
     await app.admin.post(`/tasks/${b.id}/pin`)
+    // fixada para mim (§55): o 📌 azul também passa pelo axe
+    await app.admin.post(`/tasks/${a.id}/pin/me`)
     await app.admin.patch(`/tasks/${a.id}`, { start_date: '2020-01-01' })
     await app.admin.post(`/projects/${seed.project.id}/milestones`, { name: 'Go-live', due_date: '2020-01-31' })
     const type = seed.types.find((t) => t.key === 'BUG') || seed.types[0]
