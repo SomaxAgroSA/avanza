@@ -1142,3 +1142,41 @@ Pedido da coordenação, aprovado em demonstração (26/11/2026, pontos 3 e 4 de
 - **Sombreado de todo o alto**, por trás das barras: **fins de semana** em cinza muito suave (só por semanas); a **semana ou o mês atual** com o verde suave do sistema, bem tênue; **separador vertical** entre as semanas (ou os meses).
 - Textos do cabeçalho com contraste AA sobre os fundos sombreados (o HOJE leva o fundo do cartão); os números do cabeçalho são visuais (as datas de cada barra estão na dica e no nome acessível dela).
 - **Sem mudar:** agrupar por pessoa/projeto, legenda, dica da barra, link do título, contorno vermelho do prazo vencido, ⚠ das Dependências e a nota "n sem prazo seguem na Lista".
+
+## 53. Comentários e descrições com a barra de formatação da Documentação
+
+Pedido da coordenação, aprovado em demonstração (27/11/2026). Vale para a caixa **Novo comentário** e a edição de comentário das tarefas (também na linha do tempo da demanda interna) e para a **Descrição** ao criar e editar tarefa de projeto e demanda interna. **Não muda** os comentários da Gestão (painel do elemento), os motivos das ações da demanda nem outros campos de texto.
+
+### Barra e atalhos
+
+- A **mesma barra do editor da Documentação**, com os mesmos textos: desfazer, refazer, seletor Texto/Título 1–4, negrito, itálico, sublinhado, tachado, marca-texto, código em linha, link, lista com marcadores, lista numerada, lista de verificação, citação, imagem, tabela e **Inserir**. Nestes campos o **Inserir** oferece só **Menção (@)** (nos comentários), **Bloco de código** e **Divisor** — sem destaques, sumário ou menu "/". No menu da tabela ficam inserir/excluir linhas e colunas e excluir a tabela; **mesclar/dividir células e alternar o cabeçalho ficam de fora** (o Markdown não guarda).
+- Os **atalhos de Markdown** funcionam ao digitar: `- ` (lista), `1. ` (numerada), `[ ] ` (verificação), `> ` (citação), `## ` (título), `**x**`, `*x*`, `~~x~~`, `==x==`, `` `x` ``, ```` ``` ```` (bloco de código) e `---` (divisor). **Ctrl/⌘+K** abre o link (só http/https); **Ctrl/⌘+Enter** envia o comentário.
+- Altura mínima de ~130px; passando da máxima, o texto **rola por dentro** (a barra fica à vista). Rótulo, erro e dica acessíveis (`aria-invalid`, `aria-describedby`).
+
+### Menções
+
+- Nos comentários, **@** no começo, depois de espaço ou de "(" abre a lista de pessoas **ao lado do @, na linha em que se escreve**: à direita do que já foi digitado e acompanhando enquanto se digita; se não cabe à direita, à esquerda do @. `palavra@` (e-mail) **não abre**. Filtra por **nome ou sobrenome, sem acentos** (`@jo` → Jorge Benítez; quem tem um nome que começa assim vem antes; até 8). **↑↓** movem, **Enter/Tab** escolhem, **Esc** fecha só a lista (não a janela em volta). Dentro de código, o @ não abre a lista.
+- As pessoas são **as mesmas de antes** (`GET /tasks/{id}/mention-candidates`, com "passa a ver esta tarefa" para quem ainda não via — §16). A pessoa escolhida aparece como "@Nome" e é gravada como `@[Nome](id)`; o servidor continua extraindo e validando (`domain/mentions.js`).
+- **Descrições não têm @:** o servidor não lê menções na descrição (não avisaria ninguém). Uma `@[Nome](id)` que já esteja no texto (ex.: escrita pelo Claude) aparece como menção, mas não notifica.
+
+### Formato gravado (o modelo de dados não muda)
+
+- `content` do comentário e `description` da tarefa **continuam texto Markdown**: títulos `#`, `**negrito**`, `*itálico*`, `<u>sublinhado</u>`, `~~tachado~~`, `==destaque==`, `` `código` ``, `[link](https://…)`, listas, `- [ ]`/`- [x]`, `> citação`, blocos ```` ``` ````, `---`, tabelas GFM e `![nome](/api/v1/attachments/<id>/file)`. Nova linha simples dentro do parágrafo é **quebra de linha** (como sempre foi nos comentários); linha em branco separa parágrafos. Texto que pareceria marcação ganha escape (`\*`, `2\.`).
+- O conversor é `web/src/domain/markdown-doc.ts` (porte do `backend/src/domain/doc-markdown.js` da Documentação, com menções e quebra simples), com ida e volta estável; o editor (`AppMarkdownEditor`, carregado sob demanda por `AppMarkdownField`) recebe e entrega Markdown. A **API** e o **MCP** leem e gravam o mesmo Markdown de antes.
+- **Limites** iguais: comentário até 10.000 caracteres, descrição até 50.000, contados no Markdown (uma tabela 10×10 vazia ocupa ~400; cada imagem ~60).
+
+### Imagens
+
+- Botão **Imagem**, **colar** (Ctrl+V) ou **soltar** no texto: nos comentários e na **edição** da tarefa/demanda, a imagem **sobe na hora como anexo da tarefa** (aparece em **Anexos**; mesma pré-checagem e compressão dos anexos) e entra no texto. Imagem colada ganha o nome "imagem-colada-…". Texto copiado continua colando como texto (o Excel manda junto uma imagem da seleção). Outros arquivos colados ou soltos no comentário seguem como antes (anexos do comentário, enviados ao salvar).
+- Na **criação** (a tarefa ainda não existe), a imagem fica **retida no navegador**: a tarefa é criada sem ela; logo depois a imagem sobe como anexo e a descrição é atualizada com o endereço definitivo (uma edição a mais no histórico). Se o envio falhar, a tarefa continua criada, a imagem sai do texto e o aviso diz qual faltou.
+- Imagem apagada do texto **continua em Anexos** (exclui-se por lá).
+
+### Mostrar
+
+- Comentários (tarefa, demanda, linha do tempo), descrições (página da tarefa, gaveta de visualização, ficha) e notas da linha do tempo da demanda aparecem **com o mesmo visual da Documentação**, na escala do texto ao redor: títulos, sublinhado, destaque, citação, listas de verificação (**só leitura**), tabelas, imagens, bloco de código e divisor. **Textos antigos aparecem como antes** (quebras de linha, listas, negrito, links, menções); "texto" seguido de uma linha `---` continua texto + divisor (não vira título).
+- Segurança: nada de HTML cru (o texto vira elementos React); links só **http(s)**; imagens só dos anexos (`/api/v1/attachments/<id>/file`) e da Documentação (`/api/v1/docs/files/<id>`) — de outro endereço, vira link ou só o nome.
+
+### Histórico, avisos e e-mail
+
+- O resumo do comentário no histórico, no sino e no e-mail (`plainText`) sai **sem marcas**: títulos e citações sem `#`/`>`, `☐`/`☑` nas listas de verificação, tabelas com as células separadas por " · ", blocos de código só com o conteúdo, imagens como "[imagem: nome]", sem `==`, `<u>` ou escapes.
+- O e-mail da **cópia** da tarefa ("Com cópia") leva a descrição **como texto limpo**, com as quebras de linha (`<br>` no HTML).
