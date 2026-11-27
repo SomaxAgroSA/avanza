@@ -286,7 +286,8 @@ describe('TaskFormDialog — arquivos e opção nova na criação', () => {
       }),
       initialPath: '/',
     })
-    const pickFile = () => userEvent.upload(container.ownerDocument.querySelector('input[type=file]') as HTMLInputElement, ata)
+    // o campo de arquivo do tipo (o outro seletor é o da imagem na descrição)
+    const pickFile = () => userEvent.upload(container.ownerDocument.querySelector('input[type=file]:not([aria-label="Imagem"])') as HTMLInputElement, ata)
     return { create, upload, addOption, onSaved, onOpenChange, pickFile }
   }
 

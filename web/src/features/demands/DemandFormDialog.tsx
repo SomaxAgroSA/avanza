@@ -6,7 +6,7 @@ import { formatShortDateTime } from '@/core/utils/format'
 import type { FieldValue, TaskTypeField } from '@/domain/task-config'
 import { customValueIssues, type TaskDetail } from '@/domain/tasks'
 import { isUrgency, NO_URGENCY } from '@/domain/urgency'
-import { AppAvatar, AppButton, AppDialog, AppFormField, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
+import { AppAvatar, AppButton, AppDialog, AppFormField, AppMarkdownField, AppSelect, AppTextField, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { TaskTypeIconBadge } from '@/features/task-config/config-visuals'
 import { useTaskType, useTaskTypes } from '@/features/task-config/queries'
@@ -18,7 +18,7 @@ import { useTaskAttachments, useTaskMutations } from '@/features/tasks/queries'
 import { PROJECT_OPTIONS_QUERY } from '@/features/tasks/required-fields'
 import { TaskTypeFieldsSection } from '@/features/tasks/TaskTypeFieldsSection'
 import { useUrgencyChoices } from '@/features/tasks/urgency-choices'
-import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from '@/features/tasks/use-attachment-uploader'
+import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles, useHeldTextImages, useTextImageUpload } from '@/features/tasks/use-attachment-uploader'
 import { useDemandMutations, useDemandOwners } from './queries'
 import { useCompanies } from '@/features/companies/queries'
 import { CopyEmailsField } from '@/features/tasks/CopyEmailsField'
@@ -119,6 +119,9 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
   const uploadToField = useFieldAttachmentUpload(task?.id ?? '')
   const heldFiles = useHeldFieldFiles()
   const sendFieldFiles = useFieldFilesSender()
+  // imagens da descrição (§53): na edição sobem na hora como anexos; na criação ficam retidas até criar
+  const uploadTextImages = useTextImageUpload(task?.id ?? '')
+  const heldImages = useHeldTextImages()
   const [sendingFiles, setSendingFiles] = useState(false)
   const createOption = useFieldOptionCreator()
   const heldForm = useMemo(
@@ -245,15 +248,26 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
       return
     }
     /** Depois de criar: envia os arquivos escolhidos nos campos. A demanda já existe — falha não a desfaz. */
-    const onCreated = async (saved: TaskDetail) => {
+    const onCreated = async (created: TaskDetail) => {
       const failed: string[] = []
+      let saved = created
       setSendingFiles(true)
       try {
         for (const link of fields) {
           const chosen = heldFiles.files[link.field.name] ?? []
           if ((link.field.type !== 'image' && link.field.type !== 'file') || chosen.length === 0) continue
-          const result = await sendFieldFiles(saved.id, chosen, link.field.name, link.field.type === 'image')
+          const result = await sendFieldFiles(created.id, chosen, link.field.name, link.field.type === 'image')
           result.failed.forEach((item) => failed.push(`${item.name} (${item.reason})`))
+        }
+        // imagens retidas da descrição: sobem e o texto ganha os endereços definitivos
+        const images = await heldImages.send(created.id, draft.description)
+        images.failed.forEach((name) => failed.push(name))
+        if (images.markdown !== null) {
+          try {
+            saved = await update.mutateAsync({ id: created.id, data: { description: images.markdown } })
+          } catch (error) {
+            failed.push(errorMessage(error))
+          }
         }
       } finally {
         setSendingFiles(false)
@@ -267,7 +281,8 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
       {
         taskTypeId: draft.typeId,
         title: draft.title.trim(),
-        description: draft.description,
+        // sem as imagens retidas (sobem depois de criar e o texto é atualizado)
+        description: heldImages.strip(draft.description),
         ownerId: draft.ownerId,
         areaId: draft.areaId,
         ...(draft.priorityId ? { priorityId: draft.priorityId } : {}),
@@ -339,14 +354,14 @@ function DemandForm({ open, onOpenChange, task, onSaved }: DemandFormDialogProps
             placeholder={t('demands.form.titlePlaceholder')}
             onChange={(event) => set('title', event.target.value)}
           />
-          <AppTextarea
+          <AppMarkdownField
             label={t('tasks.fields.description')}
-            rows={6}
-            maxLength={50000}
-            value={draft.description}
+            defaultValue={draft.description}
             error={errors.description}
             placeholder={t('demands.form.descriptionPlaceholder')}
-            onChange={(event) => set('description', event.target.value)}
+            onChange={(value) => set('description', value)}
+            onUpload={task ? uploadTextImages : heldImages.hold}
+            heldImages={!task}
           />
           {draft.typeId && (
             <TaskTypeFieldsSection

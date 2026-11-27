@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RichContent } from './docs'
-import { createMarkdownCodec, isTaskImageSrc, safeTaskHref, taskMarkdown } from './markdown-doc'
+import { createMarkdownCodec, heldImageSources, isTaskImageSrc, replaceHeldImages, safeTaskHref, taskMarkdown } from './markdown-doc'
 
 const { toDoc, toMarkdown } = taskMarkdown
 const roundTrip = (md: string) => toMarkdown(toDoc(md))
@@ -100,5 +100,14 @@ describe('regras de endereço', () => {
     const md = '![foto](blob:http://localhost/1)'
     expect(codec.toDoc(md).content?.[0]?.type).toBe('image')
     expect(codec.toMarkdown(codec.toDoc(md))).toBe(md)
+  })
+})
+
+describe('imagens retidas na criação', () => {
+  it('lista os endereços provisórios e troca pelo definitivo (ou tira a que não subiu)', () => {
+    const md = 'Veja:\n\n![a.png](blob:http://x/1)\n\n![b.png](blob:http://x/2)\n\nfim'
+    expect(heldImageSources(md)).toEqual(['blob:http://x/1', 'blob:http://x/2'])
+    expect(replaceHeldImages(md, (src) => (src.endsWith('1') ? '/api/v1/attachments/abc/file' : null))).toBe('Veja:\n\n![a.png](/api/v1/attachments/abc/file)\n\nfim')
+    expect(heldImageSources('sem imagens')).toEqual([])
   })
 })

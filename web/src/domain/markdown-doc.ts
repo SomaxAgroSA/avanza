@@ -1264,3 +1264,39 @@ export function safeTaskHref(href: string): string | null {
 export const TASK_MARKDOWN_OPTIONS: MarkdownDocOptions = { safeHref: safeTaskHref, isImageSrc: isTaskImageSrc, breaks: true, mentions: true }
 
 export const taskMarkdown: MarkdownCodec = createMarkdownCodec(TASK_MARKDOWN_OPTIONS)
+
+/**
+ * Imagens retidas antes de a tarefa existir (criação): o editor mostra o arquivo pelo endereço
+ * provisório `blob:` (só neste navegador); depois de criar, ele sobe como anexo e o texto ganha o
+ * endereço definitivo (`replaceHeldImages`).
+ */
+export const heldImageMarkdown: MarkdownCodec = createMarkdownCodec({ ...TASK_MARKDOWN_OPTIONS, isImageSrc: (src) => isTaskImageSrc(src) || src.startsWith('blob:') })
+
+const isHeld = (node: RichContent) => node.type === 'image' && String(node.attrs?.src ?? '').startsWith('blob:')
+
+/** Endereços provisórios (`blob:`) das imagens retidas no texto, na ordem. */
+export function heldImageSources(markdown: string): string[] {
+  const found: string[] = []
+  const walk = (nodes: RichContent[]) =>
+    nodes.forEach((node) => {
+      if (isHeld(node)) found.push(String(node.attrs?.src))
+      walk(node.content ?? [])
+    })
+  if (markdown.indexOf('blob:') < 0) return found
+  walk(heldImageMarkdown.toDoc(markdown).content ?? [])
+  return found
+}
+
+/** Troca cada imagem retida pelo endereço definitivo; `null` tira a imagem do texto (não subiu). */
+export function replaceHeldImages(markdown: string, resolve: (src: string) => string | null): string {
+  const walk = (nodes: RichContent[]): RichContent[] =>
+    nodes.flatMap((node) => {
+      if (isHeld(node)) {
+        const url = resolve(String(node.attrs?.src))
+        return url ? [{ ...node, attrs: { ...node.attrs, src: url } }] : []
+      }
+      return node.content ? [{ ...node, content: walk(node.content) }] : [node]
+    })
+  const doc = heldImageMarkdown.toDoc(markdown)
+  return heldImageMarkdown.toMarkdown({ ...doc, content: walk(doc.content ?? []) })
+}

@@ -4,7 +4,7 @@ import { MessageSquare, Paperclip, Pencil, Trash2 } from 'lucide-react'
 import { isAppError } from '@/core/errors/app-error'
 import { formatDateTime, formatRelative } from '@/core/utils/format'
 import { acceptAttribute, type Attachment } from '@/domain/attachments'
-import { mentionsToDisplay, mentionsToStorage, type MentionPerson, type TaskComment, type TaskDetail } from '@/domain/tasks'
+import type { MentionPerson, TaskComment, TaskDetail } from '@/domain/tasks'
 import {
   AppAvatar,
   AppButton,
@@ -12,7 +12,7 @@ import {
   AppEmptyState,
   AppIconButton,
   AppMarkdown,
-  AppMentionTextarea,
+  AppMarkdownField,
   AppSkeleton,
   notify,
 } from '@/presentation/components'
@@ -20,7 +20,7 @@ import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { AttachmentGallery, FilesToSend, PendingUploads } from './AttachmentViews'
 import { useAttachmentMutations, useCommentMutations, useMentionCandidates, useTaskComments } from './queries'
 import { DeleteAttachmentDialog } from './TaskAttachments'
-import { useAttachmentUploader } from './use-attachment-uploader'
+import { useAttachmentUploader, useTextImageUpload } from './use-attachment-uploader'
 import { usePendingFiles } from './use-pending-files'
 
 /** Evento do histórico intercalado com os comentários (linha do tempo da demanda interna, §45). */
@@ -170,9 +170,10 @@ function CommentItem({
 }
 
 /**
- * Novo comentário ou edição (o editor mostra "@Nome"; o texto salvo leva `@[Nome](id)`).
- * Imagens coladas (Ctrl+V), soltas no campo ou escolhidas são enviadas depois que o comentário é
- * salvo, já ligadas a ele.
+ * Novo comentário ou edição, com a barra de formatação da Documentação (§53): o editor mostra "@Nome";
+ * o texto salvo é Markdown e leva `@[Nome](id)`. Imagens (botão, Ctrl+V ou soltas no texto) sobem na hora
+ * como anexos da tarefa e entram no texto; outros arquivos (colados, soltos ou pelo "Anexar") são
+ * enviados depois que o comentário é salvo, já ligados a ele.
  */
 function CommentEditor({ taskId, people, comment, onDone }: { taskId: string; people: MentionPerson[]; comment?: TaskComment; onDone?: () => void }) {
   const { t } = useTranslation()
@@ -180,9 +181,10 @@ function CommentEditor({ taskId, people, comment, onDone }: { taskId: string; pe
   const { create, update } = useCommentMutations(taskId)
   const uploader = useAttachmentUploader(taskId)
   const fileInput = useRef<HTMLInputElement>(null)
-  const initial = comment ? mentionsToDisplay(comment.content) : { text: '', people: [] }
-  const [text, setText] = useState(initial.text)
-  const [mentioned, setMentioned] = useState<MentionPerson[]>(initial.people)
+  const uploadImages = useTextImageUpload(taskId)
+  const [text, setText] = useState(comment?.content ?? '')
+  // depois de enviar, o editor recomeça vazio (é não controlado)
+  const [round, setRound] = useState(0)
   const pendingFiles = usePendingFiles()
   const files = pendingFiles.files
   const [error, setError] = useState<string | undefined>()
@@ -191,7 +193,7 @@ function CommentEditor({ taskId, people, comment, onDone }: { taskId: string; pe
 
   async function submit() {
     if (!text.trim()) return setError('required')
-    const content = mentionsToStorage(text.trim(), mentioned)
+    const content = text.trim()
     setSending(true)
     try {
       const saved = comment ? await update.mutateAsync({ id: comment.id, content }) : await create.mutateAsync(content)
@@ -200,7 +202,7 @@ function CommentEditor({ taskId, people, comment, onDone }: { taskId: string; pe
       if (comment) onDone?.()
       else {
         setText('')
-        setMentioned([])
+        setRound((n) => n + 1)
         setError(undefined)
       }
     } catch (err) {
@@ -213,21 +215,21 @@ function CommentEditor({ taskId, people, comment, onDone }: { taskId: string; pe
 
   return (
     <div className="flex flex-col gap-2">
-      <AppMentionTextarea
+      <AppMarkdownField
+        key={round}
         label={comment ? t('comments.editLabel') : t('comments.newLabel')}
-        value={text}
+        defaultValue={comment?.content ?? ''}
         error={error}
         placeholder={t('comments.placeholder')}
-        maxLength={10000}
         focusOnMount={!!comment}
         people={people}
-        onValueChange={(value) => {
+        onChange={(value) => {
           setText(value)
           setError(undefined)
         }}
-        onMention={(person) => setMentioned((list) => (list.some((p) => p.id === person.id) ? list : [...list, person]))}
         onSubmit={() => void submit()}
-        onFiles={pendingFiles.add}
+        onUpload={uploadImages}
+        onAttach={pendingFiles.add}
       />
       <FilesToSend files={files} label={t('comments.filesToSend')} onRemove={pendingFiles.remove} />
       <PendingUploads items={uploader.pending} onDismiss={uploader.dismiss} />

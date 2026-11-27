@@ -4,7 +4,7 @@ import { NodeSelection } from '@tiptap/pm/state'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/core/utils/cn'
 import { normalizeDocHref } from '@/domain/docs'
-import { createMarkdownCodec, isTaskImageSrc, safeTaskHref, taskMarkdown, TASK_MARKDOWN_OPTIONS, type MarkdownCodec } from '@/domain/markdown-doc'
+import { heldImageMarkdown, safeTaskHref, taskMarkdown } from '@/domain/markdown-doc'
 import type { MentionPerson } from '@/domain/tasks'
 import { AppFormField } from '../AppFormField'
 import type { RichTextUpload } from './AppRichTextEditor'
@@ -31,9 +31,9 @@ export interface AppMarkdownEditorProps {
   /** Com pessoas, o "@" abre a lista de menções (gravadas como `@[Nome](id)`). */
   people?: MentionPerson[]
   /** Envia imagens (botão, colar, arrastar) e devolve os endereços; sem isso, a barra não oferece imagem. */
-  onUpload?: (files: File[]) => Promise<RichTextUpload[]>
+  onUpload?: (files: File[], source: UploadSource) => Promise<RichTextUpload[]>
   /** Outros arquivos colados/soltos no campo (ex.: viram anexos do comentário). */
-  onAttach?: (files: File[]) => void
+  onAttach?: (files: File[], source: UploadSource) => void
   /** Aceita imagens com endereço provisório (`blob:`), retidas até a tarefa existir. */
   heldImages?: boolean
   className?: string
@@ -48,8 +48,8 @@ const normalizeTaskHref = (input: string) => {
   return value && safeTaskHref(value)
 }
 
-/** Imagens retidas na criação: o endereço `blob:` vale até a tarefa existir e o arquivo subir. */
-const heldCodec: MarkdownCodec = createMarkdownCodec({ ...TASK_MARKDOWN_OPTIONS, isImageSrc: (src) => isTaskImageSrc(src) || src.startsWith('blob:') })
+/** De onde veio o arquivo (a imagem colada ganha um nome legível). */
+export type UploadSource = 'paste' | 'drop' | 'pick'
 
 /**
  * Editor dos comentários e descrições das tarefas (§53): a mesma barra da Documentação (deshacer,
@@ -73,7 +73,7 @@ interface BodyProps extends AppMarkdownEditorProps {
 
 function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, required, disabled, focusOnMount, onSubmit, people, onUpload, onAttach, heldImages, id, describedBy, invalid }: BodyProps) {
   const { t } = useTranslation()
-  const codec = heldImages ? heldCodec : taskMarkdown
+  const codec = heldImages ? heldImageMarkdown : taskMarkdown
   const [uploading, setUploading] = useState(0)
   const [linkOpen, setLinkOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -85,7 +85,7 @@ function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, requir
   const withMention = !!people
   const extensions = useMemo(() => markdownExtensions({ placeholder: placeholder ?? '', mention: withMention }), [placeholder, withMention])
   const insertCommands = useMemo(() => markdownInsertCommands(withMention), [withMention])
-  const insertFilesRef = useRef<(files: File[], pos?: number) => Promise<void>>(async () => undefined)
+  const insertFilesRef = useRef<(files: File[], source: UploadSource, pos?: number) => Promise<void>>(async () => undefined)
 
   const editor = useEditor(
     {
@@ -108,7 +108,7 @@ function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, requir
           const files = Array.from(event.clipboardData?.files ?? [])
           // texto copiado continua colando como texto (o Excel, por exemplo, manda junto uma imagem da seleção)
           if (!files.length || event.clipboardData?.getData('text/plain')) return false
-          void insertFilesRef.current(files)
+          void insertFilesRef.current(files, 'paste')
           return true
         },
         handleDrop: (view, event, _slice, moved) => {
@@ -116,7 +116,7 @@ function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, requir
           if (moved || !files.length) return false
           event.preventDefault()
           const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos
-          void insertFilesRef.current(files, pos)
+          void insertFilesRef.current(files, 'drop', pos)
           return true
         },
         handleKeyDown: (_view, event) => {
@@ -140,8 +140,9 @@ function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, requir
     [extensions],
   )
 
+  // sem avisar mudança: abrir o campo não pode regravar o texto (o Markdown antigo fica como está)
   useEffect(() => {
-    editor.setEditable(!disabled)
+    if (editor.isEditable !== !disabled) editor.setEditable(!disabled, false)
   }, [editor, disabled])
 
   // a lista do "@" lê as pessoas daqui (podem chegar depois de o editor abrir)
@@ -150,15 +151,15 @@ function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, requir
   }, [editor, people, withMention])
 
   useEffect(() => {
-    insertFilesRef.current = async (files, pos) => {
+    insertFilesRef.current = async (files, source, pos) => {
       const images = files.filter(isImage)
       const others = files.filter((file) => !isImage(file))
-      if (others.length) latest.current.onAttach?.(others)
+      if (others.length) latest.current.onAttach?.(others, source)
       const upload = latest.current.onUpload
       if (!upload || !images.length) return
       setUploading((n) => n + 1)
       try {
-        const uploaded = await upload(images)
+        const uploaded = await upload(images, source)
         const content = uploaded.filter((file) => file.kind === 'image').map((file) => ({ type: 'image', attrs: { src: file.url, alt: file.name } }))
         if (!content.length || editor.isDestroyed) return
         const chain = editor.chain().focus()
@@ -205,7 +206,7 @@ function MarkdownEditorBody({ defaultValue, onChange, label, placeholder, requir
         onChange={(event) => {
           const files = Array.from(event.target.files ?? [])
           event.target.value = ''
-          void insertFilesRef.current(files)
+          void insertFilesRef.current(files, 'pick')
         }}
       />
       <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} normalize={normalizeTaskHref} />

@@ -5,4 +5,4 @@
 export { AppRichTextEditor, type AppRichTextEditorProps, type RichTextUpload } from './AppRichTextEditor'
 export { AppRichTextView, type AppRichTextViewProps } from './AppRichTextView'
 export { scrollToHeading } from './headings'
-export { AppMarkdownEditor, type AppMarkdownEditorProps } from './AppMarkdownEditor'
+export { AppMarkdownEditor, type AppMarkdownEditorProps, type UploadSource } from './AppMarkdownEditor'

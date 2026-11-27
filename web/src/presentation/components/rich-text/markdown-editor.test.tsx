@@ -103,6 +103,8 @@ describe('AppMarkdownEditor', () => {
     renderWithProviders(<Field initial="Pode revisar, @[Mário Souza](u2)?" onChange={onChange} people={PEOPLE} focusOnMount />)
     const box = await screen.findByRole('textbox', { name: 'Novo comentário' })
     expect(box).toHaveTextContent('Pode revisar, @Mário Souza?')
+    // abrir não regrava o texto (o Markdown antigo fica como está até alguém editar)
+    expect(onChange).not.toHaveBeenCalled()
     // abre com o cursor no fim do texto (como a edição de um comentário)
     await waitFor(() => expect(box).toHaveFocus())
     await userEvent.type(box, ' Obrigado!', { skipClick: true })
