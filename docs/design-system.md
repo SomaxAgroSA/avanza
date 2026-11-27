@@ -5,7 +5,7 @@
 **Regra:** nenhuma feature cria versão própria destes componentes, e nenhum controle nativo do navegador é usado com aparência padrão (ex.: `input type=date`) — tudo segue o tema do app. Se faltar algo, evolua o componente do design system.
 
 ## Fundamentos
-- **Tokens** em `web/src/styles/index.css` (OKLCH), expostos ao Tailwind via `@theme inline`: `bg`, `surface`, `surface-2/3`, `border`, `fg`, `muted`, `subtle`, `primary(-hover/-fg/-soft)`, `success/warning/danger/info(-soft)`, `ring`, `overlay`. Componentes nunca usam cores literais.
+- **Tokens** em `web/src/styles/index.css` (OKLCH), expostos ao Tailwind via `@theme inline`: `bg`, `surface`, `surface-2/3`, `border`, `fg`, `muted`, `subtle`, `primary(-hover/-fg/-soft)`, `success/warning/danger/info(-soft)`, `info-text` (azul como texto/ícone sobre as superfícies, AA no claro e no escuro — o 📌 "fixada para mim", §55), `ring`, `overlay`. Componentes nunca usam cores literais.
 - **Tema:** Light, Dark e System (classe `.dark` no `<html>`). `public/theme-init.js` aplica antes da primeira pintura; `useThemeSync` acompanha o sistema. A preferência é salva localmente e no perfil do usuário.
 - **Gradientes** com moderação: `bg-brand-gradient` (marca, login, destaques) e `bg-subtle-gradient` (cards especiais, dashboard).
 - **Tipografia:** Inter Variable (self-hosted). **Raios:** 6/8/12/16 px. **Sombras:** `shadow-card`, `shadow-float`.
