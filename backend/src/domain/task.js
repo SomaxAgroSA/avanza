@@ -312,8 +312,15 @@ function dueRange(group, today) {
  */
 const MAX_PINNED = 10
 
+/**
+ * "Fixar para mim" (§55, ADR-068): cada pessoa fixa no topo da SUA Lista no máximo 10 tarefas (preferência
+ * pessoal e privada; não conta no limite das fixadas para todos). Fixa quem vê a tarefa.
+ */
+const MAX_PERSONAL_PINNED = 10
+
 module.exports = {
   MAX_PINNED,
+  MAX_PERSONAL_PINNED,
   DUE_GROUPS,
   dueRange,
   URGENCY_LEVELS,

@@ -33,12 +33,16 @@ describe('"O que aparece" por perfil (domain/screens, §48)', () => {
     assert.deepEqual([...optional.matchAll(/'([\w.]+)'/g)].map((m) => m[1]), OPTIONAL_GROUPS)
   })
 
-  it('grupo opcional (§50): o "Fixar" das linhas da Lista pode sumir (as fixadas continuam no topo)', () => {
+  it('grupo opcional (§50/§55): "Fixar para mim" e "Fixar para todos" podem sumir, um ou os dois', () => {
     assert.deepEqual(OPTIONAL_GROUPS, ['tasks.row_actions'])
     assert.ok(SCREEN_KEYS.includes('tasks.row_actions.pin'))
+    assert.ok(SCREEN_KEYS.includes('tasks.row_actions.pin_mine'))
     assert.equal(hiddenScreensIssue(['tasks.row_actions.pin']), null)
-    assert.deepEqual(visibleItems(['tasks.row_actions.pin'], 'tasks.row_actions'), [])
-    assert.deepEqual(visibleItems([], 'tasks.row_actions'), ['pin'])
+    assert.equal(hiddenScreensIssue(['tasks.row_actions.pin_mine', 'tasks.row_actions.pin']), null)
+    assert.deepEqual(visibleItems(['tasks.row_actions.pin'], 'tasks.row_actions'), ['pin_mine'])
+    assert.deepEqual(visibleItems(['tasks.row_actions.pin_mine'], 'tasks.row_actions'), ['pin'])
+    assert.deepEqual(visibleItems(['tasks.row_actions.pin', 'tasks.row_actions.pin_mine'], 'tasks.row_actions'), [])
+    assert.deepEqual(visibleItems([], 'tasks.row_actions'), ['pin_mine', 'pin'])
   })
 
   it('escondidas: só chaves conhecidas e sempre ao menos uma visível em cada grupo', () => {

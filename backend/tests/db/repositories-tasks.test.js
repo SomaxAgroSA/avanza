@@ -731,4 +731,52 @@ describe('repositórios de tarefas (Postgres)', () => {
     await r.tasks.delete(tasks[1].id)
     assert.equal(await pins.count(), 1)
   })
+  it('fixadas para mim (§55): uma por tarefa e pessoa, privadas; limite por pessoa sob trava; a lista põe as minhas e depois as de todos', async () => {
+    const mine = repositories.createTaskPersonalPinRepository(t.db)
+    const pins = repositories.createTaskPinRepository(t.db)
+    const project = await seedProject()
+    const tasks = []
+    for (let i = 0; i < 5; i++) tasks.push(await seedTask(project))
+    const pinFor = (user, task, max) => t.db.transaction(() => mine.pin(task.id, user.id, max || 3))
+    const first = await pinFor(member, tasks[1])
+    assert.equal(first.status, 'pinned')
+    assert.deepEqual([first.pin.taskId, first.pin.userId, first.pin.createdAt instanceof Date], [tasks[1].id, member.id, true])
+    assert.equal((await pinFor(member, tasks[1])).status, 'already')
+    // outra pessoa fixa a mesma tarefa: linhas separadas, e cada uma só vê a sua
+    assert.equal((await pinFor(owner, tasks[1])).status, 'pinned')
+    assert.deepEqual(Object.keys(await mine.listByUser(member.id, tasks.map((task) => task.id))), [tasks[1].id])
+    assert.deepEqual(await mine.listByUser(outsider.id, tasks.map((task) => task.id)), {})
+    assert.deepEqual(await mine.listByUser(member.id, []), {})
+    await t.db.exec('UPDATE task_personal_pins SET created = $3 WHERE task_id = $1 AND user_id = $2', [tasks[1].id, member.id, new Date('2026-11-01T00:00:00Z')])
+    await pinFor(member, tasks[3])
+    await t.db.exec('UPDATE task_personal_pins SET created = $3 WHERE task_id = $1 AND user_id = $2', [tasks[3].id, member.id, new Date('2026-11-02T00:00:00Z')])
+    // duas ao mesmo tempo com uma vaga (da mesma pessoa): a trava deixa passar só uma
+    const both = await Promise.all([pinFor(member, tasks[0]), pinFor(member, tasks[2])])
+    assert.deepEqual(both.map((result) => result.status).sort(), ['full', 'pinned'])
+    assert.equal(await mine.count(member.id), 3)
+    assert.equal(await mine.count(owner.id), 1)
+    const winner = both[0].status === 'pinned' ? tasks[0] : tasks[2]
+    const loser = winner === tasks[0] ? tasks[2] : tasks[0]
+
+    // para todos: a tarefa 4 (e a 3, que também é minha, fica com as minhas)
+    await t.db.transaction(() => pins.pin(tasks[4].id, owner.id, 10))
+    await t.db.transaction(() => pins.pin(tasks[3].id, owner.id, 10))
+    const base = { scope: { viewAll: true, userId: member.id }, projectId: project.id, sort: [{ column: 'code', direction: 'ASC' }], pagination: { perPage: 50, offset: 0 } }
+    const listed = await r.tasks.list(Object.assign({ pinnedFirst: true, pinnedFor: member.id }, base))
+    assert.deepEqual(codes(listed.items), [winner.code, tasks[3].code, tasks[1].code, tasks[4].code, loser.code])
+    assert.equal(listed.total, 5)
+    // as minhas não mudam a lista de outra pessoa (o dono fixou só a 1 para ele)
+    assert.deepEqual(codes((await r.tasks.list(Object.assign({ pinnedFirst: true, pinnedFor: owner.id }, base))).items), [tasks[1].code, tasks[3].code, tasks[4].code, tasks[0].code, tasks[2].code])
+    // com o filtro e "minhas tarefas primeiro" junto: os parâmetros não se misturam
+    const filtered = await r.tasks.list(Object.assign({ pinnedFirst: true, pinnedFor: member.id, firstAssigneeId: member.id, statusIds: [status.BACKLOG], search: null }, base, { pagination: { perPage: 2, offset: 0 } }))
+    assert.deepEqual(codes(filtered.items), [winner.code, tasks[3].code])
+
+    // desafixar é só da pessoa: devolve a que existia; de novo, null
+    assert.equal((await mine.unpin(tasks[1].id, member.id)).taskId, tasks[1].id)
+    assert.equal(await mine.unpin(tasks[1].id, member.id), null)
+    assert.equal(await mine.count(owner.id), 1)
+    // excluir a tarefa tira as fixações (cascata)
+    await r.tasks.delete(tasks[3].id)
+    assert.equal(await mine.count(member.id), 1)
+  })
 })

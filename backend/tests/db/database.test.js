@@ -241,3 +241,69 @@ describe('migration 0050 — tarefas fixadas no topo da Lista (§50)', () => {
     assert.equal((await t.db.one('SELECT COUNT(*) AS n FROM task_pins')).n, 1)
   })
 })
+
+describe('migration 0051 — fixar para mim (§55)', () => {
+  const fs = require('node:fs')
+  const os = require('node:os')
+  const path = require('node:path')
+  const { MIGRATIONS_DIR } = require('../../src/infrastructure/migrate')
+  const { insertRow } = require('../../src/infrastructure/sql')
+  const { hiddenScreensIssue } = require('../../src/domain/screens')
+  let t
+  let before0051
+  before(async () => {
+    t = await createTestDatabase({ migrate: false })
+    // o banco como estava antes da 0051, com perfis que escondiam ou não o "Fixar" (§50)
+    before0051 = fs.mkdtempSync(path.join(os.tmpdir(), 'avanza-0051-'))
+    fs.readdirSync(MIGRATIONS_DIR)
+      .filter((name) => name.endsWith('.sql') && name < '0051')
+      .forEach((name) => fs.copyFileSync(path.join(MIGRATIONS_DIR, name), path.join(before0051, name)))
+    await migrate(t.db, { dir: before0051 })
+    const roles = [
+      ['r_pin_hidden0001', 'SEMFIXAR', ['tasks.filters.company', 'tasks.row_actions.pin']],
+      ['r_pin_shown00001', 'COMFIXAR', ['tasks.filters.company']],
+      ['r_pin_default001', 'PADRAOFIX', []],
+    ]
+    for (const [id, code, hidden] of roles) {
+      await t.db.exec('INSERT INTO roles (id, code, name, hidden_screens) VALUES ($1, $2, $2, $3::jsonb)', [id, code, JSON.stringify(hidden)])
+    }
+    assert.equal((await migrate(t.db))[0], '0051_task_personal_pins.sql')
+  })
+  after(async () => {
+    fs.rmSync(before0051, { recursive: true, force: true })
+    await t.drop()
+  })
+
+  const hiddenOf = async (code) => (await t.db.one('SELECT hidden_screens AS hidden FROM roles WHERE code = $1', [code])).hidden
+
+  it('"O que aparece": quem escondia o "Fixar" fica sem os dois; os outros perfis continuam vendo tudo', async () => {
+    assert.deepEqual(await hiddenOf('SEMFIXAR'), ['tasks.filters.company', 'tasks.row_actions.pin', 'tasks.row_actions.pin_mine'])
+    assert.deepEqual(await hiddenOf('COMFIXAR'), ['tasks.filters.company'])
+    assert.deepEqual(await hiddenOf('PADRAOFIX'), [])
+    for (const code of ['SEMFIXAR', 'COMFIXAR', 'PADRAOFIX']) assert.equal(hiddenScreensIssue(await hiddenOf(code)), null, code)
+  })
+
+  it('uma linha por tarefa e pessoa; apagar a tarefa ou a pessoa apaga a fixação; é idempotente', async () => {
+    const role = await t.db.one("SELECT id FROM roles WHERE code = 'ADMIN'")
+    const owner = await insertRow(t.db, 'users', { email: 'dono-mim@avanza.test', name: 'Dono', role_id: role.id, status: 'active' })
+    const ana = await insertRow(t.db, 'users', { email: 'ana-mim@avanza.test', name: 'Ana', role_id: role.id, status: 'active' })
+    const project = await insertRow(t.db, 'projects', { name: 'Para mim', key: 'MIM', owner_id: owner.id })
+    const type = await t.db.one('SELECT id FROM task_types ORDER BY "order" LIMIT 1')
+    const status = await t.db.one('SELECT id FROM task_statuses ORDER BY "order" LIMIT 1')
+    const priority = await t.db.one('SELECT id FROM task_priorities ORDER BY "order" LIMIT 1')
+    const task = (n) => insertRow(t.db, 'tasks', { project_id: project.id, number: n, code: `MIM-${n}`, title: `T${n}`, type_id: type.id, status_id: status.id, priority_id: priority.id })
+    const a = await task(1)
+    const b = await task(2)
+    await t.db.exec('INSERT INTO task_personal_pins (task_id, user_id) VALUES ($1, $2), ($1, $3), ($4, $2)', [a.id, owner.id, ana.id, b.id])
+    await assert.rejects(t.db.exec('INSERT INTO task_personal_pins (task_id, user_id) VALUES ($1, $2)', [a.id, ana.id]), /duplicate key/)
+    await t.db.exec('DELETE FROM users WHERE id = $1', [ana.id])
+    assert.equal((await t.db.one('SELECT COUNT(*) AS n FROM task_personal_pins')).n, 2)
+    await t.db.exec('DELETE FROM tasks WHERE id = $1', [a.id])
+    assert.deepEqual((await t.db.query('SELECT task_id, user_id FROM task_personal_pins')).map((row) => [row.task_id, row.user_id]), [[b.id, owner.id]])
+    // rodar de novo não duplica nada nem desfaz o que o perfil escolheu depois (mostrar "Fixar para mim")
+    await t.db.exec("UPDATE roles SET hidden_screens = '[\"tasks.row_actions.pin\"]'::jsonb WHERE code = 'SEMFIXAR'")
+    await t.db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, '0051_task_personal_pins.sql'), 'utf8'))
+    assert.equal((await t.db.one('SELECT COUNT(*) AS n FROM task_personal_pins')).n, 1)
+    assert.deepEqual(await hiddenOf('SEMFIXAR'), ['tasks.row_actions.pin'])
+  })
+})

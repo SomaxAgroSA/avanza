@@ -24,6 +24,9 @@
  * - Fixar no topo da Lista (§50, ADR-064): `task_pins`, igual para todas as pessoas; quem edita a tarefa fixa e
  *   desafixa (no máximo 10); as listas trazem `pinned: { by, at } | null` e `pinned_first=true` põe as fixadas
  *   primeiro (só as que passam nos filtros).
+ * - Fixar para mim (§55, ADR-068): `task_personal_pins`, preferência pessoal e privada de quem vê a tarefa (no
+ *   máximo 10 por pessoa); sem histórico e sem tempo real. As tarefas trazem `pinned_mine: { at } | null` (só a
+ *   fixação de quem consulta) e `pinned_first=true` põe primeiro as fixadas para mim, depois as fixadas para todos.
  */
 
 const { appError } = require('../core/errors')
@@ -455,7 +458,8 @@ function createTaskService(deps) {
 
   // ---------------------------------------------------------------- apresentação
 
-  async function refsFor(list, extraUserIds) {
+  /** `viewerId` (opcional): quem consulta — traz as fixadas para ela (§55), nunca as das outras pessoas. */
+  async function refsFor(list, extraUserIds, viewerId) {
     const projectIds = []
     const userIds = (extraUserIds || []).slice()
     list.forEach((t) => {
@@ -471,6 +475,8 @@ function createTaskService(deps) {
       const by = pins[taskId].pinnedBy
       if (by && userIds.indexOf(by) < 0) userIds.push(by)
     })
+    // fixadas para mim (§55): só as de quem consulta
+    const myPins = viewerId && taskIds.length ? await deps.taskPersonalPinRepository.listByUser(viewerId, taskIds) : {}
     const sprintIds = list.map((t) => t.sprintId).filter((id, i, all) => id && all.indexOf(id) === i)
     const planItemIds = list.map((t) => t.planItemId).filter((id, i, all) => id && all.indexOf(id) === i)
     const taskTags = taskIds.length ? await deps.taskTagRepository.listByTasks(taskIds) : {}
@@ -501,6 +507,7 @@ function createTaskService(deps) {
       subtasks: taskIds.length ? await tasks.subtaskStats(taskIds, closedIds) : {},
       blocked,
       pins,
+      myPins,
       projects: byId(projectIds.length ? await deps.projectRepository.findManyByIds(projectIds) : []),
       users: byId(userIds.length ? await deps.userRepository.findManyByIds(userIds) : []),
       taskTags,
@@ -577,6 +584,8 @@ function createTaskService(deps) {
       company: companyId ? companyRef(refs.companies[companyId]) : null,
       // fixada no topo da Lista de tarefas (§50): quem fixou e quando; igual para todas as pessoas
       pinned: pinOf(task, refs),
+      // fixada para mim (§55): só a fixação de quem consulta (privada; null nas consultas sem pessoa)
+      pinned_mine: refs.myPins && refs.myPins[task.id] ? { at: iso(refs.myPins[task.id].createdAt) } : null,
     }
   }
 
@@ -597,7 +606,7 @@ function createTaskService(deps) {
   }
 
   async function presentDetail(ctx, task, project, access) {
-    const refs = Object.assign(await refsFor([task]), access.scoped ? { scoped: { [task.projectId]: true } } : {})
+    const refs = Object.assign(await refsFor([task], undefined, ctx && ctx.principal ? ctx.principal.userId : undefined), access.scoped ? { scoped: { [task.projectId]: true } } : {})
     const links = await typeLinks(task.typeId)
     const saved = (await values.listByTasks([task.id]))[task.id] || {}
     const customValues = {}
@@ -850,12 +859,28 @@ function createTaskService(deps) {
       sort: parseSort(q.sort, SORTABLE, 'code'),
       // "Minhas tarefas primeiro": as atribuídas a quem consulta vêm antes, cada grupo na ordem pedida
       firstAssigneeId: filters.mine_first === 'true' ? ctx.principal.userId : undefined,
-      // as fixadas no topo (§50), antes de qualquer outra ordem; só as que passam nos filtros
+      // as fixadas no topo, antes de qualquer outra ordem: as fixadas para mim (§55) e depois as para todos (§50);
+      // só as que passam nos filtros
       pinnedFirst: filters.pinned_first === 'true',
+      pinnedFor: ctx.principal.userId,
       pagination,
     })
-    const refs = Object.assign(await refsFor(result.items), { scoped: await itProjects(ctx, result.items) })
-    return { items: result.items.map((t) => presentSummary(t, refs)), meta: buildPageMeta(pagination, result.total) }
+    const refs = Object.assign(await refsFor(result.items, undefined, ctx.principal.userId), { scoped: await itProjects(ctx, result.items) })
+    const meta = buildPageMeta(pagination, result.total)
+    // com as fixadas no topo (§50/§55): quantas há (para todos, no total; para mim, só as de quem consulta) e os
+    // limites — a Lista desliga "Fixar" quando não cabe mais nenhuma
+    if (filters.pinned_first === 'true') meta.pins = await pinCounts(ctx)
+    return { items: result.items.map((t) => presentSummary(t, refs)), meta }
+  }
+
+  /** Quantas fixadas há para todos e para quem consulta, com os limites (§50/§55). */
+  async function pinCounts(ctx) {
+    return {
+      all: await deps.taskPinRepository.count(),
+      max_all: taskDomain.MAX_PINNED,
+      mine: await deps.taskPersonalPinRepository.count(ctx.principal.userId),
+      max_mine: taskDomain.MAX_PERSONAL_PINNED,
+    }
   }
 
   /** { projectId: true } dos projetos (das tarefas) em que a pessoa é Responsável TI limitado (§33). */
@@ -1403,6 +1428,27 @@ function createTaskService(deps) {
   }
 
   /**
+   * Fixa a tarefa no topo da Lista de quem pede, só para ela (§55, ADR-068): quem vê a tarefa; no máximo
+   * `MAX_PERSONAL_PINNED` por pessoa (TASK_PIN_PERSONAL_LIMIT); já fixada não muda nada. Preferência pessoal e
+   * privada: sem histórico da tarefa e sem tempo real; não renova o "atualizada" da tarefa.
+   */
+  async function pinTaskForMe(ctx, id) {
+    const { task, project, access } = await loadTask(ctx, id)
+    await deps.unitOfWork.run(async (repos) => {
+      const result = await repos.taskPersonalPinRepository.pin(task.id, ctx.principal.userId, taskDomain.MAX_PERSONAL_PINNED)
+      if (result.status === 'full') throw appError('TASK_PIN_PERSONAL_LIMIT', undefined, { max: taskDomain.MAX_PERSONAL_PINNED })
+    })
+    return presentDetail(ctx, task, project, access)
+  }
+
+  /** Desafixa para quem pede (§55): a mesma regra de quem fixa; não fixada não muda nada; sem histórico. */
+  async function unpinTaskForMe(ctx, id) {
+    const { task, project, access } = await loadTask(ctx, id)
+    await deps.unitOfWork.run(async (repos) => repos.taskPersonalPinRepository.unpin(task.id, ctx.principal.userId))
+    return presentDetail(ctx, task, project, access)
+  }
+
+  /**
    * Kanban: move a tarefa para `status_id` entre `prev_id` (card acima) e `next_id` (card abaixo).
    * Mudar de coluna segue as regras de edição (transição, datas, histórico, notificações);
    * reordenar dentro da mesma coluna só muda a posição (sem histórico).
@@ -1443,7 +1489,7 @@ function createTaskService(deps) {
    * ao Responsável TI nos projetos em que a pessoa é limitada (resumo do projeto, §33).
    */
   async function summarize(list, ctx) {
-    const refs = await refsFor(list)
+    const refs = await refsFor(list, undefined, ctx && ctx.principal ? ctx.principal.userId : undefined)
     if (ctx) refs.scoped = await itProjects(ctx, list)
     return list.map((t) => presentSummary(t, refs))
   }
@@ -1460,6 +1506,8 @@ function createTaskService(deps) {
     setTaskArea,
     pinTask,
     unpinTask,
+    pinTaskForMe,
+    unpinTaskForMe,
     sendTaskCopy,
     deleteTask,
     moveTask,

@@ -21,7 +21,8 @@ export const SCREEN_CATALOG = {
   'tasks.views': ['list', 'timeline'],
   'tasks.filters': ['search', 'project', 'priority', 'urgency', 'responsible', 'assignee', 'company'],
   'tasks.create': ['project_task', 'internal_demand'],
-  'tasks.row_actions': ['pin'],
+  // "Fixar para mim" (§55) e "Fixar para todos" (§50; a chave `pin` é a de antes da divisão, migration 0051)
+  'tasks.row_actions': ['pin_mine', 'pin'],
   'docs.actions': ['notify', 'versions', 'pdf'],
   'settings.menu': ['general', 'integrations', 'task_types', 'custom_fields', 'statuses', 'priorities', 'areas', 'dependency_areas', 'companies', 'tags', 'icons', 'access', 'audit'],
 } as const

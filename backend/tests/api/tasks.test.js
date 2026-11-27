@@ -217,6 +217,34 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal((await member.client.get(`/tasks/${task.id}/history`)).body.data[0].action, 'task.unpinned')
   })
 
+  it('fixar para mim (§55): POST/DELETE /tasks/{id}/pin/me, pessoal e privado, sem histórico; pinned_first põe as minhas primeiro', async () => {
+    const all = (await viewer.client.get(`/tasks?project_id=${project.id}&sort=code`)).body.data
+    const task = all[all.length - 1]
+    assert.equal(task.pinned_mine, null)
+    // quem só lê também fixa para si
+    const pinned = await viewer.client.post(`/tasks/${task.id}/pin/me`)
+    assert.equal(pinned.status, 200, JSON.stringify(pinned.body))
+    assert.ok(pinned.body.data.pinned_mine.at)
+    assert.equal(pinned.body.data.pinned, null)
+    const seen = await viewer.client.get(`/tasks?project_id=${project.id}&sort=code&pinned_first=true`)
+    assert.equal(seen.body.data[0].id, task.id)
+    assert.deepEqual(seen.body.meta.pins, { all: 0, max_all: 10, mine: 1, max_mine: 10 })
+    // privada: as outras pessoas não veem nem a fixação nem a ordem
+    const other = (await member.client.get(`/tasks?project_id=${project.id}&sort=code&pinned_first=true`)).body
+    assert.equal(other.data[0].id, all[0].id)
+    assert.equal(other.data.find((t) => t.id === task.id).pinned_mine, null)
+    assert.equal(other.meta.pins.mine, 0)
+    assert.equal((await member.client.get(`/tasks/${task.id}`)).body.data.pinned_mine, null)
+    // sem histórico
+    assert.ok(!(await member.client.get(`/tasks/${task.id}/history`)).body.data.some((entry) => entry.action === 'task.pinned'))
+    // quem não vê a tarefa não fixa; sem o cabeçalho anti-CSRF, não
+    assert.equal((await outsider.client.post(`/tasks/${task.id}/pin/me`)).status, 404)
+    assert.equal((await viewer.client.del(`/tasks/${task.id}/pin/me`, { csrf: false })).status, 403)
+    const unpinned = await viewer.client.del(`/tasks/${task.id}/pin/me`)
+    assert.equal(unpinned.status, 200, JSON.stringify(unpinned.body))
+    assert.equal(unpinned.body.data.pinned_mine, null)
+  })
+
   it('área responsável: lista inicial, muda pela lista, histórico, filtro e quadro', async () => {
     const areas = (await member.client.get('/areas')).body.data
     assert.equal(areas.length, 11)

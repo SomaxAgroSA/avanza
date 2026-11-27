@@ -545,7 +545,7 @@ function build() {
             { name: 'kind', in: 'query', schema: { type: 'string', enum: ['project', 'demand'] }, description: 'Com projeto (project) ou Sem projeto = demandas internas (demand) (§45); sem o filtro, as duas' },
             { name: 'mine', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: '"Minhas tarefas": atribuídas a quem consulta e, nas demandas internas, também as que ela pediu ou recebeu como responsável (§45)' },
             { name: 'search', in: 'query', schema: { type: 'string' }, description: 'título, código e campos personalizados pesquisáveis' },
-            { name: 'pinned_first', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'as fixadas no topo (§50), a mais recente primeiro, antes da ordem pedida em sort; só as que passam nos filtros' },
+            { name: 'pinned_first', in: 'query', schema: { type: 'string', enum: ['true', 'false'] }, description: 'as fixadas no topo antes da ordem pedida em sort: primeiro as fixadas para quem consulta (§55), depois as fixadas para todos (§50), em cada grupo a mais recente primeiro; só as que passam nos filtros. Com true, meta.pins traz as contagens e os limites' },
             { name: 'sort', in: 'query', schema: { type: 'string' }, description: 'code, title, created_at, updated_at, due_date, priority, status; prefixo "-" = desc' },
             { name: 'page', in: 'query', schema: { type: 'integer' } },
             { name: 'perPage', in: 'query', schema: { type: 'integer', maximum: 100 } },
@@ -614,6 +614,17 @@ function build() {
         delete: op('Desafixa a tarefa (§50); quem edita a tarefa; não fixada não muda nada; histórico task.unpinned', ['tasks'], {
           200: ok('Tarefa (pinned = null)', ref('TaskDetail')),
           403: errorResponse('FORBIDDEN'),
+          404: errorResponse('TASK_NOT_FOUND'),
+        }, { parameters: [idParam, csrfHeader] }),
+      },
+      '/tasks/{id}/pin/me': {
+        post: op('Fixa a tarefa no topo da Lista só de quem pede, "para mim" (§55): quem vê a tarefa; pessoal e privado (ninguém mais vê); no máximo 10 por pessoa (TASK_PIN_PERSONAL_LIMIT); já fixada não muda nada; sem histórico e sem tempo real', ['tasks'], {
+          200: ok('Tarefa (com pinned_mine)', ref('TaskDetail')),
+          404: errorResponse('TASK_NOT_FOUND'),
+          409: errorResponse('TASK_PIN_PERSONAL_LIMIT'),
+        }, { parameters: [idParam, csrfHeader] }),
+        delete: op('Desafixa a tarefa para quem pede (§55); não fixada não muda nada; sem histórico', ['tasks'], {
+          200: ok('Tarefa (pinned_mine = null)', ref('TaskDetail')),
           404: errorResponse('TASK_NOT_FOUND'),
         }, { parameters: [idParam, csrfHeader] }),
       },
@@ -1551,6 +1562,11 @@ function build() {
             perPage: { type: 'integer' },
             total: { type: 'integer' },
             totalPages: { type: 'integer' },
+            pins: {
+              type: 'object',
+              description: 'só em GET /tasks?pinned_first=true (§50/§55): quantas fixadas há para todos (no total) e para quem consulta, com os limites',
+              properties: { all: { type: 'integer' }, max_all: { type: 'integer' }, mine: { type: 'integer' }, max_mine: { type: 'integer' } },
+            },
           },
         },
         Error: {
@@ -1704,6 +1720,12 @@ function build() {
             pinned: {
               oneOf: [
                 { type: 'object', description: 'fixada no topo da Lista de tarefas (§50), igual para todas as pessoas', properties: { by: { oneOf: [ref('UserSummary'), { type: 'null' }], description: 'quem fixou' }, at: { type: 'string', format: 'date-time' } } },
+                { type: 'null' },
+              ],
+            },
+            pinned_mine: {
+              oneOf: [
+                { type: 'object', description: 'fixada no topo da Lista só para quem consulta (§55); privada: cada pessoa vê só a sua', properties: { at: { type: 'string', format: 'date-time' } } },
                 { type: 'null' },
               ],
             },

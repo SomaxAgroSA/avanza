@@ -317,6 +317,8 @@ const setTaskUrgency = taskAction((s, ctx, r) => s.setTaskUrgency(ctx, r.id, r.b
 const setTaskArea = taskAction((s, ctx, r) => s.setTaskArea(ctx, r.id, r.body()))
 const pinTask = taskAction((s, ctx, r) => s.pinTask(ctx, r.id))
 const unpinTask = taskAction((s, ctx, r) => s.unpinTask(ctx, r.id))
+const pinTaskForMe = taskAction((s, ctx, r) => s.pinTaskForMe(ctx, r.id))
+const unpinTaskForMe = taskAction((s, ctx, r) => s.unpinTaskForMe(ctx, r.id))
 const sendTaskCopy = taskAction((s, ctx, r) => s.sendTaskCopy(ctx, r.id, r.body()))
 const deleteTask = taskAction((s, ctx, r) => s.deleteTask(ctx, r.id))
 
@@ -791,6 +793,8 @@ module.exports = {
   setTaskArea,
   pinTask,
   unpinTask,
+  pinTaskForMe,
+  unpinTaskForMe,
   sendTaskCopy,
   deleteTask,
   listDemands,
