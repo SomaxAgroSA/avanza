@@ -157,6 +157,53 @@ describe('domain/task — checklist, comentários e tags', () => {
     )
   })
 
+  it('texto limpo também do editor com formatação (§53): títulos, citação, tabela, código, imagem, escapes', () => {
+    const content = [
+      '## Passos',
+      '',
+      '<u>Sublinhado</u>, ==destaque== e 2\\. item \\*literal\\*',
+      '',
+      '> citado com @[Ana](u1)',
+      '',
+      '- [ ] fazer',
+      '- [x] feito',
+      '',
+      '| Campo | Regra |',
+      '| --- | --- |',
+      '| CNPJ | **Obrigatório** |',
+      '',
+      '```js',
+      'const a = 1',
+      '```',
+      '',
+      '---',
+      '',
+      '![print.png](/api/v1/attachments/abc/file) e ![](/api/v1/attachments/def/file)',
+    ].join('\n')
+    assert.equal(
+      task.plainText(content),
+      [
+        'Passos',
+        '',
+        'Sublinhado, destaque e 2. item *literal*',
+        '',
+        'citado com @Ana',
+        '',
+        '☐ fazer',
+        '☑ feito',
+        '',
+        'Campo · Regra',
+        'CNPJ · Obrigatório',
+        '',
+        'const a = 1',
+        '',
+        '[imagem: print.png] e [imagem]',
+      ].join('\n'),
+    )
+    // texto antigo continua igual
+    assert.equal(task.plainText('linha 1\nlinha 2 com a@b.com'), 'linha 1\nlinha 2 com a@b.com')
+  })
+
   it('tags: nome obrigatório, até 40 caracteres, chave sem diferenciar maiúsculas e acentos', () => {
     assert.equal(task.tagKey('  Urgência  '), 'urgencia')
     assert.equal(task.tagNameIssue(''), 'required')

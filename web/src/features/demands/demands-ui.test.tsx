@@ -1,11 +1,11 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import { AppError } from '@/core/errors/app-error'
 import type { AuditEntry } from '@/domain/entities'
 import type { DemandOverview, DemandStatus } from '@/domain/demands'
-import type { DemandRepository, TaskRepository, TaskTypeRepository } from '@/domain/repositories'
+import type { AttachmentRepository, DemandRepository, TaskRepository, TaskTypeRepository } from '@/domain/repositories'
 import type { CustomField, TaskType, TaskTypeDetail, TaskTypeField } from '@/domain/task-config'
 import type { TaskComment, TaskDetail, TaskSummary } from '@/domain/tasks'
 import type { Area, TaskPriority, TaskStatus } from '@/domain/workflow'
@@ -111,6 +111,7 @@ function repos(
     me?: typeof ana
     demands?: Partial<DemandRepository>
     tasks?: Partial<TaskRepository>
+    attachments?: Partial<AttachmentRepository>
     taskTypes?: Partial<TaskTypeRepository>
     permissions?: Parameters<typeof makeCurrentUser>[0]
     /** Tarefas do perfil (ajuste 23/11) */
@@ -131,6 +132,7 @@ function repos(
     areas: { list: () => Promise.resolve([estrategia]) },
     demands: { owners: () => Promise.resolve([cesar, jorge]), ...options.demands },
     tasks: options.tasks,
+    attachments: options.attachments,
   })
 }
 
@@ -189,6 +191,37 @@ describe('Tarefas — dois botões e a demanda interna (§45)', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
     await waitFor(() => expect(create).toHaveBeenCalledOnce())
     expect(create.mock.calls[0]?.[0]).toMatchObject({ taskTypeId: 't1', title: 'Vista DMR: agregar Fecha cuenta', ownerId: 'u2', areaId: 'a1', urgency: 'high' })
+  })
+
+  it('descrição com formatação (§53): a imagem colada na criação sobe depois de criar e o texto ganha o endereço', async () => {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: () => 'blob:http://localhost/1' })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: () => undefined })
+    const create = vi.fn<DemandRepository['create']>(() => Promise.resolve(demand()))
+    const update = vi.fn<TaskRepository['update']>((_id, data) => Promise.resolve(demand({ description: data.description ?? '' })))
+    const upload = vi.fn<AttachmentRepository['upload']>((taskId, file) =>
+      Promise.resolve([{ id: 'a1', taskId, commentId: null, name: file.name, mime: 'image/png', kind: 'image', size: 1, uploadedBy: null, createdAt: null, url: '/api/v1/attachments/a1/file', capabilities: { delete: true } }]),
+    )
+    renderRoutes([{ path: '/tasks', element: <TasksPage /> }], { repositories: repos({ demands: { create }, tasks: { update }, attachments: { upload } }), initialPath: '/tasks' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Demanda interna' }))
+    const dialog = await screen.findByRole('dialog')
+    await chooseOption(/^Tipo/, 'Desenvolvimento')
+    await userEvent.type(within(dialog).getByLabelText(/^Título/), 'Subir o portal')
+    await chooseOption(/^Responsável/, /César/)
+    await chooseOption(/^Departamento que pede/, 'Estratégia')
+    // a mesma barra da Documentação, sem o "@" (a descrição não avisa ninguém)
+    const box = await within(dialog).findByRole('textbox', { name: 'Descrição' })
+    expect(within(dialog).getByRole('toolbar', { name: 'Formatação' })).toBeInTheDocument()
+    await userEvent.type(box, 'Passos **importantes**')
+    fireEvent.paste(box, { clipboardData: { files: [new File(['x'], 'image.png', { type: 'image/png' })], getData: () => '' } })
+    expect(await within(box).findByRole('img')).toHaveAttribute('src', 'blob:http://localhost/1')
+    expect(upload).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Criar demanda' }))
+    await waitFor(() => expect(update).toHaveBeenCalledOnce())
+    // cria sem a imagem provisória; depois ela sobe como anexo e a descrição é atualizada
+    expect(create.mock.calls[0]?.[0].description).toBe('Passos **importantes**')
+    expect(upload.mock.calls[0]?.[0]).toBe('d1')
+    expect(update.mock.calls[0]?.[0]).toBe('d1')
+    expect(update.mock.calls[0]?.[1].description).toMatch(/^Passos \*\*importantes\*\*\n\n!\[imagem-colada-\d{8}-\d{6}\.png\]\(\/api\/v1\/attachments\/a1\/file\)$/)
   })
 
   it('"Com cópia" (24/11): abaixo do responsável; os e-mails vão na criação e ficam lembrados para a próxima', async () => {

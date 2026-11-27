@@ -8,7 +8,7 @@ import { customValueIssues, datesIssue, parseHours, type TaskDetail, type TaskIn
 import { planItemStage, planStageChoices } from '@/domain/plan-tasks'
 import { statusChoices, type StatusCategory } from '@/domain/workflow'
 import { isUrgency, NO_URGENCY } from '@/domain/urgency'
-import { AppButton, AppDatePicker, AppDialog, AppMultiSelect, AppSelect, AppTextField, AppTextarea, notify } from '@/presentation/components'
+import { AppButton, AppDatePicker, AppDialog, AppMarkdownField, AppMultiSelect, AppSelect, AppTextField, notify } from '@/presentation/components'
 import { useErrorMessage } from '@/presentation/common/use-error-message'
 import { useCan } from '@/features/auth/session'
 import { useProject, useProjectMembers, useProjects } from '@/features/projects/queries'
@@ -22,7 +22,7 @@ import { useTaskAttachments, useTaskMutations } from './queries'
 import { PROJECT_OPTIONS_QUERY } from './required-fields'
 import { TaskTypeFieldsSection } from './TaskTypeFieldsSection'
 import { useUrgencyChoices } from './urgency-choices'
-import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles } from './use-attachment-uploader'
+import { useFieldAttachmentUpload, useFieldFilesSender, useHeldFieldFiles, useHeldTextImages, useTextImageUpload } from './use-attachment-uploader'
 import { useTags } from '@/features/tags/queries'
 import { useSprints } from '@/features/backlog/queries'
 import { usePlan } from '@/features/plan/queries'
@@ -172,6 +172,9 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
   const uploadToField = useFieldAttachmentUpload(task?.id ?? '')
   const heldFiles = useHeldFieldFiles()
   const sendFieldFiles = useFieldFilesSender()
+  // imagens da descrição (§53): na edição sobem na hora como anexos; na criação ficam retidas até criar
+  const uploadTextImages = useTextImageUpload(task?.id ?? '')
+  const heldImages = useHeldTextImages()
   const [sendingFiles, setSendingFiles] = useState(false)
   const createOption = useFieldOptionCreator()
   const tags = useTags(open)
@@ -282,6 +285,19 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
     return failed
   }
 
+  /** Depois de criar: as imagens retidas da descrição sobem e o texto ganha os endereços definitivos. */
+  async function sendHeldImages(created: TaskDetail, failed: string[]): Promise<TaskDetail> {
+    const images = await heldImages.send(created.id, draft.description)
+    images.failed.forEach((name) => failed.push(name))
+    if (images.markdown === null) return created
+    try {
+      return await update.mutateAsync({ id: created.id, data: { description: images.markdown } })
+    } catch (error) {
+      failed.push(errorMessage(error))
+      return created
+    }
+  }
+
   function submit() {
     const found: Record<string, string> = {}
     if (!draft.projectId) found.project_id = 'required'
@@ -317,7 +333,8 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
     const data: TaskInput = {
       taskTypeId: draft.typeId,
       title: draft.title.trim(),
-      description: draft.description,
+      // na criação, sem as imagens retidas (sobem depois de criar e o texto é atualizado)
+      description: isEdit ? draft.description : heldImages.strip(draft.description),
       statusId: flow ? undefined : draft.statusId || undefined,
       priorityId: draft.priorityId || undefined,
       urgency: isUrgency(draft.urgency) ? draft.urgency : null,
@@ -371,11 +388,13 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
         onError,
       )
     }
-    const onCreated = async (saved: TaskDetail) => {
+    const onCreated = async (created: TaskDetail) => {
       setSendingFiles(true)
       let failed: string[] = []
+      let saved = created
       try {
-        failed = await sendHeldFiles(saved)
+        failed = await sendHeldFiles(created)
+        saved = await sendHeldImages(created, failed)
       } finally {
         setSendingFiles(false)
       }
@@ -477,13 +496,13 @@ function TaskForm({ open, onOpenChange, task, projectId, initial, onSaved }: Tas
             placeholder={t('tasks.titlePlaceholder')}
             onChange={(event) => set('title', event.target.value)}
           />
-          <AppTextarea
+          <AppMarkdownField
             label={t('tasks.fields.description')}
-            rows={5}
-            maxLength={50000}
-            value={draft.description}
+            defaultValue={draft.description}
             error={errors.description}
-            onChange={(event) => set('description', event.target.value)}
+            onChange={(value) => set('description', value)}
+            onUpload={task ? uploadTextImages : heldImages.hold}
+            heldImages={!task}
           />
           <AppMultiSelect
             label={t('tasks.fields.tags')}

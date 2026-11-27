@@ -95,23 +95,27 @@ describe('TaskComments', () => {
     expect(screen.getByText('Mário Souza')).toBeInTheDocument()
   })
 
-  it('comentar com @ envia a menção no formato salvo', async () => {
+  it('comentar com @ envia a menção no formato salvo; a barra de formatação está no campo', async () => {
     const { create } = renderComments()
-    const box = await screen.findByRole('combobox', { name: 'Novo comentário' })
+    const box = await screen.findByRole('textbox', { name: 'Novo comentário' })
+    expect(screen.getByRole('toolbar', { name: 'Formatação' })).toBeInTheDocument()
     await userEvent.type(box, 'Olá @má')
     await userEvent.click(await screen.findByRole('option', { name: /Mário Souza/ }))
     await userEvent.type(box, 'veja o **manual**')
     await userEvent.click(screen.getByRole('button', { name: 'Comentar' }))
     await waitFor(() => expect(create).toHaveBeenCalledWith('k1', 'Olá @[Mário Souza](u2) veja o **manual**'))
-    await waitFor(() => expect(box).toHaveValue(''))
+    // o campo recomeça vazio
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Novo comentário' })).toHaveTextContent(''))
   })
 
   it('editar abre o texto com "@Nome" e salva mantendo a menção', async () => {
     const { update } = renderComments()
     await userEvent.click(await screen.findByRole('button', { name: 'Editar comentário' }))
-    const box = screen.getByRole('combobox', { name: 'Editar comentário' })
-    expect(box).toHaveValue('Pode revisar, @Carla Mendes?')
-    await userEvent.type(box, ' Obrigado!')
+    const box = screen.getByRole('textbox', { name: 'Editar comentário' })
+    expect(box).toHaveTextContent('Pode revisar, @Carla Mendes?')
+    // abre com o cursor no fim
+    await waitFor(() => expect(box).toHaveFocus())
+    await userEvent.type(box, ' Obrigado!', { skipClick: true })
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(update).toHaveBeenCalledWith('m1', 'Pode revisar, @[Carla Mendes](u1)? Obrigado!'))
   })
@@ -119,9 +123,10 @@ describe('TaskComments', () => {
   it('comentário com arquivo: salva o comentário e envia o anexo ligado a ele; tipo proibido nem entra', async () => {
     const error = vi.spyOn(notify, 'error').mockImplementation(() => '')
     const { create, upload } = renderComments()
-    const box = await screen.findByRole('combobox', { name: 'Novo comentário' })
+    const box = await screen.findByRole('textbox', { name: 'Novo comentário' })
     await userEvent.type(box, 'Segue o print')
-    const input = document.querySelector('input[type=file]') as HTMLInputElement
+    // o "Anexar" (o outro seletor é o da imagem no texto)
+    const input = document.querySelector('input[type=file][aria-hidden]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [new File(['x'], 'print.png', { type: 'image/png' }), new File(['MZ'], 'setup.exe')] } })
     expect(within(screen.getByRole('list', { name: 'Arquivos que serão anexados' })).getByText('print.png')).toBeInTheDocument()
     expect(error).toHaveBeenCalledWith('setup.exe: Tipo de arquivo não permitido')
@@ -133,15 +138,29 @@ describe('TaskComments', () => {
     error.mockRestore()
   })
 
-  it('imagem colada (Ctrl+V) no comentário entra na lista com nome legível e segue ligada a ele', async () => {
-    const { upload } = renderComments()
-    const box = await screen.findByRole('combobox', { name: 'Novo comentário' })
+  it('imagem colada (Ctrl+V) sobe na hora como anexo da tarefa, com nome legível, e entra no texto', async () => {
+    const upload = vi.fn<AttachmentRepository['upload']>((_taskId, file) =>
+      Promise.resolve([
+        { id: 'a9', taskId: 'k1', commentId: null, name: file.name, mime: 'image/png', kind: 'image', size: 1, uploadedBy: null, createdAt: null, url: '/api/v1/attachments/a9/file', capabilities: { delete: true } },
+      ]),
+    )
+    const create = vi.fn<CommentRepository['create']>(() => Promise.resolve(comment({ id: 'm2' })))
+    const repositories = fakeRepositories({
+      comments: { list: () => Promise.resolve([]), mentionCandidates: () => Promise.resolve(people), create },
+      attachments: { upload },
+    })
+    renderWithProviders(<TaskComments task={task} />, repositories)
+    const box = await screen.findByRole('textbox', { name: 'Novo comentário' })
     await userEvent.type(box, 'Veja o erro')
     fireEvent.paste(box, { clipboardData: { files: [new File(['x'], 'image.png', { type: 'image/png' })], getData: () => '' } })
-    expect(within(screen.getByRole('list', { name: 'Arquivos que serão anexados' })).getByText(/^imagem-colada-\d{8}-\d{6}\.png$/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Comentar' }))
     await waitFor(() => expect(upload).toHaveBeenCalledTimes(1))
-    expect(upload.mock.calls[0]?.[1].name).toMatch(/^imagem-colada-/)
+    const name = upload.mock.calls[0]?.[1].name ?? ''
+    expect(name).toMatch(/^imagem-colada-\d{8}-\d{6}\.png$/)
+    // anexo da tarefa (aparece em "Anexos"), não ligado ao comentário
+    expect(upload.mock.calls[0]?.[2]).toEqual({ field: undefined })
+    expect(await within(box).findByRole('img', { name })).toHaveAttribute('src', '/api/v1/attachments/a9/file')
+    await userEvent.click(screen.getByRole('button', { name: 'Comentar' }))
+    await waitFor(() => expect(create).toHaveBeenCalledWith('k1', `Veja o erro\n\n![${name}](/api/v1/attachments/a9/file)`))
   })
 
   it('anexos do comentário aparecem nele, com miniatura da imagem', async () => {
@@ -161,7 +180,7 @@ describe('TaskComments', () => {
   it('projeto arquivado: sem caixa de comentário', async () => {
     renderComments({}, { ...task, capabilities: { ...task.capabilities, comment: false } })
     expect(await screen.findByText('Projeto arquivado: comentários estão fechados.')).toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 })
 

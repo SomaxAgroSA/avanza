@@ -1,6 +1,7 @@
 import type { ChainedCommands } from '@tiptap/core'
 import {
   AlertTriangle,
+  AtSign,
   CheckSquare,
   Code2,
   Heading1,
@@ -53,6 +54,31 @@ export const BLOCK_COMMANDS: BlockCommand[] = [
   { key: 'divider', icon: Minus, keywords: 'hr separador divisor linha', run: (c) => void c.setHorizontalRule().run() },
   { key: 'toc', icon: ListTree, keywords: 'sumario indice toc conteudo', run: (c) => void c.insertTableOfContents().run() },
 ]
+
+/**
+ * "Menção (@)" do "Inserir" nos textos das tarefas (§53): escreve o "@" (com espaço antes, se colado
+ * numa palavra — `palavra@` não abre a lista) e a lista de pessoas abre ao lado.
+ */
+export const MENTION_COMMAND: BlockCommand = {
+  key: 'mention',
+  icon: AtSign,
+  keywords: 'mencao mencion mention pessoa persona arroba',
+  run: (c) =>
+    void c
+      .command(({ tr, state }) => {
+        const before = state.selection.$from.nodeBefore
+        const last = before?.isText ? (before.text ?? '').slice(-1) : ''
+        tr.insertText(last && !/[\s(]/.test(last) ? ' @' : '@')
+        return true
+      })
+      .run(),
+}
+
+/** O "Inserir" dos textos das tarefas: menção (quando há), bloco de código e separador. */
+export function markdownInsertCommands(withMention: boolean): BlockCommand[] {
+  const blocks = BLOCK_COMMANDS.filter((c) => c.key === 'codeBlock' || c.key === 'divider')
+  return withMention ? [MENTION_COMMAND, ...blocks] : blocks
+}
 
 const fold = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 

@@ -115,14 +115,14 @@ export function useAttachmentMutations(taskId: string) {
 }
 
 /**
- * Arquivo enviado direto num campo de imagem/arquivo; a tarefa vem em cada envio (na criação, ela
- * acabou de nascer — o formulário ainda não tinha o id).
+ * Arquivo enviado direto num campo de imagem/arquivo (ou, sem campo, imagem do texto — §53); a tarefa
+ * vem em cada envio (na criação, ela acabou de nascer — o formulário ainda não tinha o id).
  */
 export function useFieldFileUpload() {
   const { attachments } = useRepositories()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ taskId, file, field }: { taskId: string; file: File; field: string }) => attachments.upload(taskId, file, { field }),
+    mutationFn: ({ taskId, file, field }: { taskId: string; file: File; field?: string }) => attachments.upload(taskId, file, { field }),
     onSuccess: (_, { taskId }) => invalidateTaskFiles(queryClient, taskId),
   })
 }

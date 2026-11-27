@@ -2911,6 +2911,10 @@
         "label": "Bloco de código",
         "hint": "Código ou configuração"
       },
+      "mention": {
+        "label": "Menção (@)",
+        "hint": "Avisar uma pessoa no texto"
+      },
       "calloutInfo": {
         "label": "Aviso: informação",
         "hint": "Caixa de destaque azul"

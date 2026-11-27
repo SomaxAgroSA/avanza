@@ -1,13 +1,17 @@
-import { Fragment, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { cn } from '@/core/utils/cn'
+import type { RichContent } from '@/domain/docs'
+import { isTaskImageSrc, safeTaskHref, taskMarkdown } from '@/domain/markdown-doc'
 
 /**
- * Markdown simples e seguro para comentários e descrições.
+ * Markdown seguro dos comentários e descrições (§53), com a mesma aparência da Documentação
+ * (`kb-rich`): títulos, **negrito**, *itálico*, <u>sublinhado</u>, ~~riscado~~, ==destaque==, `código`,
+ * links, listas (também de verificação, só leitura), citação, bloco de código, separador, tabelas,
+ * imagens dos anexos e menções `@[Nome](id)`. O texto é lido pelo mesmo conversor do editor
+ * (`domain/markdown-doc.ts`); textos antigos continuam iguais (nova linha simples = quebra de linha).
  *
- * Suporta: parágrafos, quebras de linha, listas (- item / 1. item), **negrito**, *itálico*,
- * ~~riscado~~, `código`, [texto](https://…), links soltos http(s) e menções `@[Nome](id)`.
- * Nunca usa HTML cru (sem dangerouslySetInnerHTML): tudo vira elemento React, e links
- * só aceitam http(s) — `javascript:` e afins aparecem como texto.
+ * Nunca usa HTML cru (sem dangerouslySetInnerHTML): o documento vira elementos React; links só http(s)
+ * e imagens só dos anexos da tarefa (`/api/v1/attachments/<id>/file`) e da Documentação.
  */
 export interface AppMarkdownProps {
   text: string
@@ -15,11 +19,6 @@ export interface AppMarkdownProps {
   /** Como exibir uma menção (padrão: "@Nome" destacado). */
   renderMention?: (name: string, id: string, key: string) => ReactNode
 }
-
-const INLINE =
-  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(~~[^~\n]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(\[[^\]\n]+\]\([^)\s]+\))|(@\[[^\]\n]{1,120}\]\([A-Za-z0-9_]{1,64}\))|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/g
-
-const SAFE_URL = /^https?:\/\//i
 
 function defaultMention(name: string, _id: string, key: string) {
   return (
@@ -29,91 +28,124 @@ function defaultMention(name: string, _id: string, key: string) {
   )
 }
 
-function link(href: string, label: ReactNode, key: string) {
-  if (!SAFE_URL.test(href)) return <Fragment key={key}>{label}</Fragment>
-  return (
-    <a key={key} href={href} target="_blank" rel="noopener noreferrer" className="break-words text-primary-text underline-offset-2 hover:underline">
-      {label}
-    </a>
-  )
-}
+type MentionRenderer = NonNullable<AppMarkdownProps['renderMention']>
 
-function inline(text: string, renderMention: NonNullable<AppMarkdownProps['renderMention']>, prefix: string): ReactNode[] {
-  const nodes: ReactNode[] = []
-  let last = 0
-  let index = 0
-  for (const match of text.matchAll(INLINE)) {
-    const start = match.index ?? 0
-    if (start > last) nodes.push(text.slice(last, start))
-    const token = match[0]
-    const key = `${prefix}-${index++}`
-    if (match[1]) nodes.push(<code key={key} className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.85em]">{token.slice(1, -1)}</code>)
-    else if (match[2]) nodes.push(<strong key={key}>{inline(token.slice(2, -2), renderMention, key)}</strong>)
-    else if (match[3]) nodes.push(<del key={key}>{inline(token.slice(2, -2), renderMention, key)}</del>)
-    else if (match[4]) nodes.push(<em key={key}>{inline(token.slice(1, -1), renderMention, key)}</em>)
-    else if (match[5]) {
-      const [, label = '', href = ''] = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token) ?? []
-      nodes.push(link(href, label, key))
-    } else if (match[6]) {
-      const [, name = '', id = ''] = /^@\[([^\]]+)\]\(([^)]+)\)$/.exec(token) ?? []
-      nodes.push(renderMention(name, id, key))
-    } else if (match[7]) nodes.push(link(token, token, key))
-    last = start + token.length
-  }
-  if (last < text.length) nodes.push(text.slice(last))
-  return nodes
-}
+const children = (node: RichContent) => node.content ?? []
 
-type Block = { kind: 'p'; lines: string[] } | { kind: 'ul' | 'ol'; items: string[] }
+const plain = (node: RichContent): string =>
+  node.type === 'text' ? (node.text ?? '') : node.type === 'mention' ? `@${String(node.attrs?.label ?? '')}` : children(node).map(plain).join('')
 
-function blocks(text: string): Block[] {
-  const result: Block[] = []
-  text.replace(/\r\n/g, '\n').split('\n').forEach((line) => {
-    const bullet = /^\s*[-*]\s+(.*)$/.exec(line)
-    const numbered = /^\s*\d+[.)]\s+(.*)$/.exec(line)
-    const current = result[result.length - 1]
-    if (bullet || numbered) {
-      const kind = bullet ? 'ul' : 'ol'
-      const content = (bullet ?? numbered)?.[1] ?? ''
-      if (current && current.kind === kind) current.items.push(content)
-      else result.push({ kind, items: [content] })
-    } else if (line.trim() === '') {
-      result.push({ kind: 'p', lines: [] })
-    } else if (current && current.kind === 'p') {
-      current.lines.push(line)
-    } else {
-      result.push({ kind: 'p', lines: [line] })
+/** Texto com as marcas, de fora para dentro (link por fora, código por dentro). */
+function textNode(node: RichContent, key: string): ReactNode {
+  const marks = node.marks ?? []
+  if (!marks.length) return node.text ?? ''
+  let out: ReactNode = node.text ?? ''
+  ;[...marks].reverse().forEach((mark) => {
+    if (mark.type === 'code') out = <code>{out}</code>
+    else if (mark.type === 'bold') out = <strong>{out}</strong>
+    else if (mark.type === 'italic') out = <em>{out}</em>
+    else if (mark.type === 'underline') out = <u>{out}</u>
+    else if (mark.type === 'strike') out = <del>{out}</del>
+    else if (mark.type === 'highlight') out = <mark>{out}</mark>
+    else if (mark.type === 'link') {
+      const href = safeTaskHref(String(mark.attrs?.href ?? ''))
+      if (href)
+        out = (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="break-words">
+            {out}
+          </a>
+        )
     }
   })
-  return result.filter((b) => (b.kind === 'p' ? b.lines.length > 0 : true))
+  return <span key={key}>{out}</span>
+}
+
+function inline(nodes: RichContent[], mention: MentionRenderer, prefix: string): ReactNode[] {
+  return nodes.map((node, index) => {
+    const key = `${prefix}-${index}`
+    if (node.type === 'hardBreak') return <br key={key} />
+    if (node.type === 'mention') return mention(String(node.attrs?.label ?? ''), String(node.attrs?.id ?? ''), key)
+    return textNode(node, key)
+  })
+}
+
+function block(node: RichContent, mention: MentionRenderer, key: string): ReactNode {
+  const kids = () => children(node).map((child, index) => block(child, mention, `${key}-${index}`))
+  switch (node.type) {
+    case 'paragraph':
+      return <p key={key}>{inline(children(node), mention, key)}</p>
+    case 'heading': {
+      const level = Math.min(Math.max(Number(node.attrs?.level) || 1, 1), 4)
+      const Tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4'
+      return <Tag key={key}>{inline(children(node), mention, key)}</Tag>
+    }
+    case 'bulletList':
+      return <ul key={key}>{kids()}</ul>
+    case 'orderedList': {
+      const start = Number(node.attrs?.start) || 1
+      return (
+        <ol key={key} start={start === 1 ? undefined : start}>
+          {kids()}
+        </ol>
+      )
+    }
+    case 'listItem':
+      return <li key={key}>{kids()}</li>
+    case 'taskList':
+      return (
+        <ul key={key} data-type="taskList">
+          {kids()}
+        </ul>
+      )
+    case 'taskItem': {
+      const checked = !!node.attrs?.checked
+      // casinha só de leitura: marca-se editando o texto
+      return (
+        <li key={key} data-checked={checked}>
+          <label>
+            <input type="checkbox" checked={checked} readOnly disabled aria-label={plain(node)} />
+          </label>
+          <div>{kids()}</div>
+        </li>
+      )
+    }
+    case 'blockquote':
+      return <blockquote key={key}>{kids()}</blockquote>
+    case 'codeBlock':
+      return (
+        <pre key={key}>
+          <code>{plain(node)}</code>
+        </pre>
+      )
+    case 'horizontalRule':
+      return <hr key={key} />
+    case 'image': {
+      const src = String(node.attrs?.src ?? '')
+      if (!isTaskImageSrc(src)) return null
+      const width = Number(node.attrs?.width) || null
+      const title = node.attrs?.title ? String(node.attrs.title) : undefined
+      return <img key={key} src={src} alt={String(node.attrs?.alt ?? '')} title={title} loading="lazy" style={width ? { width: `${width}%` } : undefined} />
+    }
+    case 'table':
+      return (
+        <div key={key} className="tableWrapper">
+          <table>
+            <tbody>{kids()}</tbody>
+          </table>
+        </div>
+      )
+    case 'tableRow':
+      return <tr key={key}>{kids()}</tr>
+    case 'tableHeader':
+      return <th key={key}>{kids()}</th>
+    case 'tableCell':
+      return <td key={key}>{kids()}</td>
+    default:
+      return children(node).length ? <div key={key}>{kids()}</div> : null
+  }
 }
 
 export function AppMarkdown({ text, className, renderMention = defaultMention }: AppMarkdownProps) {
-  return (
-    <div className={cn('flex flex-col gap-2 text-sm break-words text-fg', className)}>
-      {blocks(text).map((block, i) => {
-        const key = `b${i}`
-        if (block.kind === 'p') {
-          return (
-            <p key={key}>
-              {block.lines.map((line, j) => (
-                <Fragment key={j}>
-                  {j > 0 && <br />}
-                  {inline(line, renderMention, `${key}-${j}`)}
-                </Fragment>
-              ))}
-            </p>
-          )
-        }
-        const List = block.kind
-        return (
-          <List key={key} className={cn('flex flex-col gap-0.5 pl-5', block.kind === 'ul' ? 'list-disc' : 'list-decimal')}>
-            {block.items.map((item, j) => (
-              <li key={j}>{inline(item, renderMention, `${key}-${j}`)}</li>
-            ))}
-          </List>
-        )
-      })}
-    </div>
-  )
+  const doc = useMemo(() => taskMarkdown.toDoc(text), [text])
+  return <div className={cn('kb-rich kb-rich-compact min-w-0 break-words', className)}>{children(doc).map((node, index) => block(node, renderMention, `b${index}`))}</div>
 }

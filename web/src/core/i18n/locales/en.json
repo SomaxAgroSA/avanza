@@ -2911,6 +2911,10 @@
         "label": "Code block",
         "hint": "Code or configuration"
       },
+      "mention": {
+        "label": "Mention (@)",
+        "hint": "Notify someone in the text"
+      },
       "calloutInfo": {
         "label": "Callout: information",
         "hint": "Blue highlight box"

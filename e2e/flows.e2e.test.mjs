@@ -284,7 +284,7 @@ describe('E2E — fluxos do MVP', { timeout: 300000 }, () => {
     const { page, errors } = await signIn('mario@kamban.test', PASSWORD)
 
     await page.goto(`${app.baseUrl}/tasks/${a.id}?tab=comments`)
-    await page.getByRole('combobox', { name: 'Novo comentário' }).fill('Planilha validada com o time comercial.')
+    await page.getByRole('textbox', { name: 'Novo comentário' }).fill('Planilha validada com o time comercial.')
     await page.getByRole('button', { name: 'Comentar' }).click()
     await page.getByRole('list', { name: 'Comentários' }).getByText('Planilha validada com o time comercial.').waitFor()
 
