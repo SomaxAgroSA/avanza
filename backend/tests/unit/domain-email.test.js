@@ -142,6 +142,14 @@ describe('domain/email — modelos', () => {
     assert.equal(email.renderNotificationEmail(note('demand_returned'), ctx('es')).subject, 'Demanda devuelta en Avanza')
   })
 
+  it('cópia da tarefa (§53): a descrição em Markdown vai como texto limpo, com as quebras de linha', () => {
+    const task = { id: 't1', code: 'CRM-7', title: 'Cadastro', description: '## Passos\n\n- [ ] **validar** CNPJ\n\n| A | B |\n| --- | --- |\n| 1 | <u>2</u> |\n\n![print.png](/api/v1/attachments/a1/file)' }
+    const msg = email.renderTaskCopyEmail(task, { locale: 'pt-BR', actorName: 'Ana', platform: 'Avanza', appUrl: 'https://k.com', details: {} })
+    assert.match(msg.html, /Passos<br><br>☐ validar CNPJ<br><br>A · B<br>1 · 2<br><br>\[imagem: print\.png\]/)
+    assert.doesNotMatch(msg.html + msg.text, /\*\*|##|\| ---|<u>|!\[/)
+    assert.match(msg.text, /> Passos\n\n☐ validar CNPJ/)
+  })
+
   it('redefinição vale 60 minutos; convite, 7 dias; usado ou vencido não vale', () => {
     const now = new Date('2026-10-01T12:00:00Z')
     assert.equal(authToken.expiresAt('reset', now).toISOString(), '2026-10-01T13:00:00.000Z')

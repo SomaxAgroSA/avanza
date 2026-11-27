@@ -4,6 +4,7 @@
  */
 
 const { localize } = require('./content-locale')
+const { plainText } = require('./mentions')
 
 const DEFAULT_SETTINGS = Object.freeze({
   enabled: false,
@@ -373,7 +374,8 @@ function layout(platform, opts) {
   const quote = opts.quote
     ? td(
         'padding:18px 32px 0',
-        `<p style="margin:0;padding:8px 12px;border-left:2px solid #d1d5db;font-family:${FONT};font-size:13px;line-height:1.5;color:#4b5563">${escapeHtml(opts.quote)}</p>`,
+        // as quebras de linha do texto (listas, tabelas e parágrafos já sem marcação) continuam no e-mail (<br>: o Outlook ignora white-space)
+        `<p style="margin:0;padding:8px 12px;border-left:2px solid #d1d5db;font-family:${FONT};font-size:13px;line-height:1.5;color:#4b5563">${escapeHtml(opts.quote).replace(/\n/g, '<br>')}</p>`,
       )
     : ''
   const next = opts.next ? td(`padding:18px 32px 0;font-family:${FONT};font-size:13px;line-height:1.5;color:#4b5563`, escapeHtml(opts.next)) : ''
@@ -525,7 +527,8 @@ function renderTaskCopyEmail(task, ctx) {
   const d = ctx.details || {}
   const actor = ctx.actorName || n.someone
   const priority = d.priority ? localize(d.priority, ctx.locale, ['name']).name : ''
-  const description = String(task.description || '').trim()
+  // a descrição é Markdown (§53): no e-mail vai o texto limpo, sem marcas (títulos, tabelas, imagens…)
+  const description = plainText(task.description)
   const body = layout(ctx.platform, {
     header: [ctx.platform, d.company].filter(Boolean).join('  ·  '),
     intro: fill(ctx.later ? (d.internal ? n.copy.demandLater : n.copy.taskLater) : d.internal ? n.copy.demand : n.copy.task, { actor }),
