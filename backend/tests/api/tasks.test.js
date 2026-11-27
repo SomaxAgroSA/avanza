@@ -221,6 +221,8 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     const all = (await viewer.client.get(`/tasks?project_id=${project.id}&sort=code`)).body.data
     const task = all[all.length - 1]
     assert.equal(task.pinned_mine, null)
+    // a mesma tarefa já foi fixada e desafixada para todos no teste anterior: o histórico não pode ganhar nada
+    const historyBefore = (await member.client.get(`/tasks/${task.id}/history`)).body.data.length
     // quem só lê também fixa para si
     const pinned = await viewer.client.post(`/tasks/${task.id}/pin/me`)
     assert.equal(pinned.status, 200, JSON.stringify(pinned.body))
@@ -236,7 +238,7 @@ describe('API /api/v1/tasks', { timeout: 180000 }, () => {
     assert.equal(other.meta.pins.mine, 0)
     assert.equal((await member.client.get(`/tasks/${task.id}`)).body.data.pinned_mine, null)
     // sem histórico
-    assert.ok(!(await member.client.get(`/tasks/${task.id}/history`)).body.data.some((entry) => entry.action === 'task.pinned'))
+    assert.equal((await member.client.get(`/tasks/${task.id}/history`)).body.data.length, historyBefore)
     // quem não vê a tarefa não fixa; sem o cabeçalho anti-CSRF, não
     assert.equal((await outsider.client.post(`/tasks/${task.id}/pin/me`)).status, 404)
     assert.equal((await viewer.client.del(`/tasks/${task.id}/pin/me`, { csrf: false })).status, 403)
