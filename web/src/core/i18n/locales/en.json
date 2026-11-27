@@ -261,7 +261,8 @@
     "PROJECT_HAS_DOCS": "This project has documentation: choose whether to move it, keep it as a general space or delete it.",
     "DEMAND_STATE_CONFLICT": "This action is not available at the current step of the request. Refresh the page.",
     "PANORAMA_DISABLED": "The Panorama is turned off in Settings → General.",
-    "TASK_PIN_LIMIT": "There are already 10 pinned tasks. Unpin one before pinning another."
+    "TASK_PIN_LIMIT": "There are already 10 tasks pinned for everyone. Unpin one before pinning another.",
+    "TASK_PIN_PERSONAL_LIMIT": "You already have 10 tasks pinned for yourself. Unpin one before pinning another."
   },
   "nav": {
     "main": "Main navigation",
@@ -739,7 +740,8 @@
             "internal_demand": "＋ Internal request"
           },
           "row_actions": {
-            "pin": "Pin"
+            "pin_mine": "Pin for me",
+            "pin": "Pin for everyone"
           }
         },
         "docs": {
@@ -2062,10 +2064,28 @@
       "remove": "Unpin",
       "column": "Pin",
       "pinned": "Task pinned to the top of the List, for everyone.",
-      "unpinned": "Task unpinned.",
-      "by": "Pinned by {{name}} · {{when}}",
-      "byNobody": "Pinned · {{when}}",
-      "hintRemove": "{{pinned}} — click to unpin"
+      "unpinned": "Task unpinned for everyone.",
+      "by": "Pinned for everyone by {{name}} · {{when}}",
+      "byNobody": "Pinned for everyone · {{when}}",
+      "hintRemove": "{{pinned}} — click to unpin",
+      "both": "Pinned for you and for everyone",
+      "mine": {
+        "action": "Pin for me",
+        "actionHint": "Only you see it at the top",
+        "remove": "Unpin for me",
+        "removeHint": "Back to its place in your List",
+        "full": "You already have {{max}} tasks pinned for you",
+        "pinned": "Task pinned to the top of your List. Only you see it.",
+        "unpinned": "Task unpinned from your List.",
+        "state": "Pinned for you · only you see it at the top"
+      },
+      "all": {
+        "action": "Pin for everyone",
+        "actionHint": "Stays at the top for the whole team",
+        "remove": "Unpin for everyone",
+        "removeHint": "No longer at the top for the team",
+        "full": "There are already {{max}} tasks pinned for everyone"
+      }
     }
   },
   "taskList": {

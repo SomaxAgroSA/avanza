@@ -1,5 +1,5 @@
 import type { CompanyRef } from './companies'
-import type { SortState } from './pagination'
+import type { Page, SortState } from './pagination'
 import type { Attachment } from './attachments'
 import type { PlanItemRef } from './plan'
 import type { SprintRef } from './sprints'
@@ -96,6 +96,8 @@ export interface TaskSummary {
   itVisible: boolean
   /** Fixada no topo da Lista de tarefas (§50), igual para todas as pessoas; null/ausente = não fixada. */
   pinned?: TaskPin | null
+  /** Fixada no topo da Lista só para quem olha (§55): pessoal e privada; null/ausente = não fixada para mim. */
+  pinnedMine?: { at: Date } | null
   /** Urgência (semáforo); null = sem urgência. */
   urgency: Urgency | null
   /** Área responsável; null = sem área. */
@@ -118,6 +120,62 @@ export interface TaskPin {
 
 /** No máximo 10 tarefas fixadas ao mesmo tempo, para todos (§50; o servidor confere: TASK_PIN_LIMIT). */
 export const MAX_PINNED_TASKS = 10
+
+/** No máximo 10 tarefas fixadas para mim, por pessoa (§55; o servidor confere: TASK_PIN_PERSONAL_LIMIT). */
+export const MAX_PERSONAL_PINNED_TASKS = 10
+
+/** Quantas fixadas há (para todos, no total; para mim, só as de quem olha) e os limites (§50/§55). */
+export interface TaskPinCounts {
+  all: number
+  maxAll: number
+  mine: number
+  maxMine: number
+}
+
+/** Página da Lista de tarefas: com as fixadas no topo, também as contagens delas (`pins`). */
+export type TaskPage = Page<TaskSummary> & { pins?: TaskPinCounts }
+
+/** O que o 📌 da linha oferece a quem olha (§50/§55). */
+export interface PinChoices {
+  /** "Fixar para mim": o perfil mostra (qualquer pessoa que vê a Lista). */
+  mine: boolean
+  /** "Fixar para todos": o perfil mostra e a pessoa edita tarefas. */
+  all: boolean
+  /**
+   * Como o botão age: `menu` (as duas opções), `mine` ou `all` (um clique, sem menu), `info` (só mostra a fixação
+   * para todos, sem ação: o perfil mostra "para todos" mas a pessoa não edita) ou `none` (sem botão).
+   */
+  mode: 'menu' | 'mine' | 'all' | 'info' | 'none'
+}
+
+/**
+ * O que o 📌 oferece (§55): o perfil ("O que aparece", §48) diz quais opções aparecem — "Fixar para mim"
+ * (`tasks.row_actions.pin_mine`) e "Fixar para todos" (`tasks.row_actions.pin`) — e "para todos" ainda exige editar
+ * tarefas. Com as duas, um menu; com uma, um clique; com nenhuma, sem botão (as fixadas para todos seguem no topo).
+ */
+export function pinChoices(options: { showsMine: boolean; showsAll: boolean; canEdit: boolean }): PinChoices {
+  const mine = options.showsMine
+  const all = options.showsAll && options.canEdit
+  if (mine && all) return { mine, all, mode: 'menu' }
+  if (mine) return { mine, all, mode: 'mine' }
+  if (all) return { mine, all, mode: 'all' }
+  return { mine, all, mode: options.showsAll ? 'info' : 'none' }
+}
+
+/** Como a tarefa está fixada para quem olha: a fixação dela manda na cor do 📌 (azul) sobre a para todos (verde). */
+export type PinState = 'both' | 'mine' | 'all' | 'none'
+
+export function pinStateOf(task: Pick<TaskSummary, 'pinned' | 'pinnedMine'>): PinState {
+  if (task.pinnedMine && task.pinned) return 'both'
+  if (task.pinnedMine) return 'mine'
+  if (task.pinned) return 'all'
+  return 'none'
+}
+
+/** Cabe mais uma fixada? Sem as contagens (página sem `pins`), deixa tentar (o servidor confere). */
+export function pinRoom(counts: TaskPinCounts | undefined): { mine: boolean; all: boolean } {
+  return { mine: !counts || counts.mine < counts.maxMine, all: !counts || counts.all < counts.maxAll }
+}
 
 export interface TaskCapabilities {
   edit: boolean

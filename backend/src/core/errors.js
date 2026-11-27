@@ -80,6 +80,7 @@ const ERROR_DEFINITIONS = Object.freeze({
   API_TOKEN_NOT_FOUND: { status: 404, message: 'API token not found' },
   API_TOKEN_LIMIT: { status: 409, message: 'Too many active API tokens' },
   TASK_PIN_LIMIT: { status: 409, message: 'There are already 10 pinned tasks. Unpin one before pinning another' },
+  TASK_PIN_PERSONAL_LIMIT: { status: 409, message: 'You already have 10 tasks pinned for yourself. Unpin one before pinning another' },
   API_TOKEN_NOT_REVEALABLE: { status: 409, message: 'This API token cannot be shown again (revoked, expired or created before tokens were kept)' },
   TOKEN_NOT_ALLOWED: { status: 403, message: 'This action requires signing in with the browser' },
   WEBHOOK_NOT_FOUND: { status: 404, message: 'Webhook not found' },

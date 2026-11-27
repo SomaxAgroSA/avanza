@@ -219,7 +219,7 @@ describe('mcp/tools', () => {
     assert.deepEqual(out.meta, { page: 1, perPage: 5, total: 1, totalPages: 1 })
     assert.deepEqual(out.items[0], {
       id: 't1', code: 'CRM-1', title: 'Tarefa', project: 'CRM', type: 'Bug', status: { id: 's1', name: 'A fazer', category: 'todo' },
-      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', area: { id: 'a1', name: 'Dpto. TI' }, company: { id: 'c1', name: 'Somax' }, in_report: false, it_visible: true, pinned: false, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
+      priority: 'Alta', assignee: { id: 'u2', name: 'Ana' }, sprint: null, plan_item: null, urgency: 'high', area: { id: 'a1', name: 'Dpto. TI' }, company: { id: 'c1', name: 'Somax' }, in_report: false, it_visible: true, pinned: false, pinned_mine: false, start_date: null, due_date: '2026-11-01T00:00:00.000Z',
       tags: ['api'], blocked: false, parent_task_id: null, updated_at: null,
     })
   })
@@ -244,6 +244,10 @@ describe('mcp/tools', () => {
     await byName('set_task_it_visible').run({ task_id: 't1', it_visible: true }, { services, ctx })
     await byName('set_task_pinned').run({ task_id: 't1', pinned: true }, { services, ctx })
     await byName('set_task_pinned').run({ task_id: 't1', pinned: false }, { services, ctx })
+    // "para mim" (§55): pessoal, outro caso de uso
+    await byName('set_task_pinned').run({ task_id: 't1', pinned: true, for: 'me' }, { services, ctx })
+    await byName('set_task_pinned').run({ task_id: 't1', pinned: false, for: 'me' }, { services, ctx })
+    await byName('set_task_pinned').run({ task_id: 't1', pinned: true, for: 'everyone' }, { services, ctx })
     assert.deepEqual(calls, [
       { service: 'tasks', method: 'updateTask', args: ['t1', { title: 'Novo', due_date: null, urgency: null }] },
       { service: 'tasks', method: 'moveTask', args: ['t1', { status_id: 's2' }] },
@@ -251,7 +255,11 @@ describe('mcp/tools', () => {
       { service: 'tasks', method: 'setTaskItVisible', args: ['t1', { it_visible: true }] },
       { service: 'tasks', method: 'pinTask', args: ['t1'] },
       { service: 'tasks', method: 'unpinTask', args: ['t1'] },
+      { service: 'tasks', method: 'pinTaskForMe', args: ['t1'] },
+      { service: 'tasks', method: 'unpinTaskForMe', args: ['t1'] },
+      { service: 'tasks', method: 'pinTask', args: ['t1'] },
     ])
+    assert.deepEqual(validateArguments({ task_id: 't1', pinned: true, for: 'all' }, byName('set_task_pinned').inputSchema), { for: 'invalid_option' })
   })
 
   it('projeto pai e Responsável TI: parent_id em criar/editar/filtrar e o papel it nos membros', async () => {

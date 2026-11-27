@@ -190,6 +190,8 @@ export interface TaskDto {
   it_visible?: boolean
   /** Fixada no topo da Lista de tarefas (§50): quem fixou e quando; null = não fixada. */
   pinned?: { by: UserSummaryDto | null; at: string } | null
+  /** Fixada no topo da Lista só para quem consulta (§55); null = não. */
+  pinned_mine?: { at: string } | null
   /** 'high' | 'medium' | 'low' | null */
   urgency?: string | null
   /** Área responsável (lista de /areas); null = sem área. */
@@ -740,6 +742,11 @@ export interface PageMetaDto {
   perPage: number
   total: number
   totalPages: number
+}
+
+/** GET /tasks?pinned_first=true (§50/§55): a página com as contagens das fixadas. */
+export interface TaskPageMetaDto extends PageMetaDto {
+  pins?: { all: number; max_all: number; mine: number; max_mine: number }
 }
 
 export interface PlanUpdateDto {

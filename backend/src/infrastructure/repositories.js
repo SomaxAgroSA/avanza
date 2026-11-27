@@ -52,6 +52,7 @@ function createRepositories(db, ctx) {
     taskRepository: tasks.createTaskRepository(db, ctx),
     taskTagRepository: tasks.createTaskTagRepository(db, ctx),
     taskPinRepository: tasks.createTaskPinRepository(db, ctx),
+    taskPersonalPinRepository: tasks.createTaskPersonalPinRepository(db, ctx),
     taskValueRepository: tasks.createTaskValueRepository(db, ctx),
     commentRepository: tasks.createCommentRepository(db, ctx),
     attachmentRepository: tasks.createAttachmentRepository(db, ctx),

@@ -40,8 +40,9 @@ const SCREEN_GROUPS = Object.freeze([
   group('tasks', 'tasks.filters', ['search', 'project', 'priority', 'urgency', 'responsible', 'assignee', 'company']),
   // botões de criar
   group('tasks', 'tasks.create', ['project_task', 'internal_demand']),
-  // ações de cada linha da Lista (§50): o "Fixar" (opcional: pode sumir; as fixadas continuam no topo)
-  group('tasks', 'tasks.row_actions', ['pin'], false, true),
+  // ações de cada linha da Lista: "Fixar para mim" (§55) e "Fixar para todos" (§50; a chave `pin` é a de antes
+  // da divisão, migration 0051). Opcional: podem sumir os dois (sem botão; as fixadas para todos continuam no topo)
+  group('tasks', 'tasks.row_actions', ['pin_mine', 'pin'], false, true),
   // Documentação: botões da página
   group('docs', 'docs.actions', ['notify', 'versions', 'pdf']),
   // Configurações: cada submenu

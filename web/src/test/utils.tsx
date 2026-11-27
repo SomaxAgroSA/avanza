@@ -207,6 +207,7 @@ export function fakeRepositories(overrides: {
       setItVisible: notImplemented,
       setUrgency: notImplemented,
       setPinned: notImplemented,
+      setPinnedMine: notImplemented,
       setArea: notImplemented,
       sendCopy: notImplemented,
       remove: notImplemented,

@@ -134,6 +134,7 @@ function compactTask(task) {
     in_report: task.in_report !== false,
     it_visible: !!task.it_visible,
     pinned: !!task.pinned,
+    pinned_mine: !!task.pinned_mine,
     start_date: task.start_date || null,
     due_date: task.due_date || null,
     tags: (task.tags || []).map(nameOf),
@@ -491,10 +492,20 @@ const TOOLS = [
     name: 'set_task_pinned',
     title: 'Pin task to the top of the task list',
     description:
-      'Pins (true) or unpins (false) a task to the top of the Tasks list, the same for everyone (at most 10 pinned tasks at a time: TASK_PIN_LIMIT). Requires editing the task. Does not require the fields of the status; recorded in the task history.',
-    inputSchema: schema({ task_id: TASK_ID, pinned: bool('true = pinned to the top of the list for everyone; false = back to its normal place.') }, ['task_id', 'pinned']),
+      'Pins (true) or unpins (false) a task to the top of the Tasks list. for = everyone (default): the same for everyone, at most 10 pinned tasks at a time (TASK_PIN_LIMIT), requires editing the task and is recorded in the task history. for = me: only in the list of the person using the token, private (nobody else sees it), at most 10 per person (TASK_PIN_PERSONAL_LIMIT), anyone who can see the task, not recorded in the history. Does not require the fields of the status.',
+    inputSchema: schema(
+      {
+        task_id: TASK_ID,
+        pinned: bool('true = pinned to the top of the list; false = back to its normal place.'),
+        for: oneOf(['everyone', 'me'], 'everyone (default) = for the whole team; me = only for the person using the token.'),
+      },
+      ['task_id', 'pinned'],
+    ),
     annotations: CHANGE,
-    run: (args, { services, ctx }) => (args.pinned ? services.tasks.pinTask(ctx, args.task_id) : services.tasks.unpinTask(ctx, args.task_id)),
+    run: (args, { services, ctx }) => {
+      if (args.for === 'me') return args.pinned ? services.tasks.pinTaskForMe(ctx, args.task_id) : services.tasks.unpinTaskForMe(ctx, args.task_id)
+      return args.pinned ? services.tasks.pinTask(ctx, args.task_id) : services.tasks.unpinTask(ctx, args.task_id)
+    },
   },
   {
     name: 'delete_task',

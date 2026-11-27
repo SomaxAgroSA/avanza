@@ -735,3 +735,103 @@ describe('application/tasks — fixar no topo da Lista (§50)', () => {
     assert.equal(await codeOf(() => titles({ pinned_first: 'sim' })), 'VALIDATION_ERROR:{"pinned_first":"invalid_option"}')
   })
 })
+
+describe('application/tasks — fixar para mim (§55)', () => {
+  it('quem só vê a tarefa fixa para si; a fixação é dela: as outras pessoas não veem; sem histórico', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(task.pinned_mine, null)
+    const before = s.deps.store.audit.length
+    const updated = s.deps.store.tasks.find((t) => t.id === task.id).updatedAt
+    // Lia só lê o projeto e mesmo assim fixa para ela
+    const mine = await s.tasks.pinTaskForMe(s.ctx.lia, task.id)
+    assert.ok(mine.pinned_mine.at)
+    assert.equal(mine.pinned, null)
+    // privada: Mário e Gabi não veem a fixação de Lia (nem no detalhe nem na lista)
+    assert.equal((await s.tasks.getTask(s.ctx.mario, task.id)).pinned_mine, null)
+    assert.equal((await s.tasks.listTasks(s.ctx.gabi, { project_id: s.project.id })).items[0].pinned_mine, null)
+    assert.ok((await s.tasks.listTasks(s.ctx.lia, { project_id: s.project.id })).items[0].pinned_mine.at)
+    // fixar de novo não muda nada; nada no histórico nem no "atualizada"
+    assert.equal((await s.tasks.pinTaskForMe(s.ctx.lia, task.id)).pinned_mine.at, mine.pinned_mine.at)
+    assert.equal(s.deps.store.audit.length, before)
+    assert.equal(s.deps.store.tasks.find((t) => t.id === task.id).updatedAt, updated)
+    // cada pessoa tem a sua: Mário também fixa, e desafixar a dele não mexe na de Lia
+    await s.tasks.pinTaskForMe(s.ctx.mario, task.id)
+    assert.equal((await s.tasks.unpinTaskForMe(s.ctx.mario, task.id)).pinned_mine, null)
+    assert.ok((await s.tasks.getTask(s.ctx.lia, task.id)).pinned_mine)
+    assert.equal((await s.tasks.unpinTaskForMe(s.ctx.lia, task.id)).pinned_mine, null)
+    await s.tasks.unpinTaskForMe(s.ctx.lia, task.id)
+    assert.equal(s.deps.store.audit.length, before)
+    assert.equal(s.deps.store.taskPersonalPins.length, 0)
+  })
+
+  it('quem não vê a tarefa não fixa (TASK_NOT_FOUND); excluir a tarefa tira as fixações', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    assert.equal(await codeOf(() => s.tasks.pinTaskForMe(s.ctx.outsider, task.id)), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.tasks.unpinTaskForMe(s.ctx.outsider, task.id)), 'TASK_NOT_FOUND')
+    assert.equal(await codeOf(() => s.tasks.pinTaskForMe(s.ctx.lia, 'nada')), 'TASK_NOT_FOUND')
+    await s.tasks.pinTaskForMe(s.ctx.lia, task.id)
+    await s.tasks.pinTaskForMe(s.ctx.mario, task.id)
+    await s.tasks.deleteTask(s.ctx.gabi, task.id)
+    assert.equal(s.deps.store.taskPersonalPins.length, 0)
+  })
+
+  it('no máximo 10 por pessoa (TASK_PIN_PERSONAL_LIMIT), à parte das fixadas para todos', async () => {
+    const s = await setup()
+    const created = []
+    for (let i = 0; i < 11; i += 1) created.push(await s.tasks.createTask(s.ctx.mario, newBug(s, { title: `Tarefa ${i}` })))
+    for (const t of created.slice(0, 10)) await s.tasks.pinTaskForMe(s.ctx.mario, t.id)
+    let error = null
+    try {
+      await s.tasks.pinTaskForMe(s.ctx.mario, created[10].id)
+    } catch (err) {
+      error = err
+    }
+    assert.equal(error.code, 'TASK_PIN_PERSONAL_LIMIT')
+    assert.equal(error.status, 409)
+    assert.deepEqual(error.details, { max: 10 })
+    // o limite é de cada pessoa e não conta as fixadas para todos
+    assert.ok((await s.tasks.pinTaskForMe(s.ctx.lia, created[10].id)).pinned_mine)
+    assert.ok((await s.tasks.pinTask(s.ctx.mario, created[10].id)).pinned)
+    await s.tasks.unpinTaskForMe(s.ctx.mario, created[0].id)
+    assert.ok((await s.tasks.pinTaskForMe(s.ctx.mario, created[10].id)).pinned_mine)
+  })
+
+  it('pinned_first: primeiro as fixadas para mim (a mais recente no topo), depois as para todos, depois o resto; meta.pins', async () => {
+    const s = await setup()
+    const make = async (title, extra) => s.tasks.createTask(s.ctx.mario, newBug(s, Object.assign({ title }, extra)))
+    const a = await make('Alfa')
+    const b = await make('Beta')
+    const c = await make('Gama', { urgency: 'high' })
+    const d = await make('Delta')
+    await make('Épsilon')
+    await s.tasks.pinTask(s.ctx.mario, a.id)
+    await s.tasks.pinTask(s.ctx.mario, d.id)
+    await s.tasks.pinTaskForMe(s.ctx.lia, c.id)
+    await s.tasks.pinTaskForMe(s.ctx.lia, b.id)
+    // fixada para mim e para todos: fica com as minhas
+    await s.tasks.pinTaskForMe(s.ctx.lia, d.id)
+    const titles = async (ctx, query) => (await s.tasks.listTasks(ctx, Object.assign({ project_id: s.project.id, sort: 'title' }, query))).items.map((t) => t.title)
+    assert.deepEqual(await titles(s.ctx.lia, { pinned_first: 'true' }), ['Delta', 'Beta', 'Gama', 'Alfa', 'Épsilon'])
+    // as fixadas de Lia não mudam a Lista de Mário
+    assert.deepEqual(await titles(s.ctx.mario, { pinned_first: 'true' }), ['Delta', 'Alfa', 'Beta', 'Gama', 'Épsilon'])
+    // só as que passam nos filtros; sem pinned_first, a ordem pedida
+    assert.deepEqual(await titles(s.ctx.lia, { pinned_first: 'true', urgency: 'high' }), ['Gama'])
+    assert.deepEqual(await titles(s.ctx.lia, {}), ['Alfa', 'Beta', 'Delta', 'Gama', 'Épsilon'])
+    // meta.pins: quantas há (para todos, no total; para mim, só as de quem consulta) e os limites
+    assert.deepEqual((await s.tasks.listTasks(s.ctx.lia, { pinned_first: 'true' })).meta.pins, { all: 2, max_all: 10, mine: 3, max_mine: 10 })
+    assert.deepEqual((await s.tasks.listTasks(s.ctx.mario, { pinned_first: 'true' })).meta.pins, { all: 2, max_all: 10, mine: 0, max_mine: 10 })
+    assert.equal((await s.tasks.listTasks(s.ctx.lia, {})).meta.pins, undefined)
+  })
+
+  it('os resumos com a pessoa (summarize com ctx) trazem a fixação dela; sem ctx, null', async () => {
+    const s = await setup()
+    const task = await s.tasks.createTask(s.ctx.mario, newBug(s))
+    await s.tasks.pinTaskForMe(s.ctx.mario, task.id)
+    const stored = s.deps.store.tasks.filter((t) => t.id === task.id)
+    assert.ok((await s.tasks.summarize(stored, s.ctx.mario))[0].pinned_mine)
+    assert.equal((await s.tasks.summarize(stored, s.ctx.lia))[0].pinned_mine, null)
+    assert.equal((await s.tasks.summarize(stored))[0].pinned_mine, null)
+  })
+})

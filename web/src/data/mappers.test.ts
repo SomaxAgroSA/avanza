@@ -98,6 +98,10 @@ describe('data/mappers', () => {
     expect(toTaskSummary({ ...task, area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' } }).area).toEqual({ id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'blue' })
     expect(toTaskSummary({ ...task, area: { id: 'a1', key: 'TI', name: 'Dpto. TI', color: 'xyz' } }).area?.color).toBe('gray')
     expect(toTaskSummary(task).area).toBeNull()
+    // fixada para mim (§55): só a data; ausente ou inválida = não fixada
+    expect(toTaskSummary({ ...task, pinned_mine: { at: '2026-11-27T10:00:00.000Z' } }).pinnedMine).toEqual({ at: new Date('2026-11-27T10:00:00.000Z') })
+    expect(toTaskSummary({ ...task, pinned_mine: { at: 'nada' } }).pinnedMine).toBeNull()
+    expect(toTaskSummary(task).pinnedMine).toBeNull()
     const area = toArea({ id: 'a1', key: 'TI', name: 'Dpto. TI', description: '', color: 'blue', order: 1, is_active: true, is_default: false, created_at: null, updated_at: null })
     expect([area.name, area.isDefault, area.isActive]).toEqual(['Dpto. TI', false, true])
   })

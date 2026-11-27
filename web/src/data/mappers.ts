@@ -353,6 +353,12 @@ function toTaskPin(dto: TaskDto['pinned']): TaskSummary['pinned'] {
   return dto && at ? { by: dto.by ? toUserSummary(dto.by) : null, at } : null
 }
 
+/** Fixada para mim (§55); sem data válida = não fixada. */
+function toTaskPinMine(dto: TaskDto['pinned_mine']): TaskSummary['pinnedMine'] {
+  const at = dto ? toDate(dto.at) : null
+  return at ? { at } : null
+}
+
 export function toTaskSummary(dto: TaskDto): TaskSummary {
   return {
     id: dto.id,
@@ -390,6 +396,7 @@ export function toTaskSummary(dto: TaskDto): TaskSummary {
     inReport: dto.in_report ?? true,
     itVisible: !!dto.it_visible,
     pinned: toTaskPin(dto.pinned),
+    pinnedMine: toTaskPinMine(dto.pinned_mine),
     urgency: isUrgency(dto.urgency) ? dto.urgency : null,
     area: toAreaRef(dto.area),
     company: toCompanyRef(dto.company),

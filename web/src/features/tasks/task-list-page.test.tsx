@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18n from '@/core/i18n'
 import type { TaskRepository } from '@/domain/repositories'
-import { OPEN_TASK_CATEGORIES, type TaskSummary } from '@/domain/tasks'
+import { OPEN_TASK_CATEGORIES, type TaskPinCounts, type TaskSummary } from '@/domain/tasks'
 import type { TaskPriority, TaskStatus } from '@/domain/workflow'
 import { fakeRepositories, makeCurrentUser, renderRoutes } from '@/test/utils'
 import type { ScreenKey } from '@/domain/screens'
@@ -314,70 +314,196 @@ describe('Lista de tarefas do menu — tela limpa (ajustes 20/11)', () => {
   })
 })
 
-describe('Lista — fixar no topo (§50)', () => {
+describe('Lista — fixar no topo: para mim (§55) e para todos (§50)', () => {
   const ana = { id: 'u9', name: 'Angelica Davalos', email: 'angelica@kamban.test', avatarUrl: null }
   const pinned = task({ id: 'k5', code: 'DRE-5', title: 'Portal de acceso · subir el login', pinned: { by: ana, at: new Date(Date.now() - 5 * 60_000) } })
+  const minePin = task({ id: 'k6', code: 'DRE-6', title: 'Revisar contrato do frete', pinnedMine: { at: new Date() } })
+  const bothPin = task({ id: 'k7', code: 'DRE-7', title: 'Fechar o orçamento', pinned: { by: ana, at: new Date() }, pinnedMine: { at: new Date() } })
+  const EDITOR = ['tasks.view', 'tasks.list', 'tasks.edit', 'projects.view', 'projects.view_all'] as Parameters<typeof makeCurrentUser>[0]
+  const READER = ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'] as Parameters<typeof makeCurrentUser>[0]
 
-  function setupPins(options: { hidden?: ScreenKey[]; permissions?: Parameters<typeof makeCurrentUser>[0]; items?: TaskSummary[] } = {}) {
-    const items = options.items ?? [pinned, mine, other]
+  function setupPins(options: { hidden?: ScreenKey[]; permissions?: Parameters<typeof makeCurrentUser>[0]; items?: TaskSummary[]; pins?: TaskPinCounts } = {}) {
+    const items = options.items ?? [minePin, bothPin, pinned, mine, other]
+    const pins = options.pins ?? { all: 2, maxAll: 10, mine: 2, maxMine: 10 }
     const list = vi.fn<TaskRepository['list']>((query) =>
-      Promise.resolve(query.perPage === 1 ? { items: [], page: 1, perPage: 1, total: 3, totalPages: 3 } : { items, page: 1, perPage: 20, total: items.length, totalPages: 1 }),
+      Promise.resolve(query.perPage === 1 ? { items: [], page: 1, perPage: 1, total: 3, totalPages: 3 } : { items, page: 1, perPage: 20, total: items.length, totalPages: 1, pins }),
     )
-    const setPinned = vi.fn<TaskRepository['setPinned']>((id, value) => Promise.resolve({ ...items.find((t) => t.id === id)!, pinned: value ? { by: ana, at: new Date() } : null } as never))
-    const current = makeCurrentUser(options.permissions ?? ['tasks.view', 'tasks.list', 'tasks.edit', 'projects.view', 'projects.view_all'])
+    const saved = (id: string, patch: Partial<TaskSummary>) => Promise.resolve({ ...items.find((t) => t.id === id)!, ...patch } as never)
+    const setPinned = vi.fn<TaskRepository['setPinned']>((id, value) => saved(id, { pinned: value ? { by: ana, at: new Date() } : null }))
+    const setPinnedMine = vi.fn<TaskRepository['setPinnedMine']>((id, value) => saved(id, { pinnedMine: value ? { at: new Date() } : null }))
+    const current = makeCurrentUser(options.permissions ?? EDITOR)
     renderRoutes([{ path: '/tasks', element: <TasksPage /> }], {
       repositories: fakeRepositories({
         auth: { me: async () => ({ ...current, role: current.role && { ...current.role, screens: { hidden: options.hidden ?? [], starts: {} } } }) },
         statuses: { list: () => Promise.resolve([backlog, done]) },
         priorities: { list: () => Promise.resolve([alta, media]) },
         areas: { list: () => Promise.resolve([]) },
-        tasks: { list, setPinned },
+        tasks: { list, setPinned, setPinnedMine },
       }),
       initialPath: '/tasks?scope=all',
     })
     const tableCalls = () => list.mock.calls.filter(([query]) => query.perPage !== 1)
-    return { list, setPinned, tableCalls }
+    return { list, setPinned, setPinnedMine, tableCalls }
   }
+  const pinOf = (item: TaskSummary) => within(screen.getByText(item.title).closest('tr')!).getByTestId('task-pin')
+  const openPinMenu = async (item: TaskSummary) => {
+    await userEvent.click(pinOf(item))
+    return screen.findByRole('menu')
+  }
+  const moreOf = (item: TaskSummary) => within(screen.getByText(item.title).closest('tr')!).getByRole('button', { name: 'Mais ações' })
 
-  it('pede as fixadas primeiro; fixar é discreto: sem faixas, sem fundo e sem "Fixada por" na linha — só o ícone muda', async () => {
+  it('pede as fixadas primeiro; a linha fica igual às outras e só a cor do 📌 muda: azul (minha), verde (todos), cinza', async () => {
     const { tableCalls } = setupPins()
     await screen.findByText(pinned.title)
     expect(tableCalls().at(-1)![1]).toMatchObject({ pinnedFirst: true })
     expect(screen.queryByTestId('row-group')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Fixada por/)).not.toBeInTheDocument()
-    const row = screen.getByText(pinned.title).closest('tr')!
-    expect(row).not.toHaveAttribute('data-highlight')
-    // a fixada vem primeiro (a ordem é do servidor) e o ícone aparece uma vez por linha
-    expect(within(row).getAllByTestId('task-pin')).toHaveLength(1)
-    expect(screen.getAllByTestId('task-pin')[0]).toBe(within(row).getByTestId('task-pin'))
-    const pin = within(row).getByTestId('task-pin')
-    expect(pin).toHaveAttribute('aria-pressed', 'true')
-    expect(pin).toHaveClass('text-primary-text')
-    expect(pin.querySelector('svg')).toHaveClass('fill-current')
-    const free = within(screen.getByText(mine.title).closest('tr')!).getByTestId('task-pin')
-    expect(free).toHaveAttribute('aria-pressed', 'false')
-    expect(free).toHaveClass('text-subtle')
-    expect(free.querySelector('svg')).not.toHaveClass('fill-current')
+    expect(screen.queryByText(/Fixada/)).not.toBeInTheDocument()
+    expect(screen.getByText(pinned.title).closest('tr')).not.toHaveAttribute('data-highlight')
+    // a ordem é do servidor: a tabela mostra como veio
+    expect(screen.getAllByTestId('task-pin').map((b) => b.getAttribute('data-pin-state'))).toEqual(['mine', 'both', 'all', 'none', 'none'])
+    for (const item of [minePin, bothPin]) {
+      expect(pinOf(item)).toHaveClass('text-info-text')
+      expect(pinOf(item).querySelector('svg')).toHaveClass('fill-current')
+    }
+    expect(pinOf(pinned)).toHaveClass('text-primary-text')
+    expect(pinOf(pinned).querySelector('svg')).toHaveClass('fill-current')
+    expect(pinOf(mine)).toHaveClass('text-subtle')
+    expect(pinOf(mine).querySelector('svg')).not.toHaveClass('fill-current')
   })
 
-  it('quem fixou e quando ficam na dica do ícone', async () => {
+  it.each([
+    ['para todos: quem fixou e quando', () => pinned, /^Fixada para todos por Angelica Davalos · há \d+ minutos$/],
+    ['para mim', () => minePin, /^Fixada para você · só você a vê no topo$/],
+    ['para mim e para todos', () => bothPin, /^Fixada para você e para todos$/],
+  ])('a dica do 📌 diz para quem está fixada (%s)', async (_name, item, text) => {
     setupPins()
     await screen.findByText(pinned.title)
-    await userEvent.hover(within(screen.getByText(pinned.title).closest('tr')!).getByTestId('task-pin'))
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Fixada por Angelica Davalos · há \d+ minutos — clique para desafixar$/)
+    await userEvent.hover(pinOf(item()))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(text)
   })
 
-  it('o 📌 da linha fixa e desafixa; também no ··· ("Fixar no topo" / "Desafixar")', async () => {
-    const { setPinned } = setupPins()
+  it('com as duas opções, o 📌 abre um menu: "Fixar para mim" e "Fixar para todos", cada uma com a explicação', async () => {
+    const { setPinned, setPinnedMine } = setupPins()
     await screen.findByText(pinned.title)
-    await userEvent.click(screen.getByRole('button', { name: `Fixar no topo: ${mine.title}` }))
+    const menu = await openPinMenu(mine)
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(2)
+    expect(within(menu).getByRole('menuitem', { name: 'Fixar para mim' })).toHaveAccessibleDescription('Só você a vê no topo')
+    expect(within(menu).getByRole('menuitem', { name: 'Fixar para todos' })).toHaveAccessibleDescription('Fica no topo para toda a equipe')
+    expect(within(menu).getByRole('separator')).toBeInTheDocument()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Fixar para mim' }))
+    await waitFor(() => expect(setPinnedMine).toHaveBeenCalledWith(mine.id, true))
+    expect(setPinned).not.toHaveBeenCalled()
+    // fixada para as duas: as duas opções viram "Desafixar"
+    const both = await openPinMenu(bothPin)
+    expect(within(both).getByRole('menuitem', { name: 'Desafixar para mim' })).toHaveAccessibleDescription('Volta ao lugar dela na sua Lista')
+    await userEvent.click(within(both).getByRole('menuitem', { name: 'Desafixar para todos' }))
+    await waitFor(() => expect(setPinned).toHaveBeenCalledWith(bothPin.id, false))
+  })
+
+  it('o menu é acessível: setas percorrem as opções e Esc fecha e devolve o foco ao 📌', async () => {
+    setupPins()
+    await screen.findByText(pinned.title)
+    const button = pinOf(other)
+    expect(button).toHaveAttribute('aria-haspopup', 'menu')
+    expect(button).toHaveAccessibleName(`Fixar: ${other.title}`)
+    button.focus()
+    await userEvent.keyboard('{Enter}')
+    const menu = await screen.findByRole('menu')
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Fixar para mim' })).toHaveFocus())
+    await userEvent.keyboard('{ArrowDown}')
+    expect(within(menu).getByRole('menuitem', { name: 'Fixar para todos' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    expect(pinOf(other)).toHaveFocus()
+  })
+
+  it('no limite: "Fixar para todos" desligada com "Já há 10 fixadas para todos" (e o mesmo para mim)', async () => {
+    const { setPinned } = setupPins({ pins: { all: 10, maxAll: 10, mine: 10, maxMine: 10 } })
+    await screen.findByText(pinned.title)
+    const menu = await openPinMenu(mine)
+    const all = within(menu).getByRole('menuitem', { name: 'Fixar para todos' })
+    expect(all).toHaveAttribute('aria-disabled', 'true')
+    expect(all).toHaveAccessibleDescription('Já há 10 fixadas para todos')
+    expect(within(menu).getByRole('menuitem', { name: 'Fixar para mim' })).toHaveAccessibleDescription('Você já tem 10 fixadas para você')
+    await userEvent.click(all, { pointerEventsCheck: 0 })
+    expect(setPinned).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
+    // desafixar continua possível
+    const again = await openPinMenu(pinned)
+    expect(within(again).getByRole('menuitem', { name: 'Desafixar para todos' })).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('o ··· da linha oferece as mesmas opções', async () => {
+    const { setPinnedMine } = setupPins()
+    await screen.findByText(pinned.title)
+    await userEvent.click(moreOf(other))
+    expect(await screen.findByRole('menuitem', { name: 'Fixar para todos' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Fixar para mim' }))
+    await waitFor(() => expect(setPinnedMine).toHaveBeenCalledWith(other.id, true))
+  })
+
+  it('perfil só com "Fixar para mim": um clique fixa/desafixa para mim, sem menu', async () => {
+    const { setPinned, setPinnedMine } = setupPins({ hidden: ['tasks.row_actions.pin'] })
+    await screen.findByText(pinned.title)
+    await userEvent.click(screen.getByRole('button', { name: `Fixar para mim: ${mine.title}` }))
+    await waitFor(() => expect(setPinnedMine).toHaveBeenCalledWith(mine.id, true))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    const button = screen.getByRole('button', { name: `Desafixar para mim: ${minePin.title}` })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(button)
+    await waitFor(() => expect(setPinnedMine).toHaveBeenCalledWith(minePin.id, false))
+    // a fixada para todos continua verde, mas o clique fixa para mim
+    expect(pinOf(pinned)).toHaveClass('text-primary-text')
+    expect(pinOf(pinned)).toHaveAttribute('aria-pressed', 'false')
+    expect(setPinned).not.toHaveBeenCalled()
+  })
+
+  it('perfil só com "Fixar para todos": um clique faz o de antes (para todos)', async () => {
+    const { setPinned, setPinnedMine } = setupPins({ hidden: ['tasks.row_actions.pin_mine'] })
+    await screen.findByText(pinned.title)
+    await userEvent.click(screen.getByRole('button', { name: `Fixar para todos: ${mine.title}` }))
     await waitFor(() => expect(setPinned).toHaveBeenCalledWith(mine.id, true))
-    await userEvent.click(screen.getByRole('button', { name: `Desafixar: ${pinned.title}` }))
+    await userEvent.click(screen.getByRole('button', { name: `Desafixar para todos: ${pinned.title}` }))
     await waitFor(() => expect(setPinned).toHaveBeenCalledWith(pinned.id, false))
-    const row = screen.getByText(other.title).closest('tr')!
-    await userEvent.click(within(row).getByRole('button', { name: 'Mais ações' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Fixar no topo' }))
-    await waitFor(() => expect(setPinned).toHaveBeenCalledWith(other.id, true))
+    await userEvent.hover(pinOf(pinned))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Fixada para todos por Angelica Davalos · há \d+ minutos — clique para desafixar$/)
+    expect(setPinnedMine).not.toHaveBeenCalled()
+    await userEvent.click(moreOf(other))
+    await screen.findByRole('menuitem', { name: 'Fixar para todos' })
+    expect(screen.queryByRole('menuitem', { name: 'Fixar para mim' })).not.toBeInTheDocument()
+  })
+
+  it('perfil sem nenhum dos dois (§48): sem o botão; as fixadas continuam no topo, pedidas ao servidor', async () => {
+    const { tableCalls } = setupPins({ hidden: ['tasks.row_actions.pin', 'tasks.row_actions.pin_mine'] })
+    await screen.findByText(pinned.title)
+    expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument()
+    expect(tableCalls().at(-1)![1]).toMatchObject({ pinnedFirst: true })
+    await userEvent.click(moreOf(other))
+    await screen.findByRole('menuitem', { name: 'Abrir tarefa' })
+    expect(screen.queryByRole('menuitem', { name: /Fixar/ })).not.toBeInTheDocument()
+  })
+
+  it('sem editar tarefas: fixa para si com um clique; "Fixar para todos" não aparece', async () => {
+    const { setPinned, setPinnedMine } = setupPins({ permissions: READER })
+    await screen.findByText(pinned.title)
+    await userEvent.click(screen.getByRole('button', { name: `Fixar para mim: ${pinned.title}` }))
+    await waitFor(() => expect(setPinnedMine).toHaveBeenCalledWith(pinned.id, true))
+    await userEvent.click(moreOf(mine))
+    await screen.findByRole('menuitem', { name: 'Fixar para mim' })
+    expect(screen.queryByRole('menuitem', { name: 'Fixar para todos' })).not.toBeInTheDocument()
+    expect(setPinned).not.toHaveBeenCalled()
+  })
+
+  it('sem editar tarefas e sem "Fixar para mim" no perfil: o 📌 só informa (desligado, com a dica de quem fixou)', async () => {
+    const { setPinned, setPinnedMine } = setupPins({ permissions: READER, hidden: ['tasks.row_actions.pin_mine'] })
+    await screen.findByText(pinned.title)
+    screen.getAllByTestId('task-pin').forEach((button) => expect(button).toHaveAttribute('aria-disabled', 'true'))
+    await userEvent.hover(pinOf(pinned))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Fixada para todos por Angelica Davalos · há \d+ minutos$/)
+    await userEvent.click(pinOf(pinned))
+    expect(setPinned).not.toHaveBeenCalled()
+    expect(setPinnedMine).not.toHaveBeenCalled()
   })
 
   it('"Colunas e ações": "Fixar" em "Ações em cada linha", ligado por padrão; desligar tira o botão', async () => {
@@ -388,27 +514,5 @@ describe('Lista — fixar no topo (§50)', () => {
     expect(option).toBeChecked()
     await userEvent.click(option)
     await waitFor(() => expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument())
-  })
-
-  it('perfil sem o "Fixar" (§48): sem o botão; as fixadas continuam no topo, pedidas ao servidor', async () => {
-    const { tableCalls } = setupPins({ hidden: ['tasks.row_actions.pin'] })
-    await screen.findByText(pinned.title)
-    expect(screen.queryByTestId('task-pin')).not.toBeInTheDocument()
-    expect(tableCalls().at(-1)![1]).toMatchObject({ pinnedFirst: true })
-    expect(screen.queryByTestId('row-group')).not.toBeInTheDocument()
-  })
-
-  it('sem editar tarefas: o botão aparece desligado (com a dica de quem fixou) e o ··· não oferece fixar', async () => {
-    const { setPinned } = setupPins({ permissions: ['tasks.view', 'tasks.list', 'projects.view', 'projects.view_all'] })
-    await screen.findByText(pinned.title)
-    screen.getAllByTestId('task-pin').forEach((button) => expect(button).toHaveAttribute('aria-disabled', 'true'))
-    const pin = within(screen.getByText(pinned.title).closest('tr')!).getByTestId('task-pin')
-    await userEvent.hover(pin)
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Fixada por Angelica Davalos · há \d+ minutos$/)
-    await userEvent.click(pin)
-    expect(setPinned).not.toHaveBeenCalled()
-    await userEvent.click(within(screen.getByText(mine.title).closest('tr')!).getByRole('button', { name: 'Mais ações' }))
-    await screen.findByRole('menuitem', { name: 'Abrir tarefa' })
-    expect(screen.queryByRole('menuitem', { name: 'Fixar no topo' })).not.toBeInTheDocument()
   })
 })

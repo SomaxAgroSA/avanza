@@ -41,7 +41,7 @@ import type {
 import type { PlanFile, PlanUpdate, PlanUpdateInput, PlanUpdates } from './plan-updates'
 import type { IssueInput, JournalEntry, JournalInput, PlanIssue, PlanIssues, PlanJournal, PlanReport } from './plan-management'
 import type { ColumnTypePreview, PlanColumn, PlanColumnInput } from './plan-columns'
-import type { Tag, TaskComment, TaskDetail, TaskInput, TaskSummary } from './tasks'
+import type { Tag, TaskComment, TaskDetail, TaskInput, TaskPage, TaskSummary } from './tasks'
 import type { Urgency } from './urgency'
 import type { Company, CompanyInput } from './companies'
 import type { AssignInput, DemandBox, DemandInput, DemandListFilters, DemandOverview, DemandPage } from './demands'
@@ -399,12 +399,16 @@ export interface TaskListOptions {
   planItemId?: string
   /** As tarefas de quem consulta primeiro ("Minhas tarefas primeiro"); o resto continua na lista. */
   mineFirst?: boolean
-  /** As fixadas no topo (§50), a mais recente primeiro; só as que passam nos filtros. */
+  /**
+   * As fixadas no topo: primeiro as fixadas para mim (§55), depois as para todos (§50), em cada grupo a mais recente
+   * primeiro; só as que passam nos filtros.
+   */
   pinnedFirst?: boolean
 }
 
 export interface TaskRepository {
-  list(query: ListQuery, options?: TaskListOptions): Promise<Page<TaskSummary>>
+  /** Com `pinnedFirst`, a página traz também as contagens das fixadas (`pins`, §50/§55). */
+  list(query: ListQuery, options?: TaskListOptions): Promise<TaskPage>
   get(id: string): Promise<TaskDetail>
   create(data: TaskInput & { projectId: string; taskTypeId: string; title: string }): Promise<TaskDetail>
   update(id: string, data: TaskInput): Promise<TaskDetail>
@@ -418,6 +422,8 @@ export interface TaskRepository {
   setArea(id: string, areaId: string | null): Promise<TaskDetail>
   /** Fixa (true) ou desafixa (false) no topo da Lista, para todas as pessoas (§50). */
   setPinned(id: string, pinned: boolean): Promise<TaskDetail>
+  /** Fixa (true) ou desafixa (false) no topo só da Lista de quem pede (§55): pessoal e privado. */
+  setPinnedMine(id: string, pinned: boolean): Promise<TaskDetail>
   /** "Com cópia" numa tarefa que já existe: manda o aviso dela aos endereços; devolve os que receberam. */
   sendCopy(id: string, emails: string[]): Promise<string[]>
   remove(id: string): Promise<void>

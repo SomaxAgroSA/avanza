@@ -1079,13 +1079,13 @@ Pedido da coordenação, aprovado em demonstração (26/11/2026, "Fijar tareas y
 - **Global:** fixar vale para **todas as pessoas** (não é preferência de quem fixa). As fixadas ficam **no topo** da Lista. Desde o §51 (fixar discreto) a linha fixada é **igual às outras** — sem as faixas "Fixadas · n" / "As demais", sem fundo nem borda de destaque; só o ícone muda.
 - **Quem fixou e quando:** na **dica do ícone** — "Fixada por <nome> · <quando> — clique para desafixar" (há quanto tempo; sem o nome quando a pessoa foi excluída; sem o "clique para desafixar" para quem não pode). Desde o §51 não aparece mais embaixo do título.
 - **Respeitam os filtros:** só sobem as fixadas que passam no escopo (Minhas tarefas / Ver todas), na busca e nos filtros da barra e das colunas; entre as fixadas, **a mais recente fica primeiro**; o resto segue a ordem escolhida (prazo, mais recentes, coluna ordenada).
-- **Quem pode:** quem pode **editar a tarefa** (a mesma regra da edição no servidor: `tasks.edit`, colaborador do projeto ou do fluxo da demanda, projeto não arquivado). Sem isso, o botão aparece desligado (a dica de quem fixou continua aparecendo) e o ⋯ não oferece fixar.
+- **Quem pode:** quem pode **editar a tarefa** (a mesma regra da edição no servidor: `tasks.edit`, colaborador do projeto ou do fluxo da demanda, projeto não arquivado). Sem isso, o botão aparece desligado (a dica de quem fixou continua aparecendo) e o ⋯ não oferece fixar. Desde o §55, quem não edita pode **fixar para si** e o "para todos" fica só para quem edita.
 - **Máximo de 10 fixadas ao mesmo tempo** (no total, para todos). A 11ª recusa com `TASK_PIN_LIMIT` ("Já há 10 tarefas fixadas. Desafixe uma antes de fixar outra."). O limite é conferido sob trava, então duas pessoas fixando ao mesmo tempo não passam de 10.
 - **Fixar não "mexe" na tarefa:** não exige os campos obrigatórios do status, não muda o "atualizada" (a ordem "movidas mais recentes") nem o status. Fixar o que já está fixado (ou desafixar o que não está) não muda nada.
 - **Histórico:** `task.pinned` ("Fixou a tarefa no topo da Lista") e `task.unpinned` ("Desafixou a tarefa"), na mesma transação.
 - **Excluir a tarefa** tira a fixação; excluir quem fixou deixa a fixação sem autor.
 - **"Colunas e ações":** **Fixar** entra em "Ações em cada linha" (depois de Visualizar e Editar; **ligado por padrão**), por pessoa neste navegador, como as demais.
-- **"O que aparece" (§48):** novo grupo **Tarefas — Ações em cada linha da Lista** (`tasks.row_actions`, item `pin`; exige `tasks.edit`, senão o cadeado). É o primeiro grupo **opcional**: pode ficar sem nenhum item marcado (a regra "sempre fica uma" não vale para ele). Esconder só tira o botão e o item do ⋯; **as fixadas continuam no topo** para esse perfil.
+- **"O que aparece" (§48):** novo grupo **Tarefas — Ações em cada linha da Lista** (`tasks.row_actions`, item `pin`; exige `tasks.edit`, senão o cadeado). É o primeiro grupo **opcional**: pode ficar sem nenhum item marcado (a regra "sempre fica uma" não vale para ele). Esconder só tira o botão e o item do ⋯; **as fixadas continuam no topo** para esse perfil. Desde o §55 o grupo tem dois itens: **Fixar para mim** (`pin_mine`) e **Fixar para todos** (`pin`).
 - **A aba Tarefas do projeto** não muda (sem o botão); as tarefas continuam trazendo `pinned` na API.
 - **API:** `POST /tasks/{id}/pin` e `DELETE /tasks/{id}/pin` (devolvem a tarefa); toda tarefa sai com `pinned: { by, at } | null`; `GET /tasks?pinned_first=true` põe as fixadas primeiro (a Lista pede; sem o parâmetro, a ordem de sempre). Claude (MCP): `set_task_pinned` e `pinned` nos resumos de `list_tasks`.
 
@@ -1180,3 +1180,52 @@ Pedido da coordenação, aprovado em demonstração (27/11/2026). Vale para a ca
 
 - O resumo do comentário no histórico, no sino e no e-mail (`plainText`) sai **sem marcas**: títulos e citações sem `#`/`>`, `☐`/`☑` nas listas de verificação, tabelas com as células separadas por " · ", blocos de código só com o conteúdo, imagens como "[imagem: nome]", sem `==`, `<u>` ou escapes.
 - O e-mail da **cópia** da tarefa ("Com cópia") leva a descrição **como texto limpo**, com as quebras de linha (`<br>` no HTML).
+
+## 55. Fixar para mim e fixar para todos
+
+Pedido da coordenação, aprovado em demonstração (27/11/2026). ADR-068. Amplia o §50 (fixar para todos) e o §51 (fixar discreto).
+
+### O 📌 da linha
+
+- **Onde:** Tarefas › **Lista** (a do menu, §44), no mesmo botão 📌 de cada linha e no **⋯**.
+- **Com as duas opções** (o perfil mostra as duas e a pessoa edita tarefas), o 📌 abre um **menu pequeno** (papel `menu`; setas percorrem, Enter escolhe, **Esc** fecha e devolve o foco ao 📌):
+  - **Fixar para mim** — "Só você a vê no topo" (ou **Desafixar para mim** — "Volta ao lugar dela na sua Lista"), ícone azul;
+  - separador;
+  - **Fixar para todos** — "Fica no topo para toda a equipe" (ou **Desafixar para todos** — "Deixa de ficar no topo para a equipe"), ícone verde.
+- **Com uma opção só**, um clique fixa/desafixa nela, **sem menu**: só "para mim" (perfil sem "para todos" ou pessoa que não edita tarefas) ou só "para todos" (perfil sem "para mim": o comportamento do §50).
+- **Sem nenhuma**, sem botão (as fixadas para todos continuam no topo). Exceção: perfil com "para todos" e sem "para mim", para quem **não edita** tarefas — o 📌 só informa (desligado, com a dica de quem fixou), como no §50.
+- **"Fixar para todos"** só aparece para quem pode editar tarefas (no servidor, a regra da edição da tarefa, §50). Quem não edita agora **pode fixar para si**.
+- **No limite**, a opção fica desligada e diz por quê: "Já há 10 fixadas para todos" / "Você já tem 10 fixadas para você". Desafixar continua possível. Com um clique (sem menu), o servidor recusa e o aviso de erro explica.
+- **O ⋯ da linha** oferece as mesmas opções (com a explicação), depois de "Abrir tarefa".
+
+### Cor e dica
+
+- **Fixada para mim:** 📌 **azul e cheio** (token `info-text`, AA no claro e no escuro); dica "Fixada para você · só você a vê no topo".
+- **Fixada para todos:** 📌 **verde e cheio** (como no §51); dica "Fixada para todos por <nome> · <quando>" (sem o nome quando a pessoa foi excluída; com um clique, mais "— clique para desafixar").
+- **As duas:** **azul** (a sua manda); dica "Fixada para você e para todos".
+- **Sem fixar:** cinza e tênue. A linha continua igual às outras (sem fundos nem faixas, §51).
+
+### Ordem da Lista
+
+- Primeiro as **fixadas para mim** (a última fixada primeiro), depois as **fixadas para todos** (a última primeiro), depois o resto na ordem escolhida. Uma tarefa fixada para mim e para todos fica entre as minhas.
+- Respeitam os filtros e o escopo, como no §50: só sobem as que passam.
+
+### "Para mim": pessoal e privada
+
+- **Só de quem fixou:** ninguém mais vê nem sabe — nem na Lista, nem na tarefa, nem na API (cada pessoa recebe só a própria fixação). **Não vai ao histórico** da tarefa e **não avisa o tempo real** de outras pessoas; também não renova o "atualizada" nem exige os campos do status.
+- **Quem pode:** quem **vê a tarefa** (a mesma regra de abrir a tarefa: quem não vê recebe `TASK_NOT_FOUND`).
+- **No máximo 10 por pessoa** (`domain/task.js#MAX_PERSONAL_PINNED`), à parte das 10 para todos. A 11ª recusa com `TASK_PIN_PERSONAL_LIMIT` (409, "Você já tem 10 tarefas fixadas para você…"); conferido sob trava por pessoa.
+- **Excluir a tarefa** ou **a pessoa** apaga as fixações dela (cascata).
+
+### "O que aparece" (§48)
+
+- O grupo **Tarefas — Ações em cada linha da Lista** (`tasks.row_actions`, opcional) passa a ter dois interruptores: **Fixar para mim** (`pin_mine`) e **Fixar para todos** (`pin`, a chave de antes; exige `tasks.edit`, senão o cadeado). Por padrão, os dois visíveis.
+- **Conversão (migration 0051):** perfil que escondia o "Fixar" fica com **os dois escondidos**; os outros continuam vendo tudo. Roda uma vez, junto da criação da tabela.
+- **"Colunas e ações" › Fixar** continua ligando/desligando o botão inteiro (por pessoa neste navegador).
+
+### API e Claude
+
+- `POST /tasks/{id}/pin/me` e `DELETE /tasks/{id}/pin/me` (devolvem a tarefa); as rotas `/tasks/{id}/pin` continuam sendo "para todos", sem mudança.
+- Toda tarefa sai com `pinned_mine: { at } | null` (só a fixação de quem consulta; nos resumos sem pessoa, `null`).
+- `GET /tasks?pinned_first=true` ordena minhas → para todos → resto e devolve `meta.pins = { all, max_all, mine, max_mine }` (fixadas para todos no total e as de quem consulta, com os limites).
+- Claude (MCP): `set_task_pinned` ganhou `for` (`everyone`, padrão, ou `me`); `pinned_mine` nos resumos de `list_tasks`.

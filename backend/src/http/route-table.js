@@ -99,6 +99,9 @@ const ROUTES = [
   // fixar no topo da Lista de tarefas, para todas as pessoas (§50)
   ['POST', '/api/v1/tasks/:id/pin', 'pinTask'],
   ['DELETE', '/api/v1/tasks/:id/pin', 'unpinTask'],
+  // fixar no topo só da Lista de quem pede, "para mim" (§55; pessoal e privado)
+  ['POST', '/api/v1/tasks/:id/pin/me', 'pinTaskForMe'],
+  ['DELETE', '/api/v1/tasks/:id/pin/me', 'unpinTaskForMe'],
   ['POST', '/api/v1/tasks/:id/copy', 'sendTaskCopy', JSON_LIMIT],
   ['DELETE', '/api/v1/tasks/:id', 'deleteTask'],
   // demandas internas (§45): tarefas sem projeto, pedidas a uma pessoa

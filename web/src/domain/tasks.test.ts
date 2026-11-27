@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  localDay, OPEN_TASK_CATEGORIES, TASK_SCOPE_SORT, isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, scopeCountFilters, scopedTaskFilters, taskListFilters } from './tasks'
+  localDay, OPEN_TASK_CATEGORIES, TASK_SCOPE_SORT, isOverdue, mentionQueryAt, mentionsToDisplay, mentionsToStorage, parseHours, pinChoices, pinRoom, pinStateOf, scopeCountFilters, scopedTaskFilters, taskListFilters } from './tasks'
 
 describe('domain/tasks — menções', () => {
   const carla = { id: 'u7', name: 'Carla Mendes' }
@@ -88,5 +88,28 @@ describe('domain/tasks — Lista de tarefas do menu (§44)', () => {
   it('ordem inicial: Minhas pelo prazo (sem prazo no fim); Todas pelas movidas mais recentes', () => {
     expect(TASK_SCOPE_SORT.mine).toEqual({ id: 'due_date', direction: 'asc' })
     expect(TASK_SCOPE_SORT.all).toEqual({ id: 'updated_at', direction: 'desc' })
+  })
+})
+
+describe('domain/tasks — fixar para mim e para todos (§50/§55)', () => {
+  it('o 📌 oferece o que o perfil mostra; "para todos" só para quem edita', () => {
+    expect(pinChoices({ showsMine: true, showsAll: true, canEdit: true })).toEqual({ mine: true, all: true, mode: 'menu' })
+    expect(pinChoices({ showsMine: true, showsAll: false, canEdit: true })).toEqual({ mine: true, all: false, mode: 'mine' })
+    expect(pinChoices({ showsMine: false, showsAll: true, canEdit: true })).toEqual({ mine: false, all: true, mode: 'all' })
+    // quem não edita: só "para mim" (um clique) ou, sem ela no perfil, só a informação da fixação para todos
+    expect(pinChoices({ showsMine: true, showsAll: true, canEdit: false })).toEqual({ mine: true, all: false, mode: 'mine' })
+    expect(pinChoices({ showsMine: false, showsAll: true, canEdit: false })).toEqual({ mine: false, all: false, mode: 'info' })
+    expect(pinChoices({ showsMine: false, showsAll: false, canEdit: true })).toEqual({ mine: false, all: false, mode: 'none' })
+  })
+
+  it('a fixação para mim manda na cor (azul); sem contagens, deixa tentar', () => {
+    const at = new Date()
+    expect(pinStateOf({ pinned: { by: null, at }, pinnedMine: { at } })).toBe('both')
+    expect(pinStateOf({ pinned: null, pinnedMine: { at } })).toBe('mine')
+    expect(pinStateOf({ pinned: { by: null, at } })).toBe('all')
+    expect(pinStateOf({})).toBe('none')
+    expect(pinRoom(undefined)).toEqual({ mine: true, all: true })
+    expect(pinRoom({ all: 10, maxAll: 10, mine: 9, maxMine: 10 })).toEqual({ mine: true, all: false })
+    expect(pinRoom({ all: 3, maxAll: 10, mine: 10, maxMine: 10 })).toEqual({ mine: false, all: true })
   })
 })
