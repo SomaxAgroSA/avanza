@@ -366,6 +366,30 @@
     height: 0;
     pointer-events: none;
   }
+  /*
+   * Comentários e descrições de tarefas (§53): o mesmo visual, na escala do texto ao redor
+   * (text-sm), com títulos menores e menos espaço entre blocos.
+   */
+  .kb-rich-compact {
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .kb-rich-compact > * + * { margin-top: 0.5em; }
+  .kb-rich-compact h1 { font-size: 1.25rem; margin-top: 1em; }
+  .kb-rich-compact h2 { font-size: 1.125rem; margin-top: 0.9em; }
+  .kb-rich-compact h3 { font-size: 1rem; margin-top: 0.8em; }
+  .kb-rich-compact h4 { font-size: 0.875rem; margin-top: 0.8em; }
+  .kb-rich-compact > :first-child { margin-top: 0; }
+  .kb-rich-compact hr { margin: 1em 0; }
+  .kb-rich-compact pre { padding: 0.625rem 0.75rem; font-size: 0.8125rem; }
+  .kb-rich-compact table { font-size: 0.8125rem; }
+  .kb-rich [data-mention] {
+    border-radius: var(--radius-sm);
+    background: var(--kb-primary-soft);
+    color: var(--kb-primary-soft-fg);
+    padding: 0 0.25em;
+    font-weight: 500;
+  }
 }
 
 /*
